@@ -1,3 +1,7 @@
 *.o
 *.cm*
 *.annot
+/parsing/parse.ml
+/parsing/parse.mli
+/parsing/parse.output
+/parsing/scan.ml
