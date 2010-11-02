@@ -8,16 +8,17 @@
 TOP=$(shell pwd)
 
 
-SRC=
+SRC= main.ml
 
 TARGET=qc
 
-SYSLIBS=
+SYSLIBS=nums.cma bigarray.cma str.cma unix.cma
 
-LIBS= 
+LIBS= commons/commons.cma
 
 
-MAKESUBDIRS= commons2 \
+MAKESUBDIRS= \
+   commons commons2 \
    h_asdl \
    parsing
 

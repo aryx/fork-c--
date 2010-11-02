@@ -5,3 +5,4 @@
 /parsing/parse.mli
 /parsing/parse.output
 /parsing/scan.ml
+/qc
