@@ -1,5 +1,10 @@
-(* This is not actually a noweb file, but it *is* included in front
-   of every generated .ml file.  It turns off evil polymorphic functions *)
+(* 
+ * lindig: this is not actually a noweb file, but it *is* included in front
+ * of every generated .ml file.  It turns off evil polymorphic functions 
+ * 
+ * pad: I prefer to have explicitly to include this file than having
+ * implicit magic in the build process.
+ *)
 
    (* permit bare = on integers only *)
 let (=|=) (x:int)    (y:int)    = (=) x y

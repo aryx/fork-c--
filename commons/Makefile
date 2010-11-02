@@ -10,7 +10,8 @@ TARGET=lib
 #TODO reput bitset64.ml, but depends on bits.ml which has unclear dependencies
 #TODO ? move some code in  h_parsing ? like error.ml, pp.ml, etc ?
 
-SRC=auxfuns.ml pc.ml lc.ml pc2.ml pp.ml srcmap.ml rx.ml \
+SRC=nopoly.ml \
+  auxfuns.ml pc.ml lc.ml pc2.ml pp.ml srcmap.ml rx.ml \
   verbose.ml strutil.ml \
   reinit.ml \
   error.ml impossible.ml unsupported.ml \
