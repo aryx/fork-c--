@@ -1,1 +1,10 @@
-gzip *.s in test2/
+
+modifs:
+ - gzip *.s in test2/
+ - moved files a lot
+
+related work:
+ - LLVM
+ - VPO
+ - MLRISC
+
