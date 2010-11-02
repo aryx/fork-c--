@@ -5,7 +5,10 @@ TOP=../..
 ##############################################################################
 TARGET=lib
 
-SRC=
+SRC= stdPrims.ml share.ml stdPkl.ml pklInt.ml  \
+   sexpLex.ml sexpPkl.ml \
+   stdPrimsUtil.ml
+
 
 SYSLIBS=
 
@@ -42,9 +45,12 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
+SRCNW=share  pklInt stdPkl stdPrims sexpPkl sexpLex stdPrimsUtil
+
+# TODO rc_scan
+
 sync:
-	$(SYNCWEB) -lang C share.nw share.ml
-	$(SYNCWEB) -lang C share.nw share.mli
+	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done
 
 
 lpdistclean::

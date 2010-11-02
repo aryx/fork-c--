@@ -1,3 +1,3 @@
-/*s: share.mli */
+(*s: share.mli *)
 type 'a share =  DEFv of string * 'a | USEv of string
-/*e: share.mli */
+(*e: share.mli *)

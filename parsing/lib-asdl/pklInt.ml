@@ -1,9 +1,4 @@
-<<pklInt.mli>>=
-val write_int : int -> out_channel -> unit
-val read_int : in_channel -> int
-@ 
-
-<<pklInt.ml>>=
+(*s: pklInt.ml *)
 (* overflow??? *)
 let write_int x s =
   let sign = if x < 0 then -1 else 1 in
@@ -40,4 +35,4 @@ let read_int s =
   let x = input_byte s 
   in loop(x,0,1)
 
-@ 
+(*e: pklInt.ml *)
