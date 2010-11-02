@@ -49,7 +49,8 @@ clean::
 ##############################################################################
 
 SRCNW=auxfuns pc lc pc2 pp srcmap rx verbose strutil \
- error reinit
+ error reinit \
+ 
 
 # TODO rc_scan
 
