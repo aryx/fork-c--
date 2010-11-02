@@ -39,6 +39,7 @@ OCAMLLEX=ocamllex #-ml # -ml for debugging lexer, but slightly slower
 OCAMLYACC=ocamlyacc -v
 OCAMLDEP=ocamldep $(INCLUDES)
 OCAMLMKTOP=ocamlmktop -g -custom $(INCLUDES) -thread
+OCAMLMKLIB=ocamlmklib
 
 # can also be set via 'make static'
 STATIC= #-ccopt -static

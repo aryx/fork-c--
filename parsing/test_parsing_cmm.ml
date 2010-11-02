@@ -11,11 +11,15 @@ let test_tokens_cmm file =
 (*
   Flag_parsing_php.verbose_lexing := true;
   Flag_parsing_php.verbose_parsing := true;
-
-  let toks = Parse_php.tokens file in
-  toks +> List.iter (fun x -> pr2_gen x);
 *)
+
+  let toks = Parse_cmm.tokens file in
+  toks +> List.iter (fun x ->
+    let s = Scan.tok2str x in
+    pr2 s
+  );
   ()
+
 
 let test_parse_cmm file  =
   raise Todo

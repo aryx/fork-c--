@@ -20,4 +20,6 @@ on lindig:
       loading of it is bad; yet another magic stuff happening behind your back)
     * use of literate programing (but not syncweb!)
     * use of code generator a la tarzan for sexp
+ - like pfff
+    * srcmap.ml vs my full_charpos_table and embeded parse_info.ml
 

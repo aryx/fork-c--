@@ -15,13 +15,17 @@ SRC=nopoly.ml \
   verbose.ml strutil.ml \
   reinit.ml \
   error.ml impossible.ml unsupported.ml \
-  bits.ml bitset64.ml \
+  uint64.ml bits.ml bitset64.ml \
+
+COBJS=uint64p.o
 
 SYSLIBS=
 
 LIBS=
 
 INCLUDEDIRS=
+
+OCAMLINCLUDES=-I $(shell ocamlc -where)
 
 ##############################################################################
 # Generic variables
@@ -37,16 +41,19 @@ all.opt:: $(TARGET).cmxa
 opt: all.opt
 
 
-$(TARGET).cma: $(OBJS) $(LIBS)
-	$(OCAMLC) -a -o $(TARGET).cma $(OBJS)
+$(TARGET).cma: $(COBJS) $(OBJS) $(LIBS)
+	$(OCAMLMKLIB) -o lib $(COBJS) $(OBJS)
 
 $(TARGET).cmxa: $(OPTOBJS) $(LIBS:.cma=.cmxa)
-	$(OCAMLOPT) -a -o $(TARGET).cmxa $(OPTOBJS)
+	$(OCAMLOPT) -o lib $(COBJS) $(OPTOBJS)
 
 
 clean::
 	rm -f $(TARGET).top
 
+
+uint64p.o: uint64p.c
+	gcc $(OCAMLINCLUDES) -c uint64p.c
 
 ##############################################################################
 # Literate Programming rules

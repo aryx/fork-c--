@@ -7,6 +7,7 @@ TARGET=lib
 
 SRC= ast.ml astUtil.ml astpp.ml \
      parse.ml scan.ml \
+     parse_cmm.ml \
      test_parsing_cmm.ml
 
 

@@ -15,6 +15,7 @@ TARGET=qc
 SYSLIBS=nums.cma bigarray.cma str.cma unix.cma
 
 LIBS= commons/commons.cma \
+     commons2/lib.cma \
      parsing/lib.cma \
 
 
@@ -95,6 +96,7 @@ purebytecode:
 distclean:: clean
 	set -e; for i in $(MAKESUBDIRS); do $(MAKE) -C $$i $@; done
 	rm -f Makefile.config
+
 
 ##############################################################################
 # Build documentation
