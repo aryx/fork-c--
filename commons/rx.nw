@@ -64,6 +64,8 @@ val matchstr : char rx -> string -> bool
 % ------------------------------------------------------------------ 
 
 <<rx.ml>>=
+let (=*=) = (=)
+
 type 'a rx      = 
                 | RXzero                                (* {}           *)
                 | RXunit                                (* ""           *)

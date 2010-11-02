@@ -5,13 +5,15 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-SRC=
+SRC= ast.ml astUtil.ml \
+     parse.ml scan.ml \
+
 
 SYSLIBS=
 
 LIBS=
 
-INCLUDEDIRS=
+INCLUDEDIRS= $(TOP)/commons $(TOP)/h_asdl
 
 ##############################################################################
 # Generic variables
@@ -37,18 +39,18 @@ $(TARGET).cmxa: $(OPTOBJS) $(LIBS:.cma=.cmxa)
 clean::
 	rm -f $(TARGET).top
 
-#lexer.ml: lexer.mll
-#	$(OCAMLLEX) $<
-#clean::
-#	rm -f lexer.ml
-#beforedepend:: lexer.ml
-#
-#
-#parser.ml parser.mli: parser.mly
-#	$(OCAMLYACC) $<
-#clean::
-#	rm -f parser.ml parser.mli parser.output
-#beforedepend:: parser.ml parser.mli
+scan.ml: scan.mll
+	$(OCAMLLEX) $<
+clean::
+	rm -f scan.ml
+beforedepend:: scan.ml
+
+
+parse.ml parse.mli: parse.mly
+	$(OCAMLYACC) $<
+clean::
+	rm -f parse.ml parse.mli parse.output
+beforedepend:: parse.ml parse.mli
 
 # requires zephyr, so put in vcs for now to avoid some dependencies
 #ast.ml:  astl.asdl

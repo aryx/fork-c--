@@ -1,14 +1,18 @@
 auxfuns.cmi: 
+error.cmi: srcmap.cmi 
 lc.cmi: 
 pc.cmi: 
 pc2.cmi: 
 pp.cmi: 
+reinit.cmi: 
 rx.cmi: 
 srcmap.cmi: 
 strutil.cmi: 
 verbose.cmi: 
 auxfuns.cmo: auxfuns.cmi 
 auxfuns.cmx: auxfuns.cmi 
+error.cmo: srcmap.cmi error.cmi 
+error.cmx: srcmap.cmx error.cmi 
 lc.cmo: lc.cmi 
 lc.cmx: lc.cmi 
 pc.cmo: pc.cmi 
@@ -17,6 +21,8 @@ pc2.cmo: pc2.cmi
 pc2.cmx: pc2.cmi 
 pp.cmo: pp.cmi 
 pp.cmx: pp.cmi 
+reinit.cmo: reinit.cmi 
+reinit.cmx: reinit.cmi 
 rx.cmo: rx.cmi 
 rx.cmx: rx.cmi 
 srcmap.cmo: srcmap.cmi 

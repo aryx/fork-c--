@@ -1,0 +1,6806 @@
+   0  $accept : %entry% $end
+
+   1  program : toplevels
+
+   2  toplevels : toplevels toplevelAt
+   3            |
+
+   4  toplevelAt : toplevel
+
+   5  toplevel : SECTION STR LBRACE sections RBRACE
+   6           | procedure
+   7           | declAt
+
+   8  sections : sections sectionAt
+   9           |
+
+  10  sectionAt : section
+
+  11  section : procedure
+  12          | datum
+  13          | span
+  14          | declAt
+
+  15  declAt : decl
+
+  16  decl : INVARIANT registers SEMI
+  17       | registers SEMI
+  18       | INVARIANT REGISTER registers SEMI
+  19       | REGISTER registers SEMI
+  20       | EXPORT ty exports SEMI
+  21       | EXPORT exports SEMI
+  22       | IMPORT ty imports SEMI
+  23       | IMPORT imports SEMI
+  24       | CONST ID EQUAL exprAt SEMI
+  25       | CONST ty ID EQUAL exprAt SEMI
+  26       | TYPEDEF ty names SEMI
+  27       | TARGET properties SEMI
+
+  28  uint : SINT
+  29       | UINT
+
+  30  property : MEMSIZE uint
+  31           | BYTEORDER BIG
+  32           | BYTEORDER LITTLE
+  33           | FLOATREPR STR
+  34           | CHARSET STR
+  35           | PTRSIZE uint
+  36           | WRDSIZE uint
+
+  37  properties : properties property
+  38             |
+
+  39  span : SPAN sexprAt exprAt LBRACE sections RBRACE
+
+  40  datumAt : datum
+
+  41  datum : ID COLON
+  42        | ALIGN uint SEMI
+  43        | tyAt size opt_initAt SEMI
+
+  44  opt_initAt : initAt
+  45             |
+
+  46  initAt : init
+
+  47  init : LBRACE exprs RBRACE
+  48       | LBRACE RBRACE
+  49       | STR
+  50       | string16
+
+  51  registers : STR tyAt regs opt_comma
+  52            | tyAt regs opt_comma
+
+  53  regs : regs COMMA ID optEq STR
+  54       | regs COMMA ID
+  55       | ID optEq STR
+  56       | ID
+
+  57  optEq :
+  58        | EQUAL
+
+  59  size : LBRACKET exprAt RBRACKET
+  60       | LBRACKET RBRACKET
+  61       |
+
+  62  procedure : conv ID frmls body
+  63            | ID frmls body
+
+  64  body : LBRACE body0 RBRACE
+
+  65  body0 : body0 bodyAt
+  66        |
+
+  67  bodyAt : body1
+
+  68  body1 : declAt
+  69        | stackdecl
+  70        | stmtAt
+
+  71  frmls : LPAREN formals RPAREN
+  72        | LPAREN RPAREN
+
+  73  actls : LPAREN actuals RPAREN
+  74        | LPAREN RPAREN
+
+  75  formals : formals_ opt_comma
+
+  76  formals_ : formals_ COMMA formal
+  77           | formal
+
+  78  actuals : actuals_ opt_comma
+
+  79  actuals_ : actuals_ COMMA actual
+  80           | actual
+
+  81  formal : bare_formal
+
+  82  bare_formal : opt_kind opt_invariant opt_register tyAt ID opt_aligned
+
+  83  opt_kind : STR
+  84           |
+
+  85  opt_invariant : INVARIANT
+  86                |
+
+  87  opt_register : REGISTER
+  88               |
+
+  89  cformal : opt_kind ID opt_aligned
+
+  90  cformals : cformals_ opt_comma
+  91           | opt_comma
+
+  92  cformals_ : cformals_ COMMA cformal
+  93            | cformal
+
+  94  actual : opt_kind exprAt opt_aligned
+
+  95  stackdecl : STACKDATA LBRACE data RBRACE
+
+  96  data : data datumAt
+  97       |
+
+  98  conv : FOREIGN STR
+
+  99  aligned : ALIGNED uint
+
+ 100  flowAt : flow
+
+ 101  flow : ALSO CUTS TO names
+ 102       | ALSO UNWINDS TO names
+ 103       | ALSO RETURNS TO names
+ 104       | ALSO ABORTS
+ 105       | NEVER RETURNS
+
+ 106  flows : flows flowAt
+ 107        |
+
+ 108  targets : TARGETS names
+ 109          |
+
+ 110  aliasAt : alias
+
+ 111  alias : READS opt_names
+ 112        | WRITES opt_names
+
+ 113  procanns : procanns flowAt
+ 114           | procanns aliasAt
+ 115           |
+
+ 116  nameOrMemAt : nameOrMem
+
+ 117  nameOrMem : nameOrMem0
+ 118            | ID aligned
+ 119            | STR ID opt_aligned
+
+ 120  nameOrMemAt0 : nameOrMem0
+
+ 121  nameOrMem0 : ID
+ 122             | mem_type LBRACKET exprAt mem_properties RBRACKET
+
+ 123  mem_type : sty
+ 124           | ID
+
+ 125  mem_properties : aligned opt_in_ids
+ 126                 | IN ids opt_aligned
+ 127                 |
+
+ 128  opt_aligned :
+ 129              | aligned
+
+ 130  opt_in_ids :
+ 131             | IN ids
+
+ 132  ids : ID
+ 133      | ID COMMA ids
+
+ 134  nameOrMems : nameOrMems_ opt_comma
+
+ 135  nameOrMems_ : nameOrMems_ COMMA nameOrMemAt
+ 136              | nameOrMemAt
+
+ 137  tyAt : ty
+
+ 138  ty : sty
+ 139     | ID
+
+ 140  sty : BITSn
+
+ 141  returnto : LT sexprAt SLASH sexprAt GT
+ 142           |
+
+ 143  stmtAt : stmt
+
+ 144  stmt : SEMI
+ 145       | ID COLON
+ 146       | SPAN sexprAt sexprAt body
+ 147       | nameOrMems EQUAL exprs SEMI
+ 148       | nameOrMems EQUAL conv PPERCENT ID actls flows SEMI
+ 149       | conv PPERCENT ID actls flows SEMI
+ 150       | nameOrMems EQUAL conv expr actls targets procanns SEMI
+ 151       | conv expr actls targets procanns SEMI
+ 152       | nameOrMems EQUAL PPERCENT ID actls flows SEMI
+ 153       | PPERCENT ID actls flows SEMI
+ 154       | nameOrMems EQUAL expr actls targets procanns SEMI
+ 155       | expr actls targets procanns SEMI
+ 156       | IF exprAt body
+ 157       | IF exprAt body ELSE body
+ 158       | GOTO exprAt targets SEMI
+ 159       | CONTINUATION ID LPAREN cformals RPAREN COLON
+ 160       | CUT TO expr actls flows SEMI
+ 161       | LIMITCHECK exprAt limitfailure SEMI
+ 162       | conv JUMP exprAt targets SEMI
+ 163       | JUMP exprAt targets SEMI
+ 164       | conv JUMP exprAt actls targets SEMI
+ 165       | JUMP exprAt actls targets SEMI
+ 166       | conv RETURN returnto SEMI
+ 167       | RETURN returnto SEMI
+ 168       | conv RETURN returnto actls SEMI
+ 169       | RETURN returnto actls SEMI
+ 170       | SWITCH srange expr LBRACE arms RBRACE
+
+ 171  limitfailure : FAILS TO exprAt
+ 172               |
+
+ 173  srange : LBRACKET range RBRACKET
+ 174         |
+
+ 175  range : expr
+ 176        | expr DOTDOT expr
+
+ 177  ranges : ranges_
+ 178         | ranges_ COMMA
+ 179         |
+
+ 180  ranges_ : ranges_ COMMA range
+ 181          | range
+
+ 182  arms : arms armAt
+ 183       |
+
+ 184  armAt : arm
+
+ 185  arm : CASE ranges COLON body
+
+ 186  sexprAt : sexpr
+
+ 187  sexpr : SINT opt_colon_ty
+ 188        | UINT opt_colon_ty
+ 189        | FLT opt_colon_ty
+ 190        | CHAR opt_colon_ty
+ 191        | nameOrMemAt0
+ 192        | PRIMOP
+ 193        | LPAREN exprAt RPAREN
+
+ 194  opt_colon_ty : CCOLON tyAt
+ 195               |
+
+ 196  exprAt : expr
+
+ 197  expr : sexpr
+ 198       | PRIMOP actls
+ 199       | exprAt PLUS exprAt
+ 200       | exprAt MINUS exprAt
+ 201       | exprAt PERCENT exprAt
+ 202       | exprAt STAR exprAt
+ 203       | exprAt SLASH exprAt
+ 204       | exprAt LLESS exprAt
+ 205       | exprAt GGREATER exprAt
+ 206       | exprAt CARET exprAt
+ 207       | exprAt BAR exprAt
+ 208       | exprAt AMPERSAND exprAt
+ 209       | exprAt EEQ exprAt
+ 210       | exprAt NEQ exprAt
+ 211       | exprAt LT exprAt
+ 212       | exprAt LEQ exprAt
+ 213       | exprAt GEQ exprAt
+ 214       | exprAt GT exprAt
+ 215       | exprAt INFIXOP exprAt
+ 216       | TILDE exprAt
+ 217       | MINUS exprAt
+
+ 218  exprs : exprs_ opt_comma
+
+ 219  exprs_ : exprs_ COMMA exprAt
+ 220         | exprAt
+
+ 221  imports : imports_ opt_comma
+
+ 222  imports_ : imports_ COMMA STR AS ID
+ 223           | imports_ COMMA ID
+ 224           | STR AS ID
+ 225           | ID
+
+ 226  exports : exports_ opt_comma
+
+ 227  exports_ : exports_ COMMA ID AS STR
+ 228           | exports_ COMMA ID
+ 229           | ID AS STR
+ 230           | ID
+
+ 231  names : names_ opt_comma
+
+ 232  names_ : names_ COMMA ID
+ 233         | ID
+
+ 234  opt_names : names
+ 235            |
+
+ 236  opt_comma : COMMA
+ 237            |
+
+ 238  string16 : UNICODE LPAREN STR RPAREN
+
+ 239  %entry% : '\001' program
+
+state 0
+	$accept : . %entry% $end  (0)
+
+	'\001'  shift 1
+	.  error
+
+	%entry%  goto 2
+
+
+state 1
+	%entry% : '\001' . program  (239)
+	toplevels : .  (3)
+
+	.  reduce 3
+
+	program  goto 3
+	toplevels  goto 4
+
+
+state 2
+	$accept : %entry% . $end  (0)
+
+	$end  accept
+
+
+state 3
+	%entry% : '\001' program .  (239)
+
+	.  reduce 239
+
+
+state 4
+	program : toplevels .  (1)
+	toplevels : toplevels . toplevelAt  (2)
+
+	CONST  shift 5
+	EXPORT  shift 6
+	FOREIGN  shift 7
+	IMPORT  shift 8
+	INVARIANT  shift 9
+	REGISTER  shift 10
+	SECTION  shift 11
+	TARGET  shift 12
+	TYPEDEF  shift 13
+	ID  shift 14
+	STR  shift 15
+	BITSn  shift 16
+	$end  reduce 1
+
+	toplevelAt  goto 17
+	toplevel  goto 18
+	procedure  goto 19
+	declAt  goto 20
+	decl  goto 21
+	registers  goto 22
+	ty  goto 23
+	tyAt  goto 24
+	conv  goto 25
+	sty  goto 26
+
+
+state 5
+	decl : CONST . ID EQUAL exprAt SEMI  (24)
+	decl : CONST . ty ID EQUAL exprAt SEMI  (25)
+
+	ID  shift 27
+	BITSn  shift 16
+	.  error
+
+	ty  goto 28
+	sty  goto 26
+
+
+state 6
+	decl : EXPORT . ty exports SEMI  (20)
+	decl : EXPORT . exports SEMI  (21)
+
+	ID  shift 29
+	BITSn  shift 16
+	.  error
+
+	ty  goto 30
+	exports  goto 31
+	sty  goto 26
+	exports_  goto 32
+
+
+state 7
+	conv : FOREIGN . STR  (98)
+
+	STR  shift 33
+	.  error
+
+
+state 8
+	decl : IMPORT . ty imports SEMI  (22)
+	decl : IMPORT . imports SEMI  (23)
+
+	ID  shift 34
+	STR  shift 35
+	BITSn  shift 16
+	.  error
+
+	ty  goto 36
+	imports  goto 37
+	sty  goto 26
+	imports_  goto 38
+
+
+state 9
+	decl : INVARIANT . registers SEMI  (16)
+	decl : INVARIANT . REGISTER registers SEMI  (18)
+
+	REGISTER  shift 39
+	ID  shift 40
+	STR  shift 15
+	BITSn  shift 16
+	.  error
+
+	registers  goto 41
+	ty  goto 23
+	tyAt  goto 24
+	sty  goto 26
+
+
+state 10
+	decl : REGISTER . registers SEMI  (19)
+
+	ID  shift 40
+	STR  shift 15
+	BITSn  shift 16
+	.  error
+
+	registers  goto 42
+	ty  goto 23
+	tyAt  goto 24
+	sty  goto 26
+
+
+state 11
+	toplevel : SECTION . STR LBRACE sections RBRACE  (5)
+
+	STR  shift 43
+	.  error
+
+
+state 12
+	decl : TARGET . properties SEMI  (27)
+	properties : .  (38)
+
+	.  reduce 38
+
+	properties  goto 44
+
+
+state 13
+	decl : TYPEDEF . ty names SEMI  (26)
+
+	ID  shift 40
+	BITSn  shift 16
+	.  error
+
+	ty  goto 45
+	sty  goto 26
+
+
+state 14
+	procedure : ID . frmls body  (63)
+	ty : ID .  (139)
+
+	LPAREN  shift 46
+	ID  reduce 139
+
+	frmls  goto 47
+
+
+state 15
+	registers : STR . tyAt regs opt_comma  (51)
+
+	ID  shift 40
+	BITSn  shift 16
+	.  error
+
+	ty  goto 23
+	tyAt  goto 48
+	sty  goto 26
+
+
+state 16
+	sty : BITSn .  (140)
+
+	.  reduce 140
+
+
+state 17
+	toplevels : toplevels toplevelAt .  (2)
+
+	.  reduce 2
+
+
+state 18
+	toplevelAt : toplevel .  (4)
+
+	.  reduce 4
+
+
+state 19
+	toplevel : procedure .  (6)
+
+	.  reduce 6
+
+
+state 20
+	toplevel : declAt .  (7)
+
+	.  reduce 7
+
+
+state 21
+	declAt : decl .  (15)
+
+	.  reduce 15
+
+
+state 22
+	decl : registers . SEMI  (17)
+
+	SEMI  shift 49
+	.  error
+
+
+state 23
+	tyAt : ty .  (137)
+
+	.  reduce 137
+
+
+state 24
+	registers : tyAt . regs opt_comma  (52)
+
+	ID  shift 50
+	.  error
+
+	regs  goto 51
+
+
+state 25
+	procedure : conv . ID frmls body  (62)
+
+	ID  shift 52
+	.  error
+
+
+state 26
+	ty : sty .  (138)
+
+	.  reduce 138
+
+
+state 27
+	decl : CONST ID . EQUAL exprAt SEMI  (24)
+	ty : ID .  (139)
+
+	EQUAL  shift 53
+	ID  reduce 139
+
+
+state 28
+	decl : CONST ty . ID EQUAL exprAt SEMI  (25)
+
+	ID  shift 54
+	.  error
+
+
+state 29
+	ty : ID .  (139)
+	exports_ : ID . AS STR  (229)
+	exports_ : ID .  (230)
+
+	AS  shift 55
+	COMMA  reduce 230
+	SEMI  reduce 230
+	ID  reduce 139
+
+
+state 30
+	decl : EXPORT ty . exports SEMI  (20)
+
+	ID  shift 56
+	.  error
+
+	exports  goto 57
+	exports_  goto 32
+
+
+state 31
+	decl : EXPORT exports . SEMI  (21)
+
+	SEMI  shift 58
+	.  error
+
+
+state 32
+	exports : exports_ . opt_comma  (226)
+	exports_ : exports_ . COMMA ID AS STR  (227)
+	exports_ : exports_ . COMMA ID  (228)
+	opt_comma : .  (237)
+
+	COMMA  shift 59
+	SEMI  reduce 237
+
+	opt_comma  goto 60
+
+
+state 33
+	conv : FOREIGN STR .  (98)
+
+	.  reduce 98
+
+
+state 34
+	ty : ID .  (139)
+	imports_ : ID .  (225)
+
+	COMMA  reduce 225
+	SEMI  reduce 225
+	ID  reduce 139
+	STR  reduce 139
+
+
+state 35
+	imports_ : STR . AS ID  (224)
+
+	AS  shift 61
+	.  error
+
+
+state 36
+	decl : IMPORT ty . imports SEMI  (22)
+
+	ID  shift 62
+	STR  shift 35
+	.  error
+
+	imports  goto 63
+	imports_  goto 38
+
+
+state 37
+	decl : IMPORT imports . SEMI  (23)
+
+	SEMI  shift 64
+	.  error
+
+
+state 38
+	imports : imports_ . opt_comma  (221)
+	imports_ : imports_ . COMMA STR AS ID  (222)
+	imports_ : imports_ . COMMA ID  (223)
+	opt_comma : .  (237)
+
+	COMMA  shift 65
+	SEMI  reduce 237
+
+	opt_comma  goto 66
+
+
+state 39
+	decl : INVARIANT REGISTER . registers SEMI  (18)
+
+	ID  shift 40
+	STR  shift 15
+	BITSn  shift 16
+	.  error
+
+	registers  goto 67
+	ty  goto 23
+	tyAt  goto 24
+	sty  goto 26
+
+
+state 40
+	ty : ID .  (139)
+
+	.  reduce 139
+
+
+state 41
+	decl : INVARIANT registers . SEMI  (16)
+
+	SEMI  shift 68
+	.  error
+
+
+state 42
+	decl : REGISTER registers . SEMI  (19)
+
+	SEMI  shift 69
+	.  error
+
+
+state 43
+	toplevel : SECTION STR . LBRACE sections RBRACE  (5)
+
+	LBRACE  shift 70
+	.  error
+
+
+state 44
+	decl : TARGET properties . SEMI  (27)
+	properties : properties . property  (37)
+
+	BYTEORDER  shift 71
+	MEMSIZE  shift 72
+	SEMI  shift 73
+	WRDSIZE  shift 74
+	PTRSIZE  shift 75
+	FLOATREPR  shift 76
+	CHARSET  shift 77
+	.  error
+
+	property  goto 78
+
+
+state 45
+	decl : TYPEDEF ty . names SEMI  (26)
+
+	ID  shift 79
+	.  error
+
+	names  goto 80
+	names_  goto 81
+
+
+state 46
+	frmls : LPAREN . formals RPAREN  (71)
+	frmls : LPAREN . RPAREN  (72)
+	opt_kind : .  (84)
+
+	RPAREN  shift 82
+	STR  shift 83
+	INVARIANT  reduce 84
+	REGISTER  reduce 84
+	ID  reduce 84
+	BITSn  reduce 84
+
+	formals  goto 84
+	formals_  goto 85
+	formal  goto 86
+	bare_formal  goto 87
+	opt_kind  goto 88
+
+
+state 47
+	procedure : ID frmls . body  (63)
+
+	LBRACE  shift 89
+	.  error
+
+	body  goto 90
+
+
+state 48
+	registers : STR tyAt . regs opt_comma  (51)
+
+	ID  shift 50
+	.  error
+
+	regs  goto 91
+
+
+state 49
+	decl : registers SEMI .  (17)
+
+	.  reduce 17
+
+
+state 50
+	regs : ID . optEq STR  (55)
+	regs : ID .  (56)
+	optEq : .  (57)
+
+	EQUAL  shift 92
+	COMMA  reduce 56
+	SEMI  reduce 56
+	STR  reduce 57
+
+	optEq  goto 93
+
+
+state 51
+	registers : tyAt regs . opt_comma  (52)
+	regs : regs . COMMA ID optEq STR  (53)
+	regs : regs . COMMA ID  (54)
+	opt_comma : .  (237)
+
+	COMMA  shift 94
+	SEMI  reduce 237
+
+	opt_comma  goto 95
+
+
+state 52
+	procedure : conv ID . frmls body  (62)
+
+	LPAREN  shift 46
+	.  error
+
+	frmls  goto 96
+
+
+state 53
+	decl : CONST ID EQUAL . exprAt SEMI  (24)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 106
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 54
+	decl : CONST ty ID . EQUAL exprAt SEMI  (25)
+
+	EQUAL  shift 113
+	.  error
+
+
+state 55
+	exports_ : ID AS . STR  (229)
+
+	STR  shift 114
+	.  error
+
+
+state 56
+	exports_ : ID . AS STR  (229)
+	exports_ : ID .  (230)
+
+	AS  shift 55
+	COMMA  reduce 230
+	SEMI  reduce 230
+
+
+state 57
+	decl : EXPORT ty exports . SEMI  (20)
+
+	SEMI  shift 115
+	.  error
+
+
+state 58
+	decl : EXPORT exports SEMI .  (21)
+
+	.  reduce 21
+
+
+state 59
+	exports_ : exports_ COMMA . ID AS STR  (227)
+	exports_ : exports_ COMMA . ID  (228)
+	opt_comma : COMMA .  (236)
+
+	ID  shift 116
+	SEMI  reduce 236
+
+
+state 60
+	exports : exports_ opt_comma .  (226)
+
+	.  reduce 226
+
+
+state 61
+	imports_ : STR AS . ID  (224)
+
+	ID  shift 117
+	.  error
+
+
+state 62
+	imports_ : ID .  (225)
+
+	.  reduce 225
+
+
+state 63
+	decl : IMPORT ty imports . SEMI  (22)
+
+	SEMI  shift 118
+	.  error
+
+
+state 64
+	decl : IMPORT imports SEMI .  (23)
+
+	.  reduce 23
+
+
+state 65
+	imports_ : imports_ COMMA . STR AS ID  (222)
+	imports_ : imports_ COMMA . ID  (223)
+	opt_comma : COMMA .  (236)
+
+	ID  shift 119
+	STR  shift 120
+	SEMI  reduce 236
+
+
+state 66
+	imports : imports_ opt_comma .  (221)
+
+	.  reduce 221
+
+
+state 67
+	decl : INVARIANT REGISTER registers . SEMI  (18)
+
+	SEMI  shift 121
+	.  error
+
+
+state 68
+	decl : INVARIANT registers SEMI .  (16)
+
+	.  reduce 16
+
+
+state 69
+	decl : REGISTER registers SEMI .  (19)
+
+	.  reduce 19
+
+
+state 70
+	toplevel : SECTION STR LBRACE . sections RBRACE  (5)
+	sections : .  (9)
+
+	.  reduce 9
+
+	sections  goto 122
+
+
+state 71
+	property : BYTEORDER . BIG  (31)
+	property : BYTEORDER . LITTLE  (32)
+
+	BIG  shift 123
+	LITTLE  shift 124
+	.  error
+
+
+state 72
+	property : MEMSIZE . uint  (30)
+
+	SINT  shift 125
+	UINT  shift 126
+	.  error
+
+	uint  goto 127
+
+
+state 73
+	decl : TARGET properties SEMI .  (27)
+
+	.  reduce 27
+
+
+state 74
+	property : WRDSIZE . uint  (36)
+
+	SINT  shift 125
+	UINT  shift 126
+	.  error
+
+	uint  goto 128
+
+
+state 75
+	property : PTRSIZE . uint  (35)
+
+	SINT  shift 125
+	UINT  shift 126
+	.  error
+
+	uint  goto 129
+
+
+state 76
+	property : FLOATREPR . STR  (33)
+
+	STR  shift 130
+	.  error
+
+
+state 77
+	property : CHARSET . STR  (34)
+
+	STR  shift 131
+	.  error
+
+
+state 78
+	properties : properties property .  (37)
+
+	.  reduce 37
+
+
+state 79
+	names_ : ID .  (233)
+
+	.  reduce 233
+
+
+state 80
+	decl : TYPEDEF ty names . SEMI  (26)
+
+	SEMI  shift 132
+	.  error
+
+
+state 81
+	names : names_ . opt_comma  (231)
+	names_ : names_ . COMMA ID  (232)
+	opt_comma : .  (237)
+
+	COMMA  shift 133
+	ALSO  reduce 237
+	NEVER  reduce 237
+	READS  reduce 237
+	SEMI  reduce 237
+	WRITES  reduce 237
+
+	opt_comma  goto 134
+
+
+state 82
+	frmls : LPAREN RPAREN .  (72)
+
+	.  reduce 72
+
+
+state 83
+	opt_kind : STR .  (83)
+
+	.  reduce 83
+
+
+state 84
+	frmls : LPAREN formals . RPAREN  (71)
+
+	RPAREN  shift 135
+	.  error
+
+
+state 85
+	formals : formals_ . opt_comma  (75)
+	formals_ : formals_ . COMMA formal  (76)
+	opt_comma : .  (237)
+
+	COMMA  shift 136
+	RPAREN  reduce 237
+
+	opt_comma  goto 137
+
+
+state 86
+	formals_ : formal .  (77)
+
+	.  reduce 77
+
+
+state 87
+	formal : bare_formal .  (81)
+
+	.  reduce 81
+
+
+state 88
+	bare_formal : opt_kind . opt_invariant opt_register tyAt ID opt_aligned  (82)
+	opt_invariant : .  (86)
+
+	INVARIANT  shift 138
+	REGISTER  reduce 86
+	ID  reduce 86
+	BITSn  reduce 86
+
+	opt_invariant  goto 139
+
+
+state 89
+	body : LBRACE . body0 RBRACE  (64)
+	body0 : .  (66)
+
+	.  reduce 66
+
+	body0  goto 140
+
+
+state 90
+	procedure : ID frmls body .  (63)
+
+	.  reduce 63
+
+
+state 91
+	registers : STR tyAt regs . opt_comma  (51)
+	regs : regs . COMMA ID optEq STR  (53)
+	regs : regs . COMMA ID  (54)
+	opt_comma : .  (237)
+
+	COMMA  shift 94
+	SEMI  reduce 237
+
+	opt_comma  goto 141
+
+
+state 92
+	optEq : EQUAL .  (58)
+
+	.  reduce 58
+
+
+state 93
+	regs : ID optEq . STR  (55)
+
+	STR  shift 142
+	.  error
+
+
+state 94
+	regs : regs COMMA . ID optEq STR  (53)
+	regs : regs COMMA . ID  (54)
+	opt_comma : COMMA .  (236)
+
+	ID  shift 143
+	SEMI  reduce 236
+
+
+state 95
+	registers : tyAt regs opt_comma .  (52)
+
+	.  reduce 52
+
+
+state 96
+	procedure : conv ID frmls . body  (62)
+
+	LBRACE  shift 89
+	.  error
+
+	body  goto 144
+
+
+state 97
+	sexpr : LPAREN . exprAt RPAREN  (193)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 145
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 98
+	expr : MINUS . exprAt  (217)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 146
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 99
+	expr : TILDE . exprAt  (216)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 147
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 100
+	sexpr : PRIMOP .  (192)
+	expr : PRIMOP . actls  (198)
+
+	LPAREN  shift 148
+	ALIGNED  reduce 192
+	AMPERSAND  reduce 192
+	COLON  reduce 192
+	COMMA  reduce 192
+	DOTDOT  reduce 192
+	FAILS  reduce 192
+	IN  reduce 192
+	INFIXOP  reduce 192
+	LBRACE  reduce 192
+	RBRACE  reduce 192
+	RBRACKET  reduce 192
+	RPAREN  reduce 192
+	SEMI  reduce 192
+	TARGETS  reduce 192
+	EEQ  reduce 192
+	NEQ  reduce 192
+	LT  reduce 192
+	LEQ  reduce 192
+	GT  reduce 192
+	GEQ  reduce 192
+	BAR  reduce 192
+	CARET  reduce 192
+	LLESS  reduce 192
+	GGREATER  reduce 192
+	PLUS  reduce 192
+	MINUS  reduce 192
+	PERCENT  reduce 192
+	STAR  reduce 192
+	SLASH  reduce 192
+
+	actls  goto 149
+
+
+state 101
+	nameOrMem0 : ID .  (121)
+	mem_type : ID .  (124)
+
+	ALIGNED  reduce 121
+	AMPERSAND  reduce 121
+	COLON  reduce 121
+	COMMA  reduce 121
+	DOTDOT  reduce 121
+	FAILS  reduce 121
+	IN  reduce 121
+	INFIXOP  reduce 121
+	LBRACE  reduce 121
+	LBRACKET  reduce 124
+	LPAREN  reduce 121
+	RBRACE  reduce 121
+	RBRACKET  reduce 121
+	RPAREN  reduce 121
+	SEMI  reduce 121
+	TARGETS  reduce 121
+	EEQ  reduce 121
+	NEQ  reduce 121
+	LT  reduce 121
+	LEQ  reduce 121
+	GT  reduce 121
+	GEQ  reduce 121
+	BAR  reduce 121
+	CARET  reduce 121
+	LLESS  reduce 121
+	GGREATER  reduce 121
+	PLUS  reduce 121
+	MINUS  reduce 121
+	PERCENT  reduce 121
+	STAR  reduce 121
+	SLASH  reduce 121
+	TILDE  reduce 121
+	PRIMOP  reduce 121
+	ID  reduce 121
+	BITSn  reduce 121
+	SINT  reduce 121
+	UINT  reduce 121
+	FLT  reduce 121
+	CHAR  reduce 121
+
+
+state 102
+	sexpr : SINT . opt_colon_ty  (187)
+	opt_colon_ty : .  (195)
+
+	CCOLON  shift 150
+	ALIGNED  reduce 195
+	AMPERSAND  reduce 195
+	COLON  reduce 195
+	COMMA  reduce 195
+	DOTDOT  reduce 195
+	FAILS  reduce 195
+	IN  reduce 195
+	INFIXOP  reduce 195
+	LBRACE  reduce 195
+	LPAREN  reduce 195
+	RBRACE  reduce 195
+	RBRACKET  reduce 195
+	RPAREN  reduce 195
+	SEMI  reduce 195
+	TARGETS  reduce 195
+	EEQ  reduce 195
+	NEQ  reduce 195
+	LT  reduce 195
+	LEQ  reduce 195
+	GT  reduce 195
+	GEQ  reduce 195
+	BAR  reduce 195
+	CARET  reduce 195
+	LLESS  reduce 195
+	GGREATER  reduce 195
+	PLUS  reduce 195
+	MINUS  reduce 195
+	PERCENT  reduce 195
+	STAR  reduce 195
+	SLASH  reduce 195
+	TILDE  reduce 195
+	PRIMOP  reduce 195
+	ID  reduce 195
+	BITSn  reduce 195
+	SINT  reduce 195
+	UINT  reduce 195
+	FLT  reduce 195
+	CHAR  reduce 195
+
+	opt_colon_ty  goto 151
+
+
+state 103
+	sexpr : UINT . opt_colon_ty  (188)
+	opt_colon_ty : .  (195)
+
+	CCOLON  shift 150
+	ALIGNED  reduce 195
+	AMPERSAND  reduce 195
+	COLON  reduce 195
+	COMMA  reduce 195
+	DOTDOT  reduce 195
+	FAILS  reduce 195
+	IN  reduce 195
+	INFIXOP  reduce 195
+	LBRACE  reduce 195
+	LPAREN  reduce 195
+	RBRACE  reduce 195
+	RBRACKET  reduce 195
+	RPAREN  reduce 195
+	SEMI  reduce 195
+	TARGETS  reduce 195
+	EEQ  reduce 195
+	NEQ  reduce 195
+	LT  reduce 195
+	LEQ  reduce 195
+	GT  reduce 195
+	GEQ  reduce 195
+	BAR  reduce 195
+	CARET  reduce 195
+	LLESS  reduce 195
+	GGREATER  reduce 195
+	PLUS  reduce 195
+	MINUS  reduce 195
+	PERCENT  reduce 195
+	STAR  reduce 195
+	SLASH  reduce 195
+	TILDE  reduce 195
+	PRIMOP  reduce 195
+	ID  reduce 195
+	BITSn  reduce 195
+	SINT  reduce 195
+	UINT  reduce 195
+	FLT  reduce 195
+	CHAR  reduce 195
+
+	opt_colon_ty  goto 152
+
+
+state 104
+	sexpr : FLT . opt_colon_ty  (189)
+	opt_colon_ty : .  (195)
+
+	CCOLON  shift 150
+	ALIGNED  reduce 195
+	AMPERSAND  reduce 195
+	COLON  reduce 195
+	COMMA  reduce 195
+	DOTDOT  reduce 195
+	FAILS  reduce 195
+	IN  reduce 195
+	INFIXOP  reduce 195
+	LBRACE  reduce 195
+	LPAREN  reduce 195
+	RBRACE  reduce 195
+	RBRACKET  reduce 195
+	RPAREN  reduce 195
+	SEMI  reduce 195
+	TARGETS  reduce 195
+	EEQ  reduce 195
+	NEQ  reduce 195
+	LT  reduce 195
+	LEQ  reduce 195
+	GT  reduce 195
+	GEQ  reduce 195
+	BAR  reduce 195
+	CARET  reduce 195
+	LLESS  reduce 195
+	GGREATER  reduce 195
+	PLUS  reduce 195
+	MINUS  reduce 195
+	PERCENT  reduce 195
+	STAR  reduce 195
+	SLASH  reduce 195
+	TILDE  reduce 195
+	PRIMOP  reduce 195
+	ID  reduce 195
+	BITSn  reduce 195
+	SINT  reduce 195
+	UINT  reduce 195
+	FLT  reduce 195
+	CHAR  reduce 195
+
+	opt_colon_ty  goto 153
+
+
+state 105
+	sexpr : CHAR . opt_colon_ty  (190)
+	opt_colon_ty : .  (195)
+
+	CCOLON  shift 150
+	ALIGNED  reduce 195
+	AMPERSAND  reduce 195
+	COLON  reduce 195
+	COMMA  reduce 195
+	DOTDOT  reduce 195
+	FAILS  reduce 195
+	IN  reduce 195
+	INFIXOP  reduce 195
+	LBRACE  reduce 195
+	LPAREN  reduce 195
+	RBRACE  reduce 195
+	RBRACKET  reduce 195
+	RPAREN  reduce 195
+	SEMI  reduce 195
+	TARGETS  reduce 195
+	EEQ  reduce 195
+	NEQ  reduce 195
+	LT  reduce 195
+	LEQ  reduce 195
+	GT  reduce 195
+	GEQ  reduce 195
+	BAR  reduce 195
+	CARET  reduce 195
+	LLESS  reduce 195
+	GGREATER  reduce 195
+	PLUS  reduce 195
+	MINUS  reduce 195
+	PERCENT  reduce 195
+	STAR  reduce 195
+	SLASH  reduce 195
+	TILDE  reduce 195
+	PRIMOP  reduce 195
+	ID  reduce 195
+	BITSn  reduce 195
+	SINT  reduce 195
+	UINT  reduce 195
+	FLT  reduce 195
+	CHAR  reduce 195
+
+	opt_colon_ty  goto 154
+
+
+state 106
+	decl : CONST ID EQUAL exprAt . SEMI  (24)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	SEMI  shift 157
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	.  error
+
+
+state 107
+	nameOrMemAt0 : nameOrMem0 .  (120)
+
+	.  reduce 120
+
+
+state 108
+	sexpr : nameOrMemAt0 .  (191)
+
+	.  reduce 191
+
+
+state 109
+	nameOrMem0 : mem_type . LBRACKET exprAt mem_properties RBRACKET  (122)
+
+	LBRACKET  shift 173
+	.  error
+
+
+state 110
+	mem_type : sty .  (123)
+
+	.  reduce 123
+
+
+state 111
+	exprAt : expr .  (196)
+
+	.  reduce 196
+
+
+state 112
+	expr : sexpr .  (197)
+
+	.  reduce 197
+
+
+state 113
+	decl : CONST ty ID EQUAL . exprAt SEMI  (25)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 174
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 114
+	exports_ : ID AS STR .  (229)
+
+	.  reduce 229
+
+
+state 115
+	decl : EXPORT ty exports SEMI .  (20)
+
+	.  reduce 20
+
+
+state 116
+	exports_ : exports_ COMMA ID . AS STR  (227)
+	exports_ : exports_ COMMA ID .  (228)
+
+	AS  shift 175
+	COMMA  reduce 228
+	SEMI  reduce 228
+
+
+state 117
+	imports_ : STR AS ID .  (224)
+
+	.  reduce 224
+
+
+state 118
+	decl : IMPORT ty imports SEMI .  (22)
+
+	.  reduce 22
+
+
+state 119
+	imports_ : imports_ COMMA ID .  (223)
+
+	.  reduce 223
+
+
+state 120
+	imports_ : imports_ COMMA STR . AS ID  (222)
+
+	AS  shift 176
+	.  error
+
+
+state 121
+	decl : INVARIANT REGISTER registers SEMI .  (18)
+
+	.  reduce 18
+
+
+state 122
+	toplevel : SECTION STR LBRACE sections . RBRACE  (5)
+	sections : sections . sectionAt  (8)
+
+	ALIGN  shift 177
+	CONST  shift 5
+	EXPORT  shift 6
+	FOREIGN  shift 7
+	IMPORT  shift 8
+	INVARIANT  shift 9
+	RBRACE  shift 178
+	REGISTER  shift 10
+	SPAN  shift 179
+	TARGET  shift 12
+	TYPEDEF  shift 13
+	ID  shift 180
+	STR  shift 15
+	BITSn  shift 16
+	.  error
+
+	procedure  goto 181
+	declAt  goto 182
+	sectionAt  goto 183
+	section  goto 184
+	datum  goto 185
+	span  goto 186
+	decl  goto 21
+	registers  goto 22
+	ty  goto 23
+	tyAt  goto 187
+	conv  goto 25
+	sty  goto 26
+
+
+state 123
+	property : BYTEORDER BIG .  (31)
+
+	.  reduce 31
+
+
+state 124
+	property : BYTEORDER LITTLE .  (32)
+
+	.  reduce 32
+
+
+state 125
+	uint : SINT .  (28)
+
+	.  reduce 28
+
+
+state 126
+	uint : UINT .  (29)
+
+	.  reduce 29
+
+
+state 127
+	property : MEMSIZE uint .  (30)
+
+	.  reduce 30
+
+
+state 128
+	property : WRDSIZE uint .  (36)
+
+	.  reduce 36
+
+
+state 129
+	property : PTRSIZE uint .  (35)
+
+	.  reduce 35
+
+
+state 130
+	property : FLOATREPR STR .  (33)
+
+	.  reduce 33
+
+
+state 131
+	property : CHARSET STR .  (34)
+
+	.  reduce 34
+
+
+state 132
+	decl : TYPEDEF ty names SEMI .  (26)
+
+	.  reduce 26
+
+
+state 133
+	names_ : names_ COMMA . ID  (232)
+	opt_comma : COMMA .  (236)
+
+	ID  shift 188
+	ALSO  reduce 236
+	NEVER  reduce 236
+	READS  reduce 236
+	SEMI  reduce 236
+	WRITES  reduce 236
+
+
+state 134
+	names : names_ opt_comma .  (231)
+
+	.  reduce 231
+
+
+state 135
+	frmls : LPAREN formals RPAREN .  (71)
+
+	.  reduce 71
+
+
+state 136
+	formals_ : formals_ COMMA . formal  (76)
+	opt_comma : COMMA .  (236)
+	opt_kind : .  (84)
+
+	STR  shift 83
+	INVARIANT  reduce 84
+	REGISTER  reduce 84
+	RPAREN  reduce 236
+	ID  reduce 84
+	BITSn  reduce 84
+
+	formal  goto 189
+	bare_formal  goto 87
+	opt_kind  goto 88
+
+
+state 137
+	formals : formals_ opt_comma .  (75)
+
+	.  reduce 75
+
+
+state 138
+	opt_invariant : INVARIANT .  (85)
+
+	.  reduce 85
+
+
+state 139
+	bare_formal : opt_kind opt_invariant . opt_register tyAt ID opt_aligned  (82)
+	opt_register : .  (88)
+
+	REGISTER  shift 190
+	ID  reduce 88
+	BITSn  reduce 88
+
+	opt_register  goto 191
+
+
+state 140
+	body : LBRACE body0 . RBRACE  (64)
+	body0 : body0 . bodyAt  (65)
+
+	CONST  shift 5
+	CONTINUATION  shift 192
+	CUT  shift 193
+	EXPORT  shift 6
+	FOREIGN  shift 7
+	GOTO  shift 194
+	IF  shift 195
+	IMPORT  shift 8
+	INVARIANT  shift 9
+	JUMP  shift 196
+	LIMITCHECK  shift 197
+	LPAREN  shift 97
+	PPERCENT  shift 198
+	RBRACE  shift 199
+	REGISTER  shift 10
+	RETURN  shift 200
+	SEMI  shift 201
+	SPAN  shift 202
+	STACKDATA  shift 203
+	SWITCH  shift 204
+	TARGET  shift 12
+	TYPEDEF  shift 13
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 205
+	STR  shift 206
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	declAt  goto 207
+	decl  goto 21
+	registers  goto 22
+	ty  goto 23
+	exprAt  goto 208
+	tyAt  goto 24
+	conv  goto 209
+	bodyAt  goto 210
+	body1  goto 211
+	stackdecl  goto 212
+	stmtAt  goto 213
+	nameOrMemAt  goto 214
+	nameOrMem  goto 215
+	nameOrMem0  goto 216
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 217
+	nameOrMems  goto 218
+	nameOrMems_  goto 219
+	stmt  goto 220
+	expr  goto 221
+	sexpr  goto 112
+
+
+state 141
+	registers : STR tyAt regs opt_comma .  (51)
+
+	.  reduce 51
+
+
+state 142
+	regs : ID optEq STR .  (55)
+
+	.  reduce 55
+
+
+state 143
+	regs : regs COMMA ID . optEq STR  (53)
+	regs : regs COMMA ID .  (54)
+	optEq : .  (57)
+
+	EQUAL  shift 92
+	COMMA  reduce 54
+	SEMI  reduce 54
+	STR  reduce 57
+
+	optEq  goto 222
+
+
+state 144
+	procedure : conv ID frmls body .  (62)
+
+	.  reduce 62
+
+
+state 145
+	sexpr : LPAREN exprAt . RPAREN  (193)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	RPAREN  shift 223
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	.  error
+
+
+state 146
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	expr : MINUS exprAt .  (217)
+
+	.  reduce 217
+
+
+state 147
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	expr : TILDE exprAt .  (216)
+
+	.  reduce 216
+
+
+state 148
+	actls : LPAREN . actuals RPAREN  (73)
+	actls : LPAREN . RPAREN  (74)
+	opt_kind : .  (84)
+
+	RPAREN  shift 224
+	STR  shift 83
+	LPAREN  reduce 84
+	MINUS  reduce 84
+	TILDE  reduce 84
+	PRIMOP  reduce 84
+	ID  reduce 84
+	BITSn  reduce 84
+	SINT  reduce 84
+	UINT  reduce 84
+	FLT  reduce 84
+	CHAR  reduce 84
+
+	actuals  goto 225
+	actuals_  goto 226
+	actual  goto 227
+	opt_kind  goto 228
+
+
+state 149
+	expr : PRIMOP actls .  (198)
+
+	.  reduce 198
+
+
+state 150
+	opt_colon_ty : CCOLON . tyAt  (194)
+
+	ID  shift 40
+	BITSn  shift 16
+	.  error
+
+	ty  goto 23
+	tyAt  goto 229
+	sty  goto 26
+
+
+state 151
+	sexpr : SINT opt_colon_ty .  (187)
+
+	.  reduce 187
+
+
+state 152
+	sexpr : UINT opt_colon_ty .  (188)
+
+	.  reduce 188
+
+
+state 153
+	sexpr : FLT opt_colon_ty .  (189)
+
+	.  reduce 189
+
+
+state 154
+	sexpr : CHAR opt_colon_ty .  (190)
+
+	.  reduce 190
+
+
+state 155
+	expr : exprAt AMPERSAND . exprAt  (208)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 230
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 156
+	expr : exprAt INFIXOP . exprAt  (215)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 231
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 157
+	decl : CONST ID EQUAL exprAt SEMI .  (24)
+
+	.  reduce 24
+
+
+state 158
+	expr : exprAt EEQ . exprAt  (209)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 232
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 159
+	expr : exprAt NEQ . exprAt  (210)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 233
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 160
+	expr : exprAt LT . exprAt  (211)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 234
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 161
+	expr : exprAt LEQ . exprAt  (212)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 235
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 162
+	expr : exprAt GT . exprAt  (214)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 236
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 163
+	expr : exprAt GEQ . exprAt  (213)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 237
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 164
+	expr : exprAt BAR . exprAt  (207)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 238
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 165
+	expr : exprAt CARET . exprAt  (206)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 239
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 166
+	expr : exprAt LLESS . exprAt  (204)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 240
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 167
+	expr : exprAt GGREATER . exprAt  (205)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 241
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 168
+	expr : exprAt PLUS . exprAt  (199)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 242
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 169
+	expr : exprAt MINUS . exprAt  (200)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 243
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 170
+	expr : exprAt PERCENT . exprAt  (201)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 244
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 171
+	expr : exprAt STAR . exprAt  (202)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 245
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 172
+	expr : exprAt SLASH . exprAt  (203)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 246
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 173
+	nameOrMem0 : mem_type LBRACKET . exprAt mem_properties RBRACKET  (122)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 247
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 174
+	decl : CONST ty ID EQUAL exprAt . SEMI  (25)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	SEMI  shift 248
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	.  error
+
+
+state 175
+	exports_ : exports_ COMMA ID AS . STR  (227)
+
+	STR  shift 249
+	.  error
+
+
+state 176
+	imports_ : imports_ COMMA STR AS . ID  (222)
+
+	ID  shift 250
+	.  error
+
+
+state 177
+	datum : ALIGN . uint SEMI  (42)
+
+	SINT  shift 125
+	UINT  shift 126
+	.  error
+
+	uint  goto 251
+
+
+state 178
+	toplevel : SECTION STR LBRACE sections RBRACE .  (5)
+
+	.  reduce 5
+
+
+state 179
+	span : SPAN . sexprAt exprAt LBRACE sections RBRACE  (39)
+
+	LPAREN  shift 97
+	PRIMOP  shift 252
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	sexprAt  goto 253
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	sexpr  goto 254
+
+
+state 180
+	datum : ID . COLON  (41)
+	procedure : ID . frmls body  (63)
+	ty : ID .  (139)
+
+	COLON  shift 255
+	LPAREN  shift 46
+	LBRACE  reduce 139
+	LBRACKET  reduce 139
+	SEMI  reduce 139
+	UNICODE  reduce 139
+	ID  reduce 139
+	STR  reduce 139
+
+	frmls  goto 47
+
+
+state 181
+	section : procedure .  (11)
+
+	.  reduce 11
+
+
+state 182
+	section : declAt .  (14)
+
+	.  reduce 14
+
+
+state 183
+	sections : sections sectionAt .  (8)
+
+	.  reduce 8
+
+
+state 184
+	sectionAt : section .  (10)
+
+	.  reduce 10
+
+
+state 185
+	section : datum .  (12)
+
+	.  reduce 12
+
+
+state 186
+	section : span .  (13)
+
+	.  reduce 13
+
+
+state 187
+	datum : tyAt . size opt_initAt SEMI  (43)
+	registers : tyAt . regs opt_comma  (52)
+	size : .  (61)
+
+	LBRACKET  shift 256
+	ID  shift 50
+	LBRACE  reduce 61
+	SEMI  reduce 61
+	UNICODE  reduce 61
+	STR  reduce 61
+
+	size  goto 257
+	regs  goto 51
+
+
+state 188
+	names_ : names_ COMMA ID .  (232)
+
+	.  reduce 232
+
+
+state 189
+	formals_ : formals_ COMMA formal .  (76)
+
+	.  reduce 76
+
+
+state 190
+	opt_register : REGISTER .  (87)
+
+	.  reduce 87
+
+
+state 191
+	bare_formal : opt_kind opt_invariant opt_register . tyAt ID opt_aligned  (82)
+
+	ID  shift 40
+	BITSn  shift 16
+	.  error
+
+	ty  goto 23
+	tyAt  goto 258
+	sty  goto 26
+
+
+state 192
+	stmt : CONTINUATION . ID LPAREN cformals RPAREN COLON  (159)
+
+	ID  shift 259
+	.  error
+
+
+state 193
+	stmt : CUT . TO expr actls flows SEMI  (160)
+
+	TO  shift 260
+	.  error
+
+
+state 194
+	stmt : GOTO . exprAt targets SEMI  (158)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 261
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 195
+	stmt : IF . exprAt body  (156)
+	stmt : IF . exprAt body ELSE body  (157)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 262
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 196
+	stmt : JUMP . exprAt targets SEMI  (163)
+	stmt : JUMP . exprAt actls targets SEMI  (165)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 263
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 197
+	stmt : LIMITCHECK . exprAt limitfailure SEMI  (161)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 264
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 198
+	stmt : PPERCENT . ID actls flows SEMI  (153)
+
+	ID  shift 265
+	.  error
+
+
+state 199
+	body : LBRACE body0 RBRACE .  (64)
+
+	.  reduce 64
+
+
+state 200
+	stmt : RETURN . returnto SEMI  (167)
+	stmt : RETURN . returnto actls SEMI  (169)
+	returnto : .  (142)
+
+	LT  shift 266
+	LPAREN  reduce 142
+	SEMI  reduce 142
+
+	returnto  goto 267
+
+
+state 201
+	stmt : SEMI .  (144)
+
+	.  reduce 144
+
+
+state 202
+	stmt : SPAN . sexprAt sexprAt body  (146)
+
+	LPAREN  shift 97
+	PRIMOP  shift 252
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	sexprAt  goto 268
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	sexpr  goto 254
+
+
+state 203
+	stackdecl : STACKDATA . LBRACE data RBRACE  (95)
+
+	LBRACE  shift 269
+	.  error
+
+
+state 204
+	stmt : SWITCH . srange expr LBRACE arms RBRACE  (170)
+	srange : .  (174)
+
+	LBRACKET  shift 270
+	LPAREN  reduce 174
+	MINUS  reduce 174
+	TILDE  reduce 174
+	PRIMOP  reduce 174
+	ID  reduce 174
+	BITSn  reduce 174
+	SINT  reduce 174
+	UINT  reduce 174
+	FLT  reduce 174
+	CHAR  reduce 174
+
+	srange  goto 271
+
+
+state 205
+	nameOrMem : ID . aligned  (118)
+	nameOrMem0 : ID .  (121)
+	mem_type : ID .  (124)
+	ty : ID .  (139)
+	stmt : ID . COLON  (145)
+
+	ALIGNED  shift 272
+	COLON  shift 273
+	AMPERSAND  reduce 121
+	COMMA  reduce 121
+	EQUAL  reduce 121
+	INFIXOP  reduce 121
+	LBRACKET  reduce 124
+	LPAREN  reduce 121
+	EEQ  reduce 121
+	NEQ  reduce 121
+	LT  reduce 121
+	LEQ  reduce 121
+	GT  reduce 121
+	GEQ  reduce 121
+	BAR  reduce 121
+	CARET  reduce 121
+	LLESS  reduce 121
+	GGREATER  reduce 121
+	PLUS  reduce 121
+	MINUS  reduce 121
+	PERCENT  reduce 121
+	STAR  reduce 121
+	SLASH  reduce 121
+	ID  reduce 139
+
+	aligned  goto 274
+
+
+state 206
+	registers : STR . tyAt regs opt_comma  (51)
+	nameOrMem : STR . ID opt_aligned  (119)
+
+	ID  shift 275
+	BITSn  shift 16
+	.  error
+
+	ty  goto 23
+	tyAt  goto 48
+	sty  goto 26
+
+
+state 207
+	body1 : declAt .  (68)
+
+	.  reduce 68
+
+
+state 208
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	.  error
+
+
+state 209
+	stmt : conv . PPERCENT ID actls flows SEMI  (149)
+	stmt : conv . expr actls targets procanns SEMI  (151)
+	stmt : conv . JUMP exprAt targets SEMI  (162)
+	stmt : conv . JUMP exprAt actls targets SEMI  (164)
+	stmt : conv . RETURN returnto SEMI  (166)
+	stmt : conv . RETURN returnto actls SEMI  (168)
+
+	JUMP  shift 276
+	LPAREN  shift 97
+	PPERCENT  shift 277
+	RETURN  shift 278
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 208
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 279
+	sexpr  goto 112
+
+
+state 210
+	body0 : body0 bodyAt .  (65)
+
+	.  reduce 65
+
+
+state 211
+	bodyAt : body1 .  (67)
+
+	.  reduce 67
+
+
+state 212
+	body1 : stackdecl .  (69)
+
+	.  reduce 69
+
+
+state 213
+	body1 : stmtAt .  (70)
+
+	.  reduce 70
+
+
+state 214
+	nameOrMems_ : nameOrMemAt .  (136)
+
+	.  reduce 136
+
+
+state 215
+	nameOrMemAt : nameOrMem .  (116)
+
+	.  reduce 116
+
+
+state 216
+	nameOrMem : nameOrMem0 .  (117)
+	nameOrMemAt0 : nameOrMem0 .  (120)
+
+	AMPERSAND  reduce 120
+	COMMA  reduce 117
+	EQUAL  reduce 117
+	INFIXOP  reduce 120
+	LPAREN  reduce 120
+	EEQ  reduce 120
+	NEQ  reduce 120
+	LT  reduce 120
+	LEQ  reduce 120
+	GT  reduce 120
+	GEQ  reduce 120
+	BAR  reduce 120
+	CARET  reduce 120
+	LLESS  reduce 120
+	GGREATER  reduce 120
+	PLUS  reduce 120
+	MINUS  reduce 120
+	PERCENT  reduce 120
+	STAR  reduce 120
+	SLASH  reduce 120
+
+
+state 217
+	mem_type : sty .  (123)
+	ty : sty .  (138)
+
+	LBRACKET  reduce 123
+	ID  reduce 138
+
+
+state 218
+	stmt : nameOrMems . EQUAL exprs SEMI  (147)
+	stmt : nameOrMems . EQUAL conv PPERCENT ID actls flows SEMI  (148)
+	stmt : nameOrMems . EQUAL conv expr actls targets procanns SEMI  (150)
+	stmt : nameOrMems . EQUAL PPERCENT ID actls flows SEMI  (152)
+	stmt : nameOrMems . EQUAL expr actls targets procanns SEMI  (154)
+
+	EQUAL  shift 280
+	.  error
+
+
+state 219
+	nameOrMems : nameOrMems_ . opt_comma  (134)
+	nameOrMems_ : nameOrMems_ . COMMA nameOrMemAt  (135)
+	opt_comma : .  (237)
+
+	COMMA  shift 281
+	EQUAL  reduce 237
+
+	opt_comma  goto 282
+
+
+state 220
+	stmtAt : stmt .  (143)
+
+	.  reduce 143
+
+
+state 221
+	stmt : expr . actls targets procanns SEMI  (155)
+	exprAt : expr .  (196)
+
+	LPAREN  shift 148
+	AMPERSAND  reduce 196
+	INFIXOP  reduce 196
+	EEQ  reduce 196
+	NEQ  reduce 196
+	LT  reduce 196
+	LEQ  reduce 196
+	GT  reduce 196
+	GEQ  reduce 196
+	BAR  reduce 196
+	CARET  reduce 196
+	LLESS  reduce 196
+	GGREATER  reduce 196
+	PLUS  reduce 196
+	MINUS  reduce 196
+	PERCENT  reduce 196
+	STAR  reduce 196
+	SLASH  reduce 196
+
+	actls  goto 283
+
+
+state 222
+	regs : regs COMMA ID optEq . STR  (53)
+
+	STR  shift 284
+	.  error
+
+
+state 223
+	sexpr : LPAREN exprAt RPAREN .  (193)
+
+	.  reduce 193
+
+
+state 224
+	actls : LPAREN RPAREN .  (74)
+
+	.  reduce 74
+
+
+state 225
+	actls : LPAREN actuals . RPAREN  (73)
+
+	RPAREN  shift 285
+	.  error
+
+
+state 226
+	actuals : actuals_ . opt_comma  (78)
+	actuals_ : actuals_ . COMMA actual  (79)
+	opt_comma : .  (237)
+
+	COMMA  shift 286
+	RPAREN  reduce 237
+
+	opt_comma  goto 287
+
+
+state 227
+	actuals_ : actual .  (80)
+
+	.  reduce 80
+
+
+state 228
+	actual : opt_kind . exprAt opt_aligned  (94)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 288
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 229
+	opt_colon_ty : CCOLON tyAt .  (194)
+
+	.  reduce 194
+
+
+state 230
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt AMPERSAND exprAt .  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 208
+	AMPERSAND  reduce 208
+	COLON  reduce 208
+	COMMA  reduce 208
+	DOTDOT  reduce 208
+	FAILS  reduce 208
+	IN  reduce 208
+	INFIXOP  reduce 208
+	LBRACE  reduce 208
+	LPAREN  reduce 208
+	RBRACE  reduce 208
+	RBRACKET  reduce 208
+	RPAREN  reduce 208
+	SEMI  reduce 208
+	TARGETS  reduce 208
+	EEQ  reduce 208
+	NEQ  reduce 208
+	LT  reduce 208
+	LEQ  reduce 208
+	GT  reduce 208
+	GEQ  reduce 208
+	BAR  reduce 208
+	CARET  reduce 208
+
+
+state 231
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	expr : exprAt INFIXOP exprAt .  (215)
+
+	AMPERSAND  shift 155
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 215
+	COLON  reduce 215
+	COMMA  reduce 215
+	DOTDOT  reduce 215
+	FAILS  reduce 215
+	IN  reduce 215
+	LBRACE  reduce 215
+	LPAREN  reduce 215
+	RBRACE  reduce 215
+	RBRACKET  reduce 215
+	RPAREN  reduce 215
+	SEMI  reduce 215
+	TARGETS  reduce 215
+
+
+state 232
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt EEQ exprAt .  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 209
+	COLON  reduce 209
+	COMMA  reduce 209
+	DOTDOT  reduce 209
+	FAILS  reduce 209
+	IN  reduce 209
+	INFIXOP  reduce 209
+	LBRACE  reduce 209
+	LPAREN  reduce 209
+	RBRACE  reduce 209
+	RBRACKET  reduce 209
+	RPAREN  reduce 209
+	SEMI  reduce 209
+	TARGETS  reduce 209
+
+
+state 233
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt NEQ exprAt .  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 210
+	COLON  reduce 210
+	COMMA  reduce 210
+	DOTDOT  reduce 210
+	FAILS  reduce 210
+	IN  reduce 210
+	INFIXOP  reduce 210
+	LBRACE  reduce 210
+	LPAREN  reduce 210
+	RBRACE  reduce 210
+	RBRACKET  reduce 210
+	RPAREN  reduce 210
+	SEMI  reduce 210
+	TARGETS  reduce 210
+
+
+state 234
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt LT exprAt .  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 211
+	COLON  reduce 211
+	COMMA  reduce 211
+	DOTDOT  reduce 211
+	FAILS  reduce 211
+	IN  reduce 211
+	INFIXOP  reduce 211
+	LBRACE  reduce 211
+	LPAREN  reduce 211
+	RBRACE  reduce 211
+	RBRACKET  reduce 211
+	RPAREN  reduce 211
+	SEMI  reduce 211
+	TARGETS  reduce 211
+
+
+state 235
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt LEQ exprAt .  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 212
+	COLON  reduce 212
+	COMMA  reduce 212
+	DOTDOT  reduce 212
+	FAILS  reduce 212
+	IN  reduce 212
+	INFIXOP  reduce 212
+	LBRACE  reduce 212
+	LPAREN  reduce 212
+	RBRACE  reduce 212
+	RBRACKET  reduce 212
+	RPAREN  reduce 212
+	SEMI  reduce 212
+	TARGETS  reduce 212
+
+
+state 236
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt GT exprAt .  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 214
+	COLON  reduce 214
+	COMMA  reduce 214
+	DOTDOT  reduce 214
+	FAILS  reduce 214
+	IN  reduce 214
+	INFIXOP  reduce 214
+	LBRACE  reduce 214
+	LPAREN  reduce 214
+	RBRACE  reduce 214
+	RBRACKET  reduce 214
+	RPAREN  reduce 214
+	SEMI  reduce 214
+	TARGETS  reduce 214
+
+
+state 237
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt GEQ exprAt .  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 213
+	COLON  reduce 213
+	COMMA  reduce 213
+	DOTDOT  reduce 213
+	FAILS  reduce 213
+	IN  reduce 213
+	INFIXOP  reduce 213
+	LBRACE  reduce 213
+	LPAREN  reduce 213
+	RBRACE  reduce 213
+	RBRACKET  reduce 213
+	RPAREN  reduce 213
+	SEMI  reduce 213
+	TARGETS  reduce 213
+
+
+state 238
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt BAR exprAt .  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 207
+	COLON  reduce 207
+	COMMA  reduce 207
+	DOTDOT  reduce 207
+	FAILS  reduce 207
+	IN  reduce 207
+	INFIXOP  reduce 207
+	LBRACE  reduce 207
+	LPAREN  reduce 207
+	RBRACE  reduce 207
+	RBRACKET  reduce 207
+	RPAREN  reduce 207
+	SEMI  reduce 207
+	TARGETS  reduce 207
+	EEQ  reduce 207
+	NEQ  reduce 207
+	LT  reduce 207
+	LEQ  reduce 207
+	GT  reduce 207
+	GEQ  reduce 207
+	BAR  reduce 207
+
+
+state 239
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt CARET exprAt .  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 206
+	COLON  reduce 206
+	COMMA  reduce 206
+	DOTDOT  reduce 206
+	FAILS  reduce 206
+	IN  reduce 206
+	INFIXOP  reduce 206
+	LBRACE  reduce 206
+	LPAREN  reduce 206
+	RBRACE  reduce 206
+	RBRACKET  reduce 206
+	RPAREN  reduce 206
+	SEMI  reduce 206
+	TARGETS  reduce 206
+	EEQ  reduce 206
+	NEQ  reduce 206
+	LT  reduce 206
+	LEQ  reduce 206
+	GT  reduce 206
+	GEQ  reduce 206
+	BAR  reduce 206
+	CARET  reduce 206
+
+
+state 240
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt LLESS exprAt .  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 204
+	AMPERSAND  reduce 204
+	COLON  reduce 204
+	COMMA  reduce 204
+	DOTDOT  reduce 204
+	FAILS  reduce 204
+	IN  reduce 204
+	INFIXOP  reduce 204
+	LBRACE  reduce 204
+	LPAREN  reduce 204
+	RBRACE  reduce 204
+	RBRACKET  reduce 204
+	RPAREN  reduce 204
+	SEMI  reduce 204
+	TARGETS  reduce 204
+	EEQ  reduce 204
+	NEQ  reduce 204
+	LT  reduce 204
+	LEQ  reduce 204
+	GT  reduce 204
+	GEQ  reduce 204
+	BAR  reduce 204
+	CARET  reduce 204
+	LLESS  reduce 204
+	GGREATER  reduce 204
+
+
+state 241
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt GGREATER exprAt .  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 205
+	AMPERSAND  reduce 205
+	COLON  reduce 205
+	COMMA  reduce 205
+	DOTDOT  reduce 205
+	FAILS  reduce 205
+	IN  reduce 205
+	INFIXOP  reduce 205
+	LBRACE  reduce 205
+	LPAREN  reduce 205
+	RBRACE  reduce 205
+	RBRACKET  reduce 205
+	RPAREN  reduce 205
+	SEMI  reduce 205
+	TARGETS  reduce 205
+	EEQ  reduce 205
+	NEQ  reduce 205
+	LT  reduce 205
+	LEQ  reduce 205
+	GT  reduce 205
+	GEQ  reduce 205
+	BAR  reduce 205
+	CARET  reduce 205
+	LLESS  reduce 205
+	GGREATER  reduce 205
+
+
+state 242
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt PLUS exprAt .  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 199
+	AMPERSAND  reduce 199
+	COLON  reduce 199
+	COMMA  reduce 199
+	DOTDOT  reduce 199
+	FAILS  reduce 199
+	IN  reduce 199
+	INFIXOP  reduce 199
+	LBRACE  reduce 199
+	LPAREN  reduce 199
+	RBRACE  reduce 199
+	RBRACKET  reduce 199
+	RPAREN  reduce 199
+	SEMI  reduce 199
+	TARGETS  reduce 199
+	EEQ  reduce 199
+	NEQ  reduce 199
+	LT  reduce 199
+	LEQ  reduce 199
+	GT  reduce 199
+	GEQ  reduce 199
+	BAR  reduce 199
+	CARET  reduce 199
+	LLESS  reduce 199
+	GGREATER  reduce 199
+	PLUS  reduce 199
+	MINUS  reduce 199
+
+
+state 243
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt MINUS exprAt .  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	ALIGNED  reduce 200
+	AMPERSAND  reduce 200
+	COLON  reduce 200
+	COMMA  reduce 200
+	DOTDOT  reduce 200
+	FAILS  reduce 200
+	IN  reduce 200
+	INFIXOP  reduce 200
+	LBRACE  reduce 200
+	LPAREN  reduce 200
+	RBRACE  reduce 200
+	RBRACKET  reduce 200
+	RPAREN  reduce 200
+	SEMI  reduce 200
+	TARGETS  reduce 200
+	EEQ  reduce 200
+	NEQ  reduce 200
+	LT  reduce 200
+	LEQ  reduce 200
+	GT  reduce 200
+	GEQ  reduce 200
+	BAR  reduce 200
+	CARET  reduce 200
+	LLESS  reduce 200
+	GGREATER  reduce 200
+	PLUS  reduce 200
+	MINUS  reduce 200
+
+
+state 244
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt PERCENT exprAt .  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	.  reduce 201
+
+
+state 245
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt STAR exprAt .  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	.  reduce 202
+
+
+state 246
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt SLASH exprAt .  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	.  reduce 203
+
+
+state 247
+	nameOrMem0 : mem_type LBRACKET exprAt . mem_properties RBRACKET  (122)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	mem_properties : .  (127)
+
+	ALIGNED  shift 272
+	AMPERSAND  shift 155
+	IN  shift 289
+	INFIXOP  shift 156
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	RBRACKET  reduce 127
+
+	aligned  goto 290
+	mem_properties  goto 291
+
+
+state 248
+	decl : CONST ty ID EQUAL exprAt SEMI .  (25)
+
+	.  reduce 25
+
+
+state 249
+	exports_ : exports_ COMMA ID AS STR .  (227)
+
+	.  reduce 227
+
+
+state 250
+	imports_ : imports_ COMMA STR AS ID .  (222)
+
+	.  reduce 222
+
+
+state 251
+	datum : ALIGN uint . SEMI  (42)
+
+	SEMI  shift 292
+	.  error
+
+
+state 252
+	sexpr : PRIMOP .  (192)
+
+	.  reduce 192
+
+
+state 253
+	span : SPAN sexprAt . exprAt LBRACE sections RBRACE  (39)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 293
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 254
+	sexprAt : sexpr .  (186)
+
+	.  reduce 186
+
+
+state 255
+	datum : ID COLON .  (41)
+
+	.  reduce 41
+
+
+state 256
+	size : LBRACKET . exprAt RBRACKET  (59)
+	size : LBRACKET . RBRACKET  (60)
+
+	LPAREN  shift 97
+	RBRACKET  shift 294
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 295
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 257
+	datum : tyAt size . opt_initAt SEMI  (43)
+	opt_initAt : .  (45)
+
+	LBRACE  shift 296
+	UNICODE  shift 297
+	STR  shift 298
+	SEMI  reduce 45
+
+	opt_initAt  goto 299
+	initAt  goto 300
+	init  goto 301
+	string16  goto 302
+
+
+state 258
+	bare_formal : opt_kind opt_invariant opt_register tyAt . ID opt_aligned  (82)
+
+	ID  shift 303
+	.  error
+
+
+state 259
+	stmt : CONTINUATION ID . LPAREN cformals RPAREN COLON  (159)
+
+	LPAREN  shift 304
+	.  error
+
+
+state 260
+	stmt : CUT TO . expr actls flows SEMI  (160)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 208
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 305
+	sexpr  goto 112
+
+
+state 261
+	stmt : GOTO exprAt . targets SEMI  (158)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	targets : .  (109)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	TARGETS  shift 306
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	SEMI  reduce 109
+
+	targets  goto 307
+
+
+state 262
+	stmt : IF exprAt . body  (156)
+	stmt : IF exprAt . body ELSE body  (157)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	LBRACE  shift 89
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	.  error
+
+	body  goto 308
+
+
+state 263
+	stmt : JUMP exprAt . targets SEMI  (163)
+	stmt : JUMP exprAt . actls targets SEMI  (165)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	targets : .  (109)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	LPAREN  shift 148
+	TARGETS  shift 306
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	SEMI  reduce 109
+
+	actls  goto 309
+	targets  goto 310
+
+
+state 264
+	stmt : LIMITCHECK exprAt . limitfailure SEMI  (161)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	limitfailure : .  (172)
+
+	AMPERSAND  shift 155
+	FAILS  shift 311
+	INFIXOP  shift 156
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	SEMI  reduce 172
+
+	limitfailure  goto 312
+
+
+state 265
+	stmt : PPERCENT ID . actls flows SEMI  (153)
+
+	LPAREN  shift 148
+	.  error
+
+	actls  goto 313
+
+
+state 266
+	returnto : LT . sexprAt SLASH sexprAt GT  (141)
+
+	LPAREN  shift 97
+	PRIMOP  shift 252
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	sexprAt  goto 314
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	sexpr  goto 254
+
+
+state 267
+	stmt : RETURN returnto . SEMI  (167)
+	stmt : RETURN returnto . actls SEMI  (169)
+
+	LPAREN  shift 148
+	SEMI  shift 315
+	.  error
+
+	actls  goto 316
+
+
+state 268
+	stmt : SPAN sexprAt . sexprAt body  (146)
+
+	LPAREN  shift 97
+	PRIMOP  shift 252
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	sexprAt  goto 317
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	sexpr  goto 254
+
+
+state 269
+	stackdecl : STACKDATA LBRACE . data RBRACE  (95)
+	data : .  (97)
+
+	.  reduce 97
+
+	data  goto 318
+
+
+state 270
+	srange : LBRACKET . range RBRACKET  (173)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 208
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 319
+	range  goto 320
+	sexpr  goto 112
+
+
+state 271
+	stmt : SWITCH srange . expr LBRACE arms RBRACE  (170)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 208
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 321
+	sexpr  goto 112
+
+
+state 272
+	aligned : ALIGNED . uint  (99)
+
+	SINT  shift 125
+	UINT  shift 126
+	.  error
+
+	uint  goto 322
+
+
+state 273
+	stmt : ID COLON .  (145)
+
+	.  reduce 145
+
+
+state 274
+	nameOrMem : ID aligned .  (118)
+
+	.  reduce 118
+
+
+state 275
+	nameOrMem : STR ID . opt_aligned  (119)
+	ty : ID .  (139)
+	opt_aligned : .  (128)
+
+	ALIGNED  shift 272
+	COMMA  reduce 128
+	EQUAL  reduce 128
+	ID  reduce 139
+
+	opt_aligned  goto 323
+	aligned  goto 324
+
+
+state 276
+	stmt : conv JUMP . exprAt targets SEMI  (162)
+	stmt : conv JUMP . exprAt actls targets SEMI  (164)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 325
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 277
+	stmt : conv PPERCENT . ID actls flows SEMI  (149)
+
+	ID  shift 326
+	.  error
+
+
+state 278
+	stmt : conv RETURN . returnto SEMI  (166)
+	stmt : conv RETURN . returnto actls SEMI  (168)
+	returnto : .  (142)
+
+	LT  shift 266
+	LPAREN  reduce 142
+	SEMI  reduce 142
+
+	returnto  goto 327
+
+
+state 279
+	stmt : conv expr . actls targets procanns SEMI  (151)
+	exprAt : expr .  (196)
+
+	LPAREN  shift 148
+	AMPERSAND  reduce 196
+	INFIXOP  reduce 196
+	EEQ  reduce 196
+	NEQ  reduce 196
+	LT  reduce 196
+	LEQ  reduce 196
+	GT  reduce 196
+	GEQ  reduce 196
+	BAR  reduce 196
+	CARET  reduce 196
+	LLESS  reduce 196
+	GGREATER  reduce 196
+	PLUS  reduce 196
+	MINUS  reduce 196
+	PERCENT  reduce 196
+	STAR  reduce 196
+	SLASH  reduce 196
+
+	actls  goto 328
+
+
+state 280
+	stmt : nameOrMems EQUAL . exprs SEMI  (147)
+	stmt : nameOrMems EQUAL . conv PPERCENT ID actls flows SEMI  (148)
+	stmt : nameOrMems EQUAL . conv expr actls targets procanns SEMI  (150)
+	stmt : nameOrMems EQUAL . PPERCENT ID actls flows SEMI  (152)
+	stmt : nameOrMems EQUAL . expr actls targets procanns SEMI  (154)
+
+	FOREIGN  shift 7
+	LPAREN  shift 97
+	PPERCENT  shift 329
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 330
+	exprs  goto 331
+	conv  goto 332
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 333
+	sexpr  goto 112
+	exprs_  goto 334
+
+
+state 281
+	nameOrMems_ : nameOrMems_ COMMA . nameOrMemAt  (135)
+	opt_comma : COMMA .  (236)
+
+	ID  shift 335
+	STR  shift 336
+	BITSn  shift 16
+	EQUAL  reduce 236
+
+	nameOrMemAt  goto 337
+	nameOrMem  goto 215
+	nameOrMem0  goto 338
+	mem_type  goto 109
+	sty  goto 110
+
+
+state 282
+	nameOrMems : nameOrMems_ opt_comma .  (134)
+
+	.  reduce 134
+
+
+state 283
+	stmt : expr actls . targets procanns SEMI  (155)
+	targets : .  (109)
+
+	TARGETS  shift 306
+	ALSO  reduce 109
+	NEVER  reduce 109
+	READS  reduce 109
+	SEMI  reduce 109
+	WRITES  reduce 109
+
+	targets  goto 339
+
+
+state 284
+	regs : regs COMMA ID optEq STR .  (53)
+
+	.  reduce 53
+
+
+state 285
+	actls : LPAREN actuals RPAREN .  (73)
+
+	.  reduce 73
+
+
+state 286
+	actuals_ : actuals_ COMMA . actual  (79)
+	opt_comma : COMMA .  (236)
+	opt_kind : .  (84)
+
+	STR  shift 83
+	LPAREN  reduce 84
+	RPAREN  reduce 236
+	MINUS  reduce 84
+	TILDE  reduce 84
+	PRIMOP  reduce 84
+	ID  reduce 84
+	BITSn  reduce 84
+	SINT  reduce 84
+	UINT  reduce 84
+	FLT  reduce 84
+	CHAR  reduce 84
+
+	actual  goto 340
+	opt_kind  goto 228
+
+
+state 287
+	actuals : actuals_ opt_comma .  (78)
+
+	.  reduce 78
+
+
+state 288
+	actual : opt_kind exprAt . opt_aligned  (94)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	opt_aligned : .  (128)
+
+	ALIGNED  shift 272
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	COMMA  reduce 128
+	RPAREN  reduce 128
+
+	opt_aligned  goto 341
+	aligned  goto 324
+
+
+state 289
+	mem_properties : IN . ids opt_aligned  (126)
+
+	ID  shift 342
+	.  error
+
+	ids  goto 343
+
+
+state 290
+	mem_properties : aligned . opt_in_ids  (125)
+	opt_in_ids : .  (130)
+
+	IN  shift 344
+	RBRACKET  reduce 130
+
+	opt_in_ids  goto 345
+
+
+state 291
+	nameOrMem0 : mem_type LBRACKET exprAt mem_properties . RBRACKET  (122)
+
+	RBRACKET  shift 346
+	.  error
+
+
+state 292
+	datum : ALIGN uint SEMI .  (42)
+
+	.  reduce 42
+
+
+state 293
+	span : SPAN sexprAt exprAt . LBRACE sections RBRACE  (39)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	LBRACE  shift 347
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	.  error
+
+
+state 294
+	size : LBRACKET RBRACKET .  (60)
+
+	.  reduce 60
+
+
+state 295
+	size : LBRACKET exprAt . RBRACKET  (59)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	RBRACKET  shift 348
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	.  error
+
+
+state 296
+	init : LBRACE . exprs RBRACE  (47)
+	init : LBRACE . RBRACE  (48)
+
+	LPAREN  shift 97
+	RBRACE  shift 349
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 330
+	exprs  goto 350
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+	exprs_  goto 334
+
+
+state 297
+	string16 : UNICODE . LPAREN STR RPAREN  (238)
+
+	LPAREN  shift 351
+	.  error
+
+
+state 298
+	init : STR .  (49)
+
+	.  reduce 49
+
+
+state 299
+	datum : tyAt size opt_initAt . SEMI  (43)
+
+	SEMI  shift 352
+	.  error
+
+
+state 300
+	opt_initAt : initAt .  (44)
+
+	.  reduce 44
+
+
+state 301
+	initAt : init .  (46)
+
+	.  reduce 46
+
+
+state 302
+	init : string16 .  (50)
+
+	.  reduce 50
+
+
+state 303
+	bare_formal : opt_kind opt_invariant opt_register tyAt ID . opt_aligned  (82)
+	opt_aligned : .  (128)
+
+	ALIGNED  shift 272
+	COMMA  reduce 128
+	RPAREN  reduce 128
+
+	opt_aligned  goto 353
+	aligned  goto 324
+
+
+state 304
+	stmt : CONTINUATION ID LPAREN . cformals RPAREN COLON  (159)
+	opt_kind : .  (84)
+	opt_comma : .  (237)
+
+	COMMA  shift 354
+	STR  shift 83
+	RPAREN  reduce 237
+	ID  reduce 84
+
+	opt_comma  goto 355
+	opt_kind  goto 356
+	cformal  goto 357
+	cformals  goto 358
+	cformals_  goto 359
+
+
+state 305
+	stmt : CUT TO expr . actls flows SEMI  (160)
+	exprAt : expr .  (196)
+
+	LPAREN  shift 148
+	AMPERSAND  reduce 196
+	INFIXOP  reduce 196
+	EEQ  reduce 196
+	NEQ  reduce 196
+	LT  reduce 196
+	LEQ  reduce 196
+	GT  reduce 196
+	GEQ  reduce 196
+	BAR  reduce 196
+	CARET  reduce 196
+	LLESS  reduce 196
+	GGREATER  reduce 196
+	PLUS  reduce 196
+	MINUS  reduce 196
+	PERCENT  reduce 196
+	STAR  reduce 196
+	SLASH  reduce 196
+
+	actls  goto 360
+
+
+state 306
+	targets : TARGETS . names  (108)
+
+	ID  shift 79
+	.  error
+
+	names  goto 361
+	names_  goto 81
+
+
+state 307
+	stmt : GOTO exprAt targets . SEMI  (158)
+
+	SEMI  shift 362
+	.  error
+
+
+state 308
+	stmt : IF exprAt body .  (156)
+	stmt : IF exprAt body . ELSE body  (157)
+
+	ELSE  shift 363
+	CONST  reduce 156
+	CONTINUATION  reduce 156
+	CUT  reduce 156
+	EXPORT  reduce 156
+	FOREIGN  reduce 156
+	GOTO  reduce 156
+	IF  reduce 156
+	IMPORT  reduce 156
+	INVARIANT  reduce 156
+	JUMP  reduce 156
+	LIMITCHECK  reduce 156
+	LPAREN  reduce 156
+	PPERCENT  reduce 156
+	RBRACE  reduce 156
+	REGISTER  reduce 156
+	RETURN  reduce 156
+	SEMI  reduce 156
+	SPAN  reduce 156
+	STACKDATA  reduce 156
+	SWITCH  reduce 156
+	TARGET  reduce 156
+	TYPEDEF  reduce 156
+	MINUS  reduce 156
+	TILDE  reduce 156
+	PRIMOP  reduce 156
+	ID  reduce 156
+	STR  reduce 156
+	BITSn  reduce 156
+	SINT  reduce 156
+	UINT  reduce 156
+	FLT  reduce 156
+	CHAR  reduce 156
+
+
+state 309
+	stmt : JUMP exprAt actls . targets SEMI  (165)
+	targets : .  (109)
+
+	TARGETS  shift 306
+	SEMI  reduce 109
+
+	targets  goto 364
+
+
+state 310
+	stmt : JUMP exprAt targets . SEMI  (163)
+
+	SEMI  shift 365
+	.  error
+
+
+state 311
+	limitfailure : FAILS . TO exprAt  (171)
+
+	TO  shift 366
+	.  error
+
+
+state 312
+	stmt : LIMITCHECK exprAt limitfailure . SEMI  (161)
+
+	SEMI  shift 367
+	.  error
+
+
+state 313
+	stmt : PPERCENT ID actls . flows SEMI  (153)
+	flows : .  (107)
+
+	.  reduce 107
+
+	flows  goto 368
+
+
+state 314
+	returnto : LT sexprAt . SLASH sexprAt GT  (141)
+
+	SLASH  shift 369
+	.  error
+
+
+state 315
+	stmt : RETURN returnto SEMI .  (167)
+
+	.  reduce 167
+
+
+state 316
+	stmt : RETURN returnto actls . SEMI  (169)
+
+	SEMI  shift 370
+	.  error
+
+
+state 317
+	stmt : SPAN sexprAt sexprAt . body  (146)
+
+	LBRACE  shift 89
+	.  error
+
+	body  goto 371
+
+
+state 318
+	stackdecl : STACKDATA LBRACE data . RBRACE  (95)
+	data : data . datumAt  (96)
+
+	ALIGN  shift 177
+	RBRACE  shift 372
+	ID  shift 373
+	BITSn  shift 16
+	.  error
+
+	datum  goto 374
+	ty  goto 23
+	datumAt  goto 375
+	tyAt  goto 376
+	sty  goto 26
+
+
+state 319
+	range : expr .  (175)
+	range : expr . DOTDOT expr  (176)
+	exprAt : expr .  (196)
+
+	DOTDOT  shift 377
+	AMPERSAND  reduce 196
+	COLON  reduce 175
+	COMMA  reduce 175
+	INFIXOP  reduce 196
+	RBRACKET  reduce 175
+	EEQ  reduce 196
+	NEQ  reduce 196
+	LT  reduce 196
+	LEQ  reduce 196
+	GT  reduce 196
+	GEQ  reduce 196
+	BAR  reduce 196
+	CARET  reduce 196
+	LLESS  reduce 196
+	GGREATER  reduce 196
+	PLUS  reduce 196
+	MINUS  reduce 196
+	PERCENT  reduce 196
+	STAR  reduce 196
+	SLASH  reduce 196
+
+
+state 320
+	srange : LBRACKET range . RBRACKET  (173)
+
+	RBRACKET  shift 378
+	.  error
+
+
+state 321
+	stmt : SWITCH srange expr . LBRACE arms RBRACE  (170)
+	exprAt : expr .  (196)
+
+	LBRACE  shift 379
+	AMPERSAND  reduce 196
+	INFIXOP  reduce 196
+	EEQ  reduce 196
+	NEQ  reduce 196
+	LT  reduce 196
+	LEQ  reduce 196
+	GT  reduce 196
+	GEQ  reduce 196
+	BAR  reduce 196
+	CARET  reduce 196
+	LLESS  reduce 196
+	GGREATER  reduce 196
+	PLUS  reduce 196
+	MINUS  reduce 196
+	PERCENT  reduce 196
+	STAR  reduce 196
+	SLASH  reduce 196
+
+
+state 322
+	aligned : ALIGNED uint .  (99)
+
+	.  reduce 99
+
+
+state 323
+	nameOrMem : STR ID opt_aligned .  (119)
+
+	.  reduce 119
+
+
+state 324
+	opt_aligned : aligned .  (129)
+
+	.  reduce 129
+
+
+state 325
+	stmt : conv JUMP exprAt . targets SEMI  (162)
+	stmt : conv JUMP exprAt . actls targets SEMI  (164)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	targets : .  (109)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	LPAREN  shift 148
+	TARGETS  shift 306
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	SEMI  reduce 109
+
+	actls  goto 380
+	targets  goto 381
+
+
+state 326
+	stmt : conv PPERCENT ID . actls flows SEMI  (149)
+
+	LPAREN  shift 148
+	.  error
+
+	actls  goto 382
+
+
+state 327
+	stmt : conv RETURN returnto . SEMI  (166)
+	stmt : conv RETURN returnto . actls SEMI  (168)
+
+	LPAREN  shift 148
+	SEMI  shift 383
+	.  error
+
+	actls  goto 384
+
+
+state 328
+	stmt : conv expr actls . targets procanns SEMI  (151)
+	targets : .  (109)
+
+	TARGETS  shift 306
+	ALSO  reduce 109
+	NEVER  reduce 109
+	READS  reduce 109
+	SEMI  reduce 109
+	WRITES  reduce 109
+
+	targets  goto 385
+
+
+state 329
+	stmt : nameOrMems EQUAL PPERCENT . ID actls flows SEMI  (152)
+
+	ID  shift 386
+	.  error
+
+
+state 330
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	exprs_ : exprAt .  (220)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	COMMA  reduce 220
+	RBRACE  reduce 220
+	SEMI  reduce 220
+
+
+state 331
+	stmt : nameOrMems EQUAL exprs . SEMI  (147)
+
+	SEMI  shift 387
+	.  error
+
+
+state 332
+	stmt : nameOrMems EQUAL conv . PPERCENT ID actls flows SEMI  (148)
+	stmt : nameOrMems EQUAL conv . expr actls targets procanns SEMI  (150)
+
+	LPAREN  shift 97
+	PPERCENT  shift 388
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 208
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 389
+	sexpr  goto 112
+
+
+state 333
+	stmt : nameOrMems EQUAL expr . actls targets procanns SEMI  (154)
+	exprAt : expr .  (196)
+
+	LPAREN  shift 148
+	AMPERSAND  reduce 196
+	COMMA  reduce 196
+	INFIXOP  reduce 196
+	SEMI  reduce 196
+	EEQ  reduce 196
+	NEQ  reduce 196
+	LT  reduce 196
+	LEQ  reduce 196
+	GT  reduce 196
+	GEQ  reduce 196
+	BAR  reduce 196
+	CARET  reduce 196
+	LLESS  reduce 196
+	GGREATER  reduce 196
+	PLUS  reduce 196
+	MINUS  reduce 196
+	PERCENT  reduce 196
+	STAR  reduce 196
+	SLASH  reduce 196
+
+	actls  goto 390
+
+
+state 334
+	exprs : exprs_ . opt_comma  (218)
+	exprs_ : exprs_ . COMMA exprAt  (219)
+	opt_comma : .  (237)
+
+	COMMA  shift 391
+	RBRACE  reduce 237
+	SEMI  reduce 237
+
+	opt_comma  goto 392
+
+
+state 335
+	nameOrMem : ID . aligned  (118)
+	nameOrMem0 : ID .  (121)
+	mem_type : ID .  (124)
+
+	ALIGNED  shift 272
+	COMMA  reduce 121
+	EQUAL  reduce 121
+	LBRACKET  reduce 124
+
+	aligned  goto 274
+
+
+state 336
+	nameOrMem : STR . ID opt_aligned  (119)
+
+	ID  shift 393
+	.  error
+
+
+state 337
+	nameOrMems_ : nameOrMems_ COMMA nameOrMemAt .  (135)
+
+	.  reduce 135
+
+
+state 338
+	nameOrMem : nameOrMem0 .  (117)
+
+	.  reduce 117
+
+
+state 339
+	stmt : expr actls targets . procanns SEMI  (155)
+	procanns : .  (115)
+
+	.  reduce 115
+
+	procanns  goto 394
+
+
+state 340
+	actuals_ : actuals_ COMMA actual .  (79)
+
+	.  reduce 79
+
+
+state 341
+	actual : opt_kind exprAt opt_aligned .  (94)
+
+	.  reduce 94
+
+
+state 342
+	ids : ID .  (132)
+	ids : ID . COMMA ids  (133)
+
+	COMMA  shift 395
+	ALIGNED  reduce 132
+	RBRACKET  reduce 132
+
+
+state 343
+	mem_properties : IN ids . opt_aligned  (126)
+	opt_aligned : .  (128)
+
+	ALIGNED  shift 272
+	RBRACKET  reduce 128
+
+	opt_aligned  goto 396
+	aligned  goto 324
+
+
+state 344
+	opt_in_ids : IN . ids  (131)
+
+	ID  shift 342
+	.  error
+
+	ids  goto 397
+
+
+state 345
+	mem_properties : aligned opt_in_ids .  (125)
+
+	.  reduce 125
+
+
+state 346
+	nameOrMem0 : mem_type LBRACKET exprAt mem_properties RBRACKET .  (122)
+
+	.  reduce 122
+
+
+state 347
+	span : SPAN sexprAt exprAt LBRACE . sections RBRACE  (39)
+	sections : .  (9)
+
+	.  reduce 9
+
+	sections  goto 398
+
+
+state 348
+	size : LBRACKET exprAt RBRACKET .  (59)
+
+	.  reduce 59
+
+
+state 349
+	init : LBRACE RBRACE .  (48)
+
+	.  reduce 48
+
+
+state 350
+	init : LBRACE exprs . RBRACE  (47)
+
+	RBRACE  shift 399
+	.  error
+
+
+state 351
+	string16 : UNICODE LPAREN . STR RPAREN  (238)
+
+	STR  shift 400
+	.  error
+
+
+state 352
+	datum : tyAt size opt_initAt SEMI .  (43)
+
+	.  reduce 43
+
+
+state 353
+	bare_formal : opt_kind opt_invariant opt_register tyAt ID opt_aligned .  (82)
+
+	.  reduce 82
+
+
+state 354
+	opt_comma : COMMA .  (236)
+
+	.  reduce 236
+
+
+state 355
+	cformals : opt_comma .  (91)
+
+	.  reduce 91
+
+
+state 356
+	cformal : opt_kind . ID opt_aligned  (89)
+
+	ID  shift 401
+	.  error
+
+
+state 357
+	cformals_ : cformal .  (93)
+
+	.  reduce 93
+
+
+state 358
+	stmt : CONTINUATION ID LPAREN cformals . RPAREN COLON  (159)
+
+	RPAREN  shift 402
+	.  error
+
+
+state 359
+	cformals : cformals_ . opt_comma  (90)
+	cformals_ : cformals_ . COMMA cformal  (92)
+	opt_comma : .  (237)
+
+	COMMA  shift 403
+	RPAREN  reduce 237
+
+	opt_comma  goto 404
+
+
+state 360
+	stmt : CUT TO expr actls . flows SEMI  (160)
+	flows : .  (107)
+
+	.  reduce 107
+
+	flows  goto 405
+
+
+state 361
+	targets : TARGETS names .  (108)
+
+	.  reduce 108
+
+
+state 362
+	stmt : GOTO exprAt targets SEMI .  (158)
+
+	.  reduce 158
+
+
+state 363
+	stmt : IF exprAt body ELSE . body  (157)
+
+	LBRACE  shift 89
+	.  error
+
+	body  goto 406
+
+
+state 364
+	stmt : JUMP exprAt actls targets . SEMI  (165)
+
+	SEMI  shift 407
+	.  error
+
+
+state 365
+	stmt : JUMP exprAt targets SEMI .  (163)
+
+	.  reduce 163
+
+
+state 366
+	limitfailure : FAILS TO . exprAt  (171)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 408
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 367
+	stmt : LIMITCHECK exprAt limitfailure SEMI .  (161)
+
+	.  reduce 161
+
+
+state 368
+	flows : flows . flowAt  (106)
+	stmt : PPERCENT ID actls flows . SEMI  (153)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	SEMI  shift 411
+	.  error
+
+	flowAt  goto 412
+	flow  goto 413
+
+
+state 369
+	returnto : LT sexprAt SLASH . sexprAt GT  (141)
+
+	LPAREN  shift 97
+	PRIMOP  shift 252
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	sexprAt  goto 414
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	sexpr  goto 254
+
+
+state 370
+	stmt : RETURN returnto actls SEMI .  (169)
+
+	.  reduce 169
+
+
+state 371
+	stmt : SPAN sexprAt sexprAt body .  (146)
+
+	.  reduce 146
+
+
+state 372
+	stackdecl : STACKDATA LBRACE data RBRACE .  (95)
+
+	.  reduce 95
+
+
+state 373
+	datum : ID . COLON  (41)
+	ty : ID .  (139)
+
+	COLON  shift 255
+	LBRACE  reduce 139
+	LBRACKET  reduce 139
+	SEMI  reduce 139
+	UNICODE  reduce 139
+	STR  reduce 139
+
+
+state 374
+	datumAt : datum .  (40)
+
+	.  reduce 40
+
+
+state 375
+	data : data datumAt .  (96)
+
+	.  reduce 96
+
+
+state 376
+	datum : tyAt . size opt_initAt SEMI  (43)
+	size : .  (61)
+
+	LBRACKET  shift 256
+	LBRACE  reduce 61
+	SEMI  reduce 61
+	UNICODE  reduce 61
+	STR  reduce 61
+
+	size  goto 257
+
+
+state 377
+	range : expr DOTDOT . expr  (176)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	.  error
+
+	exprAt  goto 208
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 415
+	sexpr  goto 112
+
+
+state 378
+	srange : LBRACKET range RBRACKET .  (173)
+
+	.  reduce 173
+
+
+state 379
+	stmt : SWITCH srange expr LBRACE . arms RBRACE  (170)
+	arms : .  (183)
+
+	.  reduce 183
+
+	arms  goto 416
+
+
+state 380
+	stmt : conv JUMP exprAt actls . targets SEMI  (164)
+	targets : .  (109)
+
+	TARGETS  shift 306
+	SEMI  reduce 109
+
+	targets  goto 417
+
+
+state 381
+	stmt : conv JUMP exprAt targets . SEMI  (162)
+
+	SEMI  shift 418
+	.  error
+
+
+state 382
+	stmt : conv PPERCENT ID actls . flows SEMI  (149)
+	flows : .  (107)
+
+	.  reduce 107
+
+	flows  goto 419
+
+
+state 383
+	stmt : conv RETURN returnto SEMI .  (166)
+
+	.  reduce 166
+
+
+state 384
+	stmt : conv RETURN returnto actls . SEMI  (168)
+
+	SEMI  shift 420
+	.  error
+
+
+state 385
+	stmt : conv expr actls targets . procanns SEMI  (151)
+	procanns : .  (115)
+
+	.  reduce 115
+
+	procanns  goto 421
+
+
+state 386
+	stmt : nameOrMems EQUAL PPERCENT ID . actls flows SEMI  (152)
+
+	LPAREN  shift 148
+	.  error
+
+	actls  goto 422
+
+
+state 387
+	stmt : nameOrMems EQUAL exprs SEMI .  (147)
+
+	.  reduce 147
+
+
+state 388
+	stmt : nameOrMems EQUAL conv PPERCENT . ID actls flows SEMI  (148)
+
+	ID  shift 423
+	.  error
+
+
+state 389
+	stmt : nameOrMems EQUAL conv expr . actls targets procanns SEMI  (150)
+	exprAt : expr .  (196)
+
+	LPAREN  shift 148
+	AMPERSAND  reduce 196
+	INFIXOP  reduce 196
+	EEQ  reduce 196
+	NEQ  reduce 196
+	LT  reduce 196
+	LEQ  reduce 196
+	GT  reduce 196
+	GEQ  reduce 196
+	BAR  reduce 196
+	CARET  reduce 196
+	LLESS  reduce 196
+	GGREATER  reduce 196
+	PLUS  reduce 196
+	MINUS  reduce 196
+	PERCENT  reduce 196
+	STAR  reduce 196
+	SLASH  reduce 196
+
+	actls  goto 424
+
+
+state 390
+	stmt : nameOrMems EQUAL expr actls . targets procanns SEMI  (154)
+	targets : .  (109)
+
+	TARGETS  shift 306
+	ALSO  reduce 109
+	NEVER  reduce 109
+	READS  reduce 109
+	SEMI  reduce 109
+	WRITES  reduce 109
+
+	targets  goto 425
+
+
+state 391
+	exprs_ : exprs_ COMMA . exprAt  (219)
+	opt_comma : COMMA .  (236)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	RBRACE  reduce 236
+	SEMI  reduce 236
+
+	exprAt  goto 426
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 111
+	sexpr  goto 112
+
+
+state 392
+	exprs : exprs_ opt_comma .  (218)
+
+	.  reduce 218
+
+
+state 393
+	nameOrMem : STR ID . opt_aligned  (119)
+	opt_aligned : .  (128)
+
+	ALIGNED  shift 272
+	COMMA  reduce 128
+	EQUAL  reduce 128
+
+	opt_aligned  goto 323
+	aligned  goto 324
+
+
+state 394
+	procanns : procanns . flowAt  (113)
+	procanns : procanns . aliasAt  (114)
+	stmt : expr actls targets procanns . SEMI  (155)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	READS  shift 427
+	SEMI  shift 428
+	WRITES  shift 429
+	.  error
+
+	flowAt  goto 430
+	flow  goto 413
+	aliasAt  goto 431
+	alias  goto 432
+
+
+state 395
+	ids : ID COMMA . ids  (133)
+
+	ID  shift 342
+	.  error
+
+	ids  goto 433
+
+
+state 396
+	mem_properties : IN ids opt_aligned .  (126)
+
+	.  reduce 126
+
+
+state 397
+	opt_in_ids : IN ids .  (131)
+
+	.  reduce 131
+
+
+state 398
+	sections : sections . sectionAt  (8)
+	span : SPAN sexprAt exprAt LBRACE sections . RBRACE  (39)
+
+	ALIGN  shift 177
+	CONST  shift 5
+	EXPORT  shift 6
+	FOREIGN  shift 7
+	IMPORT  shift 8
+	INVARIANT  shift 9
+	RBRACE  shift 434
+	REGISTER  shift 10
+	SPAN  shift 179
+	TARGET  shift 12
+	TYPEDEF  shift 13
+	ID  shift 180
+	STR  shift 15
+	BITSn  shift 16
+	.  error
+
+	procedure  goto 181
+	declAt  goto 182
+	sectionAt  goto 183
+	section  goto 184
+	datum  goto 185
+	span  goto 186
+	decl  goto 21
+	registers  goto 22
+	ty  goto 23
+	tyAt  goto 187
+	conv  goto 25
+	sty  goto 26
+
+
+state 399
+	init : LBRACE exprs RBRACE .  (47)
+
+	.  reduce 47
+
+
+state 400
+	string16 : UNICODE LPAREN STR . RPAREN  (238)
+
+	RPAREN  shift 435
+	.  error
+
+
+state 401
+	cformal : opt_kind ID . opt_aligned  (89)
+	opt_aligned : .  (128)
+
+	ALIGNED  shift 272
+	COMMA  reduce 128
+	RPAREN  reduce 128
+
+	opt_aligned  goto 436
+	aligned  goto 324
+
+
+state 402
+	stmt : CONTINUATION ID LPAREN cformals RPAREN . COLON  (159)
+
+	COLON  shift 437
+	.  error
+
+
+state 403
+	cformals_ : cformals_ COMMA . cformal  (92)
+	opt_comma : COMMA .  (236)
+	opt_kind : .  (84)
+
+	STR  shift 83
+	RPAREN  reduce 236
+	ID  reduce 84
+
+	opt_kind  goto 356
+	cformal  goto 438
+
+
+state 404
+	cformals : cformals_ opt_comma .  (90)
+
+	.  reduce 90
+
+
+state 405
+	flows : flows . flowAt  (106)
+	stmt : CUT TO expr actls flows . SEMI  (160)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	SEMI  shift 439
+	.  error
+
+	flowAt  goto 412
+	flow  goto 413
+
+
+state 406
+	stmt : IF exprAt body ELSE body .  (157)
+
+	.  reduce 157
+
+
+state 407
+	stmt : JUMP exprAt actls targets SEMI .  (165)
+
+	.  reduce 165
+
+
+state 408
+	limitfailure : FAILS TO exprAt .  (171)
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	SEMI  reduce 171
+
+
+state 409
+	flow : ALSO . CUTS TO names  (101)
+	flow : ALSO . UNWINDS TO names  (102)
+	flow : ALSO . RETURNS TO names  (103)
+	flow : ALSO . ABORTS  (104)
+
+	ABORTS  shift 440
+	CUTS  shift 441
+	RETURNS  shift 442
+	UNWINDS  shift 443
+	.  error
+
+
+state 410
+	flow : NEVER . RETURNS  (105)
+
+	RETURNS  shift 444
+	.  error
+
+
+state 411
+	stmt : PPERCENT ID actls flows SEMI .  (153)
+
+	.  reduce 153
+
+
+state 412
+	flows : flows flowAt .  (106)
+
+	.  reduce 106
+
+
+state 413
+	flowAt : flow .  (100)
+
+	.  reduce 100
+
+
+state 414
+	returnto : LT sexprAt SLASH sexprAt . GT  (141)
+
+	GT  shift 445
+	.  error
+
+
+state 415
+	range : expr DOTDOT expr .  (176)
+	exprAt : expr .  (196)
+
+	AMPERSAND  reduce 196
+	COLON  reduce 176
+	COMMA  reduce 176
+	INFIXOP  reduce 196
+	RBRACKET  reduce 176
+	EEQ  reduce 196
+	NEQ  reduce 196
+	LT  reduce 196
+	LEQ  reduce 196
+	GT  reduce 196
+	GEQ  reduce 196
+	BAR  reduce 196
+	CARET  reduce 196
+	LLESS  reduce 196
+	GGREATER  reduce 196
+	PLUS  reduce 196
+	MINUS  reduce 196
+	PERCENT  reduce 196
+	STAR  reduce 196
+	SLASH  reduce 196
+
+
+state 416
+	stmt : SWITCH srange expr LBRACE arms . RBRACE  (170)
+	arms : arms . armAt  (182)
+
+	CASE  shift 446
+	RBRACE  shift 447
+	.  error
+
+	armAt  goto 448
+	arm  goto 449
+
+
+state 417
+	stmt : conv JUMP exprAt actls targets . SEMI  (164)
+
+	SEMI  shift 450
+	.  error
+
+
+state 418
+	stmt : conv JUMP exprAt targets SEMI .  (162)
+
+	.  reduce 162
+
+
+state 419
+	flows : flows . flowAt  (106)
+	stmt : conv PPERCENT ID actls flows . SEMI  (149)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	SEMI  shift 451
+	.  error
+
+	flowAt  goto 412
+	flow  goto 413
+
+
+state 420
+	stmt : conv RETURN returnto actls SEMI .  (168)
+
+	.  reduce 168
+
+
+state 421
+	procanns : procanns . flowAt  (113)
+	procanns : procanns . aliasAt  (114)
+	stmt : conv expr actls targets procanns . SEMI  (151)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	READS  shift 427
+	SEMI  shift 452
+	WRITES  shift 429
+	.  error
+
+	flowAt  goto 430
+	flow  goto 413
+	aliasAt  goto 431
+	alias  goto 432
+
+
+state 422
+	stmt : nameOrMems EQUAL PPERCENT ID actls . flows SEMI  (152)
+	flows : .  (107)
+
+	.  reduce 107
+
+	flows  goto 453
+
+
+state 423
+	stmt : nameOrMems EQUAL conv PPERCENT ID . actls flows SEMI  (148)
+
+	LPAREN  shift 148
+	.  error
+
+	actls  goto 454
+
+
+state 424
+	stmt : nameOrMems EQUAL conv expr actls . targets procanns SEMI  (150)
+	targets : .  (109)
+
+	TARGETS  shift 306
+	ALSO  reduce 109
+	NEVER  reduce 109
+	READS  reduce 109
+	SEMI  reduce 109
+	WRITES  reduce 109
+
+	targets  goto 455
+
+
+state 425
+	stmt : nameOrMems EQUAL expr actls targets . procanns SEMI  (154)
+	procanns : .  (115)
+
+	.  reduce 115
+
+	procanns  goto 456
+
+
+state 426
+	expr : exprAt . PLUS exprAt  (199)
+	expr : exprAt . MINUS exprAt  (200)
+	expr : exprAt . PERCENT exprAt  (201)
+	expr : exprAt . STAR exprAt  (202)
+	expr : exprAt . SLASH exprAt  (203)
+	expr : exprAt . LLESS exprAt  (204)
+	expr : exprAt . GGREATER exprAt  (205)
+	expr : exprAt . CARET exprAt  (206)
+	expr : exprAt . BAR exprAt  (207)
+	expr : exprAt . AMPERSAND exprAt  (208)
+	expr : exprAt . EEQ exprAt  (209)
+	expr : exprAt . NEQ exprAt  (210)
+	expr : exprAt . LT exprAt  (211)
+	expr : exprAt . LEQ exprAt  (212)
+	expr : exprAt . GEQ exprAt  (213)
+	expr : exprAt . GT exprAt  (214)
+	expr : exprAt . INFIXOP exprAt  (215)
+	exprs_ : exprs_ COMMA exprAt .  (219)
+
+	AMPERSAND  shift 155
+	INFIXOP  shift 156
+	EEQ  shift 158
+	NEQ  shift 159
+	LT  shift 160
+	LEQ  shift 161
+	GT  shift 162
+	GEQ  shift 163
+	BAR  shift 164
+	CARET  shift 165
+	LLESS  shift 166
+	GGREATER  shift 167
+	PLUS  shift 168
+	MINUS  shift 169
+	PERCENT  shift 170
+	STAR  shift 171
+	SLASH  shift 172
+	COMMA  reduce 219
+	RBRACE  reduce 219
+	SEMI  reduce 219
+
+
+state 427
+	alias : READS . opt_names  (111)
+	opt_names : .  (235)
+
+	ID  shift 79
+	ALSO  reduce 235
+	NEVER  reduce 235
+	READS  reduce 235
+	SEMI  reduce 235
+	WRITES  reduce 235
+
+	names  goto 457
+	opt_names  goto 458
+	names_  goto 81
+
+
+state 428
+	stmt : expr actls targets procanns SEMI .  (155)
+
+	.  reduce 155
+
+
+state 429
+	alias : WRITES . opt_names  (112)
+	opt_names : .  (235)
+
+	ID  shift 79
+	ALSO  reduce 235
+	NEVER  reduce 235
+	READS  reduce 235
+	SEMI  reduce 235
+	WRITES  reduce 235
+
+	names  goto 457
+	opt_names  goto 459
+	names_  goto 81
+
+
+state 430
+	procanns : procanns flowAt .  (113)
+
+	.  reduce 113
+
+
+state 431
+	procanns : procanns aliasAt .  (114)
+
+	.  reduce 114
+
+
+state 432
+	aliasAt : alias .  (110)
+
+	.  reduce 110
+
+
+state 433
+	ids : ID COMMA ids .  (133)
+
+	.  reduce 133
+
+
+state 434
+	span : SPAN sexprAt exprAt LBRACE sections RBRACE .  (39)
+
+	.  reduce 39
+
+
+state 435
+	string16 : UNICODE LPAREN STR RPAREN .  (238)
+
+	.  reduce 238
+
+
+state 436
+	cformal : opt_kind ID opt_aligned .  (89)
+
+	.  reduce 89
+
+
+state 437
+	stmt : CONTINUATION ID LPAREN cformals RPAREN COLON .  (159)
+
+	.  reduce 159
+
+
+state 438
+	cformals_ : cformals_ COMMA cformal .  (92)
+
+	.  reduce 92
+
+
+state 439
+	stmt : CUT TO expr actls flows SEMI .  (160)
+
+	.  reduce 160
+
+
+state 440
+	flow : ALSO ABORTS .  (104)
+
+	.  reduce 104
+
+
+state 441
+	flow : ALSO CUTS . TO names  (101)
+
+	TO  shift 460
+	.  error
+
+
+state 442
+	flow : ALSO RETURNS . TO names  (103)
+
+	TO  shift 461
+	.  error
+
+
+state 443
+	flow : ALSO UNWINDS . TO names  (102)
+
+	TO  shift 462
+	.  error
+
+
+state 444
+	flow : NEVER RETURNS .  (105)
+
+	.  reduce 105
+
+
+state 445
+	returnto : LT sexprAt SLASH sexprAt GT .  (141)
+
+	.  reduce 141
+
+
+state 446
+	arm : CASE . ranges COLON body  (185)
+	ranges : .  (179)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	COLON  reduce 179
+
+	exprAt  goto 208
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 319
+	range  goto 463
+	ranges  goto 464
+	ranges_  goto 465
+	sexpr  goto 112
+
+
+state 447
+	stmt : SWITCH srange expr LBRACE arms RBRACE .  (170)
+
+	.  reduce 170
+
+
+state 448
+	arms : arms armAt .  (182)
+
+	.  reduce 182
+
+
+state 449
+	armAt : arm .  (184)
+
+	.  reduce 184
+
+
+state 450
+	stmt : conv JUMP exprAt actls targets SEMI .  (164)
+
+	.  reduce 164
+
+
+state 451
+	stmt : conv PPERCENT ID actls flows SEMI .  (149)
+
+	.  reduce 149
+
+
+state 452
+	stmt : conv expr actls targets procanns SEMI .  (151)
+
+	.  reduce 151
+
+
+state 453
+	flows : flows . flowAt  (106)
+	stmt : nameOrMems EQUAL PPERCENT ID actls flows . SEMI  (152)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	SEMI  shift 466
+	.  error
+
+	flowAt  goto 412
+	flow  goto 413
+
+
+state 454
+	stmt : nameOrMems EQUAL conv PPERCENT ID actls . flows SEMI  (148)
+	flows : .  (107)
+
+	.  reduce 107
+
+	flows  goto 467
+
+
+state 455
+	stmt : nameOrMems EQUAL conv expr actls targets . procanns SEMI  (150)
+	procanns : .  (115)
+
+	.  reduce 115
+
+	procanns  goto 468
+
+
+state 456
+	procanns : procanns . flowAt  (113)
+	procanns : procanns . aliasAt  (114)
+	stmt : nameOrMems EQUAL expr actls targets procanns . SEMI  (154)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	READS  shift 427
+	SEMI  shift 469
+	WRITES  shift 429
+	.  error
+
+	flowAt  goto 430
+	flow  goto 413
+	aliasAt  goto 431
+	alias  goto 432
+
+
+state 457
+	opt_names : names .  (234)
+
+	.  reduce 234
+
+
+state 458
+	alias : READS opt_names .  (111)
+
+	.  reduce 111
+
+
+state 459
+	alias : WRITES opt_names .  (112)
+
+	.  reduce 112
+
+
+state 460
+	flow : ALSO CUTS TO . names  (101)
+
+	ID  shift 79
+	.  error
+
+	names  goto 470
+	names_  goto 81
+
+
+state 461
+	flow : ALSO RETURNS TO . names  (103)
+
+	ID  shift 79
+	.  error
+
+	names  goto 471
+	names_  goto 81
+
+
+state 462
+	flow : ALSO UNWINDS TO . names  (102)
+
+	ID  shift 79
+	.  error
+
+	names  goto 472
+	names_  goto 81
+
+
+state 463
+	ranges_ : range .  (181)
+
+	.  reduce 181
+
+
+state 464
+	arm : CASE ranges . COLON body  (185)
+
+	COLON  shift 473
+	.  error
+
+
+state 465
+	ranges : ranges_ .  (177)
+	ranges : ranges_ . COMMA  (178)
+	ranges_ : ranges_ . COMMA range  (180)
+
+	COMMA  shift 474
+	COLON  reduce 177
+
+
+state 466
+	stmt : nameOrMems EQUAL PPERCENT ID actls flows SEMI .  (152)
+
+	.  reduce 152
+
+
+state 467
+	flows : flows . flowAt  (106)
+	stmt : nameOrMems EQUAL conv PPERCENT ID actls flows . SEMI  (148)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	SEMI  shift 475
+	.  error
+
+	flowAt  goto 412
+	flow  goto 413
+
+
+state 468
+	procanns : procanns . flowAt  (113)
+	procanns : procanns . aliasAt  (114)
+	stmt : nameOrMems EQUAL conv expr actls targets procanns . SEMI  (150)
+
+	ALSO  shift 409
+	NEVER  shift 410
+	READS  shift 427
+	SEMI  shift 476
+	WRITES  shift 429
+	.  error
+
+	flowAt  goto 430
+	flow  goto 413
+	aliasAt  goto 431
+	alias  goto 432
+
+
+state 469
+	stmt : nameOrMems EQUAL expr actls targets procanns SEMI .  (154)
+
+	.  reduce 154
+
+
+state 470
+	flow : ALSO CUTS TO names .  (101)
+
+	.  reduce 101
+
+
+state 471
+	flow : ALSO RETURNS TO names .  (103)
+
+	.  reduce 103
+
+
+state 472
+	flow : ALSO UNWINDS TO names .  (102)
+
+	.  reduce 102
+
+
+state 473
+	arm : CASE ranges COLON . body  (185)
+
+	LBRACE  shift 89
+	.  error
+
+	body  goto 477
+
+
+state 474
+	ranges : ranges_ COMMA .  (178)
+	ranges_ : ranges_ COMMA . range  (180)
+
+	LPAREN  shift 97
+	MINUS  shift 98
+	TILDE  shift 99
+	PRIMOP  shift 100
+	ID  shift 101
+	BITSn  shift 16
+	SINT  shift 102
+	UINT  shift 103
+	FLT  shift 104
+	CHAR  shift 105
+	COLON  reduce 178
+
+	exprAt  goto 208
+	nameOrMem0  goto 107
+	nameOrMemAt0  goto 108
+	mem_type  goto 109
+	sty  goto 110
+	expr  goto 319
+	range  goto 478
+	sexpr  goto 112
+
+
+state 475
+	stmt : nameOrMems EQUAL conv PPERCENT ID actls flows SEMI .  (148)
+
+	.  reduce 148
+
+
+state 476
+	stmt : nameOrMems EQUAL conv expr actls targets procanns SEMI .  (150)
+
+	.  reduce 150
+
+
+state 477
+	arm : CASE ranges COLON body .  (185)
+
+	.  reduce 185
+
+
+state 478
+	ranges_ : ranges_ COMMA range .  (180)
+
+	.  reduce 180
+
+
+91 terminals, 96 nonterminals
+240 grammar rules, 479 states

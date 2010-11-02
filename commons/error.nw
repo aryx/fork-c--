@@ -240,6 +240,8 @@ let option = function
     | Some Error        -> Error
     | Some (Ok x)       -> Ok (Some x)
     | None              -> Ok (None)
+@
+
 <<raise module>>=
 let list xs =
     let rec loop acc = function
@@ -248,26 +250,30 @@ let list xs =
         | Error::xs     -> Error 
     in      
         loop [] xs
+@
 
 <<raise module>>=
 let pair = function
     | (Ok x, Ok y)          -> Ok (x,y)
     | _                     -> Error
+@
         
 <<raise module>>=
 let left = function
     | (Ok x, y)             -> Ok (x,y)
     | _                     -> Error
-
+@
 <<raise module>>=
 let right = function
     | (x, Ok y)             -> Ok (x,y)
     | _                     -> Error
+@
 
 <<raise module>>=
 let triple = function
     | (Ok x, Ok y, Ok z)    -> Ok (x,y,z)
     | _                     -> Error 
+@
 
 <<raise module>>=
 let quad = function
@@ -293,10 +299,12 @@ end
 let pair = function
     | Ok (x,y)              -> Ok x , Ok y
     | Error                 -> Error, Error 
+@
 <<lower module>>=
 let triple = function
     | Ok (x,y,z)            -> Ok x , Ok y , Ok z
     | Error                 -> Error, Error, Error
+@
 <<lower module>>=
 let quad = function
     | Ok (a,b,c,d)          -> Ok a , Ok b , Ok c , Ok d
@@ -316,32 +324,38 @@ which means it (carefully) destroys informations.
 module Implode = struct
     <<implode module>>
 end
+@
 
 <<implode module>>=
 let singleton = function
     | Ok _ -> Ok ()
     | _    -> Error
+@
 
 <<implode module>>=
 let pair = function
     | Ok _, Ok _ -> Ok ()
     | _          -> Error
+@
 
 <<implode module>>=
 let triple = function
     | Ok _, Ok _, Ok _ -> Ok ()
     | _                -> Error
+@
 
 <<implode module>>=
 let quad = function
     | Ok _, Ok _, Ok _, Ok _ -> Ok ()
     | _                      -> Error
+@
 
 <<implode module>>=
 let rec list = function
     | []            -> Ok ()
     | (Ok _)::xs    -> list xs
     | _             -> Error 
+@
 
 <<implode module>>=
 let map f l =
@@ -367,6 +381,7 @@ propagation using the [[error]] type and code that doesn't.
 let combine = function  
     | Ok x      -> x
     | Error     -> Error
+@
 
 <<error.ml>>=
 let ematch x f = match x with Ok x -> Ok (f x) | Error -> Error
@@ -380,6 +395,7 @@ let ematch6 x y z w v u f =
 let ematchPair    x2 = ematch (Raise.pair x2)
 let ematchTriple  x3 = ematch (Raise.triple x3)
 let ematchQuad    x4 = ematch (Raise.quad x4)
+@
 
 <<error.ml>>=
 let seq x f = match x with Ok x -> f x | Error -> Error
@@ -402,6 +418,7 @@ let catch' default printer f arg =
     | ErrorExn(msg) -> ( printer msg 
                        ; default
                        )
+@
 <<error.ml>>=
 let catch printer f arg = catch' Error printer f arg
 let error msg           = raise (ErrorExn msg)
@@ -415,21 +432,25 @@ attributed to.
 <<error.ml>>=
 let warningPrt msg = Printf.eprintf "Warning: %s\n" msg
 let errorPrt   msg = Printf.eprintf "Error: %s\n"   msg
+@
 <<error.ml>>=
 let errorPointPrt  p msg = 
     ( Printf.eprintf "%s " (Srcmap.Str.point p)
     ; errorPrt msg
     )
+@
 <<error.ml>>=
 let errorRegionPrt r msg =
     ( Printf.eprintf "%s " (Srcmap.Str.region r)
     ; errorPrt msg
     )
+@
 <<error.ml>>=
 let errorPosPrt    p msg =
     ( Printf.eprintf "Character %d " p
     ; errorPrt msg
     )
+@
 <<error.ml>>=
 let errorRegPrt (l,r) msg = 
     ( Printf.eprintf "Character %d-%d " l r

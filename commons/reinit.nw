@@ -6,13 +6,14 @@ If multiple files are compiled in a single pass, we do not want to
 output to depend on the sequence in which the files are processed.
 Calling [[Reinit.reset]] will reset any mutable state that can effect the
 output.
-@
+
 A module can ask to be reinitialized when the driver is reinitialized.
 Any function registered with [[at]] is called by [[reset]].
 <<reinit.mli>>=
 val at : (unit -> unit) -> unit
 val reset : unit -> unit
 @ 
+
 The common case is to create a ref cell that is automatically
 reinitialized when [[reset]] is called.
 <<reinit.mli>>=

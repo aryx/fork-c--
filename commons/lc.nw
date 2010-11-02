@@ -180,6 +180,8 @@ number of characters successfully scanned and the list of results.
 % ------------------------------------------------------------------ 
 
 <<lc.ml>>=
+let (=<=) (x:char)   (y:char)   = (=) x y
+
 exception Error of string
 let error msg           = raise (Error msg)
 

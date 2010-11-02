@@ -754,9 +754,36 @@ module [[Ast]].
     module A = Ast
     module E = Error
 
-    <<helper functions>>            
+(* pad: syncweb does not support multi-lang; can't have special comments for
+ * yacc (C) and OCaml so have to inline the ocaml code here manually
+ *)
+let p  ()  = (Parsing.symbol_start (), Parsing.symbol_end())
+let pn n   = (Parsing.rhs_start n, Parsing.rhs_end n)
+let px ()  = (Parsing.symbol_start ())
+
+let rev    = List.rev
+
+let dep msg =
+  let deprecated = Reinit.ref false in
+  fun x ->
+    if not (!deprecated) then
+      begin
+        Printf.eprintf "C-- warning: %s\n" msg;
+        deprecated := true;
+      end;
+    x
+
+let rdep = dep "Use of 'register' keyword is deprecated"
+let noeqdep = dep "Hardware register name without '=' is deprecated"
+
+let str2uint str =
+  let b = Bits.U.of_string str Nativeint.size in
+  try Bits.U.to_int b with Bits.Overflow ->
+    Error.errorf "constant %s overflows %d-bit native integer" str (Nativeint.size-1)
+
 %}
 @     
+
 [[p]] returns the region for the left hand symbol in the current
 production.  A region (of type [[int * int]] contains the position of
 the first character character of the symbol in input stream, and the

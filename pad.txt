@@ -9,12 +9,15 @@ related work:
  - MLRISC
 
 
+using so many extra tools make the job harder for people to join
+  * mk vs make
+  * the nopoly trick  and weird operator like =<=
+  * noweb
+
 on lindig:
- - using so many extra tools make the job harder for people to join
-    * mk vs make
-    * the nopoly trick  and weird operator like =<=
-    * noweb
  - like me:
     * =*=  trick :) and evilness of the polymorphic equal (but implicit 
       loading of it is bad; yet another magic stuff happening behind your back)
     * use of literate programing (but not syncweb!)
+    * use of code generator a la tarzan for sexp
+

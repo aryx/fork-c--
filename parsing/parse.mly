@@ -3,43 +3,33 @@
     module A = Ast
     module E = Error
 
-    /*(*s: helper functions *)*/
-    let p  ()  = (Parsing.symbol_start (), Parsing.symbol_end())
-    let pn n   = (Parsing.rhs_start n, Parsing.rhs_end n)
-    let px ()  = (Parsing.symbol_start ())
+(* pad: syncweb does not support multi-lang; can't have special comments for
+ * yacc (C) and OCaml so have to inline the ocaml code here manually
+ *)
+let p  ()  = (Parsing.symbol_start (), Parsing.symbol_end())
+let pn n   = (Parsing.rhs_start n, Parsing.rhs_end n)
+let px ()  = (Parsing.symbol_start ())
 
-    let rev    = List.rev
-    /*(*x: helper functions *)*/
-    let dep msg =
-      let deprecated = Reinit.ref false in
-      fun x ->
-        if not (!deprecated) then
-          begin
-            Printf.eprintf "C-- warning: %s\n" msg;
-            deprecated := true;
-          end;
-        x
+let rev    = List.rev
 
-    let rdep = dep "Use of 'register' keyword is deprecated"
-    let noeqdep = dep "Hardware register name without '=' is deprecated"
-    /*(*x: helper functions *)*/
-    let mkRegs v (hint,ty,regs) = List.map (fun (id,reg) -> (v, hint, ty, id, reg)) regs
-    let mkTypedefs ty names = List.map (fun n -> A.Typedef(n,ty)) names
-    /*(*x: helper functions *)*/
-    let str2uint str =
-      let b = Bits.U.of_string str Nativeint.size in
-      try Bits.U.to_int b with Bits.Overflow ->
-        Error.errorf "constant %s overflows %d-bit native integer" str (Nativeint.size-1)
-    /*(*x: helper functions *)*/
-    let ast_mem ty exp (align, alias) = A.Mem(ty, exp, align, alias)
-    /*(*x: helper functions *)*/
-    let uminus e =
-      let rec strip = function
-        | A.ExprAt(e, _) -> strip e
-        | A.Sint(s, w) -> A.Sint("-" ^ s, w)
-        | _ -> A.UnOp("-", e) in
-      strip e
-    /*(*e: helper functions *)*/
+let dep msg =
+  let deprecated = Reinit.ref false in
+  fun x ->
+    if not (!deprecated) then
+      begin
+        Printf.eprintf "C-- warning: %s\n" msg;
+        deprecated := true;
+      end;
+    x
+
+let rdep = dep "Use of 'register' keyword is deprecated"
+let noeqdep = dep "Hardware register name without '=' is deprecated"
+
+let str2uint str =
+  let b = Bits.U.of_string str Nativeint.size in
+  try Bits.U.to_int b with Bits.Overflow ->
+    Error.errorf "constant %s overflows %d-bit native integer" str (Nativeint.size-1)
+
 %}
 /*(*x: parse.mly *)*/
 %token ABORTS ALIGN ALIGNED ALSO AS AMPERSAND BIG BYTEORDER CASE COLON CCOLON

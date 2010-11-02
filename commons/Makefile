@@ -6,9 +6,12 @@ TOP=..
 TARGET=lib
 
 #TODO reput bitset64.ml, but depends on bits.ml which has unclear dependencies
+#TODO ? move some code in  h_parsing ? like error.ml, pp.ml, etc ?
 
 SRC=auxfuns.ml pc.ml lc.ml pc2.ml pp.ml srcmap.ml rx.ml \
-  verbose.ml strutil.ml
+  verbose.ml strutil.ml \
+  reinit.ml \
+  error.ml 
 
 SYSLIBS=
 
@@ -45,7 +48,8 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=auxfuns pc lc pc2 pp srcmap rx verbose strutil
+SRCNW=auxfuns pc lc pc2 pp srcmap rx verbose strutil \
+ error reinit
 
 # TODO rc_scan
 
