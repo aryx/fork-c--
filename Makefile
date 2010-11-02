@@ -14,7 +14,8 @@ TARGET=qc
 
 SYSLIBS=nums.cma bigarray.cma str.cma unix.cma
 
-LIBS= commons/commons.cma
+LIBS= commons/commons.cma \
+     parsing/lib.cma \
 
 
 MAKESUBDIRS= \

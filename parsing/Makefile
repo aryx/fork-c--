@@ -7,13 +7,15 @@ TARGET=lib
 
 SRC= ast.ml astUtil.ml astpp.ml \
      parse.ml scan.ml \
+     test_parsing_cmm.ml
 
 
 SYSLIBS=
 
 LIBS=
 
-INCLUDEDIRS= $(TOP)/commons2 $(TOP)/h_asdl
+INCLUDEDIRS= $(TOP)/commons2 $(TOP)/h_asdl \
+  $(TOP)/commons
 
 ##############################################################################
 # Generic variables
