@@ -19,6 +19,7 @@ LIBS=
 
 MAKESUBDIRS= commons \
    h_asdl \
+   parsing
 
 #  h_camlburg tools \
 #  asdl rtl compiler runtime \
