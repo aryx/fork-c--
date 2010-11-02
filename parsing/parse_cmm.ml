@@ -50,4 +50,14 @@ let tokens file =
 (*****************************************************************************)
 
 let parse file =
-  raise Todo
+  let map = Srcmap.mk () in
+  Srcmap.sync map 0 (file, 0, 0);
+
+  Common.with_open_infile file (fun chan ->
+    let lexbuf = Lexing.from_channel chan in
+  
+    let ast = Parse.program (fun lexbuf -> Scan.token lexbuf map) lexbuf in
+    ast
+  )
+
+
