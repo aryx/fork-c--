@@ -1,0 +1,144 @@
+/*s: ast.asdl */
+module ast {
+    /*s: ast declaration */
+    name        = (string)
+    conv        = (string)  -- names for calling conventions
+    hint        = (string)  -- hints for register allocation
+    reg         = (string)  -- names for global registers
+    target      = (string)
+    alias_set   = (string)  -- names for aliasing assertions
+    size        = (int)     
+    align       = (int)     -- power of 2
+    aligned     = (int)     -- power of 2
+    in_alias    = (string)
+    op          = (string)
+    /*x: ast declaration */
+    region      = (int,int) -- (* Srcmap.reg *)
+
+    program     = (toplevel*)
+
+    toplevel    = ToplevelAt    (toplevel, region)
+                | Section       (name, section*)
+                | TopDecl       (decl)
+                | TopProcedure  (proc)
+    /*x: ast declaration */
+    section     = SectionAt     (section, region)
+                | Decl          (decl)
+                | Procedure     (proc)
+                | Datum         (datum)
+                | SSpan         (expr key, expr value, section*)
+    /*x: ast declaration */
+    decl        = DeclAt        (decl, region)
+                | Import        (ty?,import*)
+                | Export        (ty?,export*)
+                | Const         (ty?,name,expr)
+                | Typedef       (ty,name*)
+                | Registers     (register*)
+                | Pragma                          
+                | Target        (arch*)
+    /*x: ast declaration */
+    arch        = Memsize       (int)
+                | ByteorderBig
+                | ByteorderLittle
+                | FloatRepr     (string) -- "ieee754"
+                | Charset       (string) -- "latin1"
+                | WordSize      (int)    -- 32 (bits)
+                | PointerSize   (int)    -- 32 (bits)
+
+    import      = (string?,name)
+    export      = (name, string?)
+
+    /*x: ast declaration */
+    register    = (variance, hint?, ty, name, reg?)
+    proc        = (conv?, name, formal*, body*, region)
+
+    body        = BodyAt        (body, region)
+                | DeclBody      (decl)
+                | StmtBody      (stmt)
+                | DataBody      (datum*)
+            
+    memsize     = NoSize
+                | DynSize
+                | FixSize       (expr)
+                       
+    datum       = DatumAt       (datum, region)
+                | Label         (name)
+                | Align         (align)
+                | MemDecl       (ty, memsize, init?)
+
+    /*x: ast declaration */
+    init        = InitAt        (init, region)
+                | InitExprs     (expr*)
+                | InitStr       (string)
+                | InitUStr      (string)
+    /*x: ast declaration */
+    ty          = TyAt          (ty, region)
+                | BitsTy        (size)
+                | TypeSynonym   (name)
+    /*x: ast declaration */
+    variance   = Invariant
+                | Invisible
+                | Variant
+
+    formal      = (region, bare_formal)
+    bare_formal = (hint?, variance, ty, name, aligned?)
+    actual      = (hint?, expr, aligned?)
+    cformal     = (region, hint?, name, aligned?)
+    /*x: ast declaration */
+    flow        = FlowAt        (flow, region)
+                | CutsTo        (name*)
+                | UnwindsTo     (name*)
+                | ReturnsTo     (name*)
+                | NeverReturns
+                | Aborts    
+
+    mem         = AliasAt       (mem, region)
+                | Reads         (name*)
+                | Writes        (name*)
+
+    procann     = Flow (flow) 
+                | Alias (mem)
+
+    name_or_mem = NameOrMemAt   (name_or_mem, region)
+                | Name          (hint?,name,aligned?)
+                | Mem           (ty, expr, aligned?, in_alias*)
+    /*x: ast declaration */
+    altcont     = (expr, expr)
+
+    range       = Point         (expr)
+                | Range         (expr,expr)
+
+    arm         = ArmAt         (arm, region)
+                | Case          (range*,body*)
+    /*x: ast declaration */
+    guarded     = (expr? guard, expr value) 
+    /*x: ast declaration */
+    stmt        = StmtAt        (stmt, region)
+                | IfStmt        (expr, body*, body*)
+                | SwitchStmt    (range?, expr, arm*)
+                | LabelStmt     (name)
+                | ContStmt      (name, cformal*)
+                | SpanStmt      (expr key, expr value, body*)
+                | AssignStmt    (name_or_mem*, guarded*)
+                | CallStmt      (name_or_mem*, conv?, expr, actual*, target*, procann*)
+                | PrimStmt      (name_or_mem*, conv?, name, actual*, flow*)
+                | GotoStmt      (expr, target*)
+                | JumpStmt      (conv?, expr, actual*, target*)
+                | CutStmt       (expr, actual*, flow*)
+                | ReturnStmt    (conv?, altcont?, actual*)
+                | EmptyStmt  
+                | CommentStmt   (string)
+                | LimitcheckStmt(expr, expr?)
+    /*x: ast declaration */
+    expr        = ExprAt        (expr, region)
+                | Sint          (string,ty?)
+                | Uint          (string,ty?)
+                | Float         (string,ty?)
+                | Char          (int,ty?)
+                | Fetch         (name_or_mem)
+                | BinOp         (expr, op, expr)
+                | UnOp          (op, expr)
+                | PrimOp        (name, actual*)
+    /*e: ast declaration */
+}
+/*e: ast.asdl */

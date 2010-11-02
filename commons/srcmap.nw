@@ -177,6 +177,8 @@ type rgn            = pos * pos
 type location       = string    (* file   *)
                     * int       (* line   *)
                     * int       (* column *)
+@ 
+
 <<srcmap.ml>>=
 let null = (0,0)
 @
@@ -226,6 +228,7 @@ initial size of the array is [[size]].
 <<srcmap.ml>>=
 let size        =  2    (* small to test alloc *)
 let undefined   =  (0, ("undefined", -1, -1))    
+@ 
 
 <<srcmap.ml>>=
 let mk () =

@@ -188,13 +188,15 @@ by [[p]]. When [[p]] fails for the first token the returned list is
 empty. Thus, this parser never fails. 
 <<pc.mli>>=
 val many : ('t, 'v) par -> ('t, 'v list) par
-@ Note that [[many]] is greedy
+@ 
+Note that [[many]] is greedy
 and thus the following parser will never succeed:
 <<example>>=
     many p *** p
-@ All tokens suitable for [[p]] are already consumed by [[many p]] and
+@ 
+All tokens suitable for [[p]] are already consumed by [[many p]] and
 thus none is left for the following [[p]].
-@
+
 The [[some p]] parser works exactly like [[many p]] but expects at
 least one token to parse and fails otherwise. It thus returns a non
 empty list of semantic values.
@@ -204,7 +206,7 @@ val some: ('t,'v)  par -> ('t,'v list) par
 The parsers [[many]], [[some]], and [[opt]] resemble the [[*]],
 [[+]], and [[?]] operator in regular expressions. But due to the greedy
 nature of [[many]] and [[some]] their behaviour is not quite the same.
-@
+
 % ------------------------------------------------------------------  
 \subsection{Implementation}
 % ------------------------------------------------------------------ 

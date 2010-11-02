@@ -197,7 +197,7 @@ let (<|>) p1 p2 = fun ts ->
 let ( *-* ) p1 p2 = fun ts0 ->
     let (f,ts1)  = p1 ts0 in
     let (v,ts2)  = p2 ts1 in
-    	(f v, ts2)
+     (f v, ts2)
 
 let (%) f p = (succeed f) *-* p 
 

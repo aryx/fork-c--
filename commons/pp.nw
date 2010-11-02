@@ -50,27 +50,31 @@ be pretty printed.
 <<pp.mli>>=
 type doc
 
-@ The empty document is pretty printed to the empty string. Typically
+@ 
+The empty document is pretty printed to the empty string. Typically
 [[empty]] is used in one branch of an [[if]] statement.
 
 <<pp.mli>>=
 val empty : doc
 
-@ The infix operator [[x ^^ y]] concatenates two documents [[x]] and
+@ 
+The infix operator [[x ^^ y]] concatenates two documents [[x]] and
 [[y]] into a larger one.  It does not introduce any space or other
 separation between the two original documents. 
 
 <<pp.mli>>=
 val (^^) : doc -> doc -> doc
 
-@ The [[text]] function turns a string into a document. The pretty printed
+@ 
+The [[text]] function turns a string into a document. The pretty printed
 representation of the resulting document is exactly the string [[text]]
 was applied to. 
 
 <<pp.mli>>=
 val text : string -> doc
 
-@ The important points in a document are so-called [[break]]s.  A
+@ 
+The important points in a document are so-called [[break]]s.  A
 [[break]] can be either represented by a single space or a newline
 followed by a number of spaces.  The pretty printer makes this
 decision based on the available space.  So think of a [[break]] as a
@@ -81,14 +85,16 @@ break ^^ y]].
 <<pp.mli>>=
 val break : doc
 
-@ The space character used by [[break]] my be not always appropriate. 
+@ 
+The space character used by [[break]] my be not always appropriate. 
 The function [[breakWith s]] behaves like [[break]] except that it
 uses a user supplied string [[s]] instead of the space.
 
 <<pp.mli>>=
 val breakWith : string -> doc
 
-@ ------------------------------------------------------------------  
+@ 
+% ------------------------------------------------------------------  
 \subsubsection{Nesting and Grouping}
 % ------------------------------------------------------------------  
 
@@ -103,7 +109,8 @@ introduced by [[nest]]s on the outer level also into account.
 <<pp.mli>>=
 val nest : int -> doc -> doc
 
-@ The pretty printer considers the representation of [[break]]s not
+@ 
+The pretty printer considers the representation of [[break]]s not
 one by one but looks at all [[break]]s of a sub-document. Documents
 are structured into sub-documents by group-operators. Different group
 operators exist to control the behavior of the pretty printer. 
@@ -117,7 +124,8 @@ overruns any given line length.
 <<pp.mli>>=
 val hgrp : doc -> doc
     
-@ The [[vgrp]] operator creates a \textit{vertical} group.  All
+@ 
+The [[vgrp]] operator creates a \textit{vertical} group.  All
 [[break]]s inside a [[vgrp]] are represented as newlines followed by
 spaces.  Although all [[break]]s come out as newlines the indentation
 of lines inside the group may differ:  nesting is independent of
@@ -128,7 +136,8 @@ used mostly at the top level of documents only.
 <<pp.mli>>=
 val vgrp : doc -> doc
 
-@ The \textit{automatic} group [[agrp]] is the most versatile.  Breaks
+@ 
+The \textit{automatic} group [[agrp]] is the most versatile.  Breaks
 inside this group are either all turned into newlines (followed by
 spaces), or into spaces.  Subgroups are, of course, not affected but
 considered individually. 
@@ -149,7 +158,8 @@ will fit into a line and thus their [[break]]s come out as spaces.
 <<pp.mli>>=
 val agrp : doc -> doc
 
-@ The break policy inside an [[agrp]] is fixed for all breaks of the
+@ 
+The break policy inside an [[agrp]] is fixed for all breaks of the
 group.  Inside a \textit{flexible} group [[fgrp]] each [[break]] is
 considered individually:  when the document up to the next [[break]]
 fits into the current line the [[break]] comes out as space. 
@@ -158,7 +168,8 @@ Otherwise it comes out as newline followed by spaces.
 <<pp.mli>>=
 val fgrp : doc -> doc
 
-@ ------------------------------------------------------------------  
+@ 
+% ------------------------------------------------------------------  
 \subsubsection{Pretty Printing}
 % ------------------------------------------------------------------  
 
@@ -191,7 +202,8 @@ When using the prerry printer it turned out that some functions are
 frequently defined. Here are some they:
 
 
-@ A list of objects which are seperated by some seperator is very
+
+A list of objects which are seperated by some seperator is very
 common.  The [[list sep f]] function takes care to insert the
 separator only bewteen objects but not at the end of the list.  It
 creates a [[sep]] separated list.  Individual items are printed using
@@ -202,14 +214,16 @@ also provide an extra definition.
 val list      : doc -> ('a -> doc) -> 'a list -> doc 
 val commalist :        ('a -> doc) -> 'a list -> doc
 
-@ Instead of writing [[x ^^ break ^^ y]] to insert a [[break]] it is
+@ 
+Instead of writing [[x ^^ break ^^ y]] to insert a [[break]] it is
 convenient to define an operator for this: [[x ^/ y]] joins [[x]] and
 [[y]] with a [[break]].
 
 <<pp.mli>>=
 val (^/)      : doc -> doc -> doc
 
-@ A [[block]] contains objects [[xs]] formatted by [[f]] and enclosed
+@ 
+A [[block]] contains objects [[xs]] formatted by [[f]] and enclosed
 by curly braces.  Its body will be indented in case it does not fit on
 a single line. 
 
@@ -236,7 +250,8 @@ type doc =
     | DocBreak          of string
     | DocGroup          of gmode * doc
 
-@ There are four different kinds of groups or modes at the user level;
+@ 
+There are four different kinds of groups or modes at the user level;
 they are captured by [[gmode]]. The names used for the different
 groups do not match the names of the functions in the interface---this
 is a historic legacy.
@@ -248,7 +263,8 @@ type gmode =
     | GFill             (* fgrp *)
     | GAuto             (* agrp *)
 
-@ The constructor functions are mapped straight to the [[doc]] type.
+@ 
+The constructor functions are mapped straight to the [[doc]] type.
 When [[debug]] is [[true]] additional markup for the groups with
 run time computed pretty printing is added.
 
@@ -270,7 +286,8 @@ let fgrp d              = if   debug
                           then DocGroup(GFill, text "{" ^^ d ^^ text "}")
                           else DocGroup(GFill, d)
                           
-@ Pretty printing takes two steps:  users build documents of type
+@ 
+Pretty printing takes two steps:  users build documents of type
 [[doc]].  The pretty printer transforms a [[doc]] value into a simple
 document of type [[sdoc]].  The transformation from [[doc]] to
 [[sdoc]] decides about the representation of each [[break]] in the
@@ -289,7 +306,8 @@ type sdoc =
     | SText             of string * sdoc
     | SLine             of int    * sdoc    (* newline + spaces *)
 
-@ Printing a [[sdoc]] value to a string or file is straight forward. 
+@ 
+Printing a [[sdoc]] value to a string or file is straight forward. 
 The [[oc]] parameter for [[sdocToFile]] is an open file channel. For
 efficiency, the [[sdocToString]] function uses the imperative [[Buffer]]
 interface.
@@ -299,7 +317,9 @@ let rec sdocToString = function
     | SNil              -> ""
     | SText(s,d)        -> s ^ sdocToString d
     | SLine(i,d)        -> let prefix = String.make i ' ' 
-                           in  nl ^ prefix ^ sdocToString d
+                            in  nl ^ prefix ^ sdocToString d
+@
+
 <<pp.ml>>=
 let sdocToString sdoc =
     let buf = Buffer.create 256 in
@@ -330,7 +350,8 @@ let sdocToFile oc doc =
     in
         loop doc
 
-@ During pretty printing [[break]]s in [[agrp]]s are either turned
+@ 
+During pretty printing [[break]]s in [[agrp]]s are either turned
 into spaces or newlines.  After this decision is made only three
 groups or modes remain:
 
@@ -347,7 +368,8 @@ type mode =
     | Break
     | Fill
 
-@ Pretty printing means do decide whether an [[agrp]]'s [[break]]s are
+@ 
+Pretty printing means do decide whether an [[agrp]]'s [[break]]s are
 spaces or newlines.  This is done by [[format]] that takes three
 arguments:  the (maximal) line width [[w]], the number of characters
 used already used on the current line [[k]], and a list of documents. 
@@ -414,12 +436,16 @@ let rec fits w = function
     | (i,Break,DocBreak(_))     :: z -> true
     | (i,m,DocGroup(_,x))       :: z -> fits w ((i,Flat,x)::z)
 
-@ The pretty printing functions called by the user just enclose the
+@ 
+
+The pretty printing functions called by the user just enclose the
 user document with a virtual [[agrp]] and start [[format]]'ing.
+
 <<pp.ml>>=
 let ppToString  w doc = format w 0 [0,Flat,agrp(doc)] sdocToString
 let ppToFile oc w doc = format w 0 [0,Flat,agrp(doc)] (sdocToFile oc) 
 @ 
+
 % ------------------------------------------------------------------ 
 \subsubsection{Useful functions}
 % ------------------------------------------------------------------ 
@@ -446,7 +472,9 @@ let block f xs =
        end 
     ^/ text "}"
 
-@ ------------------------------------------------------------------  
+@ 
+
+% ------------------------------------------------------------------  
 \subsubsection{Auxiliaries}
 % ------------------------------------------------------------------  
 
@@ -457,7 +485,9 @@ To make groups more visible during debugging set [[debug]] to
 let debug   = false 
 let strlen  = String.length
 
-@ Unix uses a single character to represent a newline.  Other
+@ 
+
+Unix uses a single character to represent a newline.  Other
 operating systems use different or more characters.  So we better
 abstract from this.
 

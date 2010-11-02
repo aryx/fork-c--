@@ -1,0 +1,56 @@
+/*s: rtlasdl.asdl */
+module rtlasdl {
+    space       = (int)                 -- ascii code of space
+    width       = (int)
+    aligned     = (int)
+    assertion   = (aligned)
+    bool        = (int)                 -- false = 0
+    bits        = (string, width)  
+
+    aggregration = BigEndian | LittleEndian | Identity
+
+    opr         = (string, width*)
+
+    const       = Bool      (bool)
+                | Bits      (bits)  
+                | Link      (string, kind, width)
+  | Diff	    (const,  const)
+                | Late      (string, width)
+
+    kind = Code | Data | Imported
+    exp         = Const     (const)
+                | Fetch     (loc, width)
+                | App       (opr, exp*)
+
+    loc         = Mem       ( space
+                            , aggregration
+                            , width
+                            , exp
+                            , assertion
+                            )
+                | Reg       ( space
+                            , int
+                            , width
+                            )
+                | Var       ( string
+                            , int
+                            , width
+                            )
+                | Global    ( string
+                            , int
+                            , width
+                            )
+                | Slice     ( width
+                            , int
+                            , loc
+                            )
+
+    effect      = Store     (loc, exp, width)
+                | Kill      (loc)
+
+    guarded     = (exp, effect)
+
+    rtl         = (guarded*)
+    rtls        = (rtl*)
+}
+/*e: rtlasdl.asdl */

@@ -73,6 +73,8 @@ type 'a rx      =
                 | RXopt         of ('a rx)              (* e?           *)
                 | RXseq         of ('a rx) * ('a rx)    (* e1 e2        *)
                 | RXalt         of ('a rx) * ('a rx)    (* e1 | e2      *)
+@ 
+
 <<rx.ml>>=
 let zero        = RXzero
 let unit        = RXunit
@@ -99,6 +101,8 @@ let alt x y     = match (x,y) with
                 | RXzero, x     -> x
                 | x     , RXzero-> x
                 | x     , y     -> RXalt(x,y)
+@ 
+
 <<rx.ml>>=
 let ( ||| ) = alt
 let ( *** ) = seq

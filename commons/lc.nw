@@ -198,31 +198,37 @@ type 'a lexer           = string -> int -> 'a list -> (int * 'a list)
    r=region list (all regions saved by the [save] lexer) *)
 
 let succeed str x r     = (0,r)
+@ 
+
 <<lc.ml>>=
 
 let fail msg            = error msg
+@ 
 
 <<lc.ml>>=
 let any                 = fun str x r -> 
                           if x < strlen str 
                           then (1,r)
                           else fail "unexpected eof"
+@ 
 
 <<lc.ml>>=
 let eof                 = fun str x r ->         
                           if x = strlen str
                           then (0,r)
                           else fail "eof expected"
+@ 
 
 <<lc.ml>>=
 let satisfy f           = fun str x r ->
                           if x < strlen str && f (get str x)
                           then (1,r)
                           else fail "predicate failed"
-
+@ 
 <<lc.ml>>=
 let chr c               = satisfy ((=<=) c)
  
+@ 
 <<lc.ml>>=
 let str s               = fun st x r ->    
                           let l = strlen s in
@@ -234,7 +240,7 @@ let str s               = fun st x r ->
                                   else fail "str failed"
                               in 
                                   loop 0
-
+@ 
 <<lc.ml>>=
 let seq  l1 l2          = fun str x r ->
                           let (i1,r1) = l1 str  x     r    in
@@ -242,7 +248,7 @@ let seq  l1 l2          = fun str x r ->
                               (i1+i2,r2)
 let ( *** ) = seq
 
-                              
+@                               
 <<lc.ml>>=
 let alt l1 l2           = fun str x r ->
                           try l1 str x r with
@@ -255,21 +261,26 @@ let alt l1 l2           = fun str x r ->
                              which are caused by strict evaluation
                              *)
 let (|||) = alt
+@ 
 
 <<lc.ml>>=
 let rec many l          = fun str x r ->
                           (l *** many l ||| succeed) str x r 
 
+@ 
 <<lc.ml>>=
 let some l              = l *** many l
 
+@ 
 <<lc.ml>>=
 let opt l               = l ||| succeed
 
+@ 
 <<lc.ml>>=
 let save f l            = fun str x r ->
                           let (i,r') = l str x r   in
                               (i,f str x i :: r')
+@ 
 
 <<lc.ml>>=
 let saveStr l           = save String.sub l
