@@ -1,4 +1,6 @@
 (*s: strutil.ml *)
+let compares (x:string) (y:string) = compare x y
+
 module Compare = struct type t = string let compare=compares end
 module Set = Set.Make(Compare)
 module Map = Map.Make(Compare)

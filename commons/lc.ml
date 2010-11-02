@@ -1,4 +1,6 @@
 (*s: lc.ml *)
+let (=<=) (x:char)   (y:char)   = (=) x y
+
 exception Error of string
 let error msg           = raise (Error msg)
 

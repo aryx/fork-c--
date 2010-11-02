@@ -1,5 +1,4 @@
 auxfuns.cmi: 
-bitset64.cmi: 
 lc.cmi: 
 pc.cmi: 
 pc2.cmi: 
@@ -10,8 +9,6 @@ strutil.cmi:
 verbose.cmi: 
 auxfuns.cmo: auxfuns.cmi 
 auxfuns.cmx: auxfuns.cmi 
-bitset64.cmo: bitset64.cmi 
-bitset64.cmx: bitset64.cmi 
 lc.cmo: lc.cmi 
 lc.cmx: lc.cmi 
 pc.cmo: pc.cmi 

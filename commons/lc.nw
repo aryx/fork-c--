@@ -118,6 +118,7 @@ fails the lexer does not consume input and succeeds.
 <<lc.mli>>=
 val save : (string -> int -> int -> 'a) -> 'a lexer -> 'a lexer
 @
+
 [[save f l]] is a lexer [[l]] which uses a function [[f]] to store
 results to a result list.  Whenever [[l]] sucessfully matches a
 substring [[f]] is called as [[f str pos len]] where [[str]] is the
@@ -133,7 +134,8 @@ This is best illustrated by an example:
 Given a string where the following 4 regions are saved (regions can
 be nested):
         
-\begin{quote}\begin{verbatim}
+\begin{quote}
+\begin{verbatim}
         O b j e c t i v e C a m l
          ( (   )   (   ( ) )   )
          1 2   2   3   4 4 3   1 <--- look from here
@@ -142,7 +144,8 @@ be nested):
    region 2 =  je
    region 3 =      ivec
    region 4 =        e
-\end{verbatim}\end{quote}
+\end{verbatim}
+\end{quote}
 
 The result list obtained by [[scan]] is:  region1, region3, region4,
 region2.  This list ordered by the numbers of the closing
@@ -167,6 +170,7 @@ stored results. [[scan]] raises [[Error]] when scanning fails.
 <<lc.mli>>=
 val scanFrom : int -> string -> 'a lexer -> (int * 'a list)
 @
+
 [[scanFrom x str l]] scans string [[str]] using lexer [[l]] starting at
 character [[x]] of [[str]] (first character is 0) and returns the
 number of characters successfully scanned and the list of results. 

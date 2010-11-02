@@ -5,7 +5,9 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-SRC=auxfuns.ml bitset64.ml pc.ml lc.ml pc2.ml pp.ml srcmap.ml rx.ml \
+#TODO reput bitset64.ml, but depends on bits.ml which has unclear dependencies
+
+SRC=auxfuns.ml pc.ml lc.ml pc2.ml pp.ml srcmap.ml rx.ml \
   verbose.ml strutil.ml
 
 SYSLIBS=
@@ -43,7 +45,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=auxfuns bitset64 pc lc pc2 pp srcmap rx verbose strutil
+SRCNW=auxfuns pc lc pc2 pp srcmap rx verbose strutil
 
 # TODO rc_scan
 

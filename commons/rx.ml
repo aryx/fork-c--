@@ -1,4 +1,6 @@
 (*s: rx.ml *)
+let (=*=) = (=)
+
 type 'a rx      = 
                 | RXzero                                (* {}           *)
                 | RXunit                                (* ""           *)
