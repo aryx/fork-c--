@@ -5,7 +5,7 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-SRC= ast.ml astUtil.ml \
+SRC= ast.ml astUtil.ml astpp.ml \
      parse.ml scan.ml \
 
 
@@ -71,7 +71,8 @@ sync:
 	$(SYNCWEB) -lang ocamlyacc parser.nw parse.mly
 	$(SYNCWEB) -lang ocaml parser.nw scan.mll
 	$(SYNCWEB) -lang C ast.nw ast.asdl
-	$(SYNCWEB) -lang C rtlasdl.nw rtlasdl.asdl
+	$(SYNCWEB) astpp.nw astpp.ml
+	$(SYNCWEB) astpp.nw astpp.mli
 
 
 lpdistclean::

@@ -1,109 +1,24 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%
-% $Id: astpp.nw,v 1.11 2005-06-07 20:19:43 nr Exp $
-% Grades     ::=    "%%Grades:" Quality Importance Urgency
-% Quality    ::=    A|B|C|D|E
-% Importance ::=    Central|Subsystem|Peripheral
-% Urgency    ::=    Immediate|Soon|Later
-%
-% Example (at beginning of line): %%Grades: B Central Soon
-%
-
-% ------------------------------------------------------------------  
-\section{AST Pretty Printer}\label{sec:astpp}
-% ------------------------------------------------------------------  
-
-For debugging and regression testing we provide a module that pretty
-prints the abstract syntax into the concrete syntax.  The
-implementation uses an implementation of Philip Wadler's algebraic
-pretty printer \cite{wadler99:_a_prettier_printer} from the [[Pp]]
-module. 
-
-% ------------------------------------------------------------------  
-\subsection{Interface}
-% ------------------------------------------------------------------  
-
-The interface provides functions to transform a program in abstract
-syntax to a [[Pp.doc]] format.  For error reporting it is useful to
-obtain pretty printed fragments of a program.  The following list of
-functions provides pretty printing for important non terminals in a
-program.  Each function returns a [[Pp.doc]] value that can be turned
-into a [[string]] with the help of the [[Pp]] module.
-
-The [[emit]] function is specialized and more efficient in certain
-cases. It is here to help John Dias emit large programs.
-
-<<astpp.mli>>=
-val decl       : bool -> Ast.decl  -> Pp.doc
-val stmt       : Ast.stmt          -> Pp.doc
-val program    : Ast.toplevel list -> Pp.doc
-
-val emit       : out_channel -> width:int -> Ast.toplevel list -> unit
-@
-
-
-% ------------------------------------------------------------------  
-\subsection{Implementation}
-% ------------------------------------------------------------------  
-
-The implementation builds an abstract representation of the pretty
-printed concrete syntax in a purely functional way. The abstract
-representation is than written to an open file.
-
-<<astpp.ml>>=
+(*s: astpp.ml *)
 module A = Ast
 module P = Pp
 module E = Error
+
+open Nopoly
 
 let (^^)   = P.(^^)
 let (^/)   = P.(^/)
 let (~~) x = x
 let nonempty = function [] -> false | _ :: _ -> true
-@
-
-The module [[Pp]] provides the pretty printing primitives.  The
-concatenation of two abstract pretty printed objects is denoted by the
-infix operator [[^^]].  We define two more:  [[~~]] and [[~/]]; the
-first is a prefix operator that does nothing; its only purpose is to
-achieve a more consistent source code layout. In the following example
-all nested code is also nested in the source code.
-
-<<example>>=
-let f (x,y,z) = 
-    nest begin
-    ~~ x
-    ^/ y
-    ^/ z
-    end
-@
-
-The second operator [[^/]] joins two objects with a [[break]].  A
-[[break]] is either represented as a space, or as a line break
-followed by a number of spaces for indentation.  The exact outcome is
-determined by the pretty printer.  It is easiest to think of
-[[break]]s as spaces that might be turned into line breaks.
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let nest       = P.nest 4 
 
-@ 
-The [[commablock]] is just a handy special case of the [[block]]
-defined in [[Pp]]. 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let commablock f xs =
     nest begin
     ~~ P.list (P.text "," ^^ P.break) f xs
     end
 
-@ 
-To indent a group we provide [[angrp]] and [[fngrp]]; [[fngrp]] is a
-nested [[fgrp]]. While inside an [[agrp]] all breaks are either turned
-into spaces or newlines, each break inside a [[fgrp]] is considered
-separately. Only breaks at the end of a line is turned into a newline
-to make new room -- as many as possible breaks are printed as spaces.
-    
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let angrp x =
     P.agrp begin 
     ~~ nest begin
@@ -117,13 +32,7 @@ let fngrp x =
        ~~ x
        end
     end
-@
-
-Most of the names used below refer directly to the grammar or abstract
-syntax.  Since the overall purpose of this is clear we don't comment
-the code much.
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let unzip = List.split
 let zip   = List.combine
 
@@ -131,32 +40,17 @@ let zip   = List.combine
 let id i        = P.text i
 let int n       = P.text (string_of_int n)
 let semi        = P.text ";"
-@
-
-Comments are not part of the abstract syntax and thus they are
-only created for informational purposes in this module.  The argument
-passed to [[comment]] must not contain only matching [[/*]] and [[*/]]
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let comment x   = P.vgrp (P.text "// " ^^ P.text x)
-@
-
-Todo:  write functions that escape unprintable characters in literals.
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let str s       = P.text ("\"" ^ String.escaped s ^ "\"")
 let char i      = P.text ("'"  ^ Char.escaped(Char.chr i) ^ "'")
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let rec ty = function
     | A.TyAt(x,_)       -> ty x
     | A.BitsTy(n)       -> P.text "bits"  ^^ int n
     | A.TypeSynonym(name)   -> P.text name
-@
-
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let aligned = function
   | Some i -> P.text " aligned" ^/ int i 
   | None   -> P.empty
@@ -177,11 +71,7 @@ let rec lvalue = function
                     List.fold_left (fun h n -> h ^^ P.text "," ^/ P.text n) head ns
            end	
         ^^ P.text "]"
-@
-
-A [[glvalue]] is an optionally guarded lvalue.
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 and glvalue = function
     | x, None   -> lvalue x
     | x, Some e -> P.agrp(lvalue x  ^/ P.text "when" ^/ expr e)
@@ -191,9 +81,7 @@ and actual = function
     | ( None     , e, a) -> P.agrp (expr e ^^ aligned a)
 
 and actuals xs = P.agrp (P.text "(" ^^ P.commalist actual xs ^^ P.text ")")
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 and expr e = 
     let with_ty t p = match t with None -> p | Some t -> p ^^ P.text "::" ^^ ty t in
     match e with
@@ -216,9 +104,7 @@ and expr e =
                            end
     | A.UnOp(op,e)        -> P.agrp (P.text op ^^ expr e)
     | A.PrimOp(n,xs)      -> P.agrp (P.text "%" ^^ id n ^^ actuals xs)
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let memsize = function
     | A.NoSize        -> P.empty
     | A.DynSize       -> P.text "[]"
@@ -251,9 +137,7 @@ let rec datum = function
     | A.Align(a)            -> P.agrp (P.text "align" ^/ int a ^^ semi)
     | A.MemDecl(t,m,Some i) -> P.agrp (ty t ^^ memsize m ^/ init i ^^ semi)
     | A.MemDecl(t,m,None)   -> P.agrp (ty t ^^ memsize m ^^ semi) 
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let formal (_, (h, v, t, n, a)) =
     P.agrp begin
     ~~ (match h with Some hint -> str hint ^^ P.break | None -> P.empty)
@@ -264,9 +148,7 @@ let formal (_, (h, v, t, n, a)) =
     end
 
 let formals xs = P.agrp (P.text "(" ^^ P.commalist formal xs ^^ P.text ")")
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let cformal (_, h, n, a) =
     P.agrp begin
     ~~ (match h with Some hint -> str hint ^^ P.break | None -> P.empty)
@@ -275,10 +157,7 @@ let cformal (_, h, n, a) =
     end
 
 let cformals xs = P.agrp (P.text "(" ^^ P.commalist cformal xs ^^ P.text ")")
-@ 
-    
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let register is_global (v , hint, t, n, reg) = 
     angrp begin 
     ~~ (if v =*= A.Invariant then P.text "invariant" ^^ P.break else P.empty)
@@ -289,9 +168,7 @@ let register is_global (v , hint, t, n, reg) =
     ^^ (match reg with Some r -> P.break ^^ str r | None -> P.empty)
     ^^ semi
     end 
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let altcont (e1,e2) =   
             P.agrp begin 
             ~~ P.text "<" 
@@ -338,10 +215,7 @@ let panns = function
 let conv = function
     | Some cc       -> P.agrp (P.text "foreign" ^/ str cc)
     | None          -> P.empty 
-@ 
-
-    
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let opt_ty t = ( match t with 
                | Some t -> P.break ^^ ty t
                | None   -> P.empty
@@ -375,9 +249,7 @@ let architecture = function
 let range = function
     | A.Point(e)        -> expr e
     | A.Range(e1,e2)    -> P.agrp(expr e1 ^/ P.text ".." ^/ expr e2)
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let rec stmt = function
     | A.StmtAt(x,_)   -> stmt x
     
@@ -411,14 +283,7 @@ let rec stmt = function
         ~~ P.agrp (P.text "span" ^/ expr e1 ^/ expr e2)
         ^/ P.block (body false) ss
         end
-@
-
-In the abstract syntax, guards in a guarded assignment belong to the
-expression.  In the concrete syntax, the guard belongs to the lvalue.
-Guards are thus re-combined with the left hand side of an assignment
-before it is printed.
-        
-<<astpp.ml>>=
+(*x: astpp.ml *)
     | A.AssignStmt(lhs,rhs)          -> 
         let rec combine = function (* error tolerant *)
             | []   , []    -> []
@@ -439,9 +304,7 @@ before it is printed.
                ^^ semi
                end
             end
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
     | A.CallStmt(lhs, cc, e, args, ts, fs) -> 
         angrp begin
         ~~ ( if nonempty lhs
@@ -469,9 +332,7 @@ before it is printed.
         ^^ (if nonempty fs then P.break ^^ panns fs else P.empty)
         ^^ semi
         end
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
     | A.PrimStmt(lhs, cc, n, args, fs)     -> 
         angrp begin
         ~~ ( if nonempty lhs then 
@@ -607,9 +468,7 @@ and proc (cc,n,fs,ss,_) =
        end 
     ^/ P.text "}" 
     end
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 and decl is_global = function
     | A.DeclAt(x,_) -> decl is_global x
     | A.Import( t, ns) -> 
@@ -655,9 +514,7 @@ and decl is_global = function
             ^^ semi
             end
     | A.Pragma        -> comment "pragma"
-@ 
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 and arm = function
     | A.ArmAt(x,_)          -> arm x
     | A.Case(ranges, stmts) ->
@@ -678,10 +535,7 @@ and section  = function (* inside a section *)
         ~~ P.agrp (P.text "span" ^/ expr e1 ^/ expr e2)
         ^/ P.block section ss
         end
-@ 
-       
-       
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let rec toplevel = function
     | A.ToplevelAt(x, _)  -> toplevel x
     | A.Section(name, ss) -> 
@@ -698,17 +552,9 @@ let program ds = P.vgrp begin
                   end
                                             
 let pp = program
-@
-
-The [[emit]] function is more imperative than [[pp]]. It pretty-print
-every top-level element seperately and is therefore much faster. I also
-believe, that this solves stack overflow problems when large programs
-are emitted. The [[Astasm]] module was changes accordingly to use
-[[emit]].
-
-<<astpp.ml>>=
+(*x: astpp.ml *)
 let emit fd ~width tl =
     List.iter (fun t -> ( P.ppToFile fd width (toplevel t)
                         ; output_string fd "\n\n"
                         )) tl
-@
+(*e: astpp.ml *)
