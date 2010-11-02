@@ -11,11 +11,13 @@ reinit.cmi:
 rx.cmi: 
 srcmap.cmi: 
 strutil.cmi: 
+uint64.cmi: 
+unsupported.cmi: 
 verbose.cmi: 
 auxfuns.cmo: auxfuns.cmi 
 auxfuns.cmx: auxfuns.cmi 
-bits.cmo: impossible.cmi bits.cmi 
-bits.cmx: impossible.cmx bits.cmi 
+bits.cmo: unsupported.cmi uint64.cmi impossible.cmi bits.cmi 
+bits.cmx: unsupported.cmx uint64.cmx impossible.cmx bits.cmi 
 bitset64.cmo: bits.cmi bitset64.cmi 
 bitset64.cmx: bits.cmx bitset64.cmi 
 error.cmo: srcmap.cmi error.cmi 
@@ -38,5 +40,9 @@ srcmap.cmo: srcmap.cmi
 srcmap.cmx: srcmap.cmi 
 strutil.cmo: strutil.cmi 
 strutil.cmx: strutil.cmi 
+uint64.cmo: uint64.cmi 
+uint64.cmx: uint64.cmi 
+unsupported.cmo: unsupported.cmi 
+unsupported.cmx: unsupported.cmi 
 verbose.cmo: verbose.cmi 
 verbose.cmx: verbose.cmi 

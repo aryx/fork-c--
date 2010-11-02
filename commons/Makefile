@@ -5,14 +5,15 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
+#TODO uint64p.c
+
 #TODO reput bitset64.ml, but depends on bits.ml which has unclear dependencies
 #TODO ? move some code in  h_parsing ? like error.ml, pp.ml, etc ?
 
 SRC=auxfuns.ml pc.ml lc.ml pc2.ml pp.ml srcmap.ml rx.ml \
   verbose.ml strutil.ml \
   reinit.ml \
-  error.ml \
-  impossible.ml \
+  error.ml impossible.ml unsupported.ml \
   bits.ml bitset64.ml \
 
 SYSLIBS=
@@ -52,15 +53,15 @@ clean::
 
 SRCNW=auxfuns pc lc pc2 pp srcmap rx verbose strutil \
  reinit \
- error impossible \
- bits bitset64
+ error impossible unsupported \
+ uint64 bits bitset64
 
 # TODO rc_scan  rc.nw
 # TODO residualize interface in bits.nw ???
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done
-
+	$(SYNCWEB) -lang C uint64.nw uint64p.c
 
 lpdistclean::
 	rm -f $(LPSRC) .md5sum_*

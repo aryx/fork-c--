@@ -1,4 +1,7 @@
 (*s: bits.ml *)
+let (=*=) = (=)
+let (=<=) (x:char)   (y:char)   = (=) x y
+
 module I = Int64        (* signed   operations *)
 exception Overflow
 let impossf fmt = Printf.kprintf Impossible.impossible fmt

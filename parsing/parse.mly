@@ -22,6 +22,9 @@ let dep msg =
       end;
     x
 
+let mkRegs v (hint,ty,regs) = List.map (fun (id,reg) -> (v, hint, ty, id, reg)) regs
+let mkTypedefs ty names = List.map (fun n -> A.Typedef(n,ty)) names
+
 let rdep = dep "Use of 'register' keyword is deprecated"
 let noeqdep = dep "Hardware register name without '=' is deprecated"
 
@@ -29,6 +32,15 @@ let str2uint str =
   let b = Bits.U.of_string str Nativeint.size in
   try Bits.U.to_int b with Bits.Overflow ->
     Error.errorf "constant %s overflows %d-bit native integer" str (Nativeint.size-1)
+
+let ast_mem ty exp (align, alias) = A.Mem(ty, exp, align, alias)
+
+let uminus e =
+  let rec strip = function
+    | A.ExprAt(e, _) -> strip e
+    | A.Sint(s, w) -> A.Sint("-" ^ s, w)
+    | _ -> A.UnOp("-", e) in
+  strip e
 
 %}
 /*(*x: parse.mly *)*/

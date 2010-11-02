@@ -265,6 +265,7 @@ static char* parse_base (char *p, int *base)
 @
 Convert a string to an unsigned [[int64]] value.  In case of syntax
 errors or overflow, raise [[Failure]].  
+
 <<uint64p.c>>=
 value uint64_of_string(value s)          /* ML */
 {
@@ -288,3 +289,4 @@ value uint64_of_string(value s)          /* ML */
     if (p != String_val(s) + caml_string_length(s)) failwith("syntax");
     return copy_int64(res);
 }
+@ 
