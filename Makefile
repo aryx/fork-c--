@@ -16,6 +16,7 @@ SYSLIBS=nums.cma bigarray.cma str.cma unix.cma
 
 LIBS= commons/commons.cma \
      commons2/lib.cma \
+     h_asdl/lib.cma \
      parsing/lib.cma \
 
 

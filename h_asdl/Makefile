@@ -5,7 +5,7 @@ TOP=../
 ##############################################################################
 TARGET=lib
 
-SRC= stdPrims.ml share.ml stdPkl.ml pklInt.ml  \
+SRC= stdPrims.ml share.ml pklInt.ml stdPkl.ml   \
    sexpLex.ml sexpPkl.ml \
    stdPrimsUtil.ml
 

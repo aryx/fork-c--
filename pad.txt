@@ -19,7 +19,10 @@ on lindig:
     * =*=  trick :) and evilness of the polymorphic equal (but implicit 
       loading of it is bad; yet another magic stuff happening behind your back)
     * use of literate programing (but not syncweb!)
-    * use of code generator a la tarzan for sexp
+    * use of code generator a la tarzan for sexp (asdl)
+
+on cmm:
  - like pfff
     * srcmap.ml vs my full_charpos_table and embeded parse_info.ml
+    * asdl vs lib-sexp and my ocaml.mk file
 

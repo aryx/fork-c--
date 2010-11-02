@@ -33,8 +33,10 @@ let test_pp_cmm file  =
 
 let test_dump_cmm file  =
   let ast = Parse_cmm.parse file in
-  let pp = Astpp.program ast in
-  raise Todo
+
+  let chan = stdout in
+  AstUtil.sexp_wr_toplevel_list ast chan;
+  ()
 
 
 
