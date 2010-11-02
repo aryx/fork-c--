@@ -13,7 +13,7 @@ SYSLIBS=
 
 LIBS=
 
-INCLUDEDIRS= $(TOP)/commons $(TOP)/h_asdl
+INCLUDEDIRS= $(TOP)/commons2 $(TOP)/h_asdl
 
 ##############################################################################
 # Generic variables

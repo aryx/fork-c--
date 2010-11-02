@@ -17,7 +17,7 @@ SYSLIBS=
 LIBS= 
 
 
-MAKESUBDIRS= commons \
+MAKESUBDIRS= commons2 \
    h_asdl \
    parsing
 
