@@ -34,9 +34,20 @@ let test_pp_cmm file  =
 let test_dump_cmm file  =
   let ast = Parse_cmm.parse file in
 
-  let chan = stdout in
-  AstUtil.sexp_wr_toplevel_list ast chan;
-  ()
+  let temp = Common.new_temp_file "cmm" "sexp" in
+  Common.with_open_outfile temp (fun (_, chan) ->
+    AstUtil.sexp_wr_toplevel_list ast chan;
+  );
+  let s = Common.read_file temp in
+  (* Common.cat temp +> List.iter pr2; *)
+  let sexp_opt = Sexp.parse_str s in
+  match sexp_opt with
+  | Sexp.Done (t, pos) -> 
+      let str = Sexp.to_string_hum t in
+      pr2 str
+  | Sexp.Cont _ ->
+      failwith "parse error on sexp"
+  
 
 
 
