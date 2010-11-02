@@ -17,3 +17,12 @@ parts of the C-- specification are and are not currently supported.
 You can also try `man qc--'.  Quick C-- is still under development, so
 if there is a feature you need, please ask for it.
 
+
+Problems and Bug Reports
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you have trouble building the compiler or using it, send email to
+bugs@cminusminus.org.  You can view the status of bug reports at
+http://www.cminusminus.org/qc--bugs.  If either this email or this URL 
+fails, please send a letter of complaint to nr@eecs.harvard.edu with a 
+copy to help@eecs.harvard.edu.
