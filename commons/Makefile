@@ -11,7 +11,9 @@ TARGET=lib
 SRC=auxfuns.ml pc.ml lc.ml pc2.ml pp.ml srcmap.ml rx.ml \
   verbose.ml strutil.ml \
   reinit.ml \
-  error.ml 
+  error.ml \
+  impossible.ml \
+  bits.ml bitset64.ml \
 
 SYSLIBS=
 
@@ -49,10 +51,12 @@ clean::
 ##############################################################################
 
 SRCNW=auxfuns pc lc pc2 pp srcmap rx verbose strutil \
- error reinit \
- 
+ reinit \
+ error impossible \
+ bits bitset64
 
-# TODO rc_scan
+# TODO rc_scan  rc.nw
+# TODO residualize interface in bits.nw ???
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done

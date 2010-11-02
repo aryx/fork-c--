@@ -38,7 +38,7 @@ it is checked error to exceed it.
 A [[bits]] value has an observable fixed [[width]] that is the number of
 bits it can hold. The simplest [[bits]] value is [[zero]], a [[width]]
 long bit vector of zeros. 
-<<bits.mli ((evaluating))>>=
+<<bits.mli>>=
 type width = int
 
 type bits      
@@ -51,7 +51,7 @@ val is_zero : t -> bool
 Comparison is safe even on bit vectors of different widths.
 However, its results are not necessarily meaningful aside from their
 use in constructing hash tables.
-<<bits.mli ((evaluating))>>=
+<<bits.mli>>=
 val compare : t -> t -> int
 val eq      : t -> t -> bool
 @ 
@@ -62,7 +62,7 @@ a bug in the compiler, which halts with an error message.
 The
 syntax for numbers follows the {\PAL} syntax. For the details of
 strings, see below.
-<<bits.mli ((evaluating))>>=
+<<bits.mli>>=
 exception Overflow
 module S: sig  (* signed *) 
     <<interface S>>
@@ -82,7 +82,7 @@ with sign.
 Function [[to_hex_or_decimal_string]] converts to decimal if the
 argument is ``unsigned less then'' [[declimit]]; otherwise it converts
 to form [["0x%x"]].
-<<bits.mli ((evaluating))>>=
+<<bits.mli>>=
 val to_string         : bits -> string
 val to_decimal_string : bits -> string
 val to_hex_or_decimal_string : declimit:int -> bits -> string
@@ -97,7 +97,7 @@ We prefer to use {\PAL} names, not OCaml names, so logical
 [[and]] and [[or]], not [[logand]] and [[logor]].
 Except that because [[and]] and [[or]] are reserved words, it's
 [[and']] and [[or']].
-<<bits.mli ((evaluating))>>=
+<<bits.mli>>=
 module Ops : sig
   val add       : bits -> bits -> bits
   val and'      : bits -> bits -> bits
@@ -142,9 +142,11 @@ val of_native:  nativeint   -> width -> t   (* raises Overflow *)
 val of_int32:   int32       -> width -> t   (* raises Overflow *)
 val of_int64:   int64       -> width -> t   (* raises Overflow *)
 val of_string:  string      -> width -> t   (* raises Overflow *)
-@ For the format of the strings accepted by [[of_string]], see the section
+@ 
+
+For the format of the strings accepted by [[of_string]], see the section
 below.  I CANNOT FIND THE REFERENCE.  PLEASE TRY \ref OR \pageref!
-@
+
 
 % ------------------------------------------------------------------ 
 \subsection{Signed Observers}
@@ -317,13 +319,13 @@ interface to [[bits]].
 \subsection{Implementation}
 % ------------------------------------------------------------------ 
 
-<<bits.ml ((evaluating))>>=
+<<bits.ml>>=
 module I = Int64        (* signed   operations *)
 exception Overflow
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 @ 
 Here, we want our polymorphism.
-<<bits.ml ((evaluating))>>=
+<<bits.ml>>=
 let (<=) = Pervasives.(<=)
 let (>=) = Pervasives.(>=)
 let (<)  = Pervasives.(<)
@@ -333,7 +335,7 @@ Values of type [[bits]] are represented as pairs of width and [[bits64]]
 value. Whenever for the width $k < 64$ holds, we maintain the
 following invariant: the $64-k$ most significant bits equal the sign
 bit $k-1$ of $b$.
-<<bits.ml ((evaluating))>>=
+<<bits.ml>>=
 type width      = int
 type bits       = int64 * width
 type t          = bits 
@@ -352,13 +354,15 @@ significant bits ($w-1, \dots, 0$) such that the remaining $64 - w$ most
 significant bit are equal to bit $w-1$, the sign bit of a vector of
 length $w$. We use this to establish our invariant that unused bits
 equal the sign bit.
-<<bits.ml ((evaluating))>>=
+<<bits.ml>>=
 let sx64 i w =
   if w = 64 then i
   else
     let w' = 64-w in
     I.shift_right (I.shift_left i w') w'
-<<bits.ml ((evaluating))>>=
+@ 
+
+<<bits.ml>>=
 let zx64 i w =
   if w = 64 then i
   else
@@ -368,7 +372,7 @@ let zx64 i w =
 \subsection{Strings}
 
 Conversion rules seem a bit idiosyncratic...
-<<bits.ml ((evaluating))>>=
+<<bits.ml>>=
 let to_string (i,w) = Printf.sprintf "0x%Lx::bits%d" i w 
 let to_decimal_string (i,w) = Printf.sprintf "%Ld" i
 let to_hex_or_decimal_string ~declimit (i,w) =
@@ -382,7 +386,7 @@ let to_hex_or_decimal_string ~declimit (i,w) =
 \subsection Arithmetic}
 % ------------------------------------------------------------------ 
 
-<<bits.ml ((evaluating))>>=
+<<bits.ml>>=
 module Ops = struct
   <<bitwise operators>>
 end
@@ -392,6 +396,8 @@ let compare (b, w) (b', w') =
   | 0 -> Pervasives.compare (sx64 b w) (sx64 b' w)
   | diff -> diff
 let is_zero (b, w) = zx64 b w =*= I.zero
+@ 
+
 <<bitwise operators>>=
 let add (b, w) (b', w') =
   assert (w = w');
@@ -485,7 +491,9 @@ let xor (b,w) (b',w') =
 
 let com (b,w) = (Int64.lognot (zx64 b w), w)
 @
-<<bits.ml ((evaluating))>>=
+
+
+<<bits.ml>>=
 <<string scanning>>
 module S = struct
     <<implementation S>>
@@ -775,7 +783,8 @@ type tag = INT | NINT | INT64 | BV
 type width      = int
 type bitvector  = (tag * Tdpe.dynamic) (* abstract *)
 type bits       = bitvector * width
-@ We provide the same interface to [[bits]] as the evaluating
+@ 
+We provide the same interface to [[bits]] as the evaluating
 instantiation.
 <<bits.mli ((residualizing))>>=
 <<interface>>
@@ -816,7 +825,8 @@ type bits       = bitvector * width (* width * int64 *)
 <<bits.ml ((residualizing))>>=
 let maxwidth    = 64
 
-@ A few basic function for constructing bits. They attach the
+@ 
+A few basic function for constructing bits. They attach the
 appropriate tags.
 <<bits.ml ((residualizing))>>=
 
@@ -846,7 +856,8 @@ let fits (bits,width') width =
        (Sy.INT width',bits)
        (Sy.INT width))
 
-@ [[check]] appears to be called in static contexts only: its arguments
+@ 
+[[check]] appears to be called in static contexts only: its arguments
 are static. Therefore, we provide the evaluating interpretation. It
 inlines the definition of the evaluating instantiation of [[fits]].
 
@@ -887,6 +898,7 @@ let of_stringi str width =
             )
         with
             Failure _ -> syntax ("syntax error in constant: "^str)
+@ 
          
 <<bits.ml ((residualizing))>>=
 let of_stringf str width =
@@ -894,6 +906,7 @@ let of_stringf str width =
     then raise Size
     else try mkBitsINT64 width (U.of_float (float_of_string str)) with
          | Failure _ -> syntax ("syntax error in constant: "^str)
+@ 
 
 <<bits.ml ((residualizing))>>=
 let of_stringc str width =
@@ -922,7 +935,8 @@ let of_stringc str width =
             ( check width c;
               mkBitsINT64 width c
             ) 
-@ Here I need to avoid a bug
+@
+ Here I need to avoid a bug
 <<bits.ml ((residualizing))>>=
 let of_int i width =
     let uint64 = (*U.of_int i*) Int64.of_int i in
@@ -930,16 +944,21 @@ let of_int i width =
           mkBitsINT width i
          )
 let of_std_int x width = ((BV,x),width)
+@ 
+
 <<bits.ml ((residualizing))>>=
 let of_int64 i width =
   ( check width i ;
     mkBitsINT64 width i
    )
 
-@ This implementation of [[Bits.of_nativeint]] is meaning preserving
+@ 
+
+This implementation of [[Bits.of_nativeint]] is meaning preserving
 only in the restrictive assumptions mentioned at the beginning of this
 section. In the residualizing interpretation the native ints are
 dynamic, so we just construct some expression.
+
 <<bits.ml ((residualizing))>>=
 let of_nativeint i width =
   ((NINT,i),width)
@@ -1004,7 +1023,9 @@ let to_nativeint ((tag,bitv),w) =
       )
   | BV -> T.nbe' (T.arrow(T.paira',T.a')) (Sy.VAR "Bits.to_nativeint") (bitv,Sy.INT w)
 
-@ We need to fix this as soon as the rest gets fixed as well.
+@ 
+We need to fix this as soon as the rest gets fixed as well.
+
 <<bits.ml ((residualizing))>>=
 type radix      = Oct
                 | Dec

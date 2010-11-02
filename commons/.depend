@@ -1,5 +1,8 @@
 auxfuns.cmi: 
+bits.cmi: 
+bitset64.cmi: 
 error.cmi: srcmap.cmi 
+impossible.cmi: 
 lc.cmi: 
 pc.cmi: 
 pc2.cmi: 
@@ -11,8 +14,14 @@ strutil.cmi:
 verbose.cmi: 
 auxfuns.cmo: auxfuns.cmi 
 auxfuns.cmx: auxfuns.cmi 
+bits.cmo: impossible.cmi bits.cmi 
+bits.cmx: impossible.cmx bits.cmi 
+bitset64.cmo: bits.cmi bitset64.cmi 
+bitset64.cmx: bits.cmx bitset64.cmi 
 error.cmo: srcmap.cmi error.cmi 
 error.cmx: srcmap.cmx error.cmi 
+impossible.cmo: impossible.cmi 
+impossible.cmx: impossible.cmi 
 lc.cmo: lc.cmi 
 lc.cmx: lc.cmi 
 pc.cmo: pc.cmi 
