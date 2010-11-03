@@ -28,6 +28,7 @@ name with an
 optional kind is expected.
 (There are no contexts in which a kind is permitted with a general lvalue.)
 ONE PROBLEM REMAINS: WE COULD ACCEPT A KIND ON A PRIMITIVE CALL.
+
 <<elabexp.mli>>=
 type nm_or_mem = Ast.name_or_mem
 type link = Reloc.t
@@ -48,7 +49,8 @@ expression does not carry a region.
 <<elabexp.mli>>=
 val loc_region : Ast.region -> nm_or_mem -> Ast.region
 val exp_region : Ast.region -> Ast.expr  -> Ast.region
-@ The [[elab_*]] functions work with incomplete information,
+@ 
+The [[elab_*]] functions work with incomplete information,
 indicated by [[Error.Error]] values.  The policy is as follows:
 \begin{itemize}
 \item In case of a success, [[check]] returns the type of the
@@ -61,12 +63,14 @@ indicated by [[Error.Error]] values.  The policy is as follows:
       The exception [[Error.ErrorExn]] may be used internally, but it
       should never be raised by a top-level function.
 \end{itemize}
-@
+
 % ------------------------------------------------------------------ 
 \subsection{Implementation}
 % ------------------------------------------------------------------ 
 
 <<elabexp.ml>>=
+open Nopoly
+
 module A  = Ast
 module E  = Error
 module F  = Fenv.Dirty
@@ -108,7 +112,8 @@ let exprfuns env =
   let aligned     = aligned metrics in
   <<definition of [[lvalue_name]]>>
   <<definition of [[rvalue_name]]>>
-  <<mutually recursive nest of [[typed_expr]] and [[lvalue]]>> in
+  <<mutually recursive nest of [[typed_expr]] and [[lvalue]]>>
+  in
   let constant simp e = E.ematch (typed_expr e) (fun (k, kt) ->
     match kt with
     | Types.Bits w -> simp k, w
@@ -146,7 +151,7 @@ are parameterized
 by an environment.
 The rest appear in a context (under [[exprfuns]]) in which the
 environment is bound to [[env]].
-@
+
 \subsubsection {Translation of type and conversion from type to width}
 
 \nwaddbox{tywidth  : 'a Types.t -> 'a}
@@ -167,7 +172,8 @@ let elab_full_ty env =
     | A.TypeSynonym n -> snd (F.findt n env) in
   catch Srcmap.null elab
 
-let astwidth msg env = emap (tywidth msg) << elab_full_ty env
+(* pad: was << but I changed it to @<<, typo in .nw file ??? *)
+let astwidth msg env = emap (tywidth msg) @<< elab_full_ty env
 let elab_ty env = astwidth "expressed in abstract syntax" env
 @
 \subsubsection{The meanings of names}
@@ -235,6 +241,7 @@ and rvalue_name_or_mem nm = match nm with
   | A.Name(k, x, a)     -> no_kind_or_alignment k a rvalue_name x
   | A.Mem(_, _, _, _)   ->
       E.ematch (lvalue nm) (fun (loc, w) -> Rtl.fetch loc w, Types.Bits w)
+@ 
 <<utilities>>=
 let no_kind_or_alignment k a f x = match k, a with
   | None, None     -> f x
@@ -298,7 +305,8 @@ and typed_expr exp =
   | A.UnOp  (op,e)    -> apply Rtlop.Translate.unary  op [e]
   | A.PrimOp(op,args) -> let args = List.map (fun (k, x, a) -> x) args in
                          apply Rtlop.Translate.prefix op args
-@ Perhaps suprisingly, [[Bits.U.of_string]] copes with all 
+@ 
+Perhaps suprisingly, [[Bits.U.of_string]] copes with all 
          literal formats.
-@
+
 

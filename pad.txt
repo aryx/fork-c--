@@ -16,8 +16,11 @@ related work:
 
 using so many extra tools make the job harder for people to join
   * mk vs make
-  * noweb
+  * noweb. It's conveninent to have access easily to the .mli without
+    looking at the .nw. Also convenient to modify the .ml files directly.
   * the nopoly.mw trick  and weird operator like =<=
+
+
 
 on lindig:
  - like me:

@@ -23,7 +23,9 @@ LIBS= commons/commons.cma \
 MAKESUBDIRS= \
    commons commons2 \
    h_asdl \
-   parsing
+   parsing \
+   frontend1 \
+   frontend2 \
 
 #  h_camlburg tools \
 #  asdl rtl compiler runtime \

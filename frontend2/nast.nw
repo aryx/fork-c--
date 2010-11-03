@@ -204,7 +204,9 @@ If there can be no statement, [[k]]'s first argument is~[[id]].
 let rec body r accums b k = match b with
 | A.BodyAt(b,r) -> body r accums b k
 | A.DeclBody d  -> decl r accums d (k id)
-| A.StmtBody s  -> (<<match [[stmt]] [[s]] at [[r]] and continue with [[k]]>>)
+| A.StmtBody s  -> (
+  <<match [[stmt]] [[s]] at [[r]] and continue with [[k]]>>
+ )
 | A.DataBody ds -> k id {accums with data = (fdata r ds accums.data)}
 and bodies r = kmap body (fun add ss -> add ss) r
 @ 
@@ -272,9 +274,10 @@ let rec stmt r s k =
           let stmt = cons (Limitcheck (cc, cookie, Some (cont, name))) in
           k stmt {accums with ks = ((r, (name,cc,formals)) :: accums.ks)} in
 stmt r s k
-@ PERHAPS IT SHOULD BE POSSIBLE TO SET THE CALLING CONVENTION FOR CUT TO
+@ 
+PERHAPS IT SHOULD BE POSSIBLE TO SET THE CALLING CONVENTION FOR CUT TO
 AND FOR CONTINUATION?
-@
+
 Arm of a case statement.  Nothing interesting here.
 <<nast.ml>>=
 and arm r accums a k = match a with
@@ -355,3 +358,4 @@ let program ts =
       ; sections = List.map fst ss
       ; udecls = { types = saccums.tys; constants = saccums.consts }
       })
+@ 

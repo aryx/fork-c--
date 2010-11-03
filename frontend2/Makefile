@@ -5,22 +5,23 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-# TODO split in further directories
 
-SRC= eqn.ml \
-     symbol.ml cell.ml register.ml \
-     rtl.ml reloc.ml rtleqn.ml block.ml  \
-     types.ml \
-     metrics.ml asm.ml fenv.ml
+SRC= nast.ml alignment.ml topsort.ml \
+ simplify.ml rtlop.ml \
+ memalloc.ml \
+ elabexp.ml elabstmt.ml nelab.ml 
 
 SYSLIBS=
 
 LIBS=
 
 # need h_asdl/ just to knows that StdPrimInt == int for the typechecker
+
 INCLUDEDIRS= $(TOP)/commons2 \
  $(TOP)/parsing \
- $(TOP)/h_asdl
+ $(TOP)/h_asdl \
+ $(TOP)/frontend1 \
+
 
 ##############################################################################
 # Generic variables
@@ -51,8 +52,8 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=eqn symbol cell register rtl block types reloc rtlutil rtleqn \
- metrics asm fenv
+SRCNW=nast nelab elabstmt elabexp  simplify rtlop alignment topsort memalloc
+
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done

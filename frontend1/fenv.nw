@@ -645,7 +645,7 @@ implementations of [[Arg]].
 <<private types shared by clean and dirty environments>>
 <<exported signature [[Env]]>>
 module Env (Arg: Arg) = struct 
- <<body of functor [[Env]]>> 
+ <<body of functor [[Env]]>>
 end
 @ 
 
@@ -685,6 +685,11 @@ provides us what we need to know about good and bad values:
 type 'a partial     = 'a Arg.partial
 type 'a info        = 'a Arg.info
 let  bad            = Arg.bad
+
+(* pad: *)
+type  ventry        = Srcmap.rgn * (denotation * Types.ty) info
+type  tentry         = Srcmap.rgn * Types.ty info
+
 @
 
 Our interfaces includes definitions for types that capture the

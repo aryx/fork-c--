@@ -48,6 +48,8 @@ expression (or {\rtl}) bottom up as far as possible. The final result
 will tell us whether it needs further ecaluation at link-time or
 run-time.
 <<simplify.ml>>=
+open Nopoly
+
 module BO = Bits.Ops
 module R  = Rtl
 module RP = Rtl.Private
@@ -148,7 +150,7 @@ run-time expression from their arguments and return it.
 <<RTL operator implementations>>=
 let default op w args = RP.App((op,w),args)
 @ 
-<<traverse RTL>>=   
+<<traverse RTL>>=
 let app o w args = match o with
     | "NaN" 	      -> nan w args
     | "add" 	      -> add w args
@@ -243,7 +245,9 @@ let rec exp e =
                             
 and loc = function          
     | RP.Mem(sp, w, e, ass) -> RP.Mem(sp, w, exp e, ass)
-    | RP.Slice(n,lsb,l)     -> (<<rewrite slice [[l@lsb:n]]>>)
+    | RP.Slice(n,lsb,l)     -> (
+      <<rewrite slice [[l@lsb:n]]>>
+    )
     | RP.Reg(sp, i, w) as v -> v
     | RP.Var   (s,i,w) as v -> v
     | RP.Global(s,i,w) as v -> v
@@ -338,6 +342,8 @@ let round_down    w args = RP.Const(RP.Bits(Bits.U.of_int 1 2))
 let round_up      w args = RP.Const(RP.Bits(Bits.U.of_int 2 2))
 let round_nearest w args = RP.Const(RP.Bits(Bits.U.of_int 0 2))
 let round_zero    w args = RP.Const(RP.Bits(Bits.U.of_int 3 2))
+@ 
+
 <<RTL operator implementations>>=
 let rec add ws args = 
     let w = match ws with [w] -> w | _ -> Impossible.impossible "ill-typed add" in
@@ -366,10 +372,14 @@ let sub ws args =
     )
   | [x; y] when RU.Eq.exp x y -> RP.Const(RP.Bits(Bits.zero w))
   | args      -> default "sub" ws args
+@ 
+
 <<RTL operator implementations>>=
 let binop name w op = function
     | [RP.Const(RP.Bits x); RP.Const(RP.Bits y)] -> const (op x y)
     | args       -> default name w args
+@ 
+
 <<RTL operator implementations>>=
 let disjoin w = function
     | [RP.Const(RP.Bool true); _] -> RP.Const(RP.Bool true)
@@ -384,20 +394,26 @@ let conjoin w = function
     | [RP.Const(RP.Bool true); p] -> p
     | [p; RP.Const(RP.Bool true)] -> p
     | args       -> default "conjoin" w args
+@ 
+
 <<RTL operator implementations>>=
 let not' w = function
     | [RP.Const(RP.Bool b)] -> RP.Const(RP.Bool (not b))
     | args       -> default "not" w args
+@ 
 <<RTL operator implementations>>=
 let cmp_bits name w op = function
     | [RP.Const(RP.Bits x); RP.Const(RP.Bits y)] -> to_bool (op x y)
     | args       -> default name w args
+@ 
 <<RTL operator implementations>>=
 let unop name w op = function
     | [RP.Const(RP.Bits x)] -> const (op x)
     | args       -> default name w args
+@ 
 <<RTL operator implementations>>=
-<<RTL operator implementations>>=    
+@ 
+<<RTL operator implementations>>=
 let or' ws args = 
     let w = match ws with [w] -> w | _ -> Impossible.impossible "ill-typed or" in
     match args with
@@ -415,6 +431,7 @@ let and' ws args =
     | [x; RP.Const (RP.Bits y) as zero] when Bits.Ops.eq (Bits.U.of_int 0 w) y -> zero
     | [RP.Const (RP.Bits x) as zero; y] when Bits.Ops.eq (Bits.U.of_int 0 w) x -> zero
     | args  ->  default "and" ws args
+@ 
 <<RTL operator implementations>>=
 let rec zx w args   = match w, args with
 | [n;w],[RP.Const (RP.Bits x)] -> const (Bits.Ops.zx w x)
@@ -429,6 +446,8 @@ let rec sx w args   = match (w,args) with
 | [i;j], [x] when i = j -> x
 | _         -> default "sx" w args
 @ 
+
+
 \paragraph{Rewriting references to fragments of large aggregates}
 
 Here we do some fast and loose playing with assertions, as well as
@@ -452,43 +471,54 @@ let lobits =
       answer)
   else
     lobits
+@ 
 
 <<rewrite slice [[l@lsb:n]]>>=
 match loc l with
-| <<big-endian memory location>>
+| 
+ <<big-endian memory location>>
   when Cell.divides mcell n && Cell.divides mcell lsb ->
     let w          = Cell.to_width mcell ct in
     let R.C offset = Cell.to_count mcell (w - n - lsb) in
     let addr       = Dn.exp (RU.addk (RU.Width.exp' addr) (Up.exp addr) offset) in
     let assn       = Alignment.gcd assn offset in
     RP.Mem (mspace, Cell.to_count mcell n, addr, assn)
-| <<little-endian memory location>> 
+| 
+ <<little-endian memory location>>
   when Cell.divides mcell n && Cell.divides mcell lsb ->
     let R.C offset = Cell.to_count mcell lsb in
     let addr       = Dn.exp (RU.addk (RU.Width.exp' addr) (Up.exp addr) offset) in
     let assn       = Alignment.gcd assn offset in
     RP.Mem (mspace, Cell.to_count mcell n, addr, assn)
-| <<big-endian register location>> 
+| 
+  <<big-endian register location>>
   when Cell.divides rcell n && Cell.divides rcell lsb ->
     let w          = Cell.to_width rcell count in
     let R.C offset = Cell.to_count rcell (w - n - lsb) in
     RP.Reg (rspace, index + offset, Cell.to_count rcell n)
-| <<little-endian register location>> 
+| 
+  <<little-endian register location>>
   when Cell.divides rcell n && Cell.divides rcell lsb ->
     let R.C offset = Cell.to_count rcell lsb in
     RP.Reg (rspace, index + offset, Cell.to_count rcell n)
 | l -> RP.Slice(n,lsb,l)
 @ 
 <<cases for rewriting aggregates in big-endian or little-endian memory>>=
-| [w;n],[<<little-endian memory fetch>>] when Cell.divides mcell n ->
+| [w;n],[
+   <<little-endian memory fetch>>
+   ] when Cell.divides mcell n ->
     RP.Fetch (RP.Mem (mspace, Cell.to_count mcell n, addr, assn), n)
-| [w;n],[<<big-endian memory fetch>>] when Cell.divides mcell (w - n) ->
+| [w;n],[
+    <<big-endian memory fetch>>
+    ] when Cell.divides mcell (w - n) ->
     let R.C offset = Cell.to_count mcell (w - n) in
     let addr = Dn.exp (RU.addk (RU.Width.exp' addr) (Up.exp addr) offset) in
     let assn = Alignment.gcd assn offset in
     RP.Fetch (RP.Mem (mspace, Cell.to_count mcell n, addr, assn), n)
 | [w;n],[RP.App(("shrl", [_]),
-                [<<little-endian memory fetch>>; RP.Const(RP.Bits b)])] ->
+                [
+      <<little-endian memory fetch>>
+      ; RP.Const(RP.Bits b)])] ->
     let shamt = Bits.U.to_int b in
     if Cell.divides mcell shamt then
       let R.C offset = Cell.to_count mcell shamt in
@@ -498,30 +528,47 @@ match loc l with
         [RP.Fetch (RP.Mem (mspace, Cell.to_count mcell (w-shamt), addr, assn),w-shamt)]
     else
       default "lobits" ws args
-| [w;n],[RP.App(("shrl", [_]), [<<big-endian memory fetch>>; RP.Const(RP.Bits b)])] ->
+| [w;n],[RP.App(("shrl", [_]), [
+      <<big-endian memory fetch>>
+     ; RP.Const(RP.Bits b)])] ->
     let shamt = Bits.U.to_int b in
     if Cell.divides mcell shamt then
       lobits [w-shamt; n]
         [RP.Fetch (RP.Mem (mspace, Cell.to_count mcell (w-shamt), addr, assn),w-shamt)]
     else
       default "lobits" ws args
+@ 
 <<little-endian memory fetch>>=
-RP.Fetch(<<little-endian memory location>>, w')
+RP.Fetch(
+  <<little-endian memory location>>
+   , w')
+@ 
 <<little-endian memory location>>=
 RP.Mem ((sp, Rtl.LittleEndian, mcell) as mspace, ct, addr, assn)
+@ 
 <<big-endian memory fetch>>=
-RP.Fetch(<<big-endian memory location>>, w'')
+RP.Fetch(
+    <<big-endian memory location>>
+   , w'')
+@ 
 <<big-endian memory location>>=
 RP.Mem ((sp, Rtl.BigEndian, mcell) as mspace, ct, addr, assn)
+@ 
 <<cases for rewriting aggregates in big-endian or little-endian registers>>=
-| [w;n],[<<little-endian register fetch>>] when Cell.divides rcell n ->
+| [w;n],[
+   <<little-endian register fetch>>
+   ] when Cell.divides rcell n ->
     RP.Fetch (RP.Reg (rspace, index, Cell.to_count rcell n), n)
-| [w;n],[<<big-endian register fetch>>] when Cell.divides rcell (w - n) ->
+| [w;n],[
+   <<big-endian register fetch>>
+   ] when Cell.divides rcell (w - n) ->
     let R.C offset = Cell.to_count rcell (w - n) in
     let index      = index + offset in
     RP.Fetch (RP.Reg (rspace, index, Cell.to_count rcell n), n)
 | [w;n],[RP.App(("shrl", [_]),
-                [<<little-endian register fetch>>; RP.Const(RP.Bits b)])] ->
+                [
+    <<little-endian register fetch>>
+    ; RP.Const(RP.Bits b)])] ->
     let shamt = Bits.U.to_int b in
     if Cell.divides rcell shamt then
       let R.C offset = Cell.to_count rcell shamt in
@@ -530,22 +577,33 @@ RP.Mem ((sp, Rtl.BigEndian, mcell) as mspace, ct, addr, assn)
         [RP.Fetch (RP.Reg (rspace, index, Cell.to_count rcell (w-shamt)), w-shamt)]
     else
       default "lobits" ws args
-| [w;n],[RP.App(("shrl", [_]), [<<big-endian register fetch>>; RP.Const(RP.Bits b)])] ->
+| [w;n],[RP.App(("shrl", [_]), [
+      <<big-endian register fetch>>
+      ; RP.Const(RP.Bits b)])] ->
     let shamt = Bits.U.to_int b in
     if Cell.divides rcell shamt then
       lobits [w-shamt; n]
         [RP.Fetch (RP.Reg (rspace, index, Cell.to_count rcell (w-shamt)), w-shamt)]
     else
       default "lobits" ws args
+@ 
 <<little-endian register fetch>>=
-RP.Fetch(<<little-endian register location>>, w'')
+RP.Fetch(
+   <<little-endian register location>>
+   , w'')
+@ 
 <<big-endian register fetch>>=
-RP.Fetch(<<big-endian register location>>, w'')
+RP.Fetch(
+   <<big-endian register location>>
+   , w'')
+@ 
 <<little-endian register location>>=
 RP.Reg ((sp, Rtl.LittleEndian, rcell) as rspace, index, count)
+@ 
 <<big-endian register location>>=
 RP.Reg ((sp, Rtl.BigEndian,    rcell) as rspace, index, count)
 @ 
+
 <<RTL operator implementations>>=
 let unsigned n w = RP.Const (RP.Bits (Bits.U.of_int n w))
 let null = function [] -> true | _ :: _ -> false
@@ -591,6 +649,7 @@ let nan w args =
   | [n;w], [x] -> impossf "significand in NaN has width %d; should be %d" n (swidth w)
   | _ -> Impossible.impossible "ill-formed NaN"
 @ 
+
 \subsection{Machine-dependent simplifications}
 <<RTL operator implementations>>=
 let x86_carrybit w args = match args with
@@ -598,3 +657,4 @@ let x86_carrybit w args = match args with
 | _ -> default "x86_carrybit" w args
 
     
+@ 

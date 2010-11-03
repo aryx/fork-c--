@@ -16,6 +16,7 @@ SRC=nopoly.ml \
   reinit.ml \
   error.ml impossible.ml unsupported.ml debug.ml \
   uint64.ml bits.ml bitset64.ml \
+  idgen.ml 
 
 COBJS=uint64p.o
 
@@ -62,7 +63,8 @@ uint64p.o: uint64p.c
 SRCNW=auxfuns pc lc pc2 pp srcmap rx verbose strutil \
  reinit \
  error impossible unsupported debug \
- uint64 bits bitset64
+ uint64 bits bitset64 \
+ idgen
 
 # TODO rc_scan  rc.nw
 # TODO residualize interface in bits.nw ???

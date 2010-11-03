@@ -209,6 +209,8 @@ let predefined =
   ;  "bitTransfer"  , int,   [T.var 1; T.var 1; T.var 1; T.var 1; T.var 1] --> T.var 1 
                     
   ] 
+@ 
+
 <<rtlop.ml>>=
 let optypes  = ref (Strutil.assoc2map (List.map (fun (o, _, t) -> (o, t)) predefined))
 let opfloats = ref (Strutil.assoc2map (List.map (fun (o, f, _) -> (o, f)) predefined))
@@ -273,7 +275,7 @@ operator [[(zx,[10,32])]], where [[10]] is bound by $\alpha$, and [[32]]
 by $\beta$ in the above type scheme. Hence, the size of the result,
 which is inferred from the name, is always the \emph{last}
 value in the \emph{width list} of an {\rtl} operator.
-@
+
 If an operator name has a numerical component, it denotes the size of
 the result. Such a size always becomes the last element in the width
 list of an operator. 
@@ -363,3 +365,4 @@ module Emit = struct
     pf "(* This code generated automatically by Rtlop.Emit.creators *)\n";
     Strutil.Map.iter emitop (!optypes)
 end    
+@

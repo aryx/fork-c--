@@ -52,6 +52,7 @@ type 'a compunit = {
 <<exposed types>>
 val program : swap:bool -> validator -> Srcmap.map -> 'a Asm.assembler -> Nast.t ->
   ('a Fenv.Dirty.env' * 'a compunit) Error.error
+@ 
 <<exposed types>>=
 type validator = Rtl.rtl -> string option
 @ 
@@ -145,6 +146,8 @@ the fat environment.
 % ------------------------------------------------------------------ 
 
 <<nelab.ml>>=
+open Nopoly
+
 <<exposed types>>
 module A  = Ast
 module B  = Bits
@@ -159,6 +162,7 @@ module Up = Rtl.Up
 module T  = Types
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
+@ 
 
 <<nelab.ml>>=
 <<auxiliaries>>
@@ -167,10 +171,10 @@ The key to understand the implementation is the fat environment
 [[Fenv.Dirty]]; it defines a symbol table that holds the type, value, and
 target environment.  Names are chosen similar to the non-terminals
 used in the grammar.
-@
+
 An outlined in the introduction, an environment must be built up before
 the static semantics can be checked. 
-@
+
 Because type and constant declarations can refer to each other they
 can not be simply processed in source code order.  They are collected,
 then sorted, and finally processed.  The sort function is provided by
@@ -178,7 +182,7 @@ the [[Topsort.Make]] functor, which is parameterized over the
 declarations being sorted.  In the case of type declarations, for
 example, module [[Typedef.Decl]] provides the necessary informations
 about type declarations. 
-@ 
+ 
 % ------------------------------------------------------------------ 
 \subsection{Auxiliaries}
 % ------------------------------------------------------------------ 
@@ -214,7 +218,7 @@ let is2power x = x > 0 && x land (x - 1) = 0
 \subsection{Sorting and binding type and constant declarations}
 % ------------------------------------------------------------------ 
 
-@
+
 Here's the code to generically bind definitions that have to be
 sorted.
 Type~[[d]] is the declaration, which we have to be able to sort,
@@ -295,6 +299,7 @@ module Type = struct
 end
 module TypeSortBind = SortAndBind(Type)
 @
+
 % ------------------------------------------------------------------ 
 \subsubsection{Constants}
 % ------------------------------------------------------------------ 
@@ -383,7 +388,11 @@ let program ~swap validate srcmap asm ast =
     let errorf r    = Printf.kprintf (fun s -> eprint r s; E.Error) in
     let findve r n  = E.catch (eprint r) (fun env -> snd (F.findv n env)) in
     let pointerty   = Types.Bits metrics.Metrics.pointersize in
-    let vfp         = Vfp.mk metrics.Metrics.wordsize in
+    let vfp         = 
+(* pad: TODO *)
+      (* Vfp.mk metrics.Metrics.wordsize *)
+      failwith "TODO: pad port Vfp"
+   in
     let memsize     = metrics.Metrics.memsize in
     let aligned     = Elabexp.aligned metrics in
     let aligned r w = E.catch (eprint r) (fun a -> E.Ok (aligned w a)) in
@@ -461,6 +470,7 @@ let bind_and_return_continuations env conts =
             bind ((name, k) :: prev') env ks in
   bind [] env conts in
 @ 
+
 \subsubsection{Easy stuff}
 
 \paragraph{Imports}
@@ -472,9 +482,13 @@ let bind_and_remember_import env (r, ty, imports) =
     let env = F.import r (Auxfuns.Option.get name foreign) name env in
     let sym = F.symbol env name in
     let den = FE.Import (Auxfuns.Option.get name foreign, sym) in
-    let ty  = <<convert optional importing [[ty]] as long as it is pointer size>> in
+    let ty  = 
+     <<convert optional importing [[ty]] as long as it is pointer size>>
+    in
     F.bindv name (r, E.Raise.right (den, ty)) env in
   foldl import env imports in
+@ 
+
 <<convert optional importing [[ty]] as long as it is pointer size>>=
 match ty with None -> E.Ok pointerty
 | Some t -> E.seq (Elabexp.elab_ty env t) (fun w ->
@@ -514,6 +528,7 @@ with Error.ErrorExn msg -> impossible msg
         ( List.iter (assign env) names 
         ; AT.freeze t, Digest.string (Buffer.contents decls)    
         )
+@ 
 
 <<definitions of name-binding functions>>=
 let registers_from scope n rs env =
@@ -544,6 +559,8 @@ let registers_from scope n rs env =
       let named = E.Raise.right (name, entry) in
       regs_from (named::prev') (n+1) rs (F.bindv name (rgn, entry) env) in
   regs_from [] n rs env in
+@ 
+
 <<definitions of name-binding functions>>=
 let formals_from n rs env =
   let rec formals prev' n rs env = match rs with
@@ -566,6 +583,7 @@ let formals_from n rs env =
 let bind_section_names env (secname, ds) = 
   <<definitions of name-binding functions for data>>
   foldl datum env ds in
+@ 
 <<definitions of elaboration functions>>=
 let section env (secname, ds) =
   <<definitions of procedure-processing functions>>
@@ -582,11 +600,12 @@ We process [[stackdata]] declarations to accumulate three results:
 [[env]]& Environment with bindings for stack labels\\
 \end{tabular}
 \end{quote}
-@ 
+ 
 The traversal is straightforward and needs little documentation.
 <<definitions of name-binding functions>>=
 let stackdata env =
-  <<definitions of stack-data functions>> in
+  <<definitions of stack-data functions>>
+  in
   stackdata (Memalloc.relative vfp "stackdata" Memalloc.Up) [] env in
 @ 
 <<definitions of stack-data functions>>=
@@ -638,7 +657,7 @@ and stackdatum mem stacklabels' env (r, d) k =
   | N.SSpan (_, _, _) -> impossf "span in stackdata"
 @
 
-@
+
 \paragraph{Export checking}
 
 Not all named values can be exported: registers, continuations, and
@@ -724,10 +743,11 @@ let rec data spans ds rest = match ds with
             else
               E.Ok ((k, v))) in
         data (span::spans) ds' ((spans, ds) :: rest)
-@ It's unfortunate that spans are elaborated both here and in
+@ 
+It's unfortunate that spans are elaborated both here and in
 \module{elabstmt}, but to reuse the error messages would be more
 trouble than it is worth.
-@
+
 A memory declaration has a type, a type, and optionally a number of
 expressions to initialize the memory.  The number of expressions must
 match the size specification, and the type of the expressions must
@@ -792,3 +812,4 @@ and init r ty i =
 @ 
 <<nelab.ml>>=
 let rewrite = Obj.magic
+@ 

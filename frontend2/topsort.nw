@@ -121,6 +121,8 @@ topological sorting as it is outlined by Paulsen in \emph{{\small ML}
 for the working Programmer} \cite{paulson:91:ml}.
 
 <<topsort.ml>>=
+open Nopoly
+
 <<signature S>>
 <<signature Sortable>>
 
@@ -208,6 +210,8 @@ let regular =
     ; ["wash-up"]         , ["go"]
     ; ["go"]              , []
     ]
+@ 
+
 <<topsorttest.ml>>=
 let multi_lhs1 =
     [ ["wake"]            , ["shower"; "eat" ]
@@ -217,6 +221,7 @@ let multi_lhs1 =
     ; ["wash-up"]         , ["go"]
     ; ["go"]              , []
     ]
+@ 
 <<topsorttest.ml>>=
 let multi_lhs2 =
     [ ["wake"]            , ["shower"; "eat" ]
@@ -228,6 +233,7 @@ let multi_lhs2 =
     ; ["go"]              , []
     ; ["go"]              , []
     ]
+@ 
 <<topsorttest.ml>>=
 let undefs =
     [ ["wake"]            , ["shower"; "eat" ]
@@ -237,6 +243,7 @@ let undefs =
     ; ["eat"; "drink"]    , ["wash-up"]
     ; ["wash-up"]         , ["go"]
     ]
+@ 
 <<topsorttest.ml>>=
 let cycle1 =
     [ ["wake"]            , ["shower"; "eat" ]

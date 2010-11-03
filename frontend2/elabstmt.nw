@@ -25,6 +25,8 @@ type name = string
 type kind = string
 type convention = string
 type aligned    = int
+@ 
+
 <<exposed types>>=
 type actual = kind * exp * Rtl.width * aligned
 type 'a kinded = kind * 'a * aligned
@@ -64,7 +66,8 @@ val elab_cformals :
   Ast.region -> 'a Fenv.Dirty.env' -> Nast.cformal list ->
     Fenv.variable kinded list Error.error
 val codelabels : stmt list -> label list
-@ The [[elab_*]] functions work with incomplete information,
+@ 
+The [[elab_*]] functions work with incomplete information,
 indicated by [[Error.Error]] values.  The policy is as follows:
 \begin{itemize}
 \item In case of a success, [[check]] returns the type of the
@@ -77,7 +80,7 @@ indicated by [[Error.Error]] values.  The policy is as follows:
       The exception [[Error.ErrorExn]] may be used internally, but it
       should never be raised by a top-level function.
 \end{itemize}
-@
+
 % ------------------------------------------------------------------ 
 \subsection{Implementation}
 % ------------------------------------------------------------------ 
@@ -252,7 +255,9 @@ let arm (rgs, ss) =
     match rgs with
     | [] -> E.error "case arm has an empty range list"
     | (rg, w) :: rgs ->
-        let strip w (rg, w') = if w = w' then rg else <<exn on range type mismatch>> in
+        let strip w (rg, w') = if w = w' then rg else 
+         <<exn on range type mismatch>> 
+        in
         ((rg :: List.map (strip w) rgs), ss), w) in
 @ 
 The width of every range that appears in a [[switch]] arm must match
@@ -260,20 +265,28 @@ the type of the scrutinee ([[switch]]-expression).
 We check this requirement and strip the width off everything in sight.
 <<elaboration utilities>>=
 let striprange w (rg, w') =
-  if w = w' then rg else <<exn on case range type mismatch>> in
+  if w = w' then rg else 
+   <<exn on case range type mismatch>> 
+   in
 let striparms w =
-  let strip (arm, w') = if w = w' then arm else <<exn on arm type mismatch>> in
+  let strip (arm, w') = if w = w' then arm else  
+    <<exn on arm type mismatch>> 
+  in
   List.map strip in
+@ 
+
 <<exn on range type mismatch>>=
 E.errorf "ranges in case arm have different types bits%d and bits%d" w w'
+@ 
 <<exn on arm type mismatch>>=
 E.errorf "case arm uses range of type bits%d but scrutinee has type bits%d" w' w
+@ 
 <<exn on case range type mismatch>>=
 E.errorf "switch statement range has type bits%d but scrutinee has type bits%d" w' w
 @ 
 
 
-@ 
+ 
 A [[span]] statement has key and value expressions.
 The key must be a constant native word and the value a link-time (data)
 pointer.  Of course, all statement inside the span must be checked as
@@ -298,7 +311,10 @@ The right hand side may contain optional guarding expressions of type
 let assign lhs rhs =
   try E.ematch (E.Raise.list (List.map2 effect lhs rhs)) (fun es ->
     Assign (vrtl (srcmap, r) (Rtl.par es)))
-  with Invalid_argument _ -> <<complain about length mismatch in assignment>> in
+  with Invalid_argument _ -> 
+   <<complain about length mismatch in assignment>> 
+  in
+@ 
 <<elaboration utilities>>=
 let effect lhs (guard,rhs) =
   let guard = Auxfuns.Option.map exp guard in
@@ -389,12 +405,13 @@ let call left conv p args targets flows alias =
     E.ematch5 left args tgts flow alias (fun left args tgts flow alias ->
       insist_pointer "procedure value" pt;
       Call (left, conv, pe, args, tgts, flow, alias))) in
-@ The double nesting avoids a double error (from both [[exp]] and
+@ 
+The double nesting avoids a double error (from both [[exp]] and
 [[reject_uncallable]]) in the case when [[p]] is an unknown name.
 But by doing [[reject_uncallable]] early, we can issue a suitable
 message even in the case when [[p]] is a good but uncallable [[exp]]
 and some other abstract syntax is bad as well.
-@
+
 The jump expression must be a (code) pointer.
 <<definitions of elaboration functions>>=
 let jump conv p args targets =
@@ -416,7 +433,7 @@ let cut conv k args flows =
     insist_pointer "target of 'cut to'" kt;
     Cut (conv, k, args, flow)) in
 @ 
-@
+
 A [[return]] may specify alternate return continuations.  The
 expressions $e_1/e_2$ must be both of the native word type and $0 \leq
 e1 \leq e_2$.
@@ -434,7 +451,8 @@ let return conv alt args =
     if i >= 0 && n >= 0 && i <= n then
       Return (conv, i, n, args)
     else
-      <<raise error exn with bad continuation numbers>>) in
+      <<raise error exn with bad continuation numbers>>
+    ) in
 @ 
 <<raise error exn with bad continuation numbers>>=
 if i < 0 then
@@ -445,6 +463,7 @@ else if i > n then
   E.errorf "in return <i/n>, i must be at most n but you have i = %d and n = %d" i n
 else
   impossf "bad <i/n> with i = %d and n = %d, but no better error message" i n
+@ 
 <<elaboration utilities>>=
 let actual r (kind, e, a) = E.seq (exp e) (fun (e, ty) ->
   match ty with
@@ -561,6 +580,8 @@ let prim lhs conv op args flows =
         else
           Assign (Rtl.store result (Rtl.app opr argexps) w)
     | _ -> E.error "primitive operator produces exactly one result") in
+@ 
+
 <<raise error exn on primop type mismatch>>=
 Printf.kprintf E.error
   "left-hand side has type bits%d, but primitive operator produces results of type %s"
@@ -604,3 +625,4 @@ let codelabels ss =
   | Limitcheck _ -> labels in
   adds ss []
 
+@ 
