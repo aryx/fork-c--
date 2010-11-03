@@ -26,6 +26,7 @@ MAKESUBDIRS= \
    parsing \
    frontend1 \
    frontend2 \
+   ir \
 
 #  h_camlburg tools \
 #  asdl rtl compiler runtime \
