@@ -4,6 +4,10 @@ modifs:
  - moved files a lot
  - use Makefile and syncweb instead of relying on noweb and mk
 
+ - commons2/
+ - parsing/
+ - h_asdl/
+
 related work:
  - LLVM
  - VPO

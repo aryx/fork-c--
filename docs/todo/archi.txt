@@ -1,0 +1,43 @@
+How the Compiler's Source Code is Organized
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can use the compiler without any of the following information, but
+if you want to hack on the compiler, this information may help.
+
+The source code of the compiler is split into different directories. 
+The top level Makefile knows the dependencies between them and makes
+them in the right order.  Files shared by many directories go into the
+lib/ directory which is initially empty.  Once all shared files are in
+place development can be continued in the sub-directories and the
+Makefile provided there. Refer to the Makefiles for the high level
+targets available in each directory. The docs/ directory includes an
+overview document index.nw.
+
+Here are the directories:
+
+    commons2/      Library of OCaml modules for pretty printing and
+                   and parsing.
+
+    h_asdl/       OCaml sources for the runtime system of AsdlGen
+                 generated code.
+    
+    h_camlburg/   A burg implementation for OCaml; comes with its own
+                  documentation.
+
+    docs/        Various documents, manual pages, also an overview and design
+                 problems.
+
+    tests/      Code for testing.
+
+    tools/      Small tools: OCamlError, NoFake, Grades.
+
+    runtime/    The Quick C-- run-time system
+    
+    
+    todo/interp/     Interpreter for C--. 
+
+    todo/lua/        An interpreter for the embedded script language Lua.
+    
+    todo/rtl/        RTL type definition.
+
+    todo/specialized/ Partially evaluated compiler sources.
