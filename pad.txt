@@ -2,16 +2,16 @@
 modifs:
  - gzip *.s in test2/
  - moved files a lot
+ - use Makefile and syncweb instead of relying on noweb and mk
 
 related work:
  - LLVM
  - VPO
  - MLRISC
 
-
 using so many extra tools make the job harder for people to join
   * mk vs make
-  * the nopoly trick  and weird operator like =<=
+  * the nopoly.mw trick  and weird operator like =<=
   * noweb
 
 on lindig:
@@ -25,7 +25,3 @@ on cmm:
  - like pfff
     * srcmap.ml vs my full_charpos_table and embeded parse_info.ml
     * asdl vs lib-sexp and my ocaml.mk file
-
-
-demos:
- ./qc -dump_cmm demos/hello.c-- 
