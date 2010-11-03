@@ -23,6 +23,8 @@ object system.
 val map : ('a -> 'b) -> 'b assembler -> 'a assembler
 val reloc_string : (Bits.bits -> string) -> Reloc.t -> string
      (* make string form of relocatable address using mangled text of symbols *)
+@ 
+
 <<exported type definitions>>=
 class type ['proc] assembler = object
     <<assembler methods>>
@@ -139,7 +141,8 @@ After all instructions and data has been passed to an [[assembler]]
 object the [[emit]] method must be called. It finishes any remaining
 business. It is an unchecked run-time error to invoke any [[assembler]]
 method subsequently.
-@
+
+
 <<asm.ml>>=
 <<exported type definitions>>
 
@@ -182,3 +185,4 @@ let reloc_string const =
   let sym (s, _) = s#mangled_text in
   let infix op a b = String.concat "" [a; " "; op; " "; b] in
   Reloc.fold ~const ~sym ~add:(infix "+") ~sub:(infix "-")
+@

@@ -108,7 +108,7 @@ environment.  However, the dirty environment must not be really dirty:
 All information must be provided and must be ``good''.  Trying
 to clean a dirty environment with bad values will result in a checked
 run-time error.
-@
+
 % ------------------------------------------------------------------ 
 \subsection{Getting Started: creating an Environment}
 % ------------------------------------------------------------------ 
@@ -357,9 +357,10 @@ val rebindv'        : string -> ventry  -> 'p env' -> unit  (* mutates *)
 val bindt           : string -> tentry  -> 'p env' -> 'p env'
 val findv           : string -> 'p env' -> ventry   (* Error.ErrorExn *)
 val findt           : string -> 'p env' -> tentry   (* Error.ErrorExn *)
-@ \emph{Think of algebraic rules that describe the interaction of bind
+@ 
+\emph{Think of algebraic rules that describe the interaction of bind
 and find}.
-@
+
 Sometimes is is necessary to know whether a value is bound in a local
 scope.  The following predicate is true, if and only if a given name
 is bound in the top scope, \emph{and} the top scope is not the bottom
@@ -643,7 +644,10 @@ implementations of [[Arg]].
 <<exposed types shared by clean and dirty environments>>
 <<private types shared by clean and dirty environments>>
 <<exported signature [[Env]]>>
-module Env (Arg: Arg) = struct <<body of functor [[Env]]>> end
+module Env (Arg: Arg) = struct 
+ <<body of functor [[Env]]>> 
+end
+@ 
 
 <<fenv.ml>>=
 module Dirty = Env (struct
@@ -656,6 +660,7 @@ module Dirty = Env (struct
         | Error.Ok(x) -> Some x
         | Error.Error -> None
 end)
+@ 
 
 <<fenv.ml>>=
 module Clean = Env (struct
@@ -696,6 +701,8 @@ type 'proc env'    =  { scopes          :    scope list (* top = hd scopes *)
                       ; globals         :    string  list(* global registers *)
                       ; stackdata       :    stackdata
                       }
+@ 
+
 <<types exposed in signature [[Env]]>>
 <<private types shared by clean and dirty environments>>=
 type stackdata =      { soffset    :    int    (* current offset *)
@@ -833,6 +840,8 @@ type typedefn = (Ast.ty * string list) * Ast.region
 let addTypedefn t env = assert false
 let typedefns env = assert false
 let setTypedefns ts env = assert false
+@ 
+
 <<body of functor [[Env]]>>=
 type constdefn = (Ast.ty option * string * Ast.expr) * Ast.region
 let addConstdefn t env = assert false
@@ -873,6 +882,7 @@ let bindv name (rgn,x as ventry) env =
                   { env with globals = name :: env.globals }
             | _ -> env
             ) 
+@ 
 
 <<body of functor [[Env]]>>=
 let bindt name (rgn,x as tentry) env = 
@@ -905,6 +915,8 @@ let findv name env =
     | []    -> E.error ("unknown value: "^name)
     | s::ss -> (try Strutil.Map.find name s.venv with Not_found -> loop ss) in
   loop env.scopes
+@ 
+
 <<body of functor [[Env]]>>=
 let findt name env =
   let rec loop = function

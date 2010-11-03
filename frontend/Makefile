@@ -5,27 +5,22 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-#TODO uint64p.c
+# TODO split in further directories
 
-#TODO reput bitset64.ml, but depends on bits.ml which has unclear dependencies
-#TODO ? move some code in  h_parsing ? like error.ml, pp.ml, etc ?
-
-SRC=nopoly.ml \
-  auxfuns.ml pc.ml lc.ml pc2.ml pp.ml srcmap.ml rx.ml \
-  verbose.ml strutil.ml \
-  reinit.ml \
-  error.ml impossible.ml unsupported.ml debug.ml \
-  uint64.ml bits.ml bitset64.ml \
-
-COBJS=uint64p.o
+SRC= idgen.ml eqn.ml \
+     symbol.ml cell.ml register.ml \
+     rtl.ml reloc.ml rtleqn.ml block.ml  \
+     types.ml \
+     metrics.ml asm.ml fenv.ml
 
 SYSLIBS=
 
 LIBS=
 
-INCLUDEDIRS=
-
-OCAMLINCLUDES=-I $(shell ocamlc -where)
+# need h_asdl/ just to knows that StdPrimInt == int for the typechecker
+INCLUDEDIRS= $(TOP)/commons2 \
+ $(TOP)/parsing \
+ $(TOP)/h_asdl
 
 ##############################################################################
 # Generic variables
@@ -52,24 +47,15 @@ clean::
 	rm -f $(TARGET).top
 
 
-uint64p.o: uint64p.c
-	gcc $(OCAMLINCLUDES) -c uint64p.c
-
 ##############################################################################
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=auxfuns pc lc pc2 pp srcmap rx verbose strutil \
- reinit \
- error impossible unsupported debug \
- uint64 bits bitset64
-
-# TODO rc_scan  rc.nw
-# TODO residualize interface in bits.nw ???
+SRCNW=idgen eqn symbol cell register rtl block types reloc rtlutil rtleqn \
+ metrics asm fenv
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done
-	$(SYNCWEB) -lang C uint64.nw uint64p.c
 
 lpdistclean::
 	rm -f $(LPSRC) .md5sum_*

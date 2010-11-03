@@ -104,7 +104,7 @@ The [[Var 1]] values identify the variable in the type scheme that is
 replaced by an integer when the type scheme is instantiated. In case of
 [[mulx]], the size of the result is twice the number of bits [[Var 1]]
 gets bound to.
-@
+
 % ------------------------------------------------------------------ 
 \subsection{Interface (Functions)}
 % ------------------------------------------------------------------ 
@@ -145,7 +145,7 @@ list} that allows to reconstruct the monomorphic type from its
 polymorphic type scheme. This process is called instantiation. It is a
 checked run-time error if the width list is too short to instantiate all
 variables in the type scheme.
-@
+
 % ------------------------------------------------------------------ 
 \subsection{Useful abbreviations}
 % ------------------------------------------------------------------ 
@@ -189,8 +189,11 @@ type size = Const  of int
           | Var    of key
           | Double of key      
           | Half   of key
+@ 
+
 <<types.ml>>=
-<<exported type definitions>>  (* types from the interface definition *)
+<<exported type definitions>>  
+ (* types from the interface definition *)
 @
 \emph{Rather than having a fixed operator [[Double]] we could implement a
 map: [[Fun of key * (int -> int)]]. The key indentifies a width
@@ -199,7 +202,7 @@ obtain a new width. In our case the function is simply multiplication by
 two. I haven't thought about this, but would in the general case expect
 problems with circular dependencies among types. What is the right
 formalism here? -- CL}
-@ 
+ 
 <<types.ml>>=
 module E = Error
 module S = Map.Make(struct type t=key let compare=compare end)
@@ -387,3 +390,4 @@ let scheme_string (args, result) =
   | 0 -> scheme
   | n -> spr "\\/ %s . %s" (String.concat ", " (List.map keyname (Auxfuns.from 1 ~upto:n)))
                            scheme
+@ 

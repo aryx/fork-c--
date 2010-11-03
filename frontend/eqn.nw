@@ -165,6 +165,7 @@ module type S = sig
     val make_zero:      sum -> t -> t           (* add equation *)
     val solve:          t -> solution           (* Can'tSolve *)
 end
+@ 
 
 <<eqn.mli>>=
 <<EXP>>
@@ -184,6 +185,8 @@ following holds: $t_i \prec t_j \Rightarrow i < j$. In addition, no term
 $t$ appears twice in a sum.
 
 <<eqn.ml>>=
+open Nopoly
+
 <<EXP>>
 <<S>>
 module Make (E: EXP) = struct
@@ -279,29 +282,29 @@ coefficient of zero does not appear in the result.
 <<Make>>=
 let combine (k1:int) (sum1:sum) (sum2:sum) =
     let rec loop = function 
-	| []                 , [] -> []
-	| ((c1,x1)::s1 as _x) , ((c2,x2)::s2 as y) when E.compare x1 x2 < 0 ->
+ | []                 , [] -> []
+ | ((c1,x1)::s1 as _x) , ((c2,x2)::s2 as y) when E.compare x1 x2 < 0 ->
             let k = k1 * c1 in
             if k = 0 then loop (s1, y) else
             (k, x1) :: loop (s1, y) 
-	| ((c1,x1)::s1) , ((c2,x2)::s2) when E.compare x1 x2 = 0 -> 
+ | ((c1,x1)::s1) , ((c2,x2)::s2) when E.compare x1 x2 = 0 -> 
             let k = k1 * c1 + c2 in 
             if k = 0 then loop (s1, s2) else
-	    (k, x1) :: loop (s1, s2)
-	| ((c1,x1)::s1 as x) , ((c2,x2)::s2 as _y)  (*   x1 > x2 *) ->
+     (k, x1) :: loop (s1, s2)
+ | ((c1,x1)::s1 as x) , ((c2,x2)::s2 as _y)  (*   x1 > x2 *) ->
             let k = c2 in
             if k = 0 then loop (x, s2) else
             (k, x2) :: loop (x, s2)
-	| ((c1,x1)::s1) , [] ->
+ | ((c1,x1)::s1) , [] ->
             let k = k1 * c1 in
             if k = 0 then loop (s1, []) else
             (k, x1) :: loop (s1, [])
-	| []                 ,  ((c2,x2)::s2) ->
+ | []                 ,  ((c2,x2)::s2) ->
             let k = c2 in
             if k = 0 then loop ([], s2) else
             (k, x2) :: loop ([], s2)
     in
-	loop (sum1,sum2)
+ loop (sum1,sum2)
 @
 For the substitution of a variable, the variable must be found in a sum.
 The [[split]] function takes a variable $v$ and a sum $s$ and returns
@@ -477,7 +480,7 @@ let make_zero (sum:sum) (t:t) =
 \subsection{Test}
 % ------------------------------------------------------------------ 
 
-<<Test>>=   
+<<Test>>=
 module E = struct
     type t = Var of string
            | Unit
@@ -538,3 +541,4 @@ let _ = assert
             })
 *)        
 
+@ 

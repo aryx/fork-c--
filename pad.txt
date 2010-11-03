@@ -1,12 +1,13 @@
 
 modifs:
  - gzip *.s in test2/
- - moved files a lot
+ - moved files a lot and split in many directories
  - use Makefile and syncweb instead of relying on noweb and mk
 
  - commons2/
  - parsing/
  - h_asdl/
+ - TODO frontend/
 
 related work:
  - LLVM
@@ -15,14 +16,14 @@ related work:
 
 using so many extra tools make the job harder for people to join
   * mk vs make
-  * the nopoly.mw trick  and weird operator like =<=
   * noweb
+  * the nopoly.mw trick  and weird operator like =<=
 
 on lindig:
  - like me:
+    * use of literate programing (but not syncweb!)
     * =*=  trick :) and evilness of the polymorphic equal (but implicit 
       loading of it is bad; yet another magic stuff happening behind your back)
-    * use of literate programing (but not syncweb!)
     * use of code generator a la tarzan for sexp (asdl)
 
 on cmm:

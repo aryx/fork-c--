@@ -36,6 +36,9 @@ type t = {
 @
 \section{Implementation}
 <<metrics.ml>>=
+(*open Nopoly*)
+let (=*=) = (=)
+
 module A = Ast
 <<exposed types>>
 let default = {
@@ -100,3 +103,4 @@ let of_ast ~swap map =
   metrics n n n n n n
 @ 
 <<metrics.ml>>=
+@

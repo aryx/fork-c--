@@ -183,7 +183,10 @@ let offset base name ptrwidth =
     RU.add ptrwidth base (Rtl.late (Idgen.offset name) ptrwidth)
 
 let empty ptrwidth = 
+  failwith "TODO: pad: port Vfp"
+(*
     relative (Vfp.mk ptrwidth) "empty block" at ~size:0 ~alignment:1
+*)
 @
 
 \paragraph{Block Operations} When concatenating, we have to leave a gap
@@ -250,7 +253,7 @@ the representation [[T]] for blocks in Lua..
 The Lua version of [[relative]] differs from the Caml version in that
 the anchor address is the base address of an existing block.
 
-<<block.ml>>= 
+<<block.ml>>=
 module Lua = struct 
     let size      = size 
     let alignment = alignment 

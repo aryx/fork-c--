@@ -46,6 +46,8 @@ val as_simple : t -> Symbol.t option * Bits.bits
 
 No known need for efficiency here.
 <<reloc.ml>>=
+open Nopoly
+
 type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
 let eqsym (s,_) (s',_) = s#mangled_text =$= s'#mangled_text
 
@@ -80,3 +82,4 @@ let as_simple a =
   | None -> (s, Bits.Ops.sub b b')
   | Some _ -> Impossible.impossible "subtracted symbols in simple reloc" in
   fold ~const ~sym ~add ~sub a
+@ 

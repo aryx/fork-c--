@@ -51,3 +51,4 @@ let of_size n = match n with
 | 32 -> c32
 | 64 -> c64
 |  _ -> (n, (fun (C c) -> n * c), (fun w -> C (w / n)), (fun w -> w mod n = 0))
+@ 

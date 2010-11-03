@@ -50,6 +50,8 @@ slice level.
 We cannot refer to types in module \module{rtl} because this would
 create a cyclic dependency,
 <<exported types>>=
+open Nopoly
+
 type aggregation = 
     | BigEndian
     | LittleEndian
@@ -111,11 +113,15 @@ We need to check whether one register contains another.
 val contains : outer:x -> inner:x -> bool
 @
 Registers are exported to Lua as a new \emph{userdata} type.
-<<register.mli>>=
+
+%pad: no LUA for now
+<<register.mli LUA>>=
 module RT (C : Lua.Lib.CORE) : sig
 	val map : t C.V.map
 end
 @
+
+
 % ------------------------------------------------------------------ 
 \section{Implementation of registers}
 % ------------------------------------------------------------------ 
@@ -165,6 +171,8 @@ module CompareX = struct
     | Reg _, Slice _  -> -1
     | Reg r, Reg r'   -> Compare.compare r r'
 end
+@ 
+
 <<register.ml>>=
 module SetX = struct
   module S = Set.Make(CompareX)
@@ -190,6 +198,8 @@ module Set = struct
         Printf.sprintf "%c%d:%d" s i n in
     String.concat ", " (List.map elt (elements s))
 end
+@ 
+
 <<register.ml>>=
 module MapX = Map.Make(CompareX)
 module Map  = Map.Make(Compare)
@@ -210,7 +220,8 @@ let reg_int_map regs =
   (List.fold_left (fun (i,map) r -> (i+1, Map.add r i map)) (0, Map.empty) order)
 @
 The [[RT]] module creates an embedding/projection pair for registers.
-<<register.ml>>=
+%pad: no LUA
+<<register.ml LUA>>=
 module RT (C : Lua.Lib.CORE) = struct
     module V = C.V
 
@@ -285,6 +296,7 @@ function Register.range(r1, r2)
   return l
 end
 @ 
+
 <<register.ml>>=
 let width ((_, _, ms), _, c) = Cell.to_width ms c
 let widthx = function
@@ -315,3 +327,4 @@ let contains ~outer ~inner = match outer, inner with
     if c <> 1 || c' <> 1 then
       Impossible.impossible "slice of register aggregate";
     s =<= s' && i = i' && lsb <= lsb' && lsb+w >= lsb'+w'
+@ 

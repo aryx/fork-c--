@@ -48,14 +48,14 @@ other variables is \emph{dependent}.
 A~solution contains dependent variables only if the system of
 equations does not provide enough information for a solution (e.g., if
 there were fewer equations than variables).
-@
+
 N.B. For details of terminology see NR's solver paper in SP\&E.
-@
+
 Limitations: Despite the interface and the expressiveness of {\rtl}
 expressions, this is not a general equation solver. How can I make
 precise what the equation solver does without going into the details of
 operation?
-@
+
 % ------------------------------------------------------------------ 
 \section{Implementation of equations}
 % ------------------------------------------------------------------ 
@@ -67,6 +67,8 @@ equation solver. The general idea is that complicated (and possibly
 non-linear) terms are treated as constant with respect to equation
 solving.
 <<rtleqn.ml>>=
+open Nopoly
+
 module Dn = Rtl.Dn
 module Up = Rtl.Up
 module RP = Rtl.Private

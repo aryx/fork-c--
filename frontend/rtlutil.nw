@@ -371,6 +371,7 @@ end
 
 let fetch l   = R.fetch l   (Width.loc l)
 let store l e = R.store l e (Width.loc l)
+@ 
 
 <<rtlutil.ml>>=
 <<define common ReadWriteKill Higher Order Fns>>
@@ -766,7 +767,7 @@ let verbosity v =
   let v' = !the_verbosity in
   the_verbosity := v;
   v'
-
+@ 
 <<ToAST>>=
 let bits n             = A.BitsTy n
 let rec const = function
@@ -1214,6 +1215,8 @@ Printf.eprintf "--> comparing stack slots %s+%d and %s+%d\n" sym n sym' n';
   let store_uses' l (l', r', _) =
     exp' l r' || match l' with RP.Mem (_, _, e, _) -> exp' l e | _ -> false
 end
+@ 
+
 <<rtlutil.ml>>=
 @ 
 \section{Reassociating arithemtic}
@@ -1300,6 +1303,8 @@ module Exists = struct
       fun r -> rtl (R.Dn.rtl r)
   end
 end 
+@ 
+
 <<rtlutil.ml>>=
 module Find = struct
   module Loc = struct
@@ -1496,6 +1501,7 @@ module Compare = struct
       | diff    -> diff)
   let rtl (RP.Rtl l) (RP.Rtl r) = Auxfuns.compare_list guarded l r
 end
+@ 
 <<rtlutil.ml>>=
 let reloc addr w =
   let const b = R.bits b w in
@@ -1503,3 +1509,4 @@ let reloc addr w =
   let infix op a b = R.app (R.opr op [w]) [a; b] in
   let add, sub = infix "add", infix "sub" in
   Reloc.fold ~const ~sym ~add ~sub addr
+@ 

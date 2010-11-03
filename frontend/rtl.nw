@@ -130,6 +130,8 @@ unknown multiple of~$k$.
 Finally, we can ask what alignment is implied by an assertion.
 <<definitions of exported, exposed types>>=
 type count = Register.count = C of int
+@ 
+
 <<types and functions exported at top level>>=
 val none     : assertion
 val aligned  : int -> assertion
@@ -184,6 +186,7 @@ the width of a location.
 <<types and functions exported at top level>>=
 val locwidth : loc -> width
 @
+
 % ------------------------------------------------------------------ 
 \subsubsection{Conversion between Private and Public Views}
 % ------------------------------------------------------------------ 
@@ -215,6 +218,7 @@ val assertion:  Private.assertion -> assertion
 val effect :    Private.effect    -> rtl
 val const  :    Private.const     -> exp
 @
+
 % ------------------------------------------------------------------ 
 \subsubsection{The Private View}
 % ------------------------------------------------------------------ 
@@ -285,8 +289,9 @@ and  loc       = Mem        of space
                 | Slice     of width     (* number of bits in loc *)
                             *  int       (* index of least-significant bit of slice *)
                             *  loc  (* location from which slice is drawn *)
-@ Bits are numbered with the least-significant bit as bit~0.
 @
+Bits are numbered with the least-significant bit as bit~0.
+
 An [[effect]] is describes an assignment of a [[width]] bits value obtained
 from an expression [[exp]], or a [[Kill]]. A killed location contains an
 undefined value.
@@ -456,6 +461,7 @@ let store loc expr width    = rtl (Store(loc, expr, width))
 let kill  loc               = rtl (Kill(loc))
 let null                    = Rtl []
 @ 
+
 Fetch and store could convert slices, but I'm not sure if this code is
 really useful.
 <<definitions of types and functions exported at top level>>=
@@ -501,7 +507,7 @@ let loc         = id
 let rtl         = id
 let opr         = id
 let assertion   = id
-
+@ 
 
 <<Up>>=
 let effect      = rtl (* from above *)
