@@ -26,3 +26,6 @@ on cmm:
     * srcmap.ml vs my full_charpos_table and embeded parse_info.ml
     * asdl vs lib-sexp and my ocaml.mk file
 
+
+demos:
+ ./qc -dump_cmm demos/hello.c-- 
