@@ -44,20 +44,35 @@ The compiler is controlled by a Lua interpreter that is build in the
 This module provides new Lua types like [[asm]] and [[ast]] for the
 interpreter, and a library that uses them. 
 <<driver.mli>>=
-val emit_asdl : 'a * Ast.program -> unit
+
 val parse     : string -> Srcmap.map * Ast.program
-val print     : Pp.doc -> int -> out_channel -> unit
-val pretty    : 'a * Ast.toplevel list -> Pp.doc
 val scan      : string -> unit
-val version   : unit -> unit
+val emit_asdl : Srcmap.map * Ast.program -> unit
+
 val elab : 
-  swap:bool -> (Rtl.rtl -> string option) -> Srcmap.map * Ast.program
-  -> 'proc Asm.assembler
-  -> ('proc Fenv.Dirty.env' * 'proc Nelab.compunit) Error.error
+  swap:bool -> 
+  (Rtl.rtl -> string option) -> 
+  Srcmap.map * Ast.program ->
+ 'proc Asm.assembler ->
+ ('proc Fenv.Dirty.env' * 'proc Nelab.compunit) Error.error
+
 val compile :
-  Ast2ir.tgt -> (Ast2ir.proc -> unit) -> bool(*emitglobals*) -> (Srcmap.map * Ast.program)
-  -> Ast2ir.proc Asm.assembler -> bool(*validate*) -> bool(*swap*) -> unit
+  Ast2ir.tgt -> 
+  (Ast2ir.proc -> unit) -> 
+  bool(*emitglobals*) -> 
+  (Srcmap.map * Ast.program) -> 
+  Ast2ir.proc Asm.assembler -> 
+  bool(*validate*) -> 
+  bool(*swap*) -> 
+  unit
    (* raises Error.ErrorExn *)
+
+val version   : unit -> unit
+
+val pretty    : Srcmap.map * Ast.toplevel list -> Pp.doc
+val print     : Pp.doc -> int -> out_channel -> unit
+
+
 @
 
 % ------------------------------------------------------------------ 
@@ -178,6 +193,8 @@ let elab ~swap validate (map,ast) asm =
   Nelab.program ~swap validate map asm (Nast.program ast)
 
 let compile (PA.T target) opt exportglobals src asm validate swap =
+  failwith "TODO: pad: Driver.compile and mvaludate"
+(* 
   let validate = if validate then Mvalidate.rtl target else (fun _ -> None) in
   let abort () = Error.error "compilation aborted because of errors" in
   let as_ok = function Error.Ok x -> x | Error.Error -> abort () in
@@ -189,4 +206,5 @@ let compile (PA.T target) opt exportglobals src asm validate swap =
         Ast2ir.translate (PA.T target) (Fenv.clean env) opt exportglobals compunit
     else
       Error.error "metrics of source code don't match the target"))
+*)
 @

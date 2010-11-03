@@ -29,6 +29,7 @@ on lindig:
     * =*=  trick :) and evilness of the polymorphic equal (but implicit 
       loading of it is bad; yet another magic stuff happening behind your back)
     * use of code generator a la tarzan for sexp (asdl)
+    * does not like functor (cf asm.nw) and prefer objects sometimes
 
 on cmm:
  - like pfff

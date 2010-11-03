@@ -76,6 +76,24 @@ lpclean::
 	rm -f *.aux *.toc *.log *.brf *.out
 
 
+dot:
+	$(OCAMLDOC) $(SRC) -dot -dot-reduce -dot-colors white
+	perl -p -i -e 's/\[style=filled, color=white\]//;' ocamldoc.out
+	dot -Tps ocamldoc.out > dot.ps
+	mv dot.ps Fig_graph_ml.ps
+	ps2pdf Fig_graph_ml.ps
+#	dot2tex ocamldoc.out --figonly -o Fig_depend.tex
+
+doti:
+	$(OCAMLDOC) $(SRC:.ml=.mli) -dot -dot-colors white
+	perl -p -i -e 's/\[style=filled, color=white\]//;' ocamldoc.out
+	dot -Tps ocamldoc.out > dot.ps
+	mv dot.ps Fig_graph_mli.ps
+	ps2pdf Fig_graph_mli.ps
+#	dot2tex ocamldoc.out --figonly -o Fig_depend.tex
+#	gv dot.ps
+
+
 ##############################################################################
 # Generic ocaml rules
 ##############################################################################

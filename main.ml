@@ -53,6 +53,23 @@ let test_emit_asdl file =
 let test_driver_version () =
   Driver.version ()
 
+let test_driver_elab file =
+  let (srcmap, ast) = Driver.parse file in
+
+  let assembler = 
+    raise Todo 
+  in
+
+  let env_and_compunit_maybe = 
+    Driver.elab 
+      ~swap:true (* ??? *)
+      (fun rtl -> None) (* ??? *)
+      (srcmap, ast)
+      assembler
+  in
+  pr2_gen env_and_compunit_maybe;
+  ()
+
 let extra_actions () = [
     "-driver_parse", "   <file>", 
     Common.mk_action_1_arg test_driver_parse;
@@ -60,6 +77,8 @@ let extra_actions () = [
     Common.mk_action_1_arg test_driver_scan;
     "-driver_emit_asdl", "   <file>", 
     Common.mk_action_1_arg test_emit_asdl;
+    "-driver_elab", "  <file>", 
+    Common.mk_action_1_arg test_driver_elab;
     "-driver_version", "   ", 
     Common.mk_action_0_arg test_driver_version;
 ]

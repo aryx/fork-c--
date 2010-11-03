@@ -27,5 +27,7 @@ val version   : unit -> unit
 val pretty    : Srcmap.map * Ast.toplevel list -> Pp.doc
 val print     : Pp.doc -> int -> out_channel -> unit
 
+val metrics_ok : Metrics.t -> ('a, 'b, 'c) Target.t -> bool
+
 
 (*e: driver.mli *)

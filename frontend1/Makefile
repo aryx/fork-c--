@@ -11,7 +11,8 @@ SRC= eqn.ml \
      symbol.ml cell.ml register.ml \
      types.ml \
      rtl.ml reloc.ml rtlop.ml rtlutil.ml rtleqn.ml block.ml  \
-     metrics.ml asm.ml fenv.ml
+     metrics.ml asm.ml \
+     fenv.ml
 
 SYSLIBS=
 
