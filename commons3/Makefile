@@ -5,14 +5,17 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-SRC= \
+# used first in frontend1/
+SRC1= \
   srcmap.ml \
   reinit.ml \
   error.ml impossible.ml unsupported.ml debug.ml \
   uint64.ml bits.ml bitset64.ml \
-  idgen.ml \
-  cell.ml \
-  alignment.ml 
+  idgen.ml cell.ml 
+# used first in frontend2/
+SRC2= alignment.ml 
+
+SRC= $(SRC1) $(SRC2)
 
 COBJS=uint64p.o
 
