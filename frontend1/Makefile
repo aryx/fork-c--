@@ -19,7 +19,7 @@ SYSLIBS=
 LIBS=
 
 # need h_asdl/ just to knows that StdPrimInt == int for the typechecker
-INCLUDEDIRS= $(TOP)/commons2 \
+INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/parsing \
  $(TOP)/h_asdl
 

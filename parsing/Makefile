@@ -15,7 +15,8 @@ SYSLIBS=
 
 LIBS=
 
-INCLUDEDIRS= $(TOP)/commons2 $(TOP)/h_asdl \
+INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
+  $(TOP)/h_asdl \
   $(TOP)/commons $(TOP)/commons/lib-sexp \
 
 ##############################################################################

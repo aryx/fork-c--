@@ -16,6 +16,7 @@ SYSLIBS=nums.cma bigarray.cma str.cma unix.cma
 
 LIBS= commons/commons.cma \
      commons2/lib.cma \
+     commons3/lib.cma \
      h_asdl/lib.cma \
      parsing/lib.cma \
      frontend1/lib.cma \
@@ -24,7 +25,7 @@ LIBS= commons/commons.cma \
 
 
 MAKESUBDIRS= \
-   commons commons2 \
+   commons commons2 commons3 \
    h_asdl \
    parsing \
    frontend1 \
