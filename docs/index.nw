@@ -1,8 +1,13 @@
+\documentclass{article}
 %
 % $Id: index.nw,v 1.4 2006-04-10 21:28:53 nr Exp $
 %
 % Use 'mk index.dvi' to build a printable file.
+\usepackage{noweb}
 
+\input{macros}
+
+\begin{document}
 
 % ------------------------------------------------------------------ 
 \section{The Module Landscape of the Quick C\hbox{-{}-} Compiler}
@@ -624,3 +629,4 @@ parser combinators.
 \end{itemize}
 
 
+\end{document}
