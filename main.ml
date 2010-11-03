@@ -32,8 +32,42 @@ let version = "0.1"
 (*****************************************************************************)
 
 (*****************************************************************************)
+(* Extra action *)
+(*****************************************************************************)
+
+let test_driver_parse file =
+  let (srcmap, ast) = Driver.parse file in
+
+  let pp = Astpp.program ast in
+  let s = Pp.ppToString 0 pp in
+  pr2 s;
+  ()
+
+let test_driver_scan file =
+  Driver.scan file
+
+let test_emit_asdl file =
+  let (srcmap, ast) = Driver.parse file in
+  Driver.emit_asdl (srcmap, ast)
+
+let test_driver_version () =
+  Driver.version ()
+
+let extra_actions () = [
+    "-driver_parse", "   <file>", 
+    Common.mk_action_1_arg test_driver_parse;
+    "-driver_scan", "   <file>", 
+    Common.mk_action_1_arg test_driver_scan;
+    "-driver_emit_asdl", "   <file>", 
+    Common.mk_action_1_arg test_emit_asdl;
+    "-driver_version", "   ", 
+    Common.mk_action_0_arg test_driver_version;
+]
+
+(*****************************************************************************)
 (* Main action *)
 (*****************************************************************************)
+
 
 let main_action xs = 
   raise Todo
@@ -49,6 +83,7 @@ let main_action xs =
 
 let all_actions () =
  Test_parsing_cmm.actions () ++
+ extra_actions () ++
  []
 
 let options () = 

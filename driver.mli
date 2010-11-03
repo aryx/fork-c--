@@ -2,13 +2,7 @@
 
 val parse     : string -> Srcmap.map * Ast.program
 val scan      : string -> unit
-
-val pretty    : 'a * Ast.toplevel list -> Pp.doc
-val print     : Pp.doc -> int -> out_channel -> unit
-
-val emit_asdl : 'a * Ast.program -> unit
-
-val version   : unit -> unit
+val emit_asdl : Srcmap.map * Ast.program -> unit
 
 val elab : 
   swap:bool -> 
@@ -27,4 +21,11 @@ val compile :
   bool(*swap*) -> 
   unit
    (* raises Error.ErrorExn *)
+
+val version   : unit -> unit
+
+val pretty    : Srcmap.map * Ast.toplevel list -> Pp.doc
+val print     : Pp.doc -> int -> out_channel -> unit
+
+
 (*e: driver.mli *)
