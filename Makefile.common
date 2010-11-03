@@ -82,6 +82,7 @@ dot:
 	dot -Tps ocamldoc.out > dot.ps
 	mv dot.ps Fig_graph_ml.ps
 	ps2pdf Fig_graph_ml.ps
+	rm -f Fig_graph_ml.ps
 #	dot2tex ocamldoc.out --figonly -o Fig_depend.tex
 
 doti:
@@ -90,6 +91,7 @@ doti:
 	dot -Tps ocamldoc.out > dot.ps
 	mv dot.ps Fig_graph_mli.ps
 	ps2pdf Fig_graph_mli.ps
+	rm -f Fig_graph_mli.ps
 #	dot2tex ocamldoc.out --figonly -o Fig_depend.tex
 #	gv dot.ps
 

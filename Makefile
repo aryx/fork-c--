@@ -25,7 +25,9 @@ LIBS= commons/commons.cma \
 
 
 MAKESUBDIRS= \
-   commons commons2 commons3 \
+   commons \
+   commons2 \
+   commons3 \
    h_asdl \
    parsing \
    frontend1 \

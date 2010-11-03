@@ -10,7 +10,9 @@ SRC= \
   reinit.ml \
   error.ml impossible.ml unsupported.ml debug.ml \
   uint64.ml bits.ml bitset64.ml \
-  idgen.ml 
+  idgen.ml \
+  cell.ml \
+  alignment.ml 
 
 COBJS=uint64p.o
 
@@ -57,7 +59,9 @@ uint64p.o: uint64p.c
 SRCNW= srcmap  reinit \
  error impossible unsupported debug \
  uint64 bits bitset64 \
- idgen
+ idgen \
+ cell \
+ alignment
 
 # TODO rc_scan  rc.nw
 # TODO residualize interface in bits.nw ???

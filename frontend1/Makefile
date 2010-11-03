@@ -8,7 +8,7 @@ TARGET=lib
 # TODO split in further directories
 
 SRC= eqn.ml \
-     symbol.ml cell.ml register.ml \
+     symbol.ml register.ml \
      types.ml \
      rtl.ml reloc.ml rtlop.ml rtlutil.ml rtleqn.ml block.ml  \
      metrics.ml asm.ml \
@@ -52,7 +52,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=eqn symbol cell register rtl block types reloc rtlutil rtleqn \
+SRCNW=eqn symbol register rtl block types reloc rtlutil rtleqn \
  metrics asm fenv
 
 sync:

@@ -6,7 +6,7 @@ TOP=..
 TARGET=lib
 
 
-SRC= nast.ml alignment.ml topsort.ml \
+SRC= nast.ml topsort.ml \
  simplify.ml \
  memalloc.ml \
  elabexp.ml elabstmt.ml nelab.ml 
@@ -52,7 +52,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=nast nelab elabstmt elabexp  simplify rtlop alignment topsort memalloc
+SRCNW=nast nelab elabstmt elabexp  simplify rtlop topsort memalloc
 
 
 sync:
