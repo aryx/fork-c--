@@ -5,11 +5,14 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-#TODO ? move some code in  h_parsing ? like error.ml, pp.ml, etc ?
+SRC= \
+  srcmap.ml \
+  reinit.ml \
+  error.ml impossible.ml unsupported.ml debug.ml \
+  uint64.ml bits.ml bitset64.ml \
+  idgen.ml 
 
-SRC=nopoly.ml \
-  auxfuns.ml pc.ml lc.ml pc2.ml pp.ml rx.ml \
-  verbose.ml strutil.ml \
+COBJS=uint64p.o
 
 SYSLIBS=
 
@@ -44,16 +47,24 @@ clean::
 	rm -f $(TARGET).top
 
 
+uint64p.o: uint64p.c
+	gcc $(OCAMLINCLUDES) -c uint64p.c
+
 ##############################################################################
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=auxfuns pc lc pc2 pp rx verbose strutil 
+SRCNW= srcmap  reinit \
+ error impossible unsupported debug \
+ uint64 bits bitset64 \
+ idgen
 
 # TODO rc_scan  rc.nw
+# TODO residualize interface in bits.nw ???
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done
+	$(SYNCWEB) -lang C uint64.nw uint64p.c
 
 lpdistclean::
 	rm -f $(LPSRC) .md5sum_*
