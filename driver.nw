@@ -63,11 +63,14 @@ val compile :
 % ------------------------------------------------------------------ 
 \subsection{Caml Implementation}
 % ------------------------------------------------------------------ 
+
 <<driver.ml>>=
 module E  = Error
 module M  = Metrics
 module PA = Preast2ir
 module T  = Target
+@ 
+
 <<driver.ml>>=
 let version () =
     ( This.name     stdout 
@@ -76,6 +79,8 @@ let version () =
     ; output_string stdout 
         " (see also http://www.cminusminus.org)\n"
     )
+@ 
+
 <<driver.ml>>=
 let scan file =
     let fd          = try open_in file
@@ -99,6 +104,8 @@ let scan file =
         ; loop lexbuf
         ; finally ()
         )
+@ 
+
 <<driver.ml>>=
 let parse (file:string) = 
     let fd          = try open_in file
@@ -126,6 +133,8 @@ let parse (file:string) =
               ( finally()
               ; raise e
               )
+@ 
+
 <<driver.ml>>=
 let emit_asdl (map,ast) =
         AstUtil.sexp_wr_program ast stdout
@@ -134,6 +143,7 @@ let emit_asdl (map,ast) =
 let pretty (map,ast) = Astpp.program ast
 let print doc width channel = Pp.ppToFile channel width doc
 @ 
+
 \subsection{Driver support for the new front end}
 
 Metrics check.  Perhaps the [[Target.t]] should have a [[Metrics.t]] inside.

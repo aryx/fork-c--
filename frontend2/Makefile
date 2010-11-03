@@ -7,7 +7,7 @@ TARGET=lib
 
 
 SRC= nast.ml alignment.ml topsort.ml \
- simplify.ml rtlop.ml \
+ simplify.ml \
  memalloc.ml \
  elabexp.ml elabstmt.ml nelab.ml 
 

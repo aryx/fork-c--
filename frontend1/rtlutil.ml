@@ -1,4 +1,6 @@
 (*s: rtlutil.ml *)
+open Nopoly
+
 module R   = Rtl
 module RP  = Rtl.Private
 module Up  = Rtl.Up

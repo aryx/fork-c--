@@ -8,7 +8,7 @@
 TOP=$(shell pwd)
 
 
-SRC= main.ml
+SRC= this.ml driver.ml main.ml
 
 TARGET=qc
 
@@ -18,6 +18,9 @@ LIBS= commons/commons.cma \
      commons2/lib.cma \
      h_asdl/lib.cma \
      parsing/lib.cma \
+     frontend1/lib.cma \
+     frontend2/lib.cma \
+     ir/lib.cma \
 
 
 MAKESUBDIRS= \
@@ -73,6 +76,11 @@ $(TARGET).opt: $(LIBS:.cma=.cmxa) $(OPTOBJS)
 $(TARGET).top: $(LIBS) $(OBJS) 
 	$(OCAMLMKTOP) -o $@ $(SYSLIBS) $^
 
+
+this.ml: this.in
+	cp this.in this.ml
+
+
 clean::
 	rm -f $(TARGET)
 clean:: 
@@ -120,7 +128,11 @@ distclean:: clean
 ##############################################################################
 
 sync:
-	$(SYNCWEB) -lang ocaml main.nw main.ml
+#	$(SYNCWEB) -lang ocaml main.nw main.ml
+	$(SYNCWEB) -lang ocaml driver.nw driver.mli
+	$(SYNCWEB) -lang ocaml driver.nw driver.ml
+	$(SYNCWEB) -lang ocaml main2.nw this.mli
+	$(SYNCWEB) -lang ocaml main2.nw this.in
 
 
 lpdistclean::
