@@ -7,9 +7,7 @@ TARGET=lib
 
 # used first in frontend1/
 SRC1= \
-  srcmap.ml \
   reinit.ml \
-  error.ml impossible.ml unsupported.ml debug.ml \
   uint64.ml bits.ml bitset64.ml \
   idgen.ml cell.ml 
 # used first in frontend2/
@@ -26,7 +24,7 @@ SYSLIBS=
 LIBS=
 
 # ctypes.ml depends on Strutil
-INCLUDEDIRS= $(TOP)/commons2
+INCLUDEDIRS= $(TOP)/commons2 $(TOP)/error
 
 OCAMLINCLUDES=-I $(shell ocamlc -where)
 

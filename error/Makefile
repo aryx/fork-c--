@@ -5,11 +5,9 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-# TODO split in further directories
-
-SRC= eqn.ml rtleqn.ml block.ml  \
-     metrics.ml asm.ml \
-     fenv.ml
+SRC= unsupported.ml impossible.ml \
+    srcmap.ml error.ml \
+    debug.ml
 
 SYSLIBS=
 
@@ -17,11 +15,8 @@ LIBS=
 
 # need h_asdl/ just to knows that StdPrimInt == int for the typechecker
 INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
- $(TOP)/error \
  $(TOP)/parsing \
- $(TOP)/h_asdl \
- $(TOP)/front_rtl \
-
+ $(TOP)/h_asdl
 
 ##############################################################################
 # Generic variables
@@ -52,8 +47,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=eqn symbol register rtl block types reloc rtlutil rtleqn \
- metrics asm fenv
+SRCNW=
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done

@@ -16,6 +16,7 @@ SYSLIBS=nums.cma bigarray.cma str.cma unix.cma
 
 LIBS= commons/commons.cma \
      commons2/lib.cma \
+     error/lib.cma \
      commons3/lib.cma \
      h_asdl/lib.cma \
      parsing/lib.cma \
@@ -28,6 +29,7 @@ LIBS= commons/commons.cma \
 MAKESUBDIRS= \
    commons \
    commons2 \
+   error \
    commons3 \
    h_asdl \
    parsing \
@@ -40,7 +42,7 @@ MAKESUBDIRS= \
 #  asdl rtl compiler runtime \
 #  interpreter \
 
-INCLUDEDIRS=$(MAKESUBDIRS)
+INCLUDEDIRS=$(MAKESUBDIRS) commons/lib-sexp
 
 ##############################################################################
 # Generic variables
@@ -128,8 +130,7 @@ distclean:: clean
 # Developer rules
 ##############################################################################
 
-DIRS= commons2 commons3 frontend1 frontend2 ir
-
+DIRS= $(filter-out commons commons2 error, $(MAKESUBDIRS))
 # you want "-dot-reduce"
 # don't put "-dot-colors white"; using colors ocamldoc generates one
 #  color per directory ! quite useful
