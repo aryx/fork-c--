@@ -14,8 +14,10 @@ SRC1= \
   idgen.ml cell.ml 
 # used first in frontend2/
 SRC2= alignment.ml 
+# used first in ir/
+SRC3= idcode.ml ctypes.ml
 
-SRC= $(SRC1) $(SRC2)
+SRC= $(SRC1) $(SRC2) $(SRC3)
 
 COBJS=uint64p.o
 
@@ -23,7 +25,8 @@ SYSLIBS=
 
 LIBS=
 
-INCLUDEDIRS=
+# ctypes.ml depends on Strutil
+INCLUDEDIRS= $(TOP)/commons2
 
 OCAMLINCLUDES=-I $(shell ocamlc -where)
 
@@ -64,7 +67,8 @@ SRCNW= srcmap  reinit \
  uint64 bits bitset64 \
  idgen \
  cell \
- alignment
+ alignment \
+ idcode ctypes \
 
 # TODO rc_scan  rc.nw
 # TODO residualize interface in bits.nw ???

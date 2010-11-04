@@ -7,7 +7,6 @@ TARGET=lib
 
 
 SRC= \
-  idcode.ml \
   varmap.ml avail.ml property.ml unique.ml \
   automaton.ml automatongraph.ml \
   space.ml ep.ml float.ml dag.ml mflow.ml box.ml \
@@ -17,7 +16,7 @@ SRC= \
   context.ml postexpander.ml rewrite.ml \
   preast2ir.ml \
   contn.ml \
-  ctypes.ml runtimedata.ml \
+  runtimedata.ml \
   ast2ir.ml
 
 
@@ -66,7 +65,7 @@ clean::
 
 SRCNW=ast2ir automaton preast2ir space target float ep dag mflow box call \
  talloc zipcfg property unique avail varmap spans automatongraph proc \
- cfg cfgx rewrite context contn idcode runtimedata ctypes
+ cfg cfgx rewrite context contn runtimedata
 
 
 
