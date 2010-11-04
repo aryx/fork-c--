@@ -126,6 +126,16 @@ distclean:: clean
 # Developer rules
 ##############################################################################
 
+DIRS= commons2 commons3 frontend1 frontend2 ir
+
+dotall:
+	ocamldoc $(INCLUDES) $(DIRS:=/*.ml)  -dot -dot-reduce -dot-colors white
+	perl -p -i -e 's/\[style=filled, color=white\]//;' ocamldoc.out
+	dot -Tps ocamldoc.out > dot.ps
+	mv dot.ps Fig_graph_ml.ps
+	ps2pdf Fig_graph_ml.ps
+	rm -f Fig_graph_ml.ps
+
 ##############################################################################
 # Literate Programming rules
 ##############################################################################

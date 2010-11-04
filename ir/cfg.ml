@@ -1,4 +1,6 @@
 (*s: cfg.ml *)
+open Nopoly
+
 (*s: exported signatures *)
 module type X = sig
   type jx  (* extension at join point *)

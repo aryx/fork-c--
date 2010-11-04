@@ -1,4 +1,6 @@
 (*s: zipcfg.ml *)
+open Nopoly
+
 module DG  = Dag
 module M   = Mflow
 module R   = Rtl
