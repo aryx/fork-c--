@@ -7,10 +7,7 @@ TARGET=lib
 
 # TODO split in further directories
 
-SRC= eqn.ml \
-     symbol.ml register.ml \
-     types.ml \
-     rtl.ml reloc.ml rtlop.ml rtlutil.ml rtleqn.ml block.ml  \
+SRC= eqn.ml rtleqn.ml block.ml  \
      metrics.ml asm.ml \
      fenv.ml
 
@@ -21,7 +18,9 @@ LIBS=
 # need h_asdl/ just to knows that StdPrimInt == int for the typechecker
 INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/parsing \
- $(TOP)/h_asdl
+ $(TOP)/h_asdl \
+ $(TOP)/front_rtl \
+
 
 ##############################################################################
 # Generic variables

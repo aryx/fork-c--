@@ -19,6 +19,7 @@ LIBS= commons/commons.cma \
      commons3/lib.cma \
      h_asdl/lib.cma \
      parsing/lib.cma \
+     front_rtl/lib.cma \
      frontend1/lib.cma \
      frontend2/lib.cma \
      ir/lib.cma \
@@ -30,6 +31,7 @@ MAKESUBDIRS= \
    commons3 \
    h_asdl \
    parsing \
+   front_rtl \
    frontend1 \
    frontend2 \
    ir \
@@ -128,8 +130,11 @@ distclean:: clean
 
 DIRS= commons2 commons3 frontend1 frontend2 ir
 
+# you want "-dot-reduce"
+# don't put "-dot-colors white"; using colors ocamldoc generates one
+#  color per directory ! quite useful
 dotall:
-	ocamldoc $(INCLUDES) $(DIRS:=/*.ml)  -dot -dot-reduce -dot-colors white
+	ocamldoc $(INCLUDES) $(DIRS:=/*.ml)  -dot -dot-reduce 
 	perl -p -i -e 's/\[style=filled, color=white\]//;' ocamldoc.out
 	dot -Tps ocamldoc.out > dot.ps
 	mv dot.ps Fig_graph_ml.ps

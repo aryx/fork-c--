@@ -5,24 +5,18 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-
-SRC= nast.ml topsort.ml \
- simplify.ml \
- memalloc.ml \
- elabexp.ml elabstmt.ml nelab.ml 
+SRC= symbol.ml register.ml rtl.ml \
+     types.ml rtlop.ml \
+     reloc.ml rtlutil.ml
 
 SYSLIBS=
 
 LIBS=
 
 # need h_asdl/ just to knows that StdPrimInt == int for the typechecker
-
 INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/parsing \
- $(TOP)/h_asdl \
- $(TOP)/front_rtl \
- $(TOP)/frontend1 \
-
+ $(TOP)/h_asdl
 
 ##############################################################################
 # Generic variables
@@ -53,8 +47,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=nast nelab elabstmt elabexp  simplify rtlop topsort memalloc
-
+SRCNW=
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done
