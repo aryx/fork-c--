@@ -7,7 +7,8 @@ TARGET=lib
 
 SRC= ep.ml dag.ml \
      spans.ml cfg.ml \
-     mflow.ml
+     mflow.ml \
+     cfgx.ml
 
 SYSLIBS=
 

@@ -35,6 +35,7 @@ MAKESUBDIRS= \
    h_asdl \
    parsing \
    front_rtl \
+   front_cfg \
    frontend1 \
    frontend2 \
    ir \
@@ -136,7 +137,7 @@ DIRS= $(filter-out commons commons2 error, $(MAKESUBDIRS))
 # don't put "-dot-colors white"; using colors ocamldoc generates one
 #  color per directory ! quite useful
 dotall:
-	ocamldoc $(INCLUDES) $(DIRS:=/*.ml)  -dot -dot-reduce 
+	ocamldoc $(INCLUDES) $(DIRS:=/*.ml) $(SRC)  -dot -dot-reduce 
 	perl -p -i -e 's/\[style=filled, color=white\]//;' ocamldoc.out
 	dot -Tps ocamldoc.out > dot.ps
 	mv dot.ps Fig_graph_ml.ps

@@ -68,7 +68,7 @@ clean::
 
 SRCNW=ast2ir automaton preast2ir space target float ep dag mflow box call \
  talloc zipcfg property unique avail varmap spans automatongraph proc \
- cfg cfgx rewrite context contn runtimedata
+ rewrite context contn runtimedata
 
 
 
