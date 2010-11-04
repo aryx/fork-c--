@@ -21,10 +21,12 @@ LIBS= commons/commons.cma \
      h_asdl/lib.cma \
      parsing/lib.cma \
      front_rtl/lib.cma \
+     front_asm/lib.cma \
+     front_fenv/lib.cma \
      front_cfg/lib.cma \
-     frontend1/lib.cma \
-     frontend2/lib.cma \
-     ir/lib.cma \
+     front_nelab/lib.cma \
+     front_target/lib.cma \
+     front_ir/lib.cma \
 
 
 MAKESUBDIRS= \
@@ -35,10 +37,13 @@ MAKESUBDIRS= \
    h_asdl \
    parsing \
    front_rtl \
+   front_asm \
+   front_fenv \
    front_cfg \
-   frontend1 \
-   frontend2 \
-   ir \
+   front_nelab \
+   front_target \
+   front_ir \
+
 
 #  h_camlburg tools \
 #  asdl rtl compiler runtime \

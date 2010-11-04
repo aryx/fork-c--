@@ -22,7 +22,8 @@ INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/parsing \
  $(TOP)/h_asdl \
  $(TOP)/front_rtl \
- $(TOP)/frontend1 \
+ $(TOP)/front_asm \
+ $(TOP)/front_fenv \
 
 
 ##############################################################################
