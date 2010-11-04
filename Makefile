@@ -21,6 +21,7 @@ LIBS= commons/commons.cma \
      h_asdl/lib.cma \
      parsing/lib.cma \
      front_rtl/lib.cma \
+     front_cfg/lib.cma \
      frontend1/lib.cma \
      frontend2/lib.cma \
      ir/lib.cma \
