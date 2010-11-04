@@ -37,9 +37,8 @@ MAKESUBDIRS= \
    h_asdl \
    parsing \
    front_rtl \
-   front_asm \
-   front_fenv \
-   front_cfg \
+   front_asm  front_fenv \
+   front_cfg  front_zipcfg \
    front_nelab \
    front_target \
    front_ir \

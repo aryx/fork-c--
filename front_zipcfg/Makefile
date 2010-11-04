@@ -5,37 +5,21 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
-
-SRC= \
-  automatongraph.ml \
-  talloc.ml call.ml \
-  proc.ml \
-  context.ml postexpander.ml rewrite.ml \
-  preast2ir.ml \
-  contn.ml \
-  runtimedata.ml \
-  ast2ir.ml
-
+SRC= avail.ml varmap.ml \
+  property.ml unique.ml \
+  zipcfg.ml
 
 SYSLIBS=
 
 LIBS=
 
 # need h_asdl/ just to knows that StdPrimInt == int for the typechecker
-
 INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/error \
  $(TOP)/parsing \
  $(TOP)/h_asdl \
  $(TOP)/front_rtl \
  $(TOP)/front_cfg \
- $(TOP)/front_zipcfg \
- $(TOP)/front_asm \
- $(TOP)/front_fenv \
- $(TOP)/front_nelab \
- $(TOP)/front_target \
-
-
 
 ##############################################################################
 # Generic variables
@@ -66,16 +50,9 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=ast2ir preast2ir call \
- talloc automatongraph proc \
- rewrite context contn runtimedata
-
-
-
+SRCNW=
 
 sync:
-	$(SYNCWEB) expander.nw postexpander.mli
-	$(SYNCWEB) expander.nw postexpander.ml
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done
 
 lpdistclean::
