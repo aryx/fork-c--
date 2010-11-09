@@ -188,7 +188,7 @@ let replace_with ~sp =
   let sp = Dn.loc sp in
   let sp_plus = RU.addk w spval in
   let sp_plus k = Dn.exp (sp_plus k) in
-  <<supporting functions>> 
+  <<supporting functions>>
   let fact = fact (Dn.exp spval) in
   let middle_out (vfp, k) m txlim =
     <<definition of [[simp]], which is verbose>>
@@ -250,6 +250,8 @@ let simp rtl =
   Debug.eprintf "vfp"
     "Simplified stack adjustment from %s to %s\n" (str rtl) (str rtl');
   rtl' in
+@
+
 <<vfp.ml>>=
 let () = Debug.register "vfp" "stack adjustments for virtual frame pointer"
 @ 
@@ -295,7 +297,7 @@ and find_k'_added_to_sp (RP.Rtl ges) =
             when RU.Eq.loc sp' sp -> find true (- (Bits.S.to_int k')) ges
           | RP.Fetch (sp', _)
             when RU.Eq.loc sp' sp -> find true 0 ges
-		  |	_ -> Printf.printf "illegal sp assignment: sp := %s\n" (RU.ToString.exp (Up.exp e)) ; 0)
+    |	_ -> Printf.printf "illegal sp assignment: sp := %s\n" (RU.ToString.exp (Up.exp e)) ; 0)
 (* RRO temp
           | _ -> Impossible.impossible ("sp assigned other than sp + k: " ^
                                         RU.ToString.exp (Up.exp e)))

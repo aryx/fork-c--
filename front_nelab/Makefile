@@ -9,7 +9,12 @@ TARGET=lib
 SRC= nast.ml topsort.ml \
  simplify.ml \
  memalloc.ml \
- elabexp.ml elabstmt.ml nelab.ml 
+ elabexp.ml elabstmt.ml \
+ nelab.ml 
+
+# was also including vfp.ml (and its dependencies: space.ml dataflow.ml ...)
+# but nelab.ml was actually using only one small function of vfp
+# that I just inlined instead
 
 SYSLIBS=
 
@@ -55,7 +60,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=nast nelab elabstmt elabexp  simplify rtlop topsort memalloc
+SRCNW=nast nelab elabstmt elabexp  simplify topsort memalloc \
 
 
 sync:

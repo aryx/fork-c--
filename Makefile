@@ -27,6 +27,7 @@ LIBS= commons/commons.cma \
      front_nelab/lib.cma \
      front_target/lib.cma \
      front_ir/lib.cma \
+     front_zipcfg/lib.cma \
      assembler/lib.cma \
 
 

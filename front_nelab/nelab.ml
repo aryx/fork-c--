@@ -164,6 +164,9 @@ end
 module ConstSortBind = SortAndBind(Const)
 (*x: nelab.ml *)
 type scope = Local | Global
+let vfp_mk w =
+  Rtl.fetch (Rtl.reg (('V', Rtl.Identity, Cell.of_size w), 0, Rtl.C 1)) w
+
 let program ~swap validate srcmap asm ast =
   E.seq (Metrics.of_ast ~swap srcmap ast.N.target) (fun metrics ->
     let flag        = function E.Error -> F.flagError | E.Ok _ -> (fun env -> env) in
@@ -172,9 +175,8 @@ let program ~swap validate srcmap asm ast =
     let findve r n  = E.catch (eprint r) (fun env -> snd (F.findv n env)) in
     let pointerty   = Types.Bits metrics.Metrics.pointersize in
     let vfp         = 
-(* pad: TODO *)
-      (* Vfp.mk metrics.Metrics.wordsize *)
-      failwith "TODO: pad port Vfp"
+      (* pad: was Vfp.mk but brought too many dependencies *)
+      vfp_mk metrics.Metrics.wordsize
    in
     let memsize     = metrics.Metrics.memsize in
     let aligned     = Elabexp.aligned metrics in

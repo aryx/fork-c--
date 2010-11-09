@@ -46,18 +46,21 @@ let test_driver_parse file =
 let test_driver_scan file =
   Driver.scan file
 
+let test_driver_version () =
+  Driver.version ()
+
 let test_emit_asdl file =
   let (srcmap, ast) = Driver.parse file in
   Driver.emit_asdl (srcmap, ast)
 
-let test_driver_version () =
-  Driver.version ()
-
 let test_driver_elab file =
   let (srcmap, ast) = Driver.parse file in
 
+  let chan = open_out "/tmp/cmm.dot" in
+  
   let assembler = 
-    raise Todo 
+    (* pad: does not really work :( create empty file *)
+    Dotasm.asm ~compress:false ~live:true chan
   in
 
   let env_and_compunit_maybe = 
