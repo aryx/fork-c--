@@ -27,6 +27,7 @@ LIBS= commons/commons.cma \
      front_nelab/lib.cma \
      front_target/lib.cma \
      front_ir/lib.cma \
+     assembler/lib.cma \
 
 
 MAKESUBDIRS= \
@@ -42,6 +43,7 @@ MAKESUBDIRS= \
    front_nelab \
    front_target \
    front_ir \
+   assembler \
 
 
 #  h_camlburg tools \

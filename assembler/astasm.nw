@@ -38,6 +38,8 @@ module type S = sig
     type proc
     val asm: out_channel -> proc Asm.assembler
 end    
+@ 
+
 <<astasm.mli>>=
 <<PERSONALITY>>
 <<S>>
