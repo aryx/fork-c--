@@ -7,7 +7,8 @@ TARGET=lib
 
 SRC= symbol.ml register.ml rtl.ml \
      types.ml rtlop.ml \
-     reloc.ml rtlutil.ml
+     reloc.ml rtlutil.ml \
+     rtldebug.ml
 
 SYSLIBS=
 
@@ -48,7 +49,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=
+SRCNW=rtldebug
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done

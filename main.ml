@@ -70,6 +70,10 @@ let test_driver_elab file =
   pr2_gen env_and_compunit_maybe;
   ()
 
+let test_rtl file =
+  (* use Rtldebug ? *)
+  raise Todo
+
 let extra_actions () = [
     "-driver_parse", "   <file>", 
     Common.mk_action_1_arg test_driver_parse;
@@ -81,6 +85,9 @@ let extra_actions () = [
     Common.mk_action_1_arg test_driver_elab;
     "-driver_version", "   ", 
     Common.mk_action_0_arg test_driver_version;
+
+    "-test_rtl", "  <file>", 
+    Common.mk_action_1_arg test_rtl;
 ]
 
 (*****************************************************************************)
@@ -171,10 +178,6 @@ let main () =
     | [] -> 
         Common.usage usage_msg (options()); 
         failwith "too few arguments"
-
-    | x::y::xs -> 
-        Common.usage usage_msg (options()); 
-        failwith "too many arguments"
     )
   )
 
