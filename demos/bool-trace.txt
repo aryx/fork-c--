@@ -1,0 +1,116 @@
+here is the dump of 'qc -test_nelab demos/bool.c--'
+under ocamldebug:
+
+set print_depth 3000
+set print_length 300000
+break @ main 118
+run
+	Objective Caml Debugger version 3.11.2
+
+(ocd) (ocd) (ocd) Loading program... done.
+Breakpoint 1 at 771748 : file main.ml, line 115, characters 5-56
+(ocd) Time : 90530 - pc : 771752 - module Main
+Breakpoint : 1
+(ocd) p res_or_error
+res_or_error :
+  (Ast2ir.proc Fenv.Dirty.env' * Ast2ir.proc Nelab.compunit) Error.error =
+  Error.Ok
+   (<abstr>,
+    {Nelab.globals = [];
+     Nelab.sections =
+      [("text",
+        [Nelab.Procedure
+          {Nelab.env = <abstr>; Nelab.sym = <obj>; Nelab.cc = "C";
+           Nelab.name = "main"; Nelab.spans = [];
+           Nelab.formals =
+            [(0, "", Ast.Variant, 32, "argc", 1);
+             (1, "address", Ast.Variant, 32, "argv", 1)];
+           Nelab.locals = []; Nelab.continuations = [];
+           Nelab.stackmem = <abstr>; Nelab.stacklabels = [];
+           Nelab.code =
+            [Elabstmt.Call ([], "C--",
+              Rtl.Private.Const
+               (Rtl.Private.Link (<obj>, Rtl.Private.Code, 32)),
+              [("", Rtl.Private.Const (Rtl.Private.Bits (3L, 32)), 32, 1)],
+              [],
+              {Elabstmt.cuts = []; Elabstmt.unwinds = [];
+               Elabstmt.areturns = []; Elabstmt.returns = true;
+               Elabstmt.aborts = false},
+              {Elabstmt.reads = None; Elabstmt.writes = None});
+             Elabstmt.Call ([], "C--",
+              Rtl.Private.Const
+               (Rtl.Private.Link (<obj>, Rtl.Private.Code, 32)),
+              [("", Rtl.Private.Const (Rtl.Private.Bits (4L, 32)), 32, 1)],
+              [],
+              {Elabstmt.cuts = []; Elabstmt.unwinds = [];
+               Elabstmt.areturns = []; Elabstmt.returns = true;
+               Elabstmt.aborts = false},
+              {Elabstmt.reads = None; Elabstmt.writes = None});
+             Elabstmt.Return ("C", 0, 0,
+              [("", Rtl.Private.Const (Rtl.Private.Bits (0L, 32)), 32, 1)])];
+           Nelab.basic_block = false}]);
+       ("text",
+        [Nelab.Procedure
+          {Nelab.env = <abstr>; Nelab.sym = <obj>; Nelab.cc = "C--";
+           Nelab.name = "tryout"; Nelab.spans = [];
+           Nelab.formals = [(0, "", Ast.Variant, 32, "n", 1)];
+           Nelab.locals =
+            [{Fenv.index = 1; Fenv.rkind = Fenv.RNone;
+              Fenv.loc = Rtl.Private.Var ("fmt", 1, 32);
+              Fenv.variance = Ast.Variant}];
+           Nelab.continuations = []; Nelab.stackmem = <abstr>;
+           Nelab.stacklabels = [];
+           Nelab.code =
+            [Elabstmt.If
+              (Rtl.Private.App (("bool", []),
+                [Rtl.Private.App (("lobits", [32; 1]),
+                  [Rtl.Private.Fetch (Rtl.Private.Var ("n", 0, 32), 32)])]),
+              [Elabstmt.Assign
+                (Rtl.Private.Rtl
+                  [(Rtl.Private.Const (Rtl.Private.Bool true),
+                    Rtl.Private.Store (Rtl.Private.Var ("fmt", 1, 32),
+                     Rtl.Private.Const
+                      (Rtl.Private.Link (<obj>, Rtl.Private.Data, 32)),
+                     32))])],
+              [Elabstmt.Assign
+                (Rtl.Private.Rtl
+                  [(Rtl.Private.Const (Rtl.Private.Bool true),
+                    Rtl.Private.Store (Rtl.Private.Var ("fmt", 1, 32),
+                     Rtl.Private.Const
+                      (Rtl.Private.Link (<obj>, Rtl.Private.Data, 32)),
+                     32))])]);
+             Elabstmt.Call ([], "C",
+              Rtl.Private.Const
+               (Rtl.Private.Link (<obj>, Rtl.Private.Imported, 32)),
+              [("", Rtl.Private.Fetch (Rtl.Private.Var ("fmt", 1, 32), 32),
+                32, 1);
+               ("", Rtl.Private.Fetch (Rtl.Private.Var ("n", 0, 32), 32), 32,
+                1)],
+              [],
+              {Elabstmt.cuts = []; Elabstmt.unwinds = [];
+               Elabstmt.areturns = []; Elabstmt.returns = true;
+               Elabstmt.aborts = false},
+              {Elabstmt.reads = None; Elabstmt.writes = None});
+             Elabstmt.Return ("C--", 0, 0, [])];
+           Nelab.basic_block = false}]);
+       ("data",
+        [Nelab.Datalabel <obj>;
+         Nelab.InitializedData
+          [(([], (37L, 8)), 8); (([], (100L, 8)), 8); (([], (32L, 8)), 8);
+           (([], (108L, 8)), 8); (([], (111L, 8)), 8); (([], (119L, 8)), 8);
+           (([], (32L, 8)), 8); (([], (98L, 8)), 8); (([], (105L, 8)), 8);
+           (([], (116L, 8)), 8); (([], (32L, 8)), 8); (([], (105L, 8)), 8);
+           (([], (115L, 8)), 8); (([], (32L, 8)), 8); (([], (110L, 8)), 8);
+           (([], (111L, 8)), 8); (([], (110L, 8)), 8); (([], (122L, 8)), 8);
+           (([], (101L, 8)), 8); (([], (114L, 8)), 8); (([], (111L, 8)), 8);
+           (([], (10L, 8)), 8); (([], (0L, 8)), 8)];
+         Nelab.Datalabel <obj>;
+         Nelab.InitializedData
+          [(([], (37L, 8)), 8); (([], (100L, 8)), 8); (([], (32L, 8)), 8);
+           (([], (108L, 8)), 8); (([], (111L, 8)), 8); (([], (119L, 8)), 8);
+           (([], (32L, 8)), 8); (([], (98L, 8)), 8); (([], (105L, 8)), 8);
+           (([], (116L, 8)), 8); (([], (32L, 8)), 8); (([], (105L, 8)), 8);
+           (([], (115L, 8)), 8); (([], (32L, 8)), 8); (([], (122L, 8)), 8);
+           (([], (101L, 8)), 8); (([], (114L, 8)), 8); (([], (111L, 8)), 8);
+           (([], (10L, 8)), 8); (([], (0L, 8)), 8)]])]})
+(ocd) 

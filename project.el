@@ -31,11 +31,14 @@
    (join-string 
     (list 
      ;"-debugger"
-     (case 3
+     (case 11
        (1 "-driver_parse demos/hello.c--")
        (2 "-test_nast demos/hello.c--")
        (3 "-test_nelab demos/hello.c--")
        (4 "-test_nelab demos/forloop_tiger.c--")
+
+       (10 "-test_nast demos/bool.c--")
+       (11 "-test_nelab demos/bool.c--")
        )
      )
     )
