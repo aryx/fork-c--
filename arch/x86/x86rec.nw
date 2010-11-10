@@ -1,5 +1,4 @@
 % -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-% vim: ts=8 sw=4 et:
 
 % Grades     ::=    "%%Grades:" Quality Importance Urgency
 % Quality    ::=    A|B|C|D|E
@@ -237,11 +236,12 @@ We distinguish terminals from nonterminals by name, so we have to
 announce the names of the nonterminals.
 <<names of types of terminals>>=
 n w c bits symbol
-@ Terminals [[n]] and [[w]] are an index and width; both are integers.
+@ 
+Terminals [[n]] and [[w]] are an index and width; both are integers.
 Terminal [[c]] is an integer count (of cells).
 Terminal [[bits]] is a constant of types [[Bits.bits]]; terminal
 [[symbol]] is a string.
-@
+
 The recognizer uses these nonterminals:
 \begin{quote}
 \begin{tabularx}{\linewidth}{@{}>{\ttfamily}lX@{}}
@@ -264,7 +264,7 @@ inst& An instruction\\
 any& Any tree (used for debugging)\\
 \end{tabularx}
 \end{quote}
-@
+
 The recognizer uses constructors that correspond to RTL
 operations, including [[Fetch]], [[Store]], [[Guarded]], and [[Par]].
 It also uses a separate, eponymous constructor for each RTL operator.
@@ -284,7 +284,7 @@ Nop& A no-op\\
 \end{quote}
 It's tempting to eliminate [[Fetch]], which would simplify rules, but
 which would mean including widths on at least some operators.
-@
+
 
 % ------------------------------------------------------------------ 
 \subsection{Recognizer Rules}
@@ -625,6 +625,7 @@ fpsp   : Reg('F', n) [{: guard (n = 0):}] {: () :}
 fppop  : Llr(fpsp, "add", one3, w) {: () :}
 fppop2 : Llr(fpsp, "add", two3, w) {: () :}
 fppush : Llr(fpsp, "sub", one3, w) {: () :}
+@ 
 <<rules>>=
 fpstacktopl  : Fpreg(Fetch(fpsp, w))            {: () :}
 fpstacktopl  : Fpreg(Add(Fetch(fpsp, w), zero)) {: () :}
@@ -634,11 +635,13 @@ fpstacknextl : Fpreg(Sub(Fetch(fpsp, w), one3)) {: () :}
 fpstacktop  : Fetch(fpstacktopl,  w) [{: guard (w=80) :}] {: fpstacktopl :}
 fpstack1    : Fetch(fpstack1l,    w) [{: guard (w=80) :}] {: fpstack1l :}
 fpstacknext : Fetch(fpstacknextl, w) [{: guard (w=80) :}] {: fpstacknextl :}
+@ 
 <<rules>>=
 inst : Par(Store(fpstacknextl, F2f(s:w, d:w, mem), w2:w), fppush)
   {: sprintf "fld%s %s" (fsuffix s) mem :}
 inst : Par(Store(dst:meml, F2f(s:w, d:w, fpstacktop), w2:w), fppop)
   {: sprintf "fstp%s %s" (fsuffix d) dst :}
+@ 
 <<rules>>=
 inst : Par(Store(fpstacknextl, I2f(s:w, d:w, mem), w2:w), fppush)
   {: sprintf "fild%s %s" (fisuffix s) mem :}
@@ -670,6 +673,7 @@ inst : Par(Store(fpstack1l, Fdiv(fpstack1, fpstacktop), w), fppop)
   {: "fdivrp" :}
 inst : Par(Store(fpstack1l, Fmul(fpstacktop, fpstack1), w), fppop)
   {: "fmulp" :}
+@ 
 <<rules>>=
 inst : UnaryInPlace(fpstacktopl, "fabs",  w) {: "fabs" :}
 inst : UnaryInPlace(fpstacktopl, "fsqrt", w) {: "fsqrt" :}
@@ -683,6 +687,7 @@ i2f_mem : I2f(s:w, d:w, mem) [{: guard (s = 32 || s = 16) :}] {: s, mem :}
 fiadd : Fadd(fpstacktop, i2f_mem) {: i2f_mem :}
 inst : Store(fpstacktopl, fiadd, w)
    {: let s, mem = fiadd in sprintf "fiadd%s %s" (suffix s) mem :}
+@ 
 <<rules>>=
 fpccl : Fpccl() {: () :}
 fpustatusl : Fpustatusl() {: () :}
@@ -880,6 +885,7 @@ let rec const = function
   | RP.Diff(c1,c2)            -> conDiff (const c1) (const c2)
   | RP.Late(s,w)              -> conLate s w
   | RP.Bits(b)                -> conBits(b)
+@ 
 <<code to follow the labeler>>=  
 let rec exp = function
   | RP.Const(k)               -> const (k)
@@ -888,6 +894,7 @@ let rec exp = function
   | RP.App((o,_),_) when String.length o > 4 && String.sub o 0 4 =$= "x86_" ->
       conX86op(o)
   | RP.App((o,_),_)           -> error ("unknown operator " ^ o)
+@ 
 <<code to follow the labeler>>=  
 and loc l = match l with
   | RP.Mem(('m',_,_), (RP.C c), e, ass) -> conMem (exp e) c
@@ -961,6 +968,8 @@ and begins_x86_ s =
 Oh, the joy of the flags\ldots
 <<truepat>>=
 RP.Const(RP.Bool true)
+@ 
+
 <<horrible pattern match for [[Pairdestwithflags]]>>=
 | [ (<<truepat>>, <<pattern for [[hi]] := hi32([[l]] [[o]] [[r]] at 32)>>)
   ; (<<truepat>>, <<pattern for [[lo]] := lo32([[l']] [[o']] [[r']] at 32)>>)
@@ -968,12 +977,14 @@ RP.Const(RP.Bool true)
   ] when l =// l' && o =$= o' && r =// r' && l =// RP.Fetch(l'', 32) && r =// r''
       && is32 k32 && flag_index = SS.indices.SS.cc ->
         conPairdestwithflags (loc hi) (loc lo) (exp l) o (exp r) fo
+@ 
 <<horrible pattern match for [[Withflags]]>>=
 | [ (<<truepat>>, <<pattern for [[l]] := [[l']] [[o]] [[r]] at [[w]]>>)
   ; (<<truepat>>, <<pattern for [[l2]] := [[l2']] [[o2]] [[r2]] at [[w2]]>>)
   ; (<<truepat>>, <<pattern for flags := [[%x86_undefflags()]]>>)
   ] when l =/ l' && l2 =/ l2' && w = w2 && flag_index = SS.indices.SS.cc ->
       conWithundefflags (loc l) o o2 (exp r) w
+@ 
 <<horrible pattern match for [[Withflags]]>>=
 | [ (<<truepat>>, <<pattern for [[l]] := [[l']] [[o]] [[r]] at [[w]]>>)
   ; (<<truepat>>, <<pattern for flags := [[fo]] ([[l'']], [[r']])>>)
@@ -1015,6 +1026,7 @@ RP.Const(RP.Bool true)
   $r[0] := %%bitInsert(8, $r[0], %%and(%%bitExtract(8, $r[0]), 69)) 
 | $c[2] := %%x86_logicflags(%%and(%%bitExtract(8, $r[0]), 69))
 *)
+@ 
 
 <<horrible pattern match for [[addc]] and [[subb]]>>=
 | [ (<<truepat>>, <<pattern for [[l]] := [[o(l',r,CF)]] at [[w]]>>)
@@ -1022,6 +1034,7 @@ RP.Const(RP.Bool true)
   ] when l =/ l' && l =/ l'' && r =// r' && flag_index = SS.indices.SS.cc &&
          cf_index1 = flag_index && cf_index2 = flag_index ->
       conWithcarryflags (loc l) o (exp r) w fo
+@ 
 
 <<horrible pattern match for [[addc]] and [[subb]]>>=
 | [ (<<truepat>>, <<pattern for [[l]] := [[o(l',r,z1)]] at [[w]]>>)
@@ -1029,7 +1042,7 @@ RP.Const(RP.Bool true)
   ] when l =/ l' && l =/ l'' && r =// r' && flag_index = SS.indices.SS.cc &&
          Bits.is_zero z1 && Bits.is_zero z2 ->
       conWithcarryzero (loc l) o (exp r) w fo
-
+@ 
 <<pattern for [[l]] := [[l']] [[o]] [[r]] at [[w]] at H register>>=
 RP.Store(l, RP.App(("bitInsert", [32; 8]),
                    [RP.Const (RP.Bits eightbits);
@@ -1039,59 +1052,78 @@ RP.Store(l, RP.App(("bitInsert", [32; 8]),
                                    [RP.Const (RP.Bits eightbits'); RP.Fetch(l'',_)]);
                             r]) as flag_left]),
          w)
+@ 
 <<pattern for flags := [[%x86_undefflags()]]>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _), RP.App(("x86_undefflags", _), []), _)
+@ 
 <<pattern for flags := [[fo]] [[flag_left']]>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _), RP.App((fo, _), [flag_left']), _)
+@ 
 <<pattern for [[l]] := [[l']] [[o]] [[r]] at [[w]]>>=
 RP.Store(l, RP.App((o, _), [RP.Fetch(l',_); r]), w) 
+@ 
 <<pattern for [[l]] := [[o(l',r,CF)]] at [[w]]>>=
 RP.Store(l, RP.App((o, _), [RP.Fetch(l',_); r; <<cfpat 1>>]), w) 
+@ 
 <<pattern for [[l]] := [[o(l',r,z1)]] at [[w]]>>=
 RP.Store(l, RP.App((o, _), [RP.Fetch(l',_); r; RP.Const (RP.Bits z1)]), w) 
+@ 
 <<pattern for [[l2]] := [[l2']] [[o2]] [[r2]] at [[w2]]>>=
 RP.Store(l2, RP.App((o2, _), [RP.Fetch(l2',_); r2]), w2) 
+@ 
 <<pattern for [[l]] := [[l']] at [[w]]>>=
 RP.Store(l, RP.Fetch(l',_), w) 
+@ 
 <<pattern for flags := [[fo]] ([[l'']], [[r']])>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _),
          RP.App((fo, _), [RP.Fetch(l'',_); r']), _)
+@ 
 <<pattern for flags := [[fo]] ([[l'', r', CF]])>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _),
          RP.App((fo, _), [RP.Fetch(l'',_); r';<<cfpat 2>>]), _)
+@ 
 <<pattern for flags := [[fo]] ([[l'', r', z2]])>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _),
          RP.App((fo, _), [RP.Fetch(l'',_); r';RP.Const (RP.Bits z2)]), _)
+@ 
 <<pattern for flags := [[fo]] ([[l'']], [[Const b]])>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _),
          RP.App((fo, _), [RP.Fetch(l'',_); RP.Const (RP.Bits b)]), _)
+@ 
 <<pattern for flags := [[fo]] ([[l'']], [[r'']])>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _),
          RP.App((fo, _), [RP.Fetch(l'',_); r'']), _)
+@ 
 <<pattern for [[l]] := [[o]] [[l']] at [[w]]>>=
 RP.Store(l, RP.App((o, _), [RP.Fetch(l',_)]), w) 
+@ 
 <<pattern for [[hi]] := hi32([[l]] [[o]] [[r]] at 32)>>=
 RP.Store(hi, RP.App (("lobits", [64;32]),
                      [RP.App (("shrl", [64]), 
                               [RP.App((o, _), [l; r]);
                                RP.Const (RP.Bits k32)])]), 32)
+@ 
 <<pattern for [[lo]] := lo32([[l']] [[o']] [[r']] at 32)>>=
 RP.Store(lo, RP.App (("lobits", [64;32]), [RP.App((o', _), [l'; r'])]), 32)
+@ 
 <<pattern for flags := [[fo]] [[l'']])>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _),
          RP.App((fo, _), [RP.Fetch(l'',_)]), _)
+@ 
 <<pattern for [[d]] := rp:[[l1/l2]] [[o]] [[r]] at [[w]]>>=
 RP.Store(d, RP.App((o, _),
   [ (RP.App(("or",_), [ RP.App(("shl",_),
                                [RP.App(("zx",_), [RP.Fetch(l1,_)]);_]);
                                 RP.App(("zx",_), [RP.Fetch(l2,_)])]) as rp);
     r]), w)
+@ 
 <<pattern for [[d']] := rp':[[l1'/l2']] [[o']] [[r']] at [[w']]>>=
 RP.Store(d', RP.App((o', _),
   [ (RP.App(("or",_), [ RP.App(("shl",_),
                                [RP.App(("zx",_), [RP.Fetch(l1',_)]);_]);
                                 RP.App(("zx",_), [RP.Fetch(l2',_)])]) as rp');
     r']), w')
+@ 
 <<pattern for flags := [[fo]] ([[l1'/l2']], [[r']])>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _),
          RP.App((fo, _), 
@@ -1099,12 +1131,15 @@ RP.Store(RP.Reg(('c', _, _), flag_index, _),
                                      [RP.App(("zx",_), [RP.Fetch(l1',_)]);_])
                      ;                RP.App(("zx",_), [RP.Fetch(l2',_)])])
               ; r']), _)
+@ 
 <<pattern for flags := [[fo]] ([[l'']] [[o']] [[r']])>>=
 RP.Store(RP.Reg(('c', _, _), flag_index, _),
          RP.App((fo, _), [RP.App ((o', _), [RP.Fetch(l'',_); r'])]), _)
 
+@ 
 <<cfpat 1>>=
 RP.App (("x86_carrybit", _), [RP.Fetch(RP.Reg(('c', _, _), cf_index1, _), _)])
+@ 
 <<cfpat 2>>=
 RP.App (("x86_carrybit", _), [RP.Fetch(RP.Reg(('c', _, _), cf_index2, _), _)])
 @

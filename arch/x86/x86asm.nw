@@ -1,5 +1,5 @@
 % -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-% vim: ts=8 et sw=4 
+
 % Grades     ::=    "%%Grades:" Quality Importance Urgency
 % Quality    ::=    A|B|C|D|E
 % Importance ::=    Central|Subsystem|Peripheral
@@ -15,7 +15,7 @@ This is an assembler that emits ``AT\&T'' style assembly language for
 the $x$86 platform.
 It implements the
 [[Asm.assembler]] interface for assemblers in the {\qcc} compiler.
-@
+
 
 The assembler constructor receives the output channel for the assembler. 
 <<x86asm.mli>>=
@@ -59,6 +59,8 @@ Most assemblers, including the Gnu assembler, will accept many more
 characters.  But this way we don't have to enumerate the reserved
 words (e.g., names of registers).
 <<definitions>>=
+@ 
+
 <<definition of [[manglespec]] (for the name mangler)>>=
 let spec =
     let reserved = [] in        (* list reserved words here so we can avoid them *)
@@ -168,6 +170,7 @@ method section name =
   _section <- name;
   fprintf _fd ".section .%s\n" name
 method current = _section
+@ 
 <<private assembly state>>=
 val mutable _section = "bogus section"
 @ 
@@ -181,6 +184,8 @@ method align  n =
   if n <> 1 then fprintf _fd ".align %d\n" n
 method addloc n = 
   if n <> 0 then fprintf _fd ".skip %d\n"  n
+@ 
+
 <<assembly methods>>=
 method zeroes (n:int) = fprintf _fd ".skip %d, 0\n" n
 @ 
@@ -188,6 +193,7 @@ I use a dreadful hack to increase the likelihood of duplicating {\tt
 lcc}'s 
 assembly-language output for [[.word]] and [[.half]].
 The x86 has no 8-byte emission unit, so I fake one, assuming little-endian order.
+
 <<assembly methods>>=
 method value (v:Bits.bits) = 
   let altfmt = Bits.to_hex_or_decimal_string ~declimit:256 in
@@ -200,6 +206,7 @@ method value (v:Bits.bits) =
       fprintf _fd ".long 0x%Lx\n" (Int64.logand i mask32);
       fprintf _fd ".long 0x%Lx\n" (Int64.shift_right_logical i 32)
   | w -> Impossible.unimp ("emission width " ^ string_of_int w ^ " in x86 assembler")
+@ 
 <<utilities>>=
 let mask32 = Int64.pred (Int64.shift_left Int64.one 32)
 @ 
@@ -263,6 +270,7 @@ method cfg_instr (cfg,proc)  =
     let label l = this#label (try SM.find l _syms with Not_found -> this#local l) in
     this#label symbol;
     (emitter proc cfg (this#call) (this#instruction) label : unit)
+@ 
 
 <<unused utilities>>=
 module Asm = X86rec.M

@@ -56,7 +56,7 @@ aligned component.
 From Figure 3-14,
 the return register is [[eax]], and the non-volatile
 registers are [[ebp]], [[ebx]], [[esi]], and [[edi]].
-@ 
+ 
 \paragraph{X86 registers and their conventional uses}
 Calling conventions refer to registers frequently, so it is
 appropriate to be able to refer to them by name.
@@ -82,13 +82,14 @@ Flags are also volatile, except that the direction flag must be set to
 let volregs = RS.of_list [eax; ecx; edx]
 let nvregs  = RS.of_list [ebx; esi; edi; ebp]
 let allregs = RS.union volregs nvregs
-@  N.B. We omit all floating-point registers.
+@  
+N.B. We omit all floating-point registers.
 These are all volatile and available for allocation, although
 [[%st(0)]] can used to return a floating-point result.
 The ABI says that all these registers ``must be empty'' at entry and
 exit (except that [[%st(0)]] need not be empty if it holds a result).
 Understanding ``empty'' requires understanding $x$86 floating-point.
-@ 
+ 
 For now, we save a nonvolatile register anywhere.
 Later, we may want mechanisms for saving them in conventional locations.
 <<x86call.ml>>=
@@ -186,7 +187,7 @@ It's worth studying these automata to see what's likely to remain
 unchanged across conventions:
 memsize, byte order, stack alignment, and growth direction are good
 candidates for defaulting.
-@
+
 \paragraph{Automata for passing values---{\PAL}~convention}
 N.B. YOU CANNOT AFFORD TO TAKE \emph{ALL} THE SCRATCH REGISTERS AWAY
 FROM THE ALLOCATOR.
@@ -535,6 +536,7 @@ X86.layout = { creates='no late consts' }
 function X86.layout.fn(dummy,proc) --- dispatch on cc name
   return X86.layout[Stack.ccname(proc)](dummy, proc)
 end
+@ 
 <<stack-frame layout functions>>=
 function X86.layout["C"](dummy,proc) --- really for a C convention only
     local blocks = Stack.blocks(proc)
@@ -601,6 +603,8 @@ function X86.layout["C"](dummy,proc) --- really for a C convention only
 end    
 
 X86.layout["notail"] = X86.layout["C"]
+@ 
+
 <<stack-frame layout functions>>=
 function X86.layout["C--"](dummy,proc)
     local blocks = Stack.blocks(proc)
@@ -670,6 +674,8 @@ function X86.layout["C--"](dummy,proc)
     proc = Stack.freeze(proc,block)
     return proc, 1
 end    
+@ 
+
 <<stack-frame layout functions>>=
 function X86.layout["C-- thread"](dummy,proc)
     local blocks = Stack.blocks(proc)
@@ -715,3 +721,4 @@ function X86.layout["C-- thread"](dummy,proc)
     proc = Stack.freeze(proc,block)
     return proc, 1
 end    
+@ 
