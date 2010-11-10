@@ -266,6 +266,7 @@ inst : Nop() {: "// " :}
          op (List.length ws) (List.length xs))
 @
 And now we convert between RTLs and Burg constructors.
+
 <<code to follow the labeler>>=  
 let unimp = Impossible.unimp
 let const = function
@@ -282,12 +283,14 @@ let const = function
   | RP.Link(s,_,w)            -> conLink s w
   | RP.Diff _                 -> error "PIC not supported"
   | RP.Bits(b)                -> conBits(b)
+@ 
 <<code to follow the labeler>>=  
 let rec exp = function
   | RP.Const(k)               -> const (k)
   | RP.Fetch(l,w)             -> conFetch (loc l) w
   <<special cases for particular operators>>
   | RP.App((o,_),_)           -> error ("unknown operator " ^ o)
+@ 
 <<code to follow the labeler>>=  
 and loc l = match l with
 (* RRO temp

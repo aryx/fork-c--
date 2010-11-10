@@ -1,0 +1,165 @@
+(*s: ia64rec.mlb *)
+%head {: <<modules>> 
+         (*s: code to precede the labeler *)
+         let cat = String.concat ""
+         let infinity = Camlburg.inf_cost
+         let guard b = if b then 0 else infinity
+
+         let const64 b =
+           assert (Bits.width b = 64);
+           Int64.to_string (Bits.U.to_int64 b)
+
+         exception Error of string
+         let error msg = raise (Error msg)
+         (*e: code to precede the labeler *)
+      :}
+%tail {: <<code to follow the labeler>>
+      :}
+
+%term <<names of types of terminals>>
+
+%%
+(*s: rules *)
+lconst : Link(symbol, w) {: symbol#mangled_text :}
+const  : Bits(b:bits)  [{: guard (Bits.width b = 64) :}]  {: const64 b :}
+(*x: rules *)
+reg   : Fetch(regl, w) {: regl :}
+regl  : Reg('r', n) {: "r"   ^ string_of_int n :}
+regl  : Reg('a', n) {: "b"   ^ string_of_int n :}
+regl  : Reg('p', n) {: "p"   ^ string_of_int n :}
+regl  : Reg('o', n) {: "out" ^ string_of_int n :}
+
+freg  : Fetch(fregl, w) {: fregl :}
+fregl : Reg('f', n) {: "f" ^ string_of_int n :}
+
+eregl : regl  {: regl :}
+eregl : bregl {: bregl :}
+
+mem   : Fetch(meml, w) {: meml :}
+meml  : Mem(reg, w)    {: "[" ^ reg ^ "]" :} -- indirect
+
+reg_or_const : reg   {: reg :}
+reg_or_const : const {: const :}
+
+target : lconst {: lconst ^ "#" :}
+(*x: rules *)
+pcl   : Reg('c', n)    [{: guard (n = 0)  :}] {: () :}
+pc    : Fetch(pcl,w)   [{: guard (w = 64) :}] {: () :}
+
+ral   : Reg('a', n)    [{: guard (n = 0)  :}] {: () :}
+ra    : Fetch(ral,w)   [{: guard (w = 64) :}] {: () :}
+(*x: rules *)
+-- load symbol
+inst : Store(dst:regl, src:lconst, w)
+  {: cat ["addl "; dst; " = @ltoff("; src; "), gp ;;\n"; 
+          "\t"; "ld8 "; dst; " = ["; dst; "]"] :}
+
+--inst : Store(dst:regl, src:target, w)
+--  {: cat ["addl "; dst; " = "; src] :}
+
+-- load immediate
+inst : Store(dst:regl, src:const, w)
+  {: cat ["movl "; dst; " = " ; src] :}
+
+-- register move
+inst : Store(dst:eregl, src:reg, w)
+  {: cat ["mov " ; dst; " = " ; src] :}
+
+-- register move: gp -> fp
+-- AM NOT SURE OF THIS ONE OR THE ONE BELOW IT
+
+-- Okay, I'm changing this from setf/getf.d into setf/getf.sig
+-- KR
+inst : Store(dst:fregl, src:reg, w)
+  {: cat ["setf.sig "; dst; " = "; src] :}
+
+-- register move: fp -> gp
+inst : Store(dst:regl, src:freg, w)
+  {: cat ["getf.sig "; dst; " = "; src] :}
+
+-- HACK! rename out -> in register
+inst : Store(dst:eregl, Fetch(Reg('o', n), wf:w), w)
+  {: cat ["mov " ; dst; " = in"; string_of_int n] :}
+
+-- memory load
+inst : Store(dst:regl, src:mem, w)
+  {: cat ["ld8 "; dst; " = "; src] :}
+
+-- memory store
+inst : Store(dst:meml, src:reg, w)
+  {: cat ["st8 "; dst; " = "; src] :}
+
+-- HACK! memory store from offset
+inst : Store(Mem(Add(x:reg, y:const),mw:w), src:reg, w)
+  {: cat [ "add "; x; " = "; y; ", "; x; " ;;\n\t"
+         ; "st8 ["; x; "] = "; src; " ;;\n\t" 
+         ; "add "; x; " = -"; y; ", "; x
+         ]
+  :}
+(*x: rules *)
+-- addition
+inst : Store(dst:regl, Add(x:reg_or_const, y:reg), w)
+  {: cat ["add "; dst; " = "; x; ", "; y] :}
+
+inst : Store(dst:regl, Add(x:reg, y:reg_or_const), w)
+  {: cat ["add "; dst; " = "; y; ", "; x] :}
+
+-- fmul
+inst : Store(dst:fregl, Fmul(x:freg, y:freg, rm:freg), w)
+  {: cat ["xma.l "; x; " = "; y; ", "; x; ", "; rm] :}
+
+inst : Store(dst:regl, Mult(x:reg, y:reg_or_const), w)
+    {: cat [""] :}
+
+-- subtraction
+inst : Store(dst:regl, Sub(x:reg_or_const, y:reg), w)
+  {: cat ["sub "; dst; " = "; x; ", "; y] :}
+
+-- ne
+inst : Store(dst:regl, Ne(x:reg, y:reg), w)
+  {: cat ["cmp.ne "; dst; ",p0 = "; x; ", "; y] :} 
+
+-- shl
+inst : Store(dst:regl, Shl(x:reg, y:reg_or_const), w)
+  {: cat ["shl "; dst; " = "; x; ", "; y] :}
+
+-- shrl
+inst : Store(dst:regl, Shrl(x:reg, y:reg_or_const), w)
+  {: cat ["shr.u "; dst; " = "; x; ", "; y] :}
+
+-- shra
+inst : Store(dst:regl, Shra(x:reg, y:reg_or_const), w)
+  {: cat ["shr "; dst; " = "; x; ", "; y] :}
+
+-- popcnt
+inst : Store(dst:regl, Popcnt(x:reg), w)
+  {: cat ["popcnt "; dst; " = "; x] :}
+(*x: rules *)
+-- call
+next: Add(pc,const) {: () :}
+
+inst: Par(Goto(target), Store(ral,next,w))
+{: "mov loc1 = r1 ;;\n"
+ ^ "br.call.sptk.many b0 = " ^ target ^ " ;;\n"
+ ^ "mov r1 = loc1"
+:}
+
+-- return
+inst: Par(Goto(a:reg), Goto(b:reg)) 
+  {: "mov ar.pfs = loc0 ;;\n"^"\tbr.ret.sptk.many b0" :}
+-- THE ABOVE IS COMMENTED OUT UNTIL WE FIGURE OUT HOW TO PROPERLY RECOGNIZE A
+--   RETURN.
+
+-- branches
+inst: Goto(target) {: "br.sptk.many " ^ target :}
+
+-- indirect branches
+inst: Goto(reg)    {: "br.sptk.many " ^ reg :}
+
+-- conditional branch
+inst: Guarded(Fetch(regl,w), Goto(target))
+  {: cat ["("; regl; ") br.cond.sptk.many "; target] :}
+(*x: rules *)
+inst : Nop() {: "// " :}
+(*e: rules *)
+(*e: ia64rec.mlb *)

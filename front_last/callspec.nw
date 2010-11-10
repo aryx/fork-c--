@@ -68,6 +68,7 @@ value.
 <<callspec.mli>>=
 <<type t>>
 
+@ 
 
 <<type t>>=
 type t =
@@ -291,7 +292,8 @@ let where_to_save_ra t = fun ra_on_entry temp -> match style t with
     | ReturnAddress.SaveToTemp s -> Talloc.Multiple.loc temp s (wordsize t) 
 
 let to_call ~cutto ~return auto t =
-    <<it's impossible for the stack pointer to be a useful register too>>;
+    <<it's impossible for the stack pointer to be a useful register too>>
+    ;
     let volregs = Register.Set.diff t.all_regs t.nv_regs in
     { C.name           = t.name
     ; C.overflow_alloc = t.overflow
@@ -314,6 +316,8 @@ let to_call ~cutto ~return auto t =
     ; C.saved_nvr        = t.save_nvr
     ; C.return           = return
     }
+@ 
+
 <<it's impossible for the stack pointer to be a useful register too>>=
 if Register.Set.mem t.sp t.all_regs then
   Impossible.impossible

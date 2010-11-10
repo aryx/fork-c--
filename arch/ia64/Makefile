@@ -1,18 +1,15 @@
-TOP=..
+TOP=../..
 
 ##############################################################################
 # Variables
 ##############################################################################
 TARGET=lib
 
-# used by Driver.compile
-SRC= dataflow.ml vfp.ml mvalidate.ml
+# does not compile, Target.map expect 2 arguments
 
-# used by arch/ppc/
-SRC+=automatonutil.ml placevar.ml
-
-# used by arch/ia64/
-SRC+=callspec.ml
+SRC= ia64call.ml \
+     ia64asm.ml
+# no ia64regs.ml  ?
 
 SYSLIBS=
 
@@ -24,12 +21,15 @@ INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/parsing \
  $(TOP)/h_asdl \
  $(TOP)/front_rtl \
- $(TOP)/front_nelab \
- $(TOP)/front_zipcfg \
  $(TOP)/front_target \
- $(TOP)/front_ir \
+ $(TOP)/front_asm \
  $(TOP)/front_fenv \
+ $(TOP)/front_nelab \
  $(TOP)/front_cfg \
+ $(TOP)/front_ir \
+ $(TOP)/front_zipcfg \
+ $(TOP)/front_last \
+ $(TOP)/assembler \
 
 
 
@@ -62,13 +62,15 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=dataflow \
- vfp mvalidate \
- placevar automatonutil \
- callspec
+SRCNW=ia64 ia64asm ia64call 
+# no ia64regs  ?
+# ia64rec  is special
+
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done
+	$(SYNCWEB) ia64rec.nw ia64rec.mli
+	$(SYNCWEB) ia64rec.nw ia64rec.mlb
 
 lpdistclean::
 	rm -f $(LPSRC) .md5sum_*

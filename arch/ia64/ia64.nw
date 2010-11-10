@@ -151,7 +151,7 @@ let load ~dst ~addr assn =
       rtl (R.store (temploc dst)
              (R.fetch (R.mem assn mspace (R.C 8) (tempval r)) 64) 64)
   | _ -> rtl (R.store (temploc dst) 
-		(R.fetch (R.mem assn mspace (R.C 8) addr) 64) 64)
+  (R.fetch (R.mem assn mspace (R.C 8) addr) 64) 64)
 
 let store ~addr ~src assn =
   assert (tempwidth src = 64);
@@ -298,20 +298,20 @@ offsets.
 <<a nicer version of [[ldst_expand]], which does not actually work>>
 let ldst_expand rtl =
   let extract_reg_w op = function 
-	| [_; RP.Fetch((RP.Reg _) as r,w)] -> (r,w)
-	| [RP.Fetch((RP.Reg _) as r,w); _] -> (r,w)
-	| _ -> let (opname,_) = op in
+ | [_; RP.Fetch((RP.Reg _) as r,w)] -> (r,w)
+ | [RP.Fetch((RP.Reg _) as r,w); _] -> (r,w)
+ | _ -> let (opname,_) = op in
       Impossible.impossible ("could not find base register for ld/st") in
   match Down.rtl rtl with
   (* load from offset *)
   |	RP.Rtl [g,RP.Store(dst,RP.Fetch(RP.Mem(ms,mc,
-					       (RP.App(op,exps) as e),assn),w'),w)
+            (RP.App(op,exps) as e),assn),w'),w)
            ] -> let (reg, regw) = extract_reg_w op exps in
                 List.map (fun x -> Up.rtl (RP.Rtl [g, x]))
                     [ RP.Store(dst, e, regw)
                     ; RP.Store(dst, RP.Fetch(RP.Mem(ms,mc,
-						    RP.Fetch(dst,regw),assn),
-					     w'), w) ]
+          RP.Fetch(dst,regw),assn),
+          w'), w) ]
 
   (* store from offset *)
   (* NOTE: right now, we have a hack to rewrite stores from offsets
@@ -326,9 +326,9 @@ let ldst_expand rtl =
 <<a nicer version of [[ldst_expand]], which does not actually work>>=
 let ldst_expand rtl =
   let extract_reg_w op = function 
-	| [_; RP.Fetch((RP.Reg _) as r,w)] -> (r,w)
-	| [RP.Fetch((RP.Reg _) as r,w); _] -> (r,w)
-	| _ -> let (opname,_) = op in
+ | [_; RP.Fetch((RP.Reg _) as r,w)] -> (r,w)
+ | [RP.Fetch((RP.Reg _) as r,w); _] -> (r,w)
+ | _ -> let (opname,_) = op in
       Impossible.impossible ("could not find base register for ld/st") in
   match Down.rtl rtl with
   (* load from offset *)

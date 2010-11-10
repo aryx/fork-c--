@@ -156,7 +156,9 @@ let rtn return_to k n ~ra =
     else Impossible.impossible "alternate return using C calling convention" 
 
 let c ~return_to cut auto =
-  let spec = <<callspec specification>> in
+  let spec = 
+  <<callspec specification>> 
+  in
   let t = CS.to_call cut (rtn return_to) (postprocess auto) spec
   in { t with C.ra_on_exit   = (fun _ _ t -> ra)
      ;        C.sp_on_unwind = (fun e -> RU.store sp e)
@@ -171,6 +173,6 @@ Here's our CC lookup function.
 let cconv ~return_to cut ccname stage =
   let f =
     match ccname with
-	| "C" | _ -> c
+ | "C" | _ -> c
   in f ~return_to cut stage
 @ 

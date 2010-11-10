@@ -1,0 +1,1 @@
+only ppc/ and x86/ are compiling right now.
