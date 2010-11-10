@@ -1,1 +1,9 @@
-only ppc/ and x86/ are compiling right now.
+interpreter/ is the only directory that have all its file compiling.
+
+ppc/ and x86/ are compiling right now but they are depending on
+ camlburg.
+
+dummy depends on x86/ and camlburg
+
+alpha/, arm/, ia64/, mips/, sparc/ are not compiling because probably
+of some CE that were not fixed.

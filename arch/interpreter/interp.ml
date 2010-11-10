@@ -1,32 +1,11 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-% vim: ts=8 sw=4 et:
-
-% ------------------------------------------------------------------ 
-\section{The Interpreter Target}
-% ------------------------------------------------------------------ 
-
-This module defines a back end for the {\PAL} interpreter in directory
-[[../interp]]. 
-<<interp.mli>>=
-val target' : Ast2ir.tgt
-@
-
-% ------------------------------------------------------------------ 
-\subsection{Implementation}
-% ------------------------------------------------------------------ 
-<<interp.ml>>=
+(*s: interp.ml *)
 let arch        = "interp"
 let byteorder   = Rtl.LittleEndian       (* byte order *)
 let wordsize    = 32
 let pointersize = wordsize
 let memsize     = 8
 let mspace      = ('m', byteorder, Cell.of_size memsize)
-@
-The interpreter at the moment knows only the memory space [[m]].  We use
-in {\rtl}s the [[C]] space to encode jumps, gotos, and the like.
-However, these {\rtl}s never reach the interpreter but are recognized
-and translated to control-flow instructions the interpreter knows.
-<<interp.ml>>=
+(*x: interp.ml *)
 module AN     = Automaton
 module SS32   = Space.Standard32
 module T      = Target
@@ -71,11 +50,7 @@ module Spaces = struct
                 ; Space.classification = Space.Reg
                 }
 end
-@
-% ------------------------------------------------------------------ 
-\subsection{Registers}
-% ------------------------------------------------------------------ 
-<<interp.ml>>=
+(*x: interp.ml *)
 let c = Spaces.c.Space.space
 let pc:Rtl.loc            = Rtl.reg (c,0,Rtl.C 1)  (* pc pointer     *)
 let sp:Rtl.loc            = Rtl.reg (c,1,Rtl.C 1)  (* stack pointer  *)
@@ -92,111 +67,76 @@ let vfp                   = Vfp.mk wordsize
 let std_sp_location       = vfp
 let std_sp_location       = RU.add pointersize 
                              vfp (R.late "minus frame size" pointersize)
-@
-% ------------------------------------------------------------------ 
-\subsection{Control Flow and Instructions}
-% ------------------------------------------------------------------ 
-
-Module [[Flow]]  provides us with {\rtl}s that encode control transfer.
-They are part of the [[target]] value that describes this target
-completely. \emph{The encoding of control transfers and other special
-instructions is shared with the recognizer.}
-<<interp.ml>>=
+(*x: interp.ml *)
 module Flow = struct
-    <<module Flow>>
-end
-@ 
-THESE REGISTER ASSIGNMENTS MISUSE THE STANDARD [['c']] SPACE.
-ANOTHER SPACE SHOULD BE CHOSEN.
-<<module Flow>>=
-let ewidth                = RU.Width.exp 
-let lwidth                = RU.Width.loc 
-@
-We are now defining instructions that model instructions in the
-interpreter. First, we define some helper functions that allow to define
-these instructions more easily.
-<<module Flow>>=
-let fetch loc     = R.fetch loc wordsize        
-let store loc e   = R.store loc e wordsize        
-let add           = RU.add  wordsize
-let addk          = RU.addk wordsize
-let sub           = R.opr "sub" [wordsize]
-let add1 loc      = addk (fetch loc) 1
-let sub1 loc      = R.app sub [ fetch loc
-                            ; R.bits (Bits.S.of_int 1 wordsize) wordsize]
-let inc loc       = R.store loc (add1 loc) wordsize
-let dec loc       = R.store loc (sub1 loc) wordsize
-let error         = Impossible.impossible
-@
-For most control-flow related {\rtl}s, [[Target.t]] demands we provide
-embedding and projection functions. \emph{As far as I can tell the
-projections are never used and we could simplify [[Target.t]].}
-<<module Flow>>=
-let bnegate _ = Impossible.unimp "bnegate not implemented"
-@
-<<module Flow>>=
-let goto = { Ep.embed   = (fun _ e -> (DG.Nop, store pc e))
-           ; T.project = (fun r -> match D.rtl r with
-                          | RP.Rtl [(_, RP.Store(_, e, _))] -> U.exp e
-                          | _ -> error "projected non-goto"
-                          )
-           } 
+    (*s: module Flow *)
+    let ewidth                = RU.Width.exp 
+    let lwidth                = RU.Width.loc 
+    (*x: module Flow *)
+    let fetch loc     = R.fetch loc wordsize        
+    let store loc e   = R.store loc e wordsize        
+    let add           = RU.add  wordsize
+    let addk          = RU.addk wordsize
+    let sub           = R.opr "sub" [wordsize]
+    let add1 loc      = addk (fetch loc) 1
+    let sub1 loc      = R.app sub [ fetch loc
+                                ; R.bits (Bits.S.of_int 1 wordsize) wordsize]
+    let inc loc       = R.store loc (add1 loc) wordsize
+    let dec loc       = R.store loc (sub1 loc) wordsize
+    let error         = Impossible.impossible
+    (*x: module Flow *)
+    let bnegate _ = Impossible.unimp "bnegate not implemented"
+    (*x: module Flow *)
+    let goto = { Ep.embed   = (fun _ e -> (DG.Nop, store pc e))
+               ; T.project = (fun r -> match D.rtl r with
+                              | RP.Rtl [(_, RP.Store(_, e, _))] -> U.exp e
+                              | _ -> error "projected non-goto"
+                              )
+               } 
     
-let cutto =
-    { T.embed   = (fun _ {Mflow.new_pc=newpc; Mflow.new_sp= newsp} ->
-                        let assign loc e =
-                            Rtl.store loc e (Rtlutil.Width.exp e) in
-                        (DG.Nop, Rtl.par [assign sp newsp; assign pc newpc]))
-     ; T.project = (fun r -> match downrtl r with
-                      | RP.Rtl [ (_, RP.Store(_, nsp, _))
-                               ; (_, RP.Store(_ , npc, _))] ->
-                        {Mflow.new_sp=upexp nsp; Mflow.new_pc= upexp npc}
-                      | _ -> Impossible.impossible "projected non-cutto")
-     }
-let call = 
-    { T.embed   = (fun _ e -> (DG.Nop, R.par [store ra (fetch pc); store pc e]))
-    ; T.project = (fun r -> match D.rtl r with
-                  | RP.Rtl [_;(_,RP.Store(_,e,_))] -> U.exp e
-                  | RP.Rtl [(_,RP.Store(_,e,_))] -> U.exp e
-                  | _ -> error (Printf.sprintf "projected non-call: %s"
-                                               (RU.ToString.rtl r))
-                  )
-    }              
+    let cutto =
+        { T.embed   = (fun _ {Mflow.new_pc=newpc; Mflow.new_sp= newsp} ->
+                            let assign loc e =
+                                Rtl.store loc e (Rtlutil.Width.exp e) in
+                            (DG.Nop, Rtl.par [assign sp newsp; assign pc newpc]))
+         ; T.project = (fun r -> match downrtl r with
+                          | RP.Rtl [ (_, RP.Store(_, nsp, _))
+                                   ; (_, RP.Store(_ , npc, _))] ->
+                            {Mflow.new_sp=upexp nsp; Mflow.new_pc= upexp npc}
+                          | _ -> Impossible.impossible "projected non-cutto")
+         }
+    let call = 
+        { T.embed   = (fun _ e -> (DG.Nop, R.par [store ra (fetch pc); store pc e]))
+        ; T.project = (fun r -> match D.rtl r with
+                      | RP.Rtl [_;(_,RP.Store(_,e,_))] -> U.exp e
+                      | RP.Rtl [(_,RP.Store(_,e,_))] -> U.exp e
+                      | _ -> error (Printf.sprintf "projected non-call: %s"
+                                                   (RU.ToString.rtl r))
+                      )
+        }              
 
-let return = store pc (fetch ra)
+    let return = store pc (fetch ra)
 
-let branch =
-    { T.embed   = (fun _ c -> DG.cond (fun e -> R.guard c (store pc e)))
-    ; T.project = (fun r      -> match D.rtl r with
-                  | RP.Rtl [(c, (RP.Store(_,_,_)))] -> U.exp c
-                  | _ -> error "projected non-branch"
-                  )
-    }              
+    let branch =
+        { T.embed   = (fun _ c -> DG.cond (fun e -> R.guard c (store pc e)))
+        ; T.project = (fun r      -> match D.rtl r with
+                      | RP.Rtl [(c, (RP.Store(_,_,_)))] -> U.exp c
+                      | _ -> error "projected non-branch"
+                      )
+        }              
 
-(*let jump   = goto                   (* must be different from goto!  *)*)
-let jump = { Ep.embed   = (fun _ e -> (DG.Nop, store pc e))
-           ; Ep.project = goto.Ep.project
-           } 
-let cutto  = cutto
-(* let return = store pc (fetch ra)    (* no embed/project needed *)*)
-@
-We use helper functions [[store_space]] and [[fetch_space]] to store or
-fetch a value in a register-like space, given a function [[spc]] that takes
-an index and returns a register location.
-<<module Flow>>=
-let store_space spc i e = R.store (spc i) e (ewidth e)
-let fetch_space spc i w = R.fetch (spc i) w
-@
-
-% ------------------------------------------------------------------ 
-\subsection{Automata for Calling Conventions and Globals}
-% ------------------------------------------------------------------ 
-
-The interpreter hands out registers for globals and arguments, assuming
-that we have an endless supply for each. We have just one automaton
-[[seq]] that does this. It is parameterized over a function [[reg]]
-that supplies the register.
-<<interp.ml>>=
+    (*let jump   = goto                   (* must be different from goto!  *)*)
+    let jump = { Ep.embed   = (fun _ e -> (DG.Nop, store pc e))
+               ; Ep.project = goto.Ep.project
+               } 
+    let cutto  = cutto
+    (* let return = store pc (fetch ra)    (* no embed/project needed *)*)
+    (*x: module Flow *)
+    let store_space spc i e = R.store (spc i) e (ewidth e)
+    let fetch_space spc i w = R.fetch (spc i) w
+    (*e: module Flow *)
+end
+(*x: interp.ml *)
 let seq (get : int -> Rtl.width -> Register.t list ref -> AN.loc) next =
     let index = ref 0  in
     let regs  = ref [] in
@@ -221,66 +161,52 @@ let globals base =
   AN.at ~start:base mspace (seq get)
 
 let ccspecs     = { AN.call = params; AN.results = params; AN.cutto = params }
-@
-
-% ------------------------------------------------------------------ 
-\subsection{Calling Conventions}
-% ------------------------------------------------------------------ 
-
-Allmost every aspects of the calling convention is irrelevant because the
-interpreter does not work like a CPU. 
-
-I have to admit, that I don't know what I am doing here.
-
-<<transformations>>=
-let autoAt = AN.at mspace in
-let call_actuals  =
-  C.outgoing ~growth ~sp
-    ~mkauto:(fun () -> Block.srelative vfp "out call parms" autoAt params) 
-    ~autosp:(fun r  -> Block.base r.AN.overflow)
-    ~postsp:(fun _ sp -> sp) in  
-
-let prolog  =
-  let autosp = (fun _ -> vfp) in
-  C.incoming ~growth ~sp
-    ~mkauto:(fun () -> Block.srelative vfp "in call parms" autoAt params)
-    ~autosp
-    ~postsp:(fun _ _ -> std_sp_location)
-    ~insp:(fun a _ _ -> autosp a) in
-
-let call_results  =
-  let autosp = (fun r -> Block.base r.AN.overflow) in
-  C.incoming ~growth ~sp
-    ~mkauto:(fun () -> Block.srelative vfp "in ovfl results" autoAt params)
-    ~autosp
-    ~postsp:(fun _ _ -> std_sp_location)
-    ~insp:(fun a _ _ -> autosp a) in
-
-let epilog  =
-  C.outgoing ~growth ~sp
-    ~mkauto:(fun () -> Block.srelative vfp "out ovfl results" autoAt params)
-    ~autosp:(fun r -> Block.base r.AN.overflow)
-    ~postsp:(fun _ _ -> vfp) in
-
-let also_cuts_to =
-  let autosp = (fun r -> std_sp_location) in
-  C.incoming ~growth ~sp
-    ~mkauto:(fun () -> Block.srelative vfp "in cont parms" autoAt params)
-    ~autosp
-    ~postsp:(fun _ _ -> std_sp_location)
-    ~insp:(fun a _ _ -> autosp a) in
-
-let cut_actuals base  =
-   C.outgoing ~growth ~sp ~mkauto:(fun () -> autoAt base params)
-     ~autosp:(fun r -> spval)
-     ~postsp:(fun _ _ -> spval) in
-@ 
-
-
-<<interp.ml>>=
+(*x: interp.ml *)
 let cc' = (* new style *)
     let growth = Memalloc.Down            in (* irrelevant *) 
-    <<transformations>>
+    (*s: transformations *)
+    let autoAt = AN.at mspace in
+    let call_actuals  =
+      C.outgoing ~growth ~sp
+        ~mkauto:(fun () -> Block.srelative vfp "out call parms" autoAt params) 
+        ~autosp:(fun r  -> Block.base r.AN.overflow)
+        ~postsp:(fun _ sp -> sp) in  
+
+    let prolog  =
+      let autosp = (fun _ -> vfp) in
+      C.incoming ~growth ~sp
+        ~mkauto:(fun () -> Block.srelative vfp "in call parms" autoAt params)
+        ~autosp
+        ~postsp:(fun _ _ -> std_sp_location)
+        ~insp:(fun a _ _ -> autosp a) in
+
+    let call_results  =
+      let autosp = (fun r -> Block.base r.AN.overflow) in
+      C.incoming ~growth ~sp
+        ~mkauto:(fun () -> Block.srelative vfp "in ovfl results" autoAt params)
+        ~autosp
+        ~postsp:(fun _ _ -> std_sp_location)
+        ~insp:(fun a _ _ -> autosp a) in
+
+    let epilog  =
+      C.outgoing ~growth ~sp
+        ~mkauto:(fun () -> Block.srelative vfp "out ovfl results" autoAt params)
+        ~autosp:(fun r -> Block.base r.AN.overflow)
+        ~postsp:(fun _ _ -> vfp) in
+
+    let also_cuts_to =
+      let autosp = (fun r -> std_sp_location) in
+      C.incoming ~growth ~sp
+        ~mkauto:(fun () -> Block.srelative vfp "in cont parms" autoAt params)
+        ~autosp
+        ~postsp:(fun _ _ -> std_sp_location)
+        ~insp:(fun a _ _ -> autosp a) in
+
+    let cut_actuals base  =
+       C.outgoing ~growth ~sp ~mkauto:(fun () -> autoAt base params)
+         ~autosp:(fun r -> spval)
+         ~postsp:(fun _ _ -> spval) in
+    (*e: transformations *)
     { C.name             = "interp"
     ; C.overflow_alloc  = { C.parameter_deallocator = C.Callee
                           ; C.result_allocator      = C.Caller
@@ -304,18 +230,7 @@ let cc' = (* new style *)
     ; C.sp_on_jump       = (fun _ _ -> Rtl.null)
     ; C.sp_on_unwind     = (fun e ->   RU.store sp e)
     }
-@
-
-
-
-% ------------------------------------------------------------------ 
-\subsection{Target Value}
-% ------------------------------------------------------------------ 
-
-The [[target]] value is the essential information for the rest of the
-compiler.
-
-<<interp.ml>>=
+(*x: interp.ml *)
 let target' = (* new style *)
   let spaces = [ Spaces.m ; Spaces.c ; Spaces.a ] in
   let mincap = T.minimal_capabilities 32 in
@@ -528,5 +443,4 @@ let target' = (* new style *)
                          Flow.store pc (Rewrite.Ops.unsigned wordsize 0)
                      }
        }
-@
-
+(*e: interp.ml *)
