@@ -1,13 +1,4 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-
-<<tx.mli>>=
-val decrement : name:string -> from:int -> to':int -> unit
-val remaining : unit -> int
-val set_limit : int -> unit
-val used : unit -> int
-val last : unit -> string
-@
-<<tx.ml>>=
+(*s: tx.ml *)
 type t = { mutable limit : int; mutable remaining : int; mutable last : string; }
 let ts = { limit = max_int; remaining = max_int; last = "<none>"; }
 let _ = Reinit.at (fun () -> begin 
@@ -33,3 +24,4 @@ let decrement ~name ~from ~to' =
 let used _ = ts.limit - ts.remaining
 let last _ = ts.last
 
+(*e: tx.ml *)

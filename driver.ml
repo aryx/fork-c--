@@ -94,9 +94,9 @@ let metrics_ok src tgt =
 let elab ~swap validate (map,ast) asm =
   Nelab.program ~swap validate map asm (Nast.program ast)
 
-let compile (PA.T target) opt exportglobals src asm validate swap =
-  failwith "TODO: pad: Driver.compile and mvaludate"
-(* 
+let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
+  (* old: failwith "TODO: pad: Driver.compile and mvaludate" *)
+
   let validate = if validate then Mvalidate.rtl target else (fun _ -> None) in
   let abort () = Error.error "compilation aborted because of errors" in
   let as_ok = function Error.Ok x -> x | Error.Error -> abort () in
@@ -108,5 +108,4 @@ let compile (PA.T target) opt exportglobals src asm validate swap =
         Ast2ir.translate (PA.T target) (Fenv.clean env) opt exportglobals compunit
     else
       Error.error "metrics of source code don't match the target"))
-*)
 (*e: driver.ml *)

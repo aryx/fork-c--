@@ -25,11 +25,11 @@ val elab :
 val compile :
   Ast2ir.tgt -> 
   (Ast2ir.proc -> unit) -> 
-  bool(*emitglobals*) -> 
-  (Srcmap.map * Ast.program) -> 
-  Ast2ir.proc Asm.assembler -> 
-  bool(*validate*) -> 
-  bool(*swap*) -> 
+  exportglobals:bool -> 
+  src:(Srcmap.map * Ast.program) -> 
+  asm:Ast2ir.proc Asm.assembler -> 
+  validate:bool -> 
+  swap:bool -> 
   unit
    (* raises Error.ErrorExn *)
 

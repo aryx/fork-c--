@@ -178,10 +178,10 @@ type 'a analysis' = 'a fact' * ('a, 'a,                'a edge_fact_setter) comp
 type 'a transformation =     ('a, Zipcfg.graph option, Zipcfg.graph option) computation
 type 'a pass =
   'a fact *
-	('a, txlimit -> 'a answer, txlimit -> 'a edge_fact_setter answer) computation
+ ('a, txlimit -> 'a answer, txlimit -> 'a edge_fact_setter answer) computation
 type 'a pass' =
   'a fact' *
-	('a, txlimit -> 'a answer, txlimit -> 'a edge_fact_setter answer) computation
+ ('a, txlimit -> 'a answer, txlimit -> 'a edge_fact_setter answer) computation
 @ 
 And some more embedding functions:
 <<forward utilities>>=
@@ -220,14 +220,17 @@ The analysis function sets properties on unique IDs.
 <<declarations of exported values for backward analyses>>=
 val run_anal  : 'a analysis  -> Zipcfg.graph -> unit
 val run_anal' : 'a analysis' -> Zipcfg.graph -> unit
+@ 
 <<declarations of exported values for forward analyses>>=
 val run_anal  : 'a analysis  -> entry_fact:'a -> Zipcfg.graph -> unit
 val run_anal' : 'a analysis' -> entry_fact:'a -> Zipcfg.graph -> unit
-@ The rewrite pass sets properties and also rewrites the graph.
+@ 
+The rewrite pass sets properties and also rewrites the graph.
 The Boolean result tells if the graph changed.
 <<declarations of exported values for backward analyses>>=
 val rewrite  : 'a pass  -> Zipcfg.graph -> Zipcfg.graph * bool
 val rewrite' : 'a pass' -> Zipcfg.graph -> Zipcfg.graph * bool
+@ 
 <<declarations of exported values for forward analyses>>=
 val rewrite  : 'a pass  -> entry_fact:'a -> Zipcfg.graph -> Zipcfg.graph * bool
 val rewrite' : 'a pass' -> entry_fact:'a -> Zipcfg.graph -> Zipcfg.graph * bool
@@ -273,7 +276,9 @@ module B = struct
   <<backward stuff>>
 
 
-  module XXX = struct <<backward, no txlim>> end
+  module XXX = struct 
+   <<backward, no txlim>>
+  end
 
 end
 module F = struct
@@ -489,6 +494,7 @@ let add_blocks map list =
 @ 
 <<utilities>>=
 let ( << ) f g = fun x -> f (g x)
+@ 
 <<backward stuff>>=
 let debug' s (f, comp) =
   let pr = Printf.eprintf in
@@ -521,6 +527,7 @@ let anal (fact, comp) =
   { name = comp.name; last_in = wrap comp.last_in;
     middle_in = wrap2 comp.middle_in; first_in = wrap2 comp.first_in; }
 let anal' = anal
+@ 
 <<backward stuff>>=
 let a_t' (fact, comp) tx =
  let last_in l txlim =
@@ -553,6 +560,7 @@ let a_t x tx = a_t' x tx
 <<definitions of exported functions>>=
 let limit_fun f i n txlim = if txlim > 0 then f i n else None
 let limit_last f n txlim  = if txlim > 0 then f n else None
+@ 
 <<backward stuff>>=
 let limit_anal (fact, comp) =
   fact,
@@ -717,9 +725,11 @@ let rewrite' (fact, comp) ~entry_fact g =
   Tx.decrement ~name:comp.name ~from:txlim ~to':txlim';
   gc
 let rewrite pass ~entry_fact g = rewrite' (to_pass' pass) entry_fact g
+@ 
 <<utilities>>=
 let eqfact fact a a' = (* poor man's approximation of equality *)
   not (fact.changed' a a' or fact.changed' a' a)
+@ 
 <<forward utilities>>=
 let check_property_match fact u a =
   let old_a = fact.get' u in
@@ -767,6 +777,7 @@ let limit_tx tx =
     middle_out = limit_fun tx.middle_out;
     last_outs  = limit_fun tx.last_outs;
   }
+@ 
 <<forward stuff>>=
 let anal (fact, comp) =
   let wrap f in' node txlim = Dataflow (f in' node) in
@@ -774,6 +785,7 @@ let anal (fact, comp) =
   { name = comp.name;
     last_outs = wrap comp.last_outs; middle_out = wrap comp.middle_out; }
 let anal' = anal
+@ 
 <<forward stuff>>=
 let a_t' (fact, comp) tx =
  let last_outs in' l txlim =
@@ -833,7 +845,7 @@ and general_backward fact comp graph =
     update (GR.id b) block_in in
   let blocks = List.rev (G.postorder_dfs graph) in
   run fact changed fact.init_info' set_block_fact blocks
-
+@ 
 <<backward, no txlim>>=
 let rec solve_and_rewrite fact comp graph exit_fact changed =
   let a = solve_graph fact comp graph exit_fact in          (* pass 1 *)
@@ -876,7 +888,7 @@ and backward_rewrite fact comp graph changed =
               | Rewrite g -> impossf "rewriting a label in backward dataflow" in
         rewrite_next_block () in
     rewrite_blocks [] (List.rev (G.postorder_dfs graph)) changed
-
+@ 
 
 <<backward, no txlim>>=
 module Unique = struct

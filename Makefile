@@ -26,9 +26,10 @@ LIBS= commons/commons.cma \
      front_cfg/lib.cma \
      front_nelab/lib.cma \
      front_target/lib.cma \
-     front_ir/lib.cma \
      front_zipcfg/lib.cma \
+     front_ir/lib.cma \
      assembler/lib.cma \
+     front_last/lib.cma \
 
 # note that front_nelab and front_cfg are independent so could compile
 # then in parallel
@@ -46,6 +47,7 @@ MAKESUBDIRS= \
    front_target \
    front_ir \
    assembler \
+   front_last \
 
 
 #  h_camlburg tools \
