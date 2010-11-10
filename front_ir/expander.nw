@@ -1405,7 +1405,9 @@ let rec to_temp' room context e =
       t, assign_slot room slot e tempw <:> is 
   | RP.App (("f2f_implicit_round", ws), [x]) ->
       to_temp room context (RP.App (("f2f", ws), [x; RP.Fetch(rounding_mode, 2)]))
-  | RP.App (op, args) -> (<<action for expanding [[op(args)]] into a temporary>>)
+  | RP.App (op, args) -> (
+    <<action for expanding [[op(args)]] into a temporary>>
+  )
 <<other generic expander functions>> 
 in
 @ 
@@ -1629,7 +1631,9 @@ and to_stack' room e =
       let slot = exchange_slot w in
       assign_slot room slot e w <:>
       to_stack room (RP.App (f2f, [fetch_slot slot w; rm]))
-  | RP.App (op, args) -> (<<action for expanding [[op(args)]] onto the stack>>)
+  | RP.App (op, args) -> (
+   <<action for expanding [[op(args)]] onto the stack>>
+)
 @ 
 <<cases for getting a [[Fetch]] on the stack>>=
 | RP.Fetch (l, _) when Post.is_stack_top_proxy l ->
@@ -1771,7 +1775,9 @@ and rtl' hr =
     | [(g, RP.Store (left, right, w))] -> guarded g left right w
     | [(g, RP.Kill _)] -> DG.Nop
     | [] -> DG.Nop (* a nop is a nop is a nop *)
-    | ((_::_::_) as effs) -> (<<handle RTL with multiple effects [[effs]] (as RTL)>>)
+    | ((_::_::_) as effs) -> (
+     <<handle RTL with multiple effects [[effs]] (as RTL)>>
+    )
 and wrap_don't_touch f r =
   let RP.Rtl gs = Dn.rtl r in
   if trivially Post.don't_touch_me gs then
@@ -1912,14 +1918,19 @@ and assign_room room left right w =
             <<definition of [[split_assignment]]>>
             let a, is' = address room addr in
             (match right with
-            | <<\emph{pattern [[->]] action} for low-bit store>>
-            | <<\emph{pattern [[->]] action} for splittable assignment>>
-            | <<\emph{pattern [[->]] action} for doubling weird value operator>>
+            | 
+             <<\emph{pattern [[->]] action} for low-bit store>>
+            | 
+            <<\emph{pattern [[->]] action} for splittable assignment>>
+            | 
+            <<\emph{pattern [[->]] action} for doubling weird value operator>>
             | _ ->
                 if looks_like_stack_rhs right then
                   (match right with
-                  | <<\emph{pattern [[->]] action} for push-convert, then store-pop>>
-                  | <<\emph{pattern [[->]] action} for converting store-pop>>
+                  | 
+                  <<\emph{pattern [[->]] action} for push-convert, then store-pop>>
+                  | 
+                  <<\emph{pattern [[->]] action} for converting store-pop>>
                   | _ -> 
                       let is = to_stack room right in
                       is <:> is' <:> Post.store_pop a (upassn assn))

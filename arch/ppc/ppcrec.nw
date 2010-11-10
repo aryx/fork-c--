@@ -14,6 +14,8 @@ module M : sig
   val is_instruction : Rtl.rtl -> bool
   val to_asm         : Rtl.rtl -> string list -> string
 end
+@ 
+
 <<ppcrec.mlb>>=
 %head {: <<modules>> 
          module M = struct
@@ -27,6 +29,7 @@ end
 %%
 <<rules>>
 @
+
 A few abbreviations.
 <<modules>>=
 module BO   = Bits.Ops
@@ -74,7 +77,8 @@ We distinguish terminals from nonterminals by name, so we have to
 announce the names of the nonterminals.
 <<names of types of terminals>>=
 n w bits symbol
-@ Terminals [[n]] and [[w]] are an index and width; both are integers.
+@ 
+Terminals [[n]] and [[w]] are an index and width; both are integers.
 Terminal [[bits]] is a constant of types [[Bits.bits]]; terminal
 [[symbol]] is a string.
 
@@ -322,10 +326,13 @@ appears in two places.
    when Bits.eq k16 (Bits.U.of_int 16 32) && Bits.eq k16' (Bits.U.of_int 16 32)
      && Bits.eq k15 (Bits.U.of_int 15 32) && RU.Eq.exp e e' ->
      conHa16 (exp e)
+@ 
 <<pic_hi16 + pic_15>>=
 RP.App(("add", [32]), [<<pic_hi16>>; <<pic15>>])
+@ 
 <<pic_hi16>>=
 RP.App(("shrl", [32]), [e; RP.Const (RP.Bits k16')])
+@ 
 <<pic15>>=
 RP.App(("zx", [1;32]),
        [RP.App (("lobits", [32;1]),

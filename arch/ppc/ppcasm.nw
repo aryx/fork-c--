@@ -15,7 +15,7 @@ This is an assembler that emits ``AT\&T'' style assembly language for
 the PPC platform.
 It implements the
 [[Asm.assembler]] interface for assemblers in the {\qcc} compiler.
-@ 
+ 
 The assembler constructor receives the output channel for the assembler. 
 <<ppcasm.mli>>=
 val make : 
@@ -201,6 +201,7 @@ method section name =
   if name =$= "text" then fprintf _fd ".text\n"
   else fprintf _fd ".section __DATA,%s\n" name
 method current = _section
+@ 
 <<private assembly state>>=
 val mutable _section = "bogus section"
 @ 
@@ -215,6 +216,7 @@ method align  n =
   if n <> 1 then fprintf _fd ".align %d\n" (lg n)
 method addloc n = 
   if n <> 0 then fprintf _fd ".space %d\n"  n
+@ 
 <<assembly methods>>=
 method zeroes (n:int) = fprintf _fd ".space %d, 0\n" n
 @ 
@@ -234,6 +236,7 @@ method value (v:Bits.bits) =
       fprintf _fd ".long 0x%Lx\n" (Int64.shift_right_logical i 32);
       fprintf _fd ".long 0x%Lx\n" (Int64.logand i mask32)
   | w -> Impossible.unimp ("emission width " ^ string_of_int w ^ " in ppc assembler")
+@ 
 <<utilities>>=
 let mask32 = Int64.pred (Int64.shift_left Int64.one 32)
 @ 

@@ -23,11 +23,13 @@ try
 \begin{verbatim}
   qc-- -e 'Rtlop.print_shapes()'
 \end{verbatim}
-@
+
 We export an analysis function that the generic expander can use to
 pass the buck to the postexpander.
 <<opshape.mli>>=
 <<exported type definitions>>
+@ 
+
 <<exported type definitions>>=
 type opr = Rtl.Private.opr
 type exp = Rtl.Private.exp
@@ -46,6 +48,7 @@ type ('temp, 'warg) t =
   | Fpcvt  of 'temp * 'warg
   | Bool
   | Nullary
+@ 
 <<opshape.mli>>=
 val of_opr : opr -> (unit, unit) t
 val capply :
@@ -82,7 +85,7 @@ A~result of type $\bits{2n}$ gets returned in a pair of temporaries
 [[dsthi]] and [[dstlo]].
 \end{itemize}
 
-@
+
 \subsubsection{Ordinary value operators}
 
 These value operators correspond to postexpander functions [[binop]]
@@ -91,7 +94,7 @@ and [[unop]].
   \oplist{add, and, div, mod, \ldots}
 \optype{\forall  n . \bits n \arrow \bits n}
   \oplist{com, neg, fabs, fneg, popcnt}
-@
+
 \subsubsection{Ordinary value operators with rounding mode}
 
 These value operators correspond to postexpander functions [[binrm]]
@@ -100,13 +103,13 @@ and [[unrm]].
   \oplist{fadd, fdiv, fmul, fsub}
 \optype{\forall  n . \bits n \cross \bits 2 \arrow \bits n}
   \oplist{fsqrt}
-@
+
 \subsubsection{Comparisons}
 
 Comparisons correspond to the postexpander function~[[bc]].
 \optype{\forall  n . \bits n \cross \bits n \arrow \bool}
   \oplist{eq, ge, gt, le, lt, ne, \ldots}
-@
+
 
 \subsubsection{Weird value operators}
 
@@ -121,7 +124,7 @@ and
   \oplist{addc, subb}
 \optype{\forall  n . \bits n \cross \bits n \cross \bits 1 \arrow \bits 1}
   \oplist{carry, borrow}
-@
+
 
 \subsubsection{Width-changers}
 
@@ -133,7 +136,7 @@ things.  (E.g., see [[sxload]], [[zxload]], [[lostore]].)
   \oplist{sx, zx, lobits, NaN}
 \optype{\forall  n, m . \bits n \cross \bits 2 \arrow \bits m}
   \oplist{f2f, f2i, i2f}
-@
+
 
 \subsubsection {Boolean operators}
 
@@ -148,7 +151,7 @@ These operators are all dealt with directly by the generic expander.
   \oplist{conjoin, disjoin}
 \optype{bool}
   \oplist{false, true}
-@
+
 \subsubsection{Nullary operators}
 
 These operators are turned into constants in the simplifier.
@@ -156,7 +159,7 @@ These operators are turned into constants in the simplifier.
   \oplist{round\_up, round\_down, round\_zero, round\_nearest}
 \optype{\forall  n . \bits n}
   \oplist{minf, pinf, mzero, pzero}
-@
+
 \subsection{Obsolete, unsupported operators}
 
 \optype{\forall  n . \bits n \cross \bits n \arrow \bits 2}
@@ -167,43 +170,115 @@ These operators are turned into constants in the simplifier.
   \oplist{bitTransfer}
 
 \endgroup
-@
+
 <<opshape.ml>>=
 module SM = Strutil.Map
 module T  = Types
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
+ 
 
 <<exported type definitions>>
 @ 
 Here are the type variables:
 <<'a>>=
 T.Bits (T.Var 1)
+@ 
 <<'b>>=
 T.Bits (T.Var 2)
+@ 
 <<bits1>>=
 T.Bits (T.Const 1)
+@ 
 <<bits2>>=
 T.Bits (T.Const 2)
+@ 
 <<rm>>=
 <<bits2>>
 @ 
 <<opshape.ml>>=
 let shape scheme = match scheme with
-| [<<'a>>; <<'a>>           ], <<'a>>               -> Binop ((), ())
-| [<<'a>>                   ], <<'a>>               -> Unop ()
-| [<<'a>>; <<'a>>; <<rm>>   ], <<'a>>               -> Binrm ((), (), ())
-| [<<'a>>; <<rm>>           ], <<'a>>               -> Unrm ((), ())
-| [<<'a>>; <<'a>>           ], T.Bool               -> Cmp ((), ())
-| [<<'a>>; <<'a>>           ], T.Bits (T.Double 1)  -> Dblop ((), ())
-| [<<'a>>; <<'a>>; <<bits1>>], <<'a>>               -> Wrdop ((), (), ())
-| [<<'a>>; <<'a>>; <<bits1>>], <<bits1>>            -> Wrdrop ((), (), ())
-| [<<'a>>                   ], <<'b>>               -> Width
-| [<<'a>>; <<rm>>           ], <<'b>>               -> Fpcvt ((), ())
-| [T.Bool|<<bits1>>         ], (T.Bool | <<bits1>>) -> Bool
+| [
+   <<'a>>
+   ; 
+   <<'a>>           
+    ], 
+    <<'a>>               
+    -> Binop ((), ())
+| [
+   <<'a>>
+    ], 
+    <<'a>>               
+   -> Unop ()
+| [
+   <<'a>>
+   ; 
+   <<'a>>
+   ; 
+   <<rm>>
+   ], 
+  <<'a>>
+               -> Binrm ((), (), ())
+| [
+  <<'a>>
+  ; 
+  <<rm>>
+            ], 
+  <<'a>>
+               -> Unrm ((), ())
+| [
+  <<'a>>
+  ; 
+  <<'a>>
+            ], T.Bool               -> Cmp ((), ())
+| [
+  <<'a>>
+  ; 
+  <<'a>>
+             ], T.Bits (T.Double 1)  -> Dblop ((), ())
+| [
+  <<'a>>
+  ; 
+  <<'a>>
+  ; 
+  <<bits1>>
+  ], 
+  <<'a>>
+                 -> Wrdop ((), (), ())
+| [
+   <<'a>>
+   ; 
+   <<'a>>
+   ; 
+   <<bits1>>
+   ], 
+   <<bits1>>
+              -> Wrdrop ((), (), ())
+| [
+  <<'a>>
+                    ], 
+  <<'b>>
+                -> Width
+| [
+  <<'a>>
+  ; 
+  <<rm>>
+            ], 
+   <<'b>>
+                -> Fpcvt ((), ())
+| [T.Bool|
+     <<bits1>>
+           ], (T.Bool | 
+               <<bits1>>
+       ) -> Bool
 | [T.Bool; T.Bool           ], T.Bool               -> Bool
 | [                         ], T.Bool               -> Bool
-| [                         ], (<<'a>>|<<bits2>>)   -> Nullary
+| [                         ], 
+    (
+    <<'a>>
+    |
+    <<bits2>>
+    )   -> Nullary
 | _ -> impossf "unrecognized operator type %s" (Types.scheme_string scheme)
 
 let shapetab = Rtlop.fold (fun o t z -> SM.add o (shape t) z) SM.empty
@@ -322,3 +397,4 @@ let cappfun t w =
   | Nullary  -> nullary
 
 let capply to_temp to_warg opr = cappfun to_temp to_warg (of_opr opr)
+@ 

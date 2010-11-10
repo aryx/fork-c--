@@ -44,7 +44,8 @@ let aligned_mem ~align ~base target =
 (*e: utilities *)
 (*x: ast2ir.ml *)
 (*s: type imports *)
-type tgt = Preast2ir.tgt = T of (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
+type tgt = Preast2ir.tgt = 
+  T of (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
 and basic_proc = Preast2ir.basic_proc
 type proc      = Preast2ir.proc
 type old_proc  = Preast2ir.old_proc

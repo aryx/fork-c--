@@ -1,42 +1,33 @@
-TOP=..
+TOP=../..
 
 ##############################################################################
 # Variables
 ##############################################################################
 TARGET=lib
 
+SRC= ppcasm.ml ppc.ml
 
-SRC= \
-  automatongraph.ml \
-  talloc.ml call.ml \
-  proc.ml \
-  context.ml postexpander.ml rewrite.ml \
-  preast2ir.ml \
-  contn.ml \
-  runtimedata.ml \
-  ast2ir.ml \
-
-# used by arch/ppc/
-SRC+=opshape.ml expander.ml
-
+#no ppcregs.ml ? no ppccall.ml ?
 
 SYSLIBS=
 
 LIBS=
 
 # need h_asdl/ just to knows that StdPrimInt == int for the typechecker
-
 INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/error \
  $(TOP)/parsing \
  $(TOP)/h_asdl \
  $(TOP)/front_rtl \
- $(TOP)/front_cfg \
- $(TOP)/front_zipcfg \
+ $(TOP)/front_target \
  $(TOP)/front_asm \
  $(TOP)/front_fenv \
  $(TOP)/front_nelab \
- $(TOP)/front_target \
+ $(TOP)/front_cfg \
+ $(TOP)/front_ir \
+ $(TOP)/front_zipcfg \
+ $(TOP)/front_last \
+ $(TOP)/assembler \
 
 
 
@@ -69,20 +60,14 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=ast2ir preast2ir call \
- talloc automatongraph proc \
- rewrite context contn runtimedata \
- opshape
-
-
-
+SRCNW=ppc ppcasm
+# ppcregs? ppccall ?
+# ppcrec  is special
 
 sync:
-	$(SYNCWEB) expander.nw postexpander.mli
-	$(SYNCWEB) expander.nw postexpander.ml
-	$(SYNCWEB) expander.nw expander.mli
-	$(SYNCWEB) expander.nw expander.ml
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done
+	$(SYNCWEB) ppcrec.nw ppcrec.mli
+	$(SYNCWEB) ppcrec.nw ppcrec.mlb
 
 lpdistclean::
 	rm -f $(LPSRC) .md5sum_*

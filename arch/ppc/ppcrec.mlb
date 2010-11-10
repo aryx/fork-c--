@@ -1,0 +1,173 @@
+(*s: ppcrec.mlb *)
+%head {: <<modules>> 
+         module M = struct
+           (*s: code to precede the labeler *)
+           let s = Printf.sprintf
+           (*x: code to precede the labeler *)
+           let infinity = Camlburg.inf_cost
+           let guard b = if b then 0 else infinity
+           (*x: code to precede the labeler *)
+           let imports = ref ([] : string list)
+
+           let ind_addr name =
+             if List.exists ((=$=) name) (!imports) then "L" ^ name ^ "$stub" else name
+
+           let ppc_op = function
+             | "ltu" -> ("l", "lt")
+             | "leu" -> ("l", "le")
+             | "gtu" -> ("l", "gt")
+             | "geu" -> ("l", "ge")
+             | op    -> ("" , op  )
+           (*e: code to precede the labeler *)
+      :}
+%tail {:   <<code to follow the labeler>>
+         end (* of M *) 
+      :}
+
+%term <<names of types of terminals>>
+%%
+(*s: rules *)
+const16:  Bits(bits) [{: guard (Bits.S.fits 16 bits) :}]
+                     {: Bits.to_decimal_string bits :}
+
+k15 : Bits(bits)
+        [{: guard (Bits.width bits > 5 &&
+                   Bits.eq bits (Bits.U.of_int 15 (Bits.width bits))) :}]
+        {: () :}
+
+k16 : Bits(bits)
+        [{: guard (Bits.width bits > 5 &&
+                   Bits.eq bits (Bits.U.of_int 16 (Bits.width bits))) :}]
+        {: () :}
+
+k4 : Bits(bits)
+        [{: guard (Bits.width bits > 5 &&
+                   Bits.eq bits (Bits.U.of_int 4 (Bits.width bits))) :}]
+        {: () :}
+
+lconst: Link(symbol, w:int)        {: symbol#mangled_text :}
+pic:    Diff(c1:lconst, c2:lconst) {: s "%s-%s" c1 c2 :}
+pic:    Fetch(Mem(Diff(c1:lconst, c2:lconst)), w2:int) {: s "%s-%s" c1 c2 :}
+(*x: rules *)
+pcl:  Reg('c', 0) {: () :}
+cial: Reg('c', 1) {: () :}
+crl:  Reg('c', 2) {: () :}
+xerl: Reg('c', 4) {: () :}
+lrl:  Reg('c', 5) {: () :}
+spl:  Reg('r', 14) {: () :}
+
+pc:   Fetch(pcl,  32) {: () :}
+cia:  Fetch(cial, 32) {: () :}
+cr:   Fetch(crl,  32) {: () :}
+lr:   Fetch(lrl,  32) {: () :}
+sp:   Fetch(spl,  32) {: () :}
+
+regl: Reg('r', n:int) [{: guard (n<>0) :}] {: s "r%d" n :}
+reg:  Fetch(regl, 32) {: regl :}
+(*x: rules *)
+addr: const16                 {: s "%s(r0)" const16     :}
+addr: reg                     {: s  "0(%s)" reg         :}
+addr: Add(reg, const16)       {: s "%s(%s)" const16 reg :}
+
+ndx_addr: Add(reg1:reg, reg2:reg) {: s "%s,%s" reg1 reg2 :}
+(*x: rules *)
+inst: Store(regl, reg, w:int) {: s "mr %s,%s" regl reg :}
+inst: Store(regl,  lr, w:int) {: s "mflr %s" regl :}
+inst: Store(lrl,  reg, w:int) {: s "mtlr %s" reg  :}
+inst: Store(regl,  cr, w:int) {: s "mfcr %s" regl :}
+
+inst: Store(regl, const16, 32) {: s "addi %s,0,%s" regl const16 :}
+
+inst: Store (regl, Fetch(Mem(addr    ),32), 32)     {: s "lwz %s,%s" regl addr  :}
+inst: Store (regl, Fetch(Mem(ndx_addr),32), 32)     {: s "lwzx %s,%s" regl ndx_addr :}
+inst: Store (regl, Zx(Fetch(Mem(addr),8)), 32)      {: s "lbz %s,%s" regl addr  :}
+inst: Store (regl, Zx(Fetch(Mem(ndx_addr),8)), 32)  {: s "lbzx %s,%s" regl ndx_addr  :}
+inst: Store (regl, Zx(Fetch(Mem(addr),16)), 32)     {: s "lhz %s,%s" regl addr  :}
+inst: Store (regl, Zx(Fetch(Mem(ndx_addr),16)), 32) {: s "lhzx %s,%s" regl ndx_addr  :}
+inst: Store (regl, Sxlo(reg,  8), 32)               {: s "extsb %s,%s" regl reg :}
+inst: Store (regl, Sxlo(reg, 16), 32)               {: s "extsh %s,%s" regl reg :}
+inst: Store (regl, Sx(Fetch(Mem(addr),16)), 32)     {: s "lha %s,%s" regl addr  :}
+inst: Store (regl, Sx(Fetch(Mem(ndx_addr),16)), 32) {: s "lhax %s,%s" regl ndx_addr  :}
+
+inst: Store (Mem(addr    ), reg, 32)           {: s "stw %s,%s" reg addr  :}   
+inst: Store (Mem(ndx_addr), reg, 32)           {: s "stwx %s,%s" reg ndx_addr :}
+inst: Store (Mem(addr    ), Lobits(reg, 8), 8) {: s "stb %s,%s" reg addr  :}
+inst: Store (Mem(ndx_addr), Lobits(reg, 8), 8) {: s "stbx %s,%s" reg ndx_addr  :}
+inst: Store (Mem(addr    ), Lobits(reg,16),16) {: s "sth %s,%s" reg addr  :}
+inst: Store (Mem(ndx_addr), Lobits(reg,16),16) {: s "sthx %s,%s" reg ndx_addr  :}
+(*x: rules *)
+inst : Store(regl, Add(reg, ha16), 32) {: s "addis %s,%s,%s" regl reg ha16 :}
+inst : Store(regl, ha16, 32)           {: s "addis %s,0,%s" regl ha16 :}
+
+inst : Store(regl, Add(reg, Sxlo(pic,16)),32) {: s "addi %s,%s,lo16(%s)" regl reg pic :}
+inst : Store(regl, Sxlo(pic, 16), 32)         {: s "addi %s,0,lo16(%s)" regl pic :}
+
+ha16: Ha16(pic) {: s "ha16(%s)" pic :}
+(*x: rules *)
+inst:  Goto(lconst) {: s "b %s" (ind_addr lconst) :}
+inst:  Goto(lr)     {: "blr"                      :}
+(*x: rules *)
+inst : Par(Goto(lr),Store(regl,reg,w:int)) {: sprintf "mr %s, %s; blr" regl reg :}
+(*x: rules *)
+next:  Add(cia,k4) {: () :}
+inst:  Par(Goto(lr    ), Store(lrl,next,32)) {: "blrl" :}
+inst:  Par(Goto(lconst), Store(lrl,next,32)) {: s "bl %s" (ind_addr lconst) :}
+(*x: rules *)
+cmp:   Cmp(op:string, x:reg, y:reg)     {: ("",  ppc_op op,x,y) :}
+cmp:   Cmp(op:string, x:reg, y:const16) {: ("i", ppc_op op,x,y) :}
+inst:  Guarded(cmp,Goto(lconst)) 
+       {: let (i_, (l_, op), x, y) = cmp in
+          s "cmp%sw%s cr0,%s,%s\n\tb%s %s"  l_ i_ x y op lconst
+       :}
+inst : Guarded(OvSet(Fetch(xerl,32)), Goto(lconst))
+       {: s "bo %s" lconst :}
+(*x: rules *)
+inst: Store(regl,  Add(x:reg, y:reg), 32)       {: s "add %s,%s,%s" regl x y :}
+inst: Store(regl,  Add(x:reg, y:const16), 32)   {: s "addi %s,%s,%s" regl x y :}
+
+inst: Store(regl, Unop (opr:string,x:reg),      32) {: s "%s  %s,%s"    opr regl x :}
+inst: Store(regl, Binop(opr:string,x:reg,y:reg),32) {: s "%s  %s,%s,%s" opr regl x y :}
+inst: Store(regl, Binop(opr:string,x:reg,y:const16), 32)
+    {: s "%si %s,%s,%s" opr regl x y :}
+(*x: rules *)
+inst : any [100] {: s "<%s>" any :}
+
+any : True  () {: "True"  :}
+any : False () {: "False" :}
+any : Link(symbol, w:int) {: s "Link(%s,%d)" (symbol#mangled_text) w :}
+any : Diff(c1:any, c2:any) {: s "Diff(%s, %s)" c1 c2 :}
+any : Bits(bits)     {: sprintf "Bits(%s)" (Bits.to_string bits) :}
+
+any : Fetch (any, w:int) {: s "Fetch(%s,%d)" any w :}
+
+any : Sx(any)           {: s "Sx(%s)" any  :}
+any : Zx(any)           {: s "Zx(%s)" any  :}
+any : Sxlo(any,w:int)   {: s "Sxlo(%s,%d)" any w :}
+any : Zxlo(any,w:int)   {: s "Zxlo(%s,%d)" any w :}
+any : Add(x:any, y:any) {: s "Add(%s, %s)" x y :}
+
+any: Ha16(any) {: s "Ha16(%s)" any :}
+
+
+any : Unop (op:string, x:any)         {: s "Unop(%s,%s)" op x  :}
+any : Binop(op:string, x:any, y:any)  {: s "Binop(%s,%s,%s)" op x y  :}
+
+any : Nop () {: "nop" :}
+
+any : Lobits(any, w:int) {: s "Lobits(%s, %d)" any w :}
+any : BitExtract(lsb:any, y:any, n:int) {: sprintf "BitExtract(%s, %s, %d)" lsb y n :}
+
+any : Slice(w:int, n:int, y:any) {: sprintf "Slice(%d, %d, %s)" w n y :}
+
+any : Mem(any) {: s "Mem(%s)" any :}
+any : Reg(char, n:int) {: sprintf "Reg(%s, %d)" (Char.escaped char) n :}
+
+any : Store (dst:any, src:any, w:int) {: s "Store(%s,%s,%d)" dst src w :}
+any : Kill(any) {: s "Kill(%s)" any :}
+
+any : Guarded(guard:any, any) {: s "Guarded(%s,%s)" guard any :}
+any : Cmp(op:string, x:any, y:any) {: s "Cmp(%s,%s,%s)" op x y :}
+any : Par(l:any, r:any) {: s "Par(%s,%s)" l r :}
+any : Goto(any) {: s "Goto(%s)" any :}
+(*e: rules *)
+(*e: ppcrec.mlb *)
