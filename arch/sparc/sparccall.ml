@@ -1,16 +1,4 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-
-\section{SPARC calling conventions}
-
-<<sparccall.mli>>=
-val cconv :
-  return_to:(Rtl.exp -> Rtl.rtl) ->
-  Mflow.cut_args Target.map ->
-  string -> Automaton.cc_spec ->
-  Call.t
-@ 
-\section{Implementation of SPARC calling conventions}
-<<sparccall.ml>>=
+(*s: sparccall.ml *)
 module R  = Rtl
 module RU = Rtlutil
 module RS = Register.Set
@@ -19,18 +7,7 @@ module A  = Automaton
 module C  = Call
 let sprintf = Printf.sprintf
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
-@ 
-<<SPARC calling convention automata in Lua>>=
-A = Automaton
-Sparc              = Sparc           or {}
-Sparc.cc           = Sparc.cc        or {}
-Sparc.cc["C"  ]    = Sparc.cc["C"]   or {}
-Sparc.cc["notail"] = Sparc.cc["C"]   or {}
-Sparc.cc["C--"]    = Sparc.cc["C--"] or {}
-@ 
-\paragraph{SPARC registers and their conventional uses}
-Cheats, cheats, and more cheats...
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let rspace = Rg.Spaces.r.Space.space
 let fspace = Rg.Spaces.f.Space.space
 let dspace = Rg.Spaces.d.Space.space
@@ -56,26 +33,7 @@ let saved_nvr temps =
       let bad () = impossf "cannot save $%c%d" sp i in
       let w = Register.width reg in
       (match sp with 'r' -> t | 'f' -> u | 'x' -> q | _ -> bad()) w
-@ 
-Stack pointer is doubleword-aligned (which we actually force to be
-quad word aligned in case we are really on a sparc 9)
-<<SPARC calling convention automata in Lua>>=
-Sparc.sp_align  = 16
-Sparc.wordsize  = 32
-
-function reg(sp, i, w, agg)
-  return Register.create { space = sp, index = i, cellsize = w, agg = agg }
-end
-function r(i) return (reg("r", i, Sparc.wordsize)) end
-function f(i) return (reg("f", i, Sparc.wordsize, 'big')) end
-function x(i) return (reg("f", 8+2*i, Sparc.wordsize * 2, 'big')) end
-function o(i) return (reg("o", i, Sparc.wordsize)) end
-function i(i) return (reg("i", i, Sparc.wordsize)) end
-
-Sparc.vol_fp  = (f(0)..f(7)) .. (x(0)..x(7))
-@ 
-\paragraph{Conventions governing the stack}
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let ra       = R.reg (r 31)
 let spr      = r 14
 let sp       = R.reg spr
@@ -83,54 +41,7 @@ let spval    = R.fetch sp 32
 let sp_align = 16
 let growth   = Memalloc.Down
 let bo       = R.BigEndian
-@ 
-\paragraph{Automata for passing values---C~convention}
-
-<<SPARC calling convention automata in Lua>>=
-Sparc.cc["C"].results =
-  A.choice { "float",  A.useregs (f(0)..f(7)),
-             A.is_any, { A.widen(32, "multiple")
-                       , A.widths {32, 64}
-                       , A.useregs { i(0), i(1) }
-                       } 
-           } 
-
-Sparc.cc["C"].call =
-  { A.widen(32, "multiple")
-  , A.useregs (o(0)..o(5))
-  , A.overflow { growth = "up", max_alignment = Sparc.sp_align }
-  }
-@ 
-
-<<SPARC calling convention automata in Lua>>=
-Sparc.cc["C"].cutto =
-  { A.widen(32, "multiple")
-  , A.useregs (r(24)..r(29))
-  , A.overflow { growth = "up", max_alignment = Sparc.sp_align }
-  }
-@ 
-<<SPARC calling convention automata in Lua>>=
-Sparc.cc["C--"].call    = Sparc.cc["C"].call
-Sparc.cc["notail"].call = Sparc.cc["C"].call
-
-Sparc.cc["C--"].results = {
-  Sparc.cc["C"].results,
-  A.overflow { growth = "up", max_alignment = Sparc.sp_align }
-}
-Sparc.cc["notail"].results = Sparc.cc["C--"].results
-
-Sparc.cc["C--"].cutto    = Sparc.cc["C"].cutto
-Sparc.cc["notail"].cutto = Sparc.cc["C"].cutto
-@ 
-Finally we register the calling conventions.
-<<SPARC calling convention automata in Lua>>=
-A.register_cc(Backend.sparc.target, "C",   Sparc.cc["C"])
-A.register_cc(Backend.sparc.target, "notail", Sparc.cc["notail"])
-A.register_cc(Backend.sparc.target, "C--", Sparc.cc["C--"])
-A.register_cc(Backend.sparc.target, "C-- thread", Sparc.cc["C--"]) -- damn lies
-@ 
-\subsection{Implementation based on [[Callspec]]}
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let wordsize  = 32
 let memsize   = 8
 let byteorder = bo
@@ -142,8 +53,7 @@ let mk_automaton block_name automaton () =
 
 let old_end   block = RU.addk wordsize (Block.base block) (Block.size block)
 let young_end block = Block.base block
-@ 
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let tail_overflow = 
     { C.parameter_deallocator = C.Callee
     ; C.result_allocator      = C.Caller
@@ -153,8 +63,7 @@ let c_overflow =
     { C.parameter_deallocator = C.Caller
     ; C.result_allocator      = C.Caller
     } 
-@ 
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let prolog auto = 
   let autosp a = young_end a.A.overflow in
   C.incoming ~growth:growth ~sp:sp
@@ -162,22 +71,19 @@ let prolog auto =
     ~autosp:autosp
     ~postsp:(fun _ _ -> std_sp_location) 
     ~insp:(fun a _ _ -> autosp a)
-@ 
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let epilog auto =
     C.outgoing ~growth:growth ~sp:sp
         ~mkauto:(mk_automaton "out ovfl results" auto.A.results)
         ~autosp:(fun r -> std_sp_location)
         ~postsp:(fun _ _ -> vfp)
-@ 
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let call_actuals auto =
     C.outgoing ~growth:growth ~sp:sp
         ~mkauto:(mk_automaton "out call parms" auto.A.call)
         ~autosp:(fun r  -> std_sp_location)
         ~postsp:(fun a sp -> std_sp_location)
-@ 
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let call_results auto =
     let autosp = (fun a -> std_sp_location) in
     C.incoming ~growth:growth ~sp:sp
@@ -185,9 +91,7 @@ let call_results auto =
         ~autosp:autosp
         ~postsp:(fun _ _ -> std_sp_location) 
         ~insp:(fun a _ _ -> std_sp_location)
-@ 
-These might be wrong.  No tests yet.
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let also_cuts_to auto =
     let autosp = (fun r   -> std_sp_location) in
     C.incoming ~growth:growth ~sp:sp
@@ -201,13 +105,11 @@ let cut_actuals auto base =
         ~mkauto:(fun ()   -> A.at mspace ~start:base auto.A.cutto)
         ~autosp:(fun r    -> std_sp_location)
         ~postsp:(fun a sp -> std_sp_location)
-@ 
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let ra_on_entry block = R.fetch ra wordsize
 let where_to_save_ra ra_on_entry temp = Talloc.Multiple.loc temp 't' 32
 (* ra *)
-@ 
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let rtn ccname return_to k n ~ra =
   if k > n then impossf "Return <k/n> has k:%d > n:%d\n" k n
   else return_to ra
@@ -215,11 +117,17 @@ let rtn ccname return_to k n ~ra =
     if k = 0 && n = 0 then return_to ra
     else Impossible.impossible ("alternate return using "^ccname^" calling convention")
 *)
-@
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 (* Really inteded for the C convention *)
 let to_call ~cutto ~return_to ~altret ccname auto =
-    <<it's impossible for the stack pointer to be a useful register too>>
+    (*s: it's impossible for the stack pointer to be a useful register too *)
+    if Register.Set.mem spr all_regs then
+      Impossible.impossible
+        (Printf.sprintf "In convention \"%s\", stack pointer is also an ordinary register"
+           ccname)
+    else
+      ()
+    (*e: it's impossible for the stack pointer to be a useful register too *)
     ;
     let return k n ~ra =
       if altret then rtn ccname return_to k n ~ra
@@ -247,17 +155,7 @@ let to_call ~cutto ~return_to ~altret ccname auto =
     ; C.cutto            = cutto
     ; C.return           = return
     }
-@ 
-<<it's impossible for the stack pointer to be a useful register too>>=
-if Register.Set.mem spr all_regs then
-  Impossible.impossible
-    (Printf.sprintf "In convention \"%s\", stack pointer is also an ordinary register"
-       ccname)
-else
-  ()
-@
-Here's our CC lookup function.
-<<sparccall.ml>>=
+(*x: sparccall.ml *)
 let c ~altret ~return_to cut ccname auto =
   to_call ~altret ~cutto:cut ~return_to ccname auto (* postprocess auto *)
 
@@ -270,4 +168,4 @@ let cconv ~return_to cut ccname stage =
     | "C-- thread" -> c ~altret:false (* damn lies *)
     | _            -> Impossible.unimp ccname
   in f ~return_to cut ccname stage
-@ 
+(*e: sparccall.ml *)

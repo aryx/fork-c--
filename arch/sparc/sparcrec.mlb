@@ -1,25 +1,47 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-
-\section{SPARC Recognizer}
-
-<<sparcrec.mli>>=
-val to_asm : Rtl.rtl -> string
-val is_instruction : Rtl.rtl -> bool
-@ 
-
-A few abbreviations.
-<<modules>>=
-module R  = Rtl
-module RU = Rtlutil
-module RP = Rtl.Private
-module SS = Space.Standard32
-module Down = Rtl.Dn
-module Up   = Rtl.Up
-
-@ 
-<<sparcrec.mlb>>=
+(*s: sparcrec.mlb *)
 %head {: <<modules>> 
-         <<code to precede the labeler>>
+         (*s: code to precede the labeler *)
+         let infinity = Camlburg.inf_cost
+         let guard b = if b then 0 else infinity
+
+         let const32 b =
+           assert (Bits.width b = 32);
+           Nativeint.to_string (Bits.U.to_native b)
+
+         let const64 b =
+           assert (Bits.width b = 64);
+           let hi32 = Bits.Ops.lobits 32 (Bits.Ops.shrl b (Bits.U.of_int 32 64)) in
+           let lo32 = Bits.Ops.lobits 32 b in
+           (Nativeint.to_string (Bits.U.to_native hi32),
+            Nativeint.to_string (Bits.U.to_native lo32))
+
+         exception Error of string
+         let sprintf   = Printf.sprintf
+         let s         = Printf.sprintf
+         let error msg = raise (Error msg)
+
+         let rspace = ('r', R.BigEndian, Cell.of_size 32)
+         let spl = RP.Reg(rspace, 14, R.C 1)
+         let sp  = RP.Fetch(spl, 32)
+         let ral = RP.Reg(rspace, 31, R.C 1)
+         let ra  = RP.Fetch(ral, 32)
+         let yregl = RP.Reg Sparcregs.y
+         let yreg = RP.Fetch(yregl, 32)
+
+         let idiomatic_reg_name n =
+           if n = 14 then "%sp"
+           else if n = 30 then "%fp"
+           else if n >= 0 && n < 8 then sprintf "%%g%i" n
+           else if n < 16 then sprintf "%%o%i" (n - 8)
+           else if n < 24 then sprintf "%%l%i" (n - 16)
+           else if n < 32 then sprintf "%%i%i" (n - 24)
+           else Impossible.impossible (sprintf "Register %%r%i doesn't exist" n)
+
+         let positive b = Bits.Ops.gt b (Bits.zero 32)
+         let negative b = Bits.Ops.lt b (Bits.zero 32)
+
+         let in_proc = Reinit.ref false
+         (*e: code to precede the labeler *)
       :}
 %tail {: <<code to follow the labeler>>
       :}
@@ -27,63 +49,7 @@ module Up   = Rtl.Up
 %term <<names of types of terminals>>
 
 %%
-<<rules>>
-@ 
-
-\subsection{Utilities}
-<<code to precede the labeler>>=
-let infinity = Camlburg.inf_cost
-let guard b = if b then 0 else infinity
-
-let const32 b =
-  assert (Bits.width b = 32);
-  Nativeint.to_string (Bits.U.to_native b)
-
-let const64 b =
-  assert (Bits.width b = 64);
-  let hi32 = Bits.Ops.lobits 32 (Bits.Ops.shrl b (Bits.U.of_int 32 64)) in
-  let lo32 = Bits.Ops.lobits 32 b in
-  (Nativeint.to_string (Bits.U.to_native hi32),
-   Nativeint.to_string (Bits.U.to_native lo32))
-
-exception Error of string
-let sprintf   = Printf.sprintf
-let s         = Printf.sprintf
-let error msg = raise (Error msg)
-
-let rspace = ('r', R.BigEndian, Cell.of_size 32)
-let spl = RP.Reg(rspace, 14, R.C 1)
-let sp  = RP.Fetch(spl, 32)
-let ral = RP.Reg(rspace, 31, R.C 1)
-let ra  = RP.Fetch(ral, 32)
-let yregl = RP.Reg Sparcregs.y
-let yreg = RP.Fetch(yregl, 32)
-
-let idiomatic_reg_name n =
-  if n = 14 then "%sp"
-  else if n = 30 then "%fp"
-  else if n >= 0 && n < 8 then sprintf "%%g%i" n
-  else if n < 16 then sprintf "%%o%i" (n - 8)
-  else if n < 24 then sprintf "%%l%i" (n - 16)
-  else if n < 32 then sprintf "%%i%i" (n - 24)
-  else Impossible.impossible (sprintf "Register %%r%i doesn't exist" n)
-
-let positive b = Bits.Ops.gt b (Bits.zero 32)
-let negative b = Bits.Ops.lt b (Bits.zero 32)
-
-let in_proc = Reinit.ref false
-@ 
-
-\subsection{Recognizer terminals, nonterminals, and constructors}
-
-<<names of types of terminals>>=
-n w bits symbol
-@ 
-
-\subsection{Recognizer Rules}
-
-\paragraph{Constants}
-<<rules>>=
+(*s: rules *)
 lconst : Link(symbol, w) {: symbol#mangled_text :}
 const  : Bits(b:bits) [{: guard (Bits.width b = 32) :}]  {: const32 b :}
 pos    : Bits(b:bits) [{: guard (Bits.width b = 32 && positive b) :}]  {: const32 b :}
@@ -94,10 +60,7 @@ constx : Bits(b:bits) [{: guard (Bits.width b = 64) :}] {: const64 b :}
 four   : Bits(bits)   [{: guard (Bits.eq bits (Bits.S.of_int 4 32)) :}] {:():}
 one    : Bits(bits)   [{: guard (Bits.eq bits (Bits.S.of_int 1 32)) :}] {:():}
 zero   : Bits(bits)   [{: guard (Bits.eq bits (Bits.S.of_int 0 32)) :}] {:():}
-@ 
-
-\paragraph{Location Types}
-<<rules>>=
+(*x: rules *)
 rreg   : Fetch(rregl, w) {: rregl :}
 rregl  : Reg('r', n:int) {: idiomatic_reg_name n :}
 
@@ -140,10 +103,7 @@ reg_or_const : reg   {: reg :}
 reg_or_const : const {: const :}
 
 target : lconst {: lconst :}
-@ 
-
-\paragraph{Special Locations}
-<<rules>>=
+(*x: rules *)
 pcl:  Reg('c',  0) {: () :}
 npcl: Reg('c',  1) {: () :}
 ccl:  Reg('c',  2) {: () :}
@@ -157,10 +117,7 @@ cc:  Fetch(ccl,  w) {: () :}
 sp:  Fetch(spl,  w) {: () :}
 ra:  Fetch(ral,  w) {: () :}
 cwp: Fetch(cwpl, w) {: () :}
-@ 
-
-\paragraph{Data movement}
-<<rules>>=
+(*x: rules *)
 inst : Store(dst:fregl, Ftoi(src:freg), w)
   {: sprintf "fstoi %s, %s" src dst :}
 
@@ -264,11 +221,7 @@ inst : Store(dst:dregl, Fetch(Mem(Add(x:reg, y:const), mw:w), w), w)
 
 inst : Store(dst:fsrl, Fetch(Mem(Add(x:reg, y:const), mw:w), w), w)
   {: sprintf "ld [%s+%s], %s" x y dst :}
-@ 
-
-
-\paragraph{Arithmetic}
-<<rules>>=
+(*x: rules *)
 -- add
 inst : Store(dst:regl, Add(x:reg_or_const, y:reg), w)
   {: sprintf "add %s, %s, %s" y x dst :}
@@ -372,19 +325,10 @@ inst : Store(dst:dregl, Fsub(x:dreg, y:dreg), w)
 -- fneg
 inst : Store(dst:fregl, Fneg(x:freg), w)
   {: sprintf "fnegs %s, %s" x dst :}
-@ 
-To negate a double-precision floating-point value, we negate the most
-significant word, which contains the sign bit.
-The least significant word is simply copied.
-Strictly speaking, this ought to be handled in the postexpander.
-That would be good, because then we could get rid of [[dregnuml]].
-<<rules>>=
+(*x: rules *)
 inst : Store(dst:dregnuml, Fneg(x:dregnum), w)
   {: sprintf "fnegs %%f%d, %%f%d\n\tfmovs %%f%d, %%f%d" x dst (x+1) (dst+1) :}
-@ 
-
-\paragraph{Control Flow}
-<<rules>>=
+(*x: rules *)
 -- call
 next: Store(regl, Add(pc, four), w) {: regl :}
 inst: Par(Goto(target), next)
@@ -489,16 +433,9 @@ inst: Guarded(Sparcfle(cc), Goto(target))
    {: sprintf "fble %s\n\tnop" target :}
 inst: Guarded(Sparcflt(cc), Goto(target))
    {: sprintf "fbl %s\n\tnop" target :}
-@ 
-
-\paragraph{Other Instructions}
-Why is this here?
-<<rules>>=
+(*x: rules *)
 inst : Nop() {: "! Why do you think there should be a nop? " :}
-@ 
-
-\paragraph{Diagnostic rules}
-<<rules>>=
+(*x: rules *)
 inst: any [1000] {: s "<%s>" any :}
 
 any : True  () {: "True"  :}
@@ -548,179 +485,5 @@ any : Kill(any) {: s "Kill(%s)" any :}
 any : Guarded(guard:any, any) {: s "Guarded(%s,%s)" guard any :}
 any : Par(l:any, r:any) {: s "Par(%s,%s)" l r :}
 any : Goto(any) {: s "Goto(%s)" any :}
-@ 
-
-\subsection{Interfacing {\rtl}s with the Expander}
-
-<<special cases for particular operators>>=
-| RP.App(("sub",   [w]), [x; y])  -> conSub    (exp x) (exp y)
-| RP.App(("subb",  [w]), [x; y; z]) -> conSubb (exp x) (exp y) (exp z)
-| RP.App(("add",   [w]), [x; y])  -> conAdd    (exp x) (exp y)
-| RP.App(("addc",  [w]), [x; y; z]) -> conAddc (exp x) (exp y) (exp z)
-| RP.App(("mul",   [32]), [x; y]) -> conMul    (exp x) (exp y)
-| RP.App(("neg",   [w]), [x])     -> conNeg    (exp x)
-| RP.App(("quot",  [w]), [x; y])  -> conQuot   (exp x) (exp y)
-| RP.App(("divu",  [w]), [x; y])  -> conDivu   (exp x) (exp y)
-(* maybe can be implemented with mulx instruction for SPARC 9
-| RP.App(("mulx",  [32;64]), [x; y]) -> conMulx (exp x) (exp y)
-*)
-
-| RP.App(("and",   [w]), [x; y]) -> conAnd    (exp x) (exp y)
-| RP.App(("or",    [w]), [x; y]) -> conOr     (exp x) (exp y)
-| RP.App(("xor",   [w]), [x; y]) -> conXor    (exp x) (exp y)
-| RP.App(("com",   [w]), [x])    -> conCom    (exp x)
-
-| RP.App(("shl",   [w]), [x; y]) -> conShl    (exp x) (exp y)
-| RP.App(("shrl",  [w]), [x; y]) -> conShrl   (exp x) (exp y)
-| RP.App(("shra",  [w]), [x; y]) -> conShra   (exp x) (exp y)
-
-| RP.App(("lobits",[32;8]),  [x]) -> conLobyte (exp x)
-| RP.App(("lobits",[32;16]), [x]) -> conLohalf (exp x)
-| RP.App(("lobits",[64;32]), [x]) -> conLoword (exp x)
-| RP.App(("zx", [8; 32]),    [x]) -> conZxbyte (exp x)
-| RP.App(("zx", [16;32]),    [x]) -> conZxhalf (exp x)
-| RP.App(("sx", [8; 32]),    [x]) -> conSxbyte (exp x)
-| RP.App(("sx", [16;32]),    [x]) -> conSxhalf (exp x)
-
-| RP.App(("sparc_subcc", [w]), [x; y]) -> conSparcsubcc (exp x) (exp y)
-| RP.App(("sparc_addcc", [w]), [x; y]) -> conSparcaddcc (exp x) (exp y)
-| RP.App(("sparc_mulx_hi", [w]), [x; y]) -> conSparcmulxhi (exp x) (exp y)
-| RP.App(("sparc_mulux_hi", [w]), [x; y]) -> conSparcmuluxhi (exp x) (exp y)
-| RP.App(("sparc_adcflags", [w]), [x; y; z]) -> conSparcadcflags (exp x) (exp y) (exp z)
-| RP.App(("sparc_sbbflags", [w]), [x; y; z]) -> conSparcsbbflags (exp x) (exp y) (exp z)
-| RP.App(("sparc_carrybit", _), [x]) -> conSparccarrybit (exp x)
-
-| RP.App(("sparc_eq",    [w]), [x]) -> conSparceq  (exp x)
-| RP.App(("sparc_ne",    [w]), [x]) -> conSparcne  (exp x)
-| RP.App(("sparc_ge",    [w]), [x]) -> conSparcge  (exp x)
-| RP.App(("sparc_geu",   [w]), [x]) -> conSparcgeu (exp x)
-| RP.App(("sparc_gt",    [w]), [x]) -> conSparcgt  (exp x)
-| RP.App(("sparc_gtu",   [w]), [x]) -> conSparcgtu (exp x)
-| RP.App(("sparc_le",    [w]), [x]) -> conSparcle  (exp x)
-| RP.App(("sparc_leu",   [w]), [x]) -> conSparcleu (exp x)
-| RP.App(("sparc_lt",    [w]), [x]) -> conSparclt  (exp x)
-| RP.App(("sparc_ltu",   [w]), [x]) -> conSparcltu (exp x)
-
-| RP.App(("sparc_feq",    [w]), [x]) -> conSparcfeq  (exp x)
-| RP.App(("sparc_fne",    [w]), [x]) -> conSparcfne  (exp x)
-| RP.App(("sparc_fge",    [w]), [x]) -> conSparcfge  (exp x)
-| RP.App(("sparc_fgt",    [w]), [x]) -> conSparcfgt  (exp x)
-| RP.App(("sparc_fle",    [w]), [x]) -> conSparcfle  (exp x)
-| RP.App(("sparc_flt",    [w]), [x]) -> conSparcflt  (exp x)
-
-| RP.App(("fdiv", [w]), [x; y; rm]) -> conFdiv (exp x) (exp y)
-| RP.App(("fmul", [w]), [x; y; rm]) -> conFmul (exp x) (exp y)
-| RP.App(("fadd", [w]), [x; y; rm]) -> conFadd (exp x) (exp y)
-| RP.App(("fsub", [w]), [x; y; rm]) -> conFsub (exp x) (exp y)
-| RP.App(("fneg", [w]), [x])        -> conFneg (exp x)
-
-| RP.App(("i2f", [w;w']), [x; rm]) -> conItof (exp x)
-| RP.App(("f2i", [w;w']), [x; rm]) -> conFtoi (exp x)
-     (* MISSING ASSERTION: %f2i ALWAYS ROUNDS TO ZERO *)
-| RP.App(("f2f", [w;w']), [x; rm]) -> conFtof (exp x)
-
-| RP.App((("add"|"sub"|"mul"|"sx"|"zx"|"lobits"|"bitInsert"|
-           "bitExtract"|"fabs"|"fneg"|"fdiv"|"fmul"|"fsub"|"fadd"|"f2f"|"f2i"|
-           "i2f"|"and"|"or"|"xor"|"com") as op, ws), xs)->
-    Impossible.impossible
-      (Printf.sprintf
-         "operator %%%s specialized to [%s] & applied to %d arguments"
-         op (String.concat "; " (List.map string_of_int ws)) (List.length xs))
-@
-And now we convert between RTLs and Burg constructors.
-<<code to follow the labeler>>=  
-let unimp = Impossible.unimp
-let const = function
-  | RP.Late(s,w)              -> unimp "sparc: late constants"
-  | RP.Bool(b)                -> unimp "sparc: bool"
-  | RP.Link(s,_,w)            -> conLink s w
-  | RP.Diff _                 -> error "PIC not supported"
-  | RP.Bits(b)                -> conBits(b)
-@ 
-<<code to follow the labeler>>=  
-let rec exp = function
-  | RP.Const(k)               -> const (k)
-  | RP.Fetch(l,w)             -> conFetch (loc l) w
-  <<special cases for particular operators>>
-  | RP.App((o,_),_)           -> error ("unknown operator " ^ o)
-@ 
-<<code to follow the labeler>>=  
-and loc l = match l with
-  | RP.Mem(('m', aff, _), w, e, ass) -> conMem (exp e) w
-  | RP.Reg((sp, _, _), i, R.C 1)     -> conReg     sp i
-  | RP.Reg((sp, _, _), i, R.C 2)     -> conRegPair sp i
-  | RP.Reg _                  -> unimp "quad registers and other large beasts"
-  | RP.Mem(_, _, _, _)        -> error "non-mem, non-reg cell"
-  | RP.Var _ | RP.Global _    -> error "var found"
-  | RP.Slice(w,i,l)           -> unimp "sparc: slice locations"
-@ 
-We recognize some special forms of single effects.  When is npc used
-and when is pc used?
-
-How to handle returns:
-
- ret  is really jmpl %i7+8, %g0
- retl is really jmpl %o7+8, %g0
- 
-this is a bit of a problem for our code because the machinery has no
-idea that the return address is being placed in different registers
-maybe we should tell it that %i7 is the return address, which is a
-non-volatile register, so that it won't try to save and resore the
-value on the stack, which is pointless.  Should be okay as long as %o7
-is mentioned as volatile and isn't available to pass a parameter on a
-call.  For now, we will just be using the ``ret'' instruction because
-we don't do the so-called ``leaf optimization''.
-<<code to follow the labeler>>=  
-and effect = function
-  | RP.Store(RP.Reg(('c',_,_), i, c), r, _)
-    when (i = 1 (* i = npc *)) -> conGoto (exp r)
-(*
-  | RP.Store(RP.Reg('c',i, _), r, w)  -> error (sprintf "set $c[%d]" i)
-*)
-  | RP.Store(maybe_spl, RP.App(("add",_), [x;y]), _)
-    when (RU.Eq.loc maybe_spl spl && (RU.Eq.exp x sp || RU.Eq.exp y sp)) ->
-      conSave (exp x) (exp y)
-  | RP.Store(l,e,w)                   -> conStore (loc l) (exp e) w
-  | RP.Kill(l)                        -> unimp "sparc: kill effect"
-@
-We attempt to recognize register pairs.
-<<code to follow the labeler>>=  
-and regpair = function
-  | _ -> Impossible.impossible "Argument is not a register pair"
-@
-<<code to follow the labeler>>=
-and rtl (RP.Rtl es) = geffects es
-and geffects = function
-    | []          -> conNop ()
-    | [g, s]      -> guarded g s
-    | (g, s) :: t -> conPar (guarded g s) (geffects t)
-and guarded g eff = match g with
-  | RP.Const(RP.Bool b) -> if b then effect eff else conNop()
-  | _ -> conGuarded (exp g) (effect eff)
-@ 
-
-\subsection{The exported recognizer}
-
-We try not to immediately halt if something goes wrong but instead drop error messages into the assembly language.
-
-<<code to follow the labeler>>=
-let errmsg r msg =
-  List.iter prerr_string
-    [ "recognizer error: "; msg; " on "; RU.ToString.rtl r; "\n" ]
-
-let to_asm r =
-  try
-    let plan = rtl (Down.rtl (Simplify.rtl r)) in
-    plan.inst.Camlburg.action ()
-  with 
-  | Camlburg.Uncovered -> " not an instruction: " ^ RU.ToString.rtl r
-  | Error msg -> (errmsg r msg; " error in recognizer: " ^ msg)
-
-let is_instruction r =
-  try
-    let plan = rtl (Down.rtl (Simplify.rtl r)) in
-    plan.inst.Camlburg.cost < 100  (* should be true, but shade this... *)
-  with 
-  | Camlburg.Uncovered -> false
-  | Error msg -> (errmsg r msg; false)
-@ 
+(*e: rules *)
+(*e: sparcrec.mlb *)
