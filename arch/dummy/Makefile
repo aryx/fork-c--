@@ -26,7 +26,7 @@ INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/front_zipcfg \
  $(TOP)/front_last \
  $(TOP)/assembler \
-
+ ../x86
 
 
 ##############################################################################

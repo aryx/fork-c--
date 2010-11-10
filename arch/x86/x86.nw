@@ -28,6 +28,8 @@ val placevars : Ast2ir.proc -> Automaton.t
 Here are some abbreviations.
 Note especially the use of the [[X86regs]] module, internally known as~[[Rg]].
 <<x86.ml>>=
+open Nopoly
+
 module A  = Automaton
 module C  = Context
 module DG = Dag
@@ -48,8 +50,11 @@ let unimpf  fmt = Printf.kprintf Impossible.unimp      fmt
 At initialization, we register the x86 machine invariant as a property
 for the optimization backplane.
 <<x86.ml>>=
+(* pad: don't need lua *)
+(*
 let _ = Backplane.M.register "x86 invariant"
     ["The x86 machine invariant.  For more explanation, see '<machine> invariant'."]
+*)
 @ 
 \subsection{Storage spaces}
 
@@ -209,7 +214,7 @@ The rest of the compiler deals in locations, expressions, and RTLs.
 But the postexpander deals primarily with temporaries and blocks.
 Here are some functions to help smooth over the differences.
 Here are some utility functions for computing locations, values, and widths.
-<<x86 postexpander>>= 
+<<x86 postexpander>>=
 let (<:>) = DG.(<:>)
 let rtl r = DG.Rtl r
 let tempstore t e = rtl (R.store (temploc t) e (tempwidth t))
@@ -217,7 +222,7 @@ let tempstore t e = rtl (R.store (temploc t) e (tempwidth t))
 And another for doing shifts.  Parameter [[op]] should be, e.g., [[RO.shl]].
 N.B.~This is actually acceptable as an instruction, since the Pentium
 does a shift-immediate em{without} touching condition codes.
-<<x86 postexpander>>= 
+<<x86 postexpander>>=
 let shift dst op n = tempstore dst (op 32 (tempval dst) (RO.unsigned 32 n))
 @ 
 Here are some important locations and values.

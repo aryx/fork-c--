@@ -1,4 +1,6 @@
 (*s: x86.ml *)
+open Nopoly
+
 module A  = Automaton
 module C  = Context
 module DG = Dag
@@ -16,8 +18,11 @@ module T  = Target
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let unimpf  fmt = Printf.kprintf Impossible.unimp      fmt
 (*x: x86.ml *)
+(* pad: don't need lua *)
+(*
 let _ = Backplane.M.register "x86 invariant"
     ["The x86 machine invariant.  For more explanation, see '<machine> invariant'."]
+*)
 (*x: x86.ml *)
 module SS = Space.Standard32
 module Spaces = struct
