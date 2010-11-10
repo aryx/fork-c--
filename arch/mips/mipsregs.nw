@@ -46,9 +46,11 @@ module Spaces = struct
     let u  = SS.u    byteorder  32
     let c  = SS.c  6 id [32]    (* pc, npc, cc, _, fp_mode, fp_fcmp *)
 end
+@ 
 <<mipsregs.ml>>=
 let locations = SS.locations Spaces.c
 let pc        = locations.SS.pc
 let cc        = locations.SS.cc
 let npc       = locations.SS.npc
 
+@ 

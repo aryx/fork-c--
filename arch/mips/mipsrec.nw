@@ -401,7 +401,7 @@ let const = function
     | RP.Diff _                 -> error "PIC not supported"
     | RP.Bits(b)                -> conBits b
     | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
-
+@ 
 <<tail>>=
 <<helpers for [[exp]] and [[loc]]>>
 let rec exp = function
@@ -424,6 +424,7 @@ let effect = function
     <<special cases for [[Store]]>>
     | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
     | RP.Kill(l)                -> error "cannot handle kill"
+@ 
 
 <<tail>>=
 let guarded g stmt = match g with
@@ -451,6 +452,7 @@ let rtl (RP.Rtl es) = geffects es
 <<helpers for [[exp]] and [[loc]]>>=
 let cmp = 
     Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] 
+@ 
 
 <<special cases for [[App]]>>=
 | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)

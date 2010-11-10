@@ -1,0 +1,153 @@
+(*s: mipsrec.mlb *)
+%head {: <<head>> :}
+%tail {: <<tail>> :}
+%term <<terminal types>>
+%%
+(*s: rules *)
+const64:    Bits(bits) [{: guard (Bits.width bits = 64)  :}]{:         bits :}
+const:      Bits(bits) [{: guard (Bits.width bits = 32)  :}]{: const32 bits :}
+symbol:     Link(x, w:int)      {: x#mangled_text :}
+(*x: rules *)
+f:          Reg('f', n:int)  {: n :}
+r:          Reg('r', n:int)  {: n :}
+
+regl:       r   {: reg r  :}
+fregl:      f   {: freg f :}
+
+pcl:        Reg('c',  0) {: () :}
+spl:        Reg('r', 29) {: () :}
+ral:        Reg('r', 31) {: () :}
+
+reg:        Fetch(regl,w:int)   {: regl   :}
+freg:       Fetch(fregl,w:int)  {: fregl  :}
+
+pc:         Fetch(pcl,32)       {: () :}
+sp:         Fetch(spl,32)       {: () :}
+ra:         Fetch(ral,32)       {: () :}
+(*x: rules *)
+meml:       Mem(addr)     {: addr :}
+mem:        Fetch(meml,w:int)   {: meml :}
+
+addr:       reg                 {: cat ["(";reg;")"]     :}
+addr:       imm                 {: imm                   :}
+addr:       Add(imm,reg)        {: cat [imm;"(";reg;")"] :}
+addr:       Add(reg,imm)        {: cat [imm;"(";reg;")"] :}
+addr:       symbol              {: symbol                :}
+(*x: rules *)
+imm:        const               {: const                 :} 
+imm:        symbol              {: symbol                :}
+imm:        Add(symbol,imm)     {: cat [symbol;"+";imm]  :}
+imm:        Add(imm,symbol)     {: cat [symbol;"+";imm]  :}
+(*x: rules *)
+inst:       Store(regl,imm,32)
+            {: cat ["la"; " "; regl; ","; imm] :}
+
+inst:       Store(regl,const,32)
+            {: cat ["li"; " "; regl; ","; const] :}
+
+inst:       Store(regl,mem,32)
+            {: cat ["l"; suffix 32; " "; regl; ","; mem] :}
+
+inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
+            {: cat ["l"; suffix w; sx; " "; regl; ","; mem] :}
+
+inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int) 
+            {: cat ["l"; suffix w; zx; " "; regl; ","; mem] :}
+(*x: rules *)
+inst:       Store(fregl,const,32)
+            {: sprintf "li $1, %s; mtc1 $1, %s" const fregl :} 
+(*x: rules *)
+inst:       Store(f,b:const64,64)
+            {: sprintf "li $1, %s; mtc1 $1, %s; li $1 %s; mtc1 $1, %s"
+                       (const64 (lo b)) (freg f) (const64 (hi b)) (freg (f+1))
+            :}           
+(*x: rules *)
+inst:       Store(meml, reg, w:int)
+            {: cat ["s"; suffix w; " "; reg; ","; meml] :}
+
+inst:       Store(meml, freg, w:int)
+            {: cat ["s.s "; freg; ","; meml] :}
+(*x: rules *)
+inst:       Store(regl, reg, 32)
+            {: cat ["move"; " "; regl; ","; reg] :}
+
+inst:       Store(fregl, freg, 32)
+            {: cat ["mov.s"; " "; fregl; ","; freg] :}
+
+inst:       Store(fregl, freg, 64)
+            {: cat ["mov.d"; " "; fregl; ","; freg] :}
+(*x: rules *)
+inst:       Store(fregl, reg, 32)
+            {: cat ["nop; mtc1"; " "; reg; ","; fregl] :}
+
+inst:       Store(regl, freg, 32)
+            {: cat ["nop; mfc1"; " "; regl; ","; freg] :}
+
+
+(*x: rules *)
+inst:       Goto(symbol)
+            {: cat ["j"; " "; symbol] :}
+
+inst:       Goto(reg)
+            {: cat ["jr"; " "; reg] :}
+(*x: rules *)
+next:       Add(pc,const)       {: () :}
+inst:       Par(Goto(addr),Store(ral,next,32))     -- s/addr/symbol/g ? 
+            {: cat ["jal"; " "; addr] :} 
+(*x: rules *)
+syscall:    Link(x, w:int) [{: guard (x#mangled_text =$= "syscall") :}] {: () :}
+inst:       Par(Goto(syscall), Store(ral,pc,32))
+            {: "syscall" :}
+(*x: rules *)
+cmp:        Cmp(op:string,x:reg,y:reg)              {: (op,x,y) :}
+cmp:        Cmp(op:string,x:reg,y:const)            {: (op,x,y) :}
+inst:       Guarded(cmp,Goto(addr)) 
+            {: match cmp with 
+               | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr]
+            :}   
+(*x: rules *)
+inst:       Store(dst:regl, Add(x:reg,y:reg), 32)
+            {: cat ["add"; " "; dst; ","; x; ","; y] :}
+     
+inst:       Store(dst:regl, Add(x:reg,y:imm), 32)
+            {: cat ["addi"; " "; dst; ","; x; ","; y] :}
+     
+inst:       Store(dst:fregl, D2S(x:freg), 32)
+            {: cat ["cvt.s.d"; " "; dst; ","; x] :}
+
+inst:       Store(dst:fregl, S2D(x:freg), 64)
+            {: cat ["cvt.d.s"; " "; dst; ","; x] :}
+(*x: rules *)
+inst:       Nop() {: "nop" :}
+(*x: rules *)
+inst: any [100]         {: cat ["<";any;">"] :}
+
+any : True  ()          {: cat [ "True"  ] :}
+any : False ()          {: cat [ "False" ] :}
+any : Link(x, w:int)    {: cat [ "Link(";x#mangled_text;",";width w;")" ] :}
+any : Late(string,w:int){: cat [ "Late(";string;",";width w;")" ] :}
+any : Bits(bits)        {: cat [ "Bits(b)" ] :}
+
+any : Fetch (any, w:int){: cat [ "Fetch(";any;",";width w;")" ] :}
+
+any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
+any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
+any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
+any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
+
+any : Mem(any)   {: cat [ "Mem(";any;")" ] :}
+any : Reg(char, n:int)  {: cat [ "Reg('";Char.escaped char;"',"; width n;")" ] :}
+
+any : Store (dst:any, src:any, w:int)
+                        {: cat [ "Store(";dst;",";src;",";width w;")" ] :}
+any : Kill(any)         {: cat [ "Kill(";any;")" ] :}
+
+any : Guarded(guard:any, any) 
+                        {: cat [ "Guarded(";guard;",";any;")" ] :}
+any : Cmp(op:string, x:any, y:any)    
+                        {: cat [ "Cmp(";op;",";x;",";y;")" ] :}
+any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
+any : Goto(any)         {: cat [ "Goto(";any;")" ] :}
+(*e: rules *)
+(*e: mipsrec.mlb *)
