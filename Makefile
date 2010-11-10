@@ -32,6 +32,7 @@ LIBS= commons/commons.cma \
      front_last/lib.cma \
      arch/interpreter/lib.cma \
      arch/ppc/lib.cma \
+     arch/x86/lib.cma \
 
 # note that front_nelab and front_cfg are independent so could compile
 # then in parallel
@@ -53,6 +54,7 @@ MAKESUBDIRS= \
    front_last \
    arch/interpreter \
    arch/ppc \
+   arch/x86 \
 
 
 #  h_camlburg tools \

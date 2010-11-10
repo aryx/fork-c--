@@ -5,8 +5,10 @@ TOP=../..
 ##############################################################################
 TARGET=lib
 
+# need camlburg for x86rec
 SRC= x86regs.ml x86call.ml \
-     x86asm.ml
+     x86asm.ml \
+     x86rec.ml
 
 SYSLIBS=
 
@@ -27,6 +29,7 @@ INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/front_zipcfg \
  $(TOP)/front_last \
  $(TOP)/assembler \
+ $(TOP)/h_camlburg/engine \
 
 
 
@@ -54,6 +57,8 @@ $(TARGET).cmxa: $(OPTOBJS) $(LIBS:.cma=.cmxa)
 clean::
 	rm -f $(TARGET).top
 
+x86rec.ml: x86rec.mlb
+	$(TOP)/h_camlburg/mlburg $^ > $@
 
 ##############################################################################
 # Literate Programming rules

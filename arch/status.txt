@@ -1,7 +1,6 @@
-interpreter/ is the only directory that have all its file compiling.
+interpreter/ is correctly compiling.
 
-ppc/ and x86/ are compiling right now but they are depending on
- camlburg.
+ppc/ and x86/ are compiling; they are depending on camlburg.
 
 dummy depends on x86/ and camlburg
 
