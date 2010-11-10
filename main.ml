@@ -86,13 +86,14 @@ open Common
  *    * arch/interpreter
  * 
  *    * arch/x86/
- *       - x86asm.make to build the assembler
+ *       - x86asm.make to build the assembler (need a Cfgutil.emit func)
  *       - x86.target to get a target
  * 
  *    * arch/ppc/
  * 
  *    * arch/...
  * 
+ *  - Cfgutil.emit (in assembler/) passed to x86asm.make
  *)
 
 (*****************************************************************************)
