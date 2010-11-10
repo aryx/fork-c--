@@ -23,11 +23,13 @@ val alocs : Automaton.loc -> Rtl.width -> Rtl.loc list
 val aloc  : Automaton.loc -> Rtl.width -> Rtl.loc 
 @ 
 \subsection{Implementation}
+
 <<automatonutil.ml>>=
 module R   = Rtl
 module RP  = Rtl.Private
 module Up  = Rtl.Up
 module Dn  = Rtl.Dn
+@ 
 
 <<automatonutil.ml>>=
 let alocs aloc w =
@@ -37,3 +39,4 @@ let alocs aloc w =
 let aloc a w = match alocs a w with
 | [l] -> l
 | _ -> Impossible.impossible "automaton split value across multiple locations"
+@ 

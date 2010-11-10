@@ -12,6 +12,8 @@ result is [[None]].
 val rtl : ('a, 'b, 'c) Target.t -> Rtl.rtl -> string option
 @ 
 <<mvalidate.ml>>=
+open Nopoly
+
 module RP   = Rtl.Private
 module Down = Rtl.Dn
 module Up   = Rtl.Up

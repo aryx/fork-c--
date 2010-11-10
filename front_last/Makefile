@@ -5,7 +5,11 @@ TOP=..
 ##############################################################################
 TARGET=lib
 
+# used by Driver.compile
 SRC= dataflow.ml vfp.ml mvalidate.ml
+
+# used by arch/ppc/
+SRC+=automatonutil.ml placevar.ml
 
 SYSLIBS=
 
@@ -20,6 +24,9 @@ INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/front_nelab \
  $(TOP)/front_zipcfg \
  $(TOP)/front_target \
+ $(TOP)/front_ir \
+ $(TOP)/front_fenv \
+
 
 
 ##############################################################################
@@ -52,7 +59,8 @@ clean::
 ##############################################################################
 
 SRCNW=dataflow \
- vfp mvalidate
+ vfp mvalidate \
+ placevar automatonutil
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done

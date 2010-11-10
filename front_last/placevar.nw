@@ -7,7 +7,6 @@
 %
 %%Grades: D Peripheral Later
 
-@
 \section{Placing variables into suitable temporary locations}
 The [[mk_automaton]] function generates an automaton for placing variables,
 given a warning function and a function that returns temporaries.
@@ -31,6 +30,8 @@ val replace_globals : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
 @
 Boilerplate for linking to Lua.
 <<placevar.ml>>=
+open Nopoly
+
 module A  = Automaton
 module G  = Zipcfg
 module GR = Zipcfg.Rep
@@ -285,6 +286,7 @@ let update rtl = replace_var store_var fetch_var store_global fetch_global rtl i
 let g = G.map_rtls update g in
 <<verbosely dump [[tMap]]>>
 @ 
+
 <<verbosely dump [[tMap]]>>=
 let () =
   if Debug.on "placevar" then
@@ -293,6 +295,7 @@ let () =
       | Some l -> RU.ToString.exp (l.A.fetch 99) in
     Printf.eprintf "Varmap: Var i -> Loc\n";
     Array.iteri (fun i l -> Printf.eprintf "  %d -> %s\n" i (loc l)) tMap in
+@
 <<placevar.ml>>=
 let () = Debug.register "placevar" "variable placer"
 @

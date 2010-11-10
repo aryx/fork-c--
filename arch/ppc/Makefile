@@ -5,6 +5,7 @@ TOP=../..
 ##############################################################################
 TARGET=lib
 
+# todo: need camlburg
 SRC= ppcasm.ml ppc.ml
 
 #no ppcregs.ml ? no ppccall.ml ?
