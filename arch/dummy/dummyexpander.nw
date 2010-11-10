@@ -97,11 +97,11 @@ Systems 1, 3 (Sep 1992), 213-226.
 
 <<dummyexpander.mlb>>=
 %head {: 
- <<utilities>> 
+ <<utilities>>
  :}    
 <<terminal types>>
 %tail {: 
- <<tail>> 
+ <<tail>>
 :}
 %%
 <<rules>>
@@ -613,7 +613,7 @@ Make sure that the above function [[map]] is \emph{not} in the same
 and the code below will not type check! This mistake has taken me some
 time to spot.
 
-<<tail>>=  
+<<tail>>=
 let rec exp = function
     | RP.Const(RP.Bool(true))   -> conTrue()
     | RP.Const(RP.Bool(false))  -> conFalse()
@@ -719,7 +719,7 @@ struct
         C.register_module "Expander" 
         [ "dummy", V.efunc (V.value **-> proc **-> V.result V.bool) (fun _ -> cfg)
         ] 
-	(* FIX -- want proper stage *)
+ (* FIX -- want proper stage *)
     end (*M*)    
 end (*Make*)            
 @

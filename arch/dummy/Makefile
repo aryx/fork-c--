@@ -7,6 +7,9 @@ TARGET=lib
 
 SRC=  dummy.ml
 
+# does not compile for now
+# dummyexpander.ml
+
 SYSLIBS=
 
 LIBS=
@@ -26,6 +29,7 @@ INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/front_zipcfg \
  $(TOP)/front_last \
  $(TOP)/assembler \
+ $(TOP)/h_camlburg/engine \
  ../x86
 
 
@@ -53,6 +57,8 @@ $(TARGET).cmxa: $(OPTOBJS) $(LIBS:.cma=.cmxa)
 clean::
 	rm -f $(TARGET).top
 
+dummyexpander.ml: dummyexpander.mlb
+	$(TOP)/h_camlburg/mlburg $^ > $@
 
 ##############################################################################
 # Literate Programming rules

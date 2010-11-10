@@ -10,7 +10,7 @@
  module D  = Rtl.Dn      (* Convert Down to private repr. *)
  module U  = Rtl.Up       (* Convert Up    to abstract repr. *)
  module W  = Rtlutil.Width 
- module G  = Cfg4             (* for expanding all RTLs in a CFG *)
+ module G  = Cfg             (* for expanding all RTLs in a CFG *)
  module GU = Cfgutil
  (*x: utilities *)
  exception Error of string
@@ -190,7 +190,7 @@
          C.register_module "Expander" 
          [ "dummy", V.efunc (V.value **-> proc **-> V.result V.bool) (fun _ -> cfg)
          ] 
- 	(* FIX -- want proper stage *)
+  (* FIX -- want proper stage *)
      end (*M*)    
  end (*Make*)            
  (*e: tail *)

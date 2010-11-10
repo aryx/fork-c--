@@ -2,7 +2,8 @@ interpreter/ is correctly compiling.
 
 ppc/ and x86/ are compiling; they are depending on camlburg.
 
-dummy depends on x86/ and camlburg
+dummy depends on x86/. The dummy target compiles but not the dummyexpander
+
 
 alpha/, arm/, ia64/, mips/, sparc/ are not compiling because probably
 of some CE that were not fixed.
