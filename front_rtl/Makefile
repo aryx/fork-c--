@@ -49,7 +49,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=rtldebug
+SRCNW=register reloc rtl  rtldebug rtlop rtlutil symbol types
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done

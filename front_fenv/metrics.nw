@@ -19,7 +19,9 @@ things are not consistent.
 <<metrics.mli>>=
 <<exposed types>>
 val default : t
-val of_ast  : swap:bool -> Srcmap.map -> (Ast.region * Ast.arch) list -> t Error.error
+val of_ast  : 
+  swap:bool -> Srcmap.map -> (Ast.region * Ast.arch) list -> 
+  t Error.error
 @ 
 
 Field [[alignment]] is the alignment required to load or store a word

@@ -31,13 +31,13 @@ let typecheck (r:Rtl.rtl) =
         | RP.Bool _                -> Types.Bool 
         | RP.Bits b                -> Types.Bits (Bits.width b)
         | RP.Link (_,_,w)          -> Types.Bits w
-	| RP.Diff (c,c')	   -> let t = const c and t' = const c' in
+ | RP.Diff (c,c')	   -> let t = const c and t' = const c' in
                                       if t =*= t' then t else fail r
         | RP.Late (_,w)            -> Types.Bits w
     
     and loc = function
         | RP.Mem ((_, _, ms),c,e,ass) ->
-	    let _ = bits (exp e) in Types.Bits (Cell.to_width ms c)
+     let _ = bits (exp e) in Types.Bits (Cell.to_width ms c)
         | RP.Reg ((_, _, ms),i,c)     -> Types.Bits (Cell.to_width ms c)
         | RP.Slice (w,i,l)         -> let _ = bits (loc l) in Types.Bits w
         | RP.Var    (_,_,w)        -> Types.Bits w

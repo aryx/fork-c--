@@ -30,7 +30,8 @@ LIBS= commons/commons.cma \
      front_zipcfg/lib.cma \
      assembler/lib.cma \
 
-
+# note that front_nelab and front_cfg are independent so could compile
+# then in parallel
 MAKESUBDIRS= \
    commons \
    commons2 \
@@ -143,6 +144,7 @@ DIRS= $(filter-out commons commons2 error, $(MAKESUBDIRS))
 # you want "-dot-reduce"
 # don't put "-dot-colors white"; using colors ocamldoc generates one
 #  color per directory ! quite useful
+# todo? generate a graph using the  -dot-types flag ? (type dependencies)
 dotall:
 	ocamldoc $(INCLUDES) $(DIRS:=/*.ml) $(SRC)  -dot -dot-reduce 
 	perl -p -i -e 's/\[style=filled, color=white\]//;' ocamldoc.out
@@ -150,6 +152,9 @@ dotall:
 	mv dot.ps Fig_graph_ml.ps
 	ps2pdf Fig_graph_ml.ps
 	rm -f Fig_graph_ml.ps
+
+tags:
+	~/pfff/stags -verbose -lang ml .
 
 ##############################################################################
 # Literate Programming rules

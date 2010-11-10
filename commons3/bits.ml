@@ -109,7 +109,8 @@ module Ops = struct
           Impossible.impossible "lobits: k > w")
 
   let shra (b,w) (b',w') =
-      let n  = zx64 b w in
+    (* todo: pad: bug ? _n is unused ? *)
+      let _n  = zx64 b w in
           (Int64.shift_right b (Int64.to_int b'), w)
 
   let shrl (b,w) (b',w') =

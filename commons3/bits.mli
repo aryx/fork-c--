@@ -1,7 +1,12 @@
 (*s: bits.mli *)
 type width = int
 
-type bits      
+(* pad: this was previously an abstract type, but it's less convenient
+ * with ocamldebug
+ *)
+type bits = Int64.t * int
+
+
 type t = bits 
 
 val width : t -> width         (* observer *)

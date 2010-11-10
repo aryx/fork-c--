@@ -60,8 +60,7 @@ uint64p.o: uint64p.c
 # Literate Programming rules
 ##############################################################################
 
-SRCNW= srcmap  reinit \
- error impossible unsupported debug \
+SRCNW= reinit \
  uint64 bits bitset64 \
  idgen \
  cell \

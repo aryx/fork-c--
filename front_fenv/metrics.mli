@@ -10,5 +10,7 @@ type t = {
 }
 (*e: exposed types *)
 val default : t
-val of_ast  : swap:bool -> Srcmap.map -> (Ast.region * Ast.arch) list -> t Error.error
+val of_ast  : 
+  swap:bool -> Srcmap.map -> (Ast.region * Ast.arch) list -> 
+  t Error.error
 (*e: metrics.mli *)

@@ -1,6 +1,13 @@
 (*s: reloc.mli *)
 type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
-type t
+
+type exp = Pos of symbol * Rtl.width | Neg of symbol * Rtl.width
+type t  = exp list * Bits.bits
+(* pad: was previously an abstract type
+ *   'type t'
+ * but it forbids to see the data from the debugger
+ *)
+
 
 (* constructors *)
 val of_const : Bits.bits -> t

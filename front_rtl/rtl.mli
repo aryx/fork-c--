@@ -54,11 +54,23 @@ module Private: sig
 end
 
 (*s: types and functions exported at top level *)
-type exp          (* denotes a compile-time or run-time value *)
-type loc          (* mutable container of a bit vector *)
-type rtl          (* effect of a computation *)
-type opr          (* a pure function on values *)
-type assertion    (* a claim about the run-time value of an address *)
+
+(* pad: was originally abstrac types but it forbids to use
+ * the debugger to inspect values.
+ *
+ * 
+ * type exp          (* denotes a compile-time or run-time value *)
+ * type loc          (* mutable container of a bit vector *)
+ * type rtl          (* effect of a computation *)
+ * type opr          (* a pure function on values *)
+ * type assertion    (* a claim about the run-time value of an address *)
+ *)
+
+type exp       = Private.exp     
+type loc       = Private.loc   
+type rtl       = Private.rtl        
+type opr       = Private.opr        
+type assertion = Private.assertion  
 
 val bool      : bool -> exp                    
 val bits      : Bits.bits -> width -> exp      

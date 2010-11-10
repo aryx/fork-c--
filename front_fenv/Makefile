@@ -9,7 +9,8 @@ TARGET=lib
 
 SRC= eqn.ml rtleqn.ml block.ml  \
      metrics.ml \
-     fenv.ml
+     fenv.ml \
+
 
 SYSLIBS=
 
@@ -53,8 +54,8 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=eqn symbol register rtl block types reloc rtlutil rtleqn \
- metrics asm fenv
+SRCNW=eqn block rtleqn metrics fenv
+
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done

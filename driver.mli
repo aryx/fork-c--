@@ -1,8 +1,19 @@
 (*s: driver.mli *)
 
-val parse     : string -> Srcmap.map * Ast.program
+(* the lexer *)
 val scan      : string -> unit
+
+(* the parser *)
+val parse     : string -> Srcmap.map * Ast.program
+
+(* sexp-based AST printer *)
 val emit_asdl : Srcmap.map * Ast.program -> unit
+
+(* basic pretty printer *)
+val pretty    : Srcmap.map * Ast.program -> Pp.doc
+val print     : Pp.doc -> int -> out_channel -> unit
+
+
 
 val elab : 
   swap:bool -> 
@@ -24,8 +35,6 @@ val compile :
 
 val version   : unit -> unit
 
-val pretty    : Srcmap.map * Ast.toplevel list -> Pp.doc
-val print     : Pp.doc -> int -> out_channel -> unit
 
 val metrics_ok : Metrics.t -> ('a, 'b, 'c) Target.t -> bool
 
