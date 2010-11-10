@@ -28,6 +28,7 @@ raised.
 \item [[parse]]: returns the abstract syntax of a {\PAL} file.
 \item [[emit_asdl]]: writes the {\AST} in {\small ASDL} syntax to
       [[stdout]].
+%pad: where is check ??
 \item [[check]]: checks the static semantics of a file and returns 
       an environment [[env]] value upon success. 
 \item [[compile]]: compiles an {\AST} to assembly code. The function

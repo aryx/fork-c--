@@ -22,7 +22,8 @@ open Common
  * 
  * - DONE Ast.program (in parsing/, and its basic printer Astpp.emit)
  *   functions: Parse_cmm.tokens, Parse_cmm.parse, Driver.parse
- *   todo: a vof_ast that pretty prints cleanly
+ *   todo: a vof_ast that pretty prints cleanly not using the asdl-based
+ *    not so good sexp printer
  * 
  * - DONE Nast.t (in front_nelab/)
  *   functions: Nast.program
