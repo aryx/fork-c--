@@ -164,6 +164,7 @@ end
 module ConstSortBind = SortAndBind(Const)
 (*x: nelab.ml *)
 type scope = Local | Global
+(* pad: copy paste of Vfp.mk but brought too many dependencies *)
 let vfp_mk w =
   Rtl.fetch (Rtl.reg (('V', Rtl.Identity, Cell.of_size w), 0, Rtl.C 1)) w
 

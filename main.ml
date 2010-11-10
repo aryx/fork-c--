@@ -39,16 +39,21 @@ open Common
  *     subfunction: Elablstmt.elab_stmts taking some rtl hook,
  *      a region, a fenv, a nast.stmt list and returning a list of
  *      elaborate statements.
+ *     todo: should unit test test
  * 
  *   * DONE Rtl.Private.*, especially 'const', 'exp (in front_rtl/, 
  *     and its checker Rtldebug.typecheck, and
  *     its printer in Rtlutil.ToString.rtl)
  *     functions: Nelab.program will build a compunit containing Rtl stuff
  *      in its leaves
+ *     todo: should unit test test
+ * 
+ *   * DONE `proc Fenv.env (in front_fenv/)
+ *     subfunction: Fenv.clean which takes a Dirty env and return a Clean env
+ *     todo: should unit test test
  * 
  *   * Asm.assembler ?? (in front_asm/ )
  * 
- *   * Fenv.??? (in front_fenv/)
  * 
  * - Cfg.S.cfg and especially Cfg.S.kind (in front_cfg/, and its printer in
  *   Cfg.S.print_node
@@ -83,7 +88,6 @@ let test_driver_parse file =
   let (srcmap, ast) = Driver.parse file in
 
   (* todo: write a vof_ast so can pretty print it cleanly *)
-
   let pp = Astpp.program ast in
   let s = Pp.ppToString 0 pp in
   pr2 s;
@@ -95,6 +99,7 @@ let test_nast file =
   let nast = Nast.program ast in
   (* todo: write a vof_nast so can pretty print that *)
   pr2_gen nast
+
 
 (* filename -> ast -> nast -> nelab *)
 let test_nelab file =
