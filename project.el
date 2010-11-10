@@ -31,7 +31,7 @@
    (join-string 
     (list 
      ;"-debugger"
-     (case 20
+     (case 40
        (1 "-driver_parse demos/hello.c--")
        (2 "-test_nast demos/hello.c--")
        (3 "-test_nelab demos/hello.c--")
@@ -41,6 +41,8 @@
        (11 "-test_nelab demos/bool.c--")
 
        (20 "-driver_compile demos/hello.c--")
+       
+       (40 "-test_x86 demos/bool.c--")
        )
      )
     )

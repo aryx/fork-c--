@@ -86,6 +86,8 @@ open Common
  *    * arch/interpreter
  * 
  *    * arch/x86/
+ *       - x86asm.make to build the assembler
+ *       - x86.target to get a target
  * 
  *    * arch/ppc/
  * 
@@ -148,6 +150,30 @@ let test_nelab file =
   in
   (* todo: write a vof_compunit and vof_fenv so can pretty print that *)
   pr2_gen res_or_error
+
+let test_x86 file =
+  let (srcmap, ast) = Driver.parse file in
+
+  let tgt = X86.target in
+  let asm = 
+    let chan = open_out "/tmp/cmm.asm" in
+    X86asm.make Cfgutil.emit chan
+  in
+  (* pad: ugly *)
+  Block._empty_vfp_hook := (fun ptrwidth ->
+    Block.relative (Vfp.mk ptrwidth) "empty block" 
+      Block.at ~size:0 ~alignment:1;
+  );
+
+  Driver.compile
+    tgt
+    (fun proc -> ()) (* ?? optimizer ? *)
+    ~exportglobals:true (* ?? *)
+    ~src:(srcmap, ast)
+    ~asm
+    ~validate:true (* ?? *)
+    ~swap:false (* ?? give weird error mesage when set to true *);
+  ()
   
 
 let test_rtl file =
@@ -234,6 +260,9 @@ let extra_actions () = [
     Common.mk_action_1_arg test_nast;
     "-test_nelab", "  <file>", 
     Common.mk_action_1_arg test_nelab;
+
+    "-test_x86", "  <file>", 
+    Common.mk_action_1_arg test_x86;
 
     "-test_rtl", "  <file>", 
     Common.mk_action_1_arg test_rtl;
