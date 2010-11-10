@@ -156,6 +156,7 @@ let test_x86 file =
   let (srcmap, ast) = Driver.parse file in
 
   let tgt = X86.target in
+
   let asm = 
     let chan = open_out "/tmp/cmm.asm" in
     X86asm.make Cfgutil.emit chan
