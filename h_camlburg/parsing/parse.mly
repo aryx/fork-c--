@@ -1,95 +1,10 @@
-% vim: set ts=8 et sw=4:
-
-% ------------------------------------------------------------------ 
-\section{Parser}
-% ------------------------------------------------------------------ 
-
-This is the parser for the Burg specification language, specified in the
-OCamlYacc parser generator language. The parser returns a [[Spec.t]]
-value with no static checks performed. 
-
-<<parse.mly>>=
+/*(*s: parse.mly *)*/
 %{
     let rcsid = "$Id: parse.nw,v 1.10 2003-08-29 11:41:00 lindig Exp $"
 
     open Parse_prolog
 %}
-<<token definitions>>
-%start spec
-%type <Spec.t>spec
-%%
-<<grammar>>
-
-@
-%pad: had %% but cause pbs with syncweb
-
-<<parse_prolog.ml>>=
-<<prolog>>
-@ 
-
-The parser's entry point is [[spec]]. The function returns an [[Spec.t]]
-value and raises [[Parsing.Parse_error]] in the case of a parse error.
-
-% ------------------------------------------------------------------ 
-\subsection{Prolog}
-% ------------------------------------------------------------------ 
-
-The prolog holds code commonly used in the semantic actions of the
-grammar.
-
-<<prolog>>=
-module S = Spec
-@
-
-If a semantic action detects an error, we report it with the
-[[Parseerror.Error]] exception. We would like to declare our own
-exception but there is no way in OCamlYacc to declare it in the
-(generated) interface. 
-
-<<prolog>>=
-let error msg = raise (Parseerror.Error msg)
-@
-
-The parser provides character offset for symbols in the grammar. We use
-them to annotate our abstract specification.
-
-<<prolog>>=
-let p  ()  = (Parsing.symbol_start (), Parsing.symbol_end())
-let px x   = (Parsing.rhs_start x    , Parsing.rhs_end x)
-let rev    = List.rev   
-@
-
-We collect declarations into a record, starting with the [[empty]]
-record below. These terminals are predifined: [[int]], [[char]], and
-[[string]]---they correspond to the types of literals.
-
-<<prolog>>=
-type decls = 
-    { terms     : S.StringSet.t
-    ; heads     : Code.exp list     (* in reverse order *)
-    ; tails     : Code.exp list     (* in reverse order *)
-    ; types     : string S.StringMap.t
-    }
-
-let empty =
-    { terms     = List.fold_right 
-                    S.StringSet.add 
-                    ["int"; "string"; "char"] 
-                    S.StringSet.empty
-    ; heads     = []
-    ; tails     = []
-    ; types     = S.StringMap.empty
-    }
-@
-
-% ------------------------------------------------------------------ 
-\subsection{Token Definitions}
-% ------------------------------------------------------------------ 
-
-We have simplified the specifiaction language and have to remove
-superficial tokens here. 
-
-<<token definitions>>=
+/*(*s: token definitions *)*/
 %token<string>                      ID  
 %token<int>                         INT  
 %token<Srcmap.location * string>    CODE        
@@ -115,16 +30,11 @@ superficial tokens here.
 %token LBRACKET
 %token RBRACKET
 %token COMMA
-@
-
-% ------------------------------------------------------------------ 
-\subsection{Grammar}
-% ------------------------------------------------------------------ 
-
-We occasionally put functions into the semantic actions when the value
-of the action depends on some inherited value. 
-
-<<grammar>>=
+/*(*e: token definitions *)*/
+%start spec
+%type <Spec.t>spec
+%%
+/*(*s: grammar *)*/
 spec    : decls PPERCENT rules EOF  { let d   = $1 in 
                                       let r   = $3 d.terms 
                                       and map = $4 
@@ -179,12 +89,7 @@ decl    : PERCENT TERM idlist       { fun d ->
 idlist  : idlist ID                 { $2 :: $1 }
         | ID                        { [$1]     }
         ;
-@
-
-A rule receives the set of terminal types from the declaration. It
-passes it on to the pattern sub-grammar.
-
-<<grammar>>=
+/*(*x: grammar *)*/
 rules   : rules  rule               { fun terms -> $2 terms :: $1 terms }
         | /**/                      { fun terms -> []             }
         ;
@@ -204,19 +109,7 @@ rule    : ID COLON toppat cost code { fun terms ->
                                         ; S.code     = $4
                                         }
                                     }    
-@
-
-A pattern receives the set of declared terminal types [[ts]]. This set
-is used to decide about the type of an explicitly typed variable. A
-variable $x$ without an explicit type defaults to $x:x$.
-
-We have two productions for patterns: [[pat]], and [[toppat]]. Toplevel
-patterns [[toppat]] must not contain literals or terminal variables.
-They make lttle sense anyway and complicate code generation. Patterns in
-argument positions are recognized by [[pat]] and do not bear such
-restrictions.
-
-<<grammar>>=
+/*(*x: grammar *)*/
 pat     : INT                       { fun ts -> S.Literal(S.Int($1)) }
         | STRING                    { fun ts -> S.Literal(S.String($1))}
         | CHAR                      { fun ts -> S.Literal(S.Char($1))}
@@ -246,13 +139,7 @@ pats    : pats COMMA pat            { fun ts -> $3 ts :: $1 ts }
         | pat                       { fun ts -> [$1 ts] }
         | /**/                      { fun ts -> [] }
         ;
-@
-
-I encountered shift-reduce errors when I provided an empty alternative
-for the cost. Therefore the default case with no explicit cost expression
-is now part of the [[rule]] nontermimal.
-
-<<grammar>>=
+/*(*x: grammar *)*/
 cost    : LBRACKET INT    RBRACKET  { Code.Int($2) }
         | LBRACKET code   RBRACKET  { $2           }    /* remove */
         | code                      { $1           }    
@@ -260,8 +147,6 @@ cost    : LBRACKET INT    RBRACKET  { Code.Int($2) }
 
 code    : CODE                      { let (loc,src) = $1 in 
                                        Code.Raw(loc,"("^src^")") }
-@
+/*(*e: grammar *)*/
 
-
-
-
+/*(*e: parse.mly *)*/

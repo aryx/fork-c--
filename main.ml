@@ -22,11 +22,13 @@ open Common
  * 
  * - DONE Ast.program (in parsing/, and its basic printer Astpp.emit)
  *   functions: Parse_cmm.tokens, Parse_cmm.parse, Driver.parse
+ * 
  *   todo: a vof_ast that pretty prints cleanly not using the asdl-based
  *    not so good sexp printer
  * 
  * - DONE Nast.t (in front_nelab/)
  *   functions: Nast.program
+ * 
  *   todo: a vof_nast that pretty prints cleanly
  * 
  * - DONE 'a Nelab.compunit * 'a Fenv.Dirty.env' (in front_nelab/)
@@ -40,6 +42,7 @@ open Common
  *     subfunction: Elablstmt.elab_stmts taking some rtl hook,
  *      a region, a fenv, a nast.stmt list and returning a list of
  *      elaborate statements.
+ * 
  *     todo: should have some unit tests independent of nelab
  * 
  *   * DONE Rtl.Private.*, especially 'const', 'exp (in front_rtl/, 
@@ -47,14 +50,16 @@ open Common
  *     its printer in Rtlutil.ToString.rtl)
  *     functions: Nelab.program will build a compunit containing Rtl stuff
  *      in its leaves
+ * 
  *     todo: should have some unit tests independent of front_elab/
  * 
  *   * DONE `proc Fenv.env (in front_fenv/)
  *     subfunction: Fenv.clean which takes a Dirty env and return a Clean env
  *     note that the assembler is in the fatenv !!
+ * 
  *     todo: should have sone unit tests independent of front_elab/
  * 
- *   * Asm.assembler ?? (in front_asm/ )
+ *   * Asm.assembler (in front_asm/ ) see below
  * 
  * 
  * - Cfg.S.cfg and especially Cfg.S.kind (in front_cfg/, and its printer in
@@ -62,17 +67,30 @@ open Common
  *  
  *    * Dag.block ??
  * 
- * - Zipcfg.graph and zgraph (in front_zipcfg/, ) ???
+ * - Zipcfg.graph and zgraph (in front_zipcfg/, ) 
+ *    ???
  * 
  * - Ast2ir.tgt (in front_ir/, ) ??
  *   function: Ast2ir.translate
+ * 
  *   takes a tgt, build from ??? 
  *   a clean fatenv, an optimizer ??, a nelab compunit
  *   and does some side effects on the assembler in the clean fatenv.
  * 
  *    * - Target.?? machine ? t ? (in front_target/, ) ???
  *  
-
+ * - Asm.assembler (in front_asm/)
+ * 
+ *    * arch/dummy/
+ * 
+ *    * arch/interpreter
+ * 
+ *    * arch/x86/
+ * 
+ *    * arch/ppc/
+ * 
+ *    * arch/...
+ * 
  *)
 
 (*****************************************************************************)
