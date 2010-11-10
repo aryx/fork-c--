@@ -1,0 +1,155 @@
+(*s: alpharec.mlb *)
+%head {: <<head>> :}
+%tail {: <<tail>> :}
+%term <<terminal types>>
+%%
+(*s: rules *)
+const:      Bits(bits)          {: int64 bits           :}
+zero:       Bits(bits)          [{: guard (Bits.eq bits (Bits.zero 64)) :}] {: () :}
+four:       Bits(bits)          [{: guard (Bits.eq bits (Bits.S.of_int 4 64)) :}] {:():}
+symbol:     Link(x, w:int)      {: x#mangled_text       :}
+(*x: rules *)
+regl:       Reg('r', n:int)  {: reg  n :}
+fregl:      Reg('f', n:int)  {: freg n :}
+
+pcl:        Reg('c',  0) {: () :}
+spl:        Reg('r', 30) {: () :}
+ral:        Reg('r', 26) {: () :}
+pvl:        Reg('r', 27) {: () :}
+gpl:        Reg('r', 29) {: () :}
+
+
+reg:        Fetch(regl,w:int)   {: regl    :}
+freg:       Fetch(fregl,w:int)  {: fregl   :}
+
+pc:         Fetch(pcl,64)       {: () :}
+sp:         Fetch(spl,64)       {: () :}
+ra:         Fetch(ral,64)       {: () :}
+pv:         Fetch(pvl,64)       {: () :}
+gp:         Fetch(gpl,64)       {: () :}
+
+(*x: rules *)
+meml:       Mem(addr)           {: addr :}
+mem:        Fetch(meml,w:int)   {: meml :}
+
+addr:       reg                 {: sprintf "(%s)" reg       :}
+addr:       imm                 {: imm                      :}
+addr:       Add(imm,reg)        {: sprintf "%s(%s)" imm reg :}
+addr:       Add(reg,imm)        {: sprintf "%s(%s)" imm reg :}
+addr:       symbol              {: symbol                   :}
+(*x: rules *)
+imm:        const               {: const  :} 
+imm:        symbol              {: symbol :}
+imm:        Add(symbol,imm)     {: sprintf "%s+%s" symbol imm :}
+imm:        Add(imm,symbol)     {: sprintf "%s+%s" symbol imm :}
+(*x: rules *)
+inst:       Store(regl,imm,64)
+            {: sprintf "lda %s, %s" regl imm :} 
+            
+            
+inst:       Store(regl,const,64)
+            {: sprintf "ldiq %s, %s" regl const :}
+
+
+inst:       Store(regl,mem,64)
+            {: sprintf "ldq %s, %s" regl mem :}
+
+inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
+            {: sprintf "ld%s %s, %s" (suffix w) regl mem :}
+            
+inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int) 
+            {: sprintf "ld%su %s, %s" (suffix w) regl mem :}
+            
+(*x: rules *)
+inst:       Store(meml, reg, w:int)
+            {: sprintf "st%s %s, %s" (suffix w) reg meml :}
+
+inst:       Store(meml, freg, w:int)
+            {: sprintf "sts %s, %s" freg meml :}
+(*x: rules *)
+inst:       Store(regl, reg, 64)
+            {: sprintf "mov %s, %s" reg  regl :}
+
+inst:       Store(fregl, freg, 64)
+            {: sprintf "fmov %s, %s" freg  fregl :}
+
+inst:       Store(fregl, reg, 64)
+            {: sprintf "itoft %s, %s" reg  fregl :}
+
+inst:       Store(regl, freg, 64)
+            {: sprintf "ftoit %s, %s" freg  regl :}
+
+(*x: rules *)
+inst:       Goto(symbol)
+            {: sprintf "br %s" symbol :}
+
+inst:       Goto(reg)
+            {: sprintf "jmp (%s)" reg  :}
+(*x: rules *)
+next:       Store(regl,Add(pc,four),64)      {: regl :}
+
+inst:       Par(Goto(reg),next)
+            {: sprintf "jsr %s,(%s)" next reg :}
+
+inst:       Store(gpl,GP(reg),64)
+            {: sprintf "ldgp $gp, (%s)" reg :}
+(*x: rules *)
+inst:       Guarded(cmp_zero,Goto(addr)) 
+            {: match cmp_zero with (op,reg) ->
+                sprintf "b%s %s, %s" op reg addr
+            :}   
+(*x: rules *)
+cmp:        Cmp(op:string,x:reg,y:reg)                      {: (op, x, y) :}
+cmp_zero:   Cmp(op:string,reg,zero)                         {: (op, reg)  :}
+
+inst:       Store(dst:regl,Bit(cmp),64)
+            {: match cmp with (op, x, y) -> 
+                sprintf "cmp%s %s, %s" op x y 
+            :}
+
+inst:       Store(dst:regl,Com(reg),64)
+            {: sprintf "not %s, %s" dst reg :}
+
+(*x: rules *)
+inst:       Store(dst:regl, Add(x:reg,y:reg), 64)
+            {: sprintf "addq %s, %s, %s" x y dst :}
+     
+inst:       Store(dst:regl, Add(x:reg,y:imm), 64)
+            {: sprintf "addq %s, %s, %s" x y dst :}
+(*x: rules *)
+inst:       Nop() {: "nop" :}
+(*x: rules *)
+inst: any [100]         {: cat ["<";any;">"] :}
+
+any : True  ()          {: cat [ "True"  ] :}
+any : False ()          {: cat [ "False" ] :}
+any : Link(x, w:int)    {: cat [ "Link(";x#mangled_text;",";width w;")" ] :}
+any : Late(string,w:int){: cat [ "Late(";string;",";width w;")" ] :}
+any : Bits(bits)        {: cat [ "Bits(b)" ] :}
+
+any : Fetch (any, w:int){: cat [ "Fetch(";any;",";width w;")" ] :}
+
+any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
+any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
+any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
+any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
+
+any : Mem(any)          {: cat [ "Mem(";any;")" ] :}
+any : Reg(char, n:int)  {: cat [ "Reg('";Char.escaped char;"',";width n;")" ] :}
+
+any : Store (dst:any, src:any, w:int)
+                        {: cat [ "Store(";dst;",";src;",";width w;")" ] :}
+any : Kill(any)         {: cat [ "Kill(";any;")" ] :}
+
+any : Guarded(guard:any, any) 
+                        {: cat [ "Guarded(";guard;",";any;")" ] :}
+any : Cmp(op:string, x:any, y:any)     
+                        {: cat [ "Cmp(";op;",";x;",";y;")"] :}
+any : GP(any)           {: cat [ "GP(";any;")"] :}
+any : Com(any)          {: cat [ "Com(";any;")"] :}
+any : Bit(any)          {: cat [ "Bit(";any;")"] :}
+any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
+any : Goto(any)         {: cat [ "Goto(";any;")" ] :}
+(*e: rules *)
+(*e: alpharec.mlb *)
