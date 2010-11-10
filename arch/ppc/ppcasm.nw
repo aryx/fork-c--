@@ -33,6 +33,8 @@ The implementation provides no surprises. It builds up an {\AST} and
 emits it to [[stdout]] when the [[emit]] method is called.
 
 <<ppcasm.ml>>=
+open Nopoly
+
 module G  = Zipcfg
 module GR = Zipcfg.Rep
 module SM = Strutil.Map
@@ -240,7 +242,7 @@ method value (v:Bits.bits) =
 <<utilities>>=
 let mask32 = Int64.pred (Int64.shift_left Int64.one 32)
 @ 
-<<assembly methods>>=            
+<<assembly methods>>=
 method addr a =
   match Reloc.if_bare a with
   | Some b -> this#value b

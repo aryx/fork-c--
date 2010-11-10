@@ -5,8 +5,9 @@ TOP=../..
 ##############################################################################
 TARGET=lib
 
-# todo: need camlburg
-SRC= ppcasm.ml ppc.ml
+# need camlburg for ppcrec
+SRC= ppcasm.ml ppc.ml \
+     ppcrec.ml
 
 #no ppcregs.ml ? no ppccall.ml ?
 
@@ -29,6 +30,7 @@ INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
  $(TOP)/front_zipcfg \
  $(TOP)/front_last \
  $(TOP)/assembler \
+ $(TOP)/h_camlburg/engine \
 
 
 
@@ -56,6 +58,8 @@ $(TARGET).cmxa: $(OPTOBJS) $(LIBS:.cma=.cmxa)
 clean::
 	rm -f $(TARGET).top
 
+ppcrec.ml: ppcrec.mlb
+	$(TOP)/h_camlburg/mlburg $^ > $@
 
 ##############################################################################
 # Literate Programming rules

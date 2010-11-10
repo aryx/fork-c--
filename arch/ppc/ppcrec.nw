@@ -17,21 +17,25 @@ end
 @ 
 
 <<ppcrec.mlb>>=
-%head {: <<modules>> 
+%head {: 
+    <<modules>>
          module M = struct
            <<code to precede the labeler>>
       :}
-%tail {:   <<code to follow the labeler>>
+%tail {:   
+    <<code to follow the labeler>>
          end (* of M *) 
       :}
 
-%term <<names of types of terminals>>
+%term 
+  <<names of types of terminals>>
 %%
 <<rules>>
 @
 
 A few abbreviations.
 <<modules>>=
+open Nopoly
 module BO   = Bits.Ops
 module RP   = Rtl.Private
 module RU   = Rtlutil
@@ -264,7 +268,7 @@ any : Goto(any) {: s "Goto(%s)" any :}
 
 The code in this section walks an RTL and calls suitable \burg\
 constructors. 
-<<code to follow the labeler>>=  
+<<code to follow the labeler>>=
 let rec const = function
   | RP.Bool(true)             -> conTrue  ()
   | RP.Bool(false)            -> conFalse ()
@@ -322,13 +326,19 @@ let rec exp = function
 This job can't be done in BURG because the expression in question
 appears in two places.
 <<case for [[ha16(e)]]>>=
-| RP.App (("shl", [32]), [<<pic_hi16 + pic_15>>; RP.Const (RP.Bits k16)]) 
+| RP.App (("shl", [32]), [
+   <<pic_hi16 + pic_15>>
+   ; RP.Const (RP.Bits k16)]) 
    when Bits.eq k16 (Bits.U.of_int 16 32) && Bits.eq k16' (Bits.U.of_int 16 32)
      && Bits.eq k15 (Bits.U.of_int 15 32) && RU.Eq.exp e e' ->
      conHa16 (exp e)
 @ 
 <<pic_hi16 + pic_15>>=
-RP.App(("add", [32]), [<<pic_hi16>>; <<pic15>>])
+RP.App(("add", [32]), [
+  <<pic_hi16>>
+  ; 
+  <<pic15>>
+  ])
 @ 
 <<pic_hi16>>=
 RP.App(("shrl", [32]), [e; RP.Const (RP.Bits k16')])
@@ -338,7 +348,7 @@ RP.App(("zx", [1;32]),
        [RP.App (("lobits", [32;1]),
                 [RP.App(("shrl", [32]), [e'; RP.Const (RP.Bits k15)])])])
 @ 
-<<code to follow the labeler>>=  
+<<code to follow the labeler>>=
 and loc l = match l with
   | RP.Mem(('m',_,_), Rtl.C c, e, ass) -> conMem (exp e)
   | RP.Reg((sp, _,_), i, w)            -> conReg sp i 

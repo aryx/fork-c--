@@ -510,4 +510,5 @@ let gen_elf spec =
 @ 
 
 <<noguardscheck.mli>>=
+val gen_elf: Spec.t -> unit
 @ 

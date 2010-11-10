@@ -1,5 +1,18 @@
 (*s: ppcrec.mlb *)
-%head {: <<modules>> 
+%head {: 
+    (*s: modules *)
+    open Nopoly
+    module BO   = Bits.Ops
+    module RP   = Rtl.Private
+    module RU   = Rtlutil
+    module SS   = Space.Standard32
+    module Down = Rtl.Dn      (* Convert Down  to private repr. *)
+    module Up   = Rtl.Up      (* Convert Up    to abstract repr. *)
+
+    exception Error of string
+    let error msg = raise (Error msg)
+    let sprintf = Printf.sprintf
+    (*e: modules *)
          module M = struct
            (*s: code to precede the labeler *)
            let s = Printf.sprintf
@@ -20,11 +33,132 @@
              | op    -> ("" , op  )
            (*e: code to precede the labeler *)
       :}
-%tail {:   <<code to follow the labeler>>
+%tail {:   
+    (*s: code to follow the labeler *)
+    let rec const = function
+      | RP.Bool(true)             -> conTrue  ()
+      | RP.Bool(false)            -> conFalse ()
+      | RP.Link(s,_,w)            -> conLink s w
+      | RP.Diff(c1,c2)            -> conDiff (const c1) (const c2)
+      | RP.Late(s,w)              -> Impossible.impossible "Late constant in recognizer"
+      | RP.Bits(b)                -> conBits(b)
+    (*x: code to follow the labeler *)
+    let is_cmp (opr,ws) =
+      let cmp = ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] in
+      if not (List.mem opr cmp) then false
+      else match ws with
+        [32]  -> true
+      | _     -> error "comparison not at 32 bits in PPC recognizer"
+
+    let rtl2ppc = function
+      | "and"  -> "and"
+      | "divu" -> "divwu"
+      | "quot" -> "divw"
+      | "mul"  -> "mullw"
+      | "neg"  -> "neg"
+      | "or"   -> "or"
+      | "shl"  -> "slw"
+      | "shrl" -> "srw"
+      | "sub"  -> "sub"
+      | "xor"  -> "xor"
+      | opr    -> error (sprintf "Unsupported RTL operator \"%s\"" opr)
+
+    let rec exp = function
+      | RP.Const(k)                  -> const (k)
+      | RP.Fetch(l,w)                -> conFetch (loc l) w
+      (*s: case for [[ha16(e)]] *)
+      | RP.App (("shl", [32]), [
+         (*s: pic_hi16 + pic_15 *)
+         RP.App(("add", [32]), [
+           (*s: pic_hi16 *)
+           RP.App(("shrl", [32]), [e; RP.Const (RP.Bits k16')])
+           (*e: pic_hi16 *)
+           ; 
+           (*s: pic15 *)
+           RP.App(("zx", [1;32]),
+                  [RP.App (("lobits", [32;1]),
+                           [RP.App(("shrl", [32]), [e'; RP.Const (RP.Bits k15)])])])
+           (*e: pic15 *)
+           ])
+         (*e: pic_hi16 + pic_15 *)
+         ; RP.Const (RP.Bits k16)]) 
+         when Bits.eq k16 (Bits.U.of_int 16 32) && Bits.eq k16' (Bits.U.of_int 16 32)
+           && Bits.eq k15 (Bits.U.of_int 15 32) && RU.Eq.exp e e' ->
+           conHa16 (exp e)
+      (*e: case for [[ha16(e)]] *)
+      | RP.App(("sx", [n; _]), [RP.App (("lobits", [_;_]), [x])]) -> conSxlo (exp x) n
+      | RP.App(("zx", [n; _]), [RP.App (("lobits", [_;_]), [x])]) -> conZxlo (exp x) n
+      | RP.App(("sx", [8 ;32]), [x]) -> conSx (exp x)
+      | RP.App(("sx", [16;32]), [x]) -> conSx (exp x)
+      | RP.App(("zx", [8 ;32]), [x]) -> conZx (exp x)
+      | RP.App(("zx", [16;32]), [x]) -> conZx (exp x)
+      | RP.App(("add",[16]), [x; y]) -> conAdd  (exp x) (exp y)
+      | RP.App(("add",[32]), [x; y]) -> conAdd  (exp x) (exp y)
+
+
+      | RP.App(("ppc_xer_ov_set", []), [x])        -> conOvSet (exp x)
+      | RP.App(("bitExtract", [_; n]), [lsb; src]) -> conBitExtract (exp lsb) (exp src) n
+
+      | RP.App(("lobits", [32;w]), [x]) -> conLobits (exp x) w
+
+      | RP.App((opr, ws), [x])          -> conUnop (rtl2ppc opr) (exp x)
+      | RP.App((opr, ws), [x;y])        -> if is_cmp(opr,ws) then conCmp opr (exp x) (exp y)
+                                           else conBinop (rtl2ppc opr) (exp x) (exp y)
+
+      | RP.App((o,_),_) -> error (sprintf "unknown operator %s" o)
+    (*x: code to follow the labeler *)
+    and loc l = match l with
+      | RP.Mem(('m',_,_), Rtl.C c, e, ass) -> conMem (exp e)
+      | RP.Reg((sp, _,_), i, w)            -> conReg sp i 
+      | RP.Mem(_, _, _, _)                 -> error "non-mem, non-reg cell"
+      | RP.Var _ | RP.Global _             -> error "var found"
+      | RP.Slice(w,i,l)                    -> conSlice w i (loc l)
+
+    and effect = function
+      | RP.Store(RP.Reg(('c',_,_),i,_),r,_)
+        when i = SS.indices.SS.pc          -> conGoto (exp r)
+      | RP.Store(l,e,w)                    -> conStore (loc l) (exp e) w
+      | RP.Kill(l)                         -> conKill (loc l)
+
+    and guarded g eff =
+      match g with
+      | RP.Const(RP.Bool b) -> if b then effect eff else conNop()
+      | _                   -> conGuarded (exp g) (effect eff)
+
+    and geffects = function
+        | []          -> conNop()
+        | [g, s]      -> guarded g s
+        | (g, s) :: t -> conPar (guarded g s) (geffects t)
+    and rtl (RP.Rtl es) = geffects es
+    (*x: code to follow the labeler *)
+    let errmsg r msg =
+      List.iter prerr_string
+        [ "recognizer error: "; msg; " on "; RU.ToString.rtl r; "\n" ]
+
+    let to_asm r i =
+      try
+        let _ = imports := i in
+        let plan = rtl (Down.rtl r) in
+        plan.inst.Camlburg.action ()
+      with 
+      | Camlburg.Uncovered -> " not an instruction: " ^ RU.ToString.rtl r
+      | Error msg -> (errmsg r msg; " error in recognizer: " ^ msg)
+
+    let is_instruction r =
+      try
+        let plan = rtl (Down.rtl r) in
+        plan.inst.Camlburg.cost < 100
+      with
+      | Camlburg.Uncovered -> false
+      | Error msg -> (errmsg r msg; false)
+    (*e: code to follow the labeler *)
          end (* of M *) 
       :}
 
-%term <<names of types of terminals>>
+%term 
+  (*s: names of types of terminals *)
+  n w bits symbol
+  (*e: names of types of terminals *)
 %%
 (*s: rules *)
 const16:  Bits(bits) [{: guard (Bits.S.fits 16 bits) :}]
