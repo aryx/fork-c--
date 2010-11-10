@@ -8,6 +8,7 @@ TARGET=lib
 SRC= mangle.ml \
      cfgutil.ml \
      astasm.ml dotasm.ml \
+     dummyasm.ml \
 
 SYSLIBS=
 
@@ -54,7 +55,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=mangle astasm dotasm
+SRCNW=mangle astasm dotasm dummyasm
 
 sync:
 	for i in $(SRCNW); do echo $$i; $(SYNCWEB) $$i.nw $$i.ml || exit 1; $(SYNCWEB) $$i.nw $$i.mli || exit 1; done

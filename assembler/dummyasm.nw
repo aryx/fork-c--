@@ -1,0 +1,76 @@
+% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
+
+% ------------------------------------------------------------------ 
+% Grades     ::=    "%%Grades:" Quality Importance Urgency
+% Quality    ::=    A|B|C|D|E
+% Importance ::=    Central|Subsystem|Peripheral
+% Urgency    ::=    Immediate|Soon|Later
+%
+% Example (at beginning of line): %%Grades: E Peripheral Label
+\section{Dummy Assembler}
+% ------------------------------------------------------------------ 
+
+<<dummyasm.mli>>=
+val asm : unit Asm.assembler
+@                      
+% ------------------------------------------------------------------ 
+\subsection{Implementation}
+% ------------------------------------------------------------------ 
+
+<<dummyasm.ml>>=
+module Asm = Asm
+
+<<Make>>
+let asm = new asm ()
+@
+
+% ------------------------------------------------------------------ 
+\subsubsection{The assembler class}
+% ------------------------------------------------------------------ 
+
+<<Make>>=
+class ['proc] v : ['proc] Asm.assembler =
+object (this)
+
+(*
+    (* declarations *)
+    method import s = Symbol.unmangled s
+    method export s = Symbol.unmangled s
+    method local  s = Symbol.unmangled s
+
+    method globals n = ()
+
+    (* sections *)
+    method section s = _section <- s
+    method current   = _section
+
+    (* definitions *)
+    method label s   = ()
+    method const s b = ()
+
+    (* locations *)
+
+    method org n    = ()
+    method align n  = ()
+    method addloc n = ()
+
+    method longjmp_size () =
+      Impossible.unimp "longjmp size not set for dot -- needed for alternate returns"
+
+    (* instructions *)
+    method cfg_instr (proc : 'proc) =
+      let (cfg, proc) = proc in
+      let s   = proc.Proc.symbol in
+      let mangle  = Mangle.mk spec in
+      output_string fd (cfg2dot ~name:(mangle s#mangled_text) cfg)
+
+    method zeroes n = ()
+    method value v = ()
+    method addr  a = ()
+    method comment s = ()
+    method emit = ()
+*)
+end
+
+
+@ 

@@ -70,7 +70,9 @@ module type Env = sig
     (* pad: was previously an abstract type *)
     type 'proc env' = { scopes          :    scope list (* top = hd scopes *)
                        ; srcmap          :    Srcmap.map
+                       (* pad: the assembler is embeded in the fat env !! *)
                        ; asm             :    'proc Asm.assembler
+
                        ; error           :    bool
                        ; metrics         :    Metrics.t
                        ; extern          :    extern
@@ -93,6 +95,7 @@ module type Env = sig
     val empty   : Srcmap.map -> Metrics.t -> 'proc Asm.assembler -> 'proc env'
                            (* empty scope stack *)
     val srcmap  : 'proc env' -> Srcmap.map
+    (* pad: allow to access the assembler embeded in the fat env *)
     val asm     : 'proc env' -> 'proc Asm.assembler
     val metrics : 'proc env' -> Metrics.t
     (*x: bindings appearing in signature [[Env]] *)

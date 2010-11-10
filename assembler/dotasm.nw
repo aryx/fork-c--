@@ -78,8 +78,12 @@ object (this)
     method globals n = ()
 
     (* sections *)
-    method section s = _section <- s
-    method current   = _section
+    method section s = 
+      print_string "pad: Dotasm.section\n";
+      _section <- s
+    method current   = 
+      print_string "pad: Dotasm.current\n";
+      _section
 
     (* definitions *)
     method label s   = ()
@@ -92,10 +96,12 @@ object (this)
     method addloc n = ()
 
     method longjmp_size () =
+      print_string "pad: Dotasm.XXX\n";
       Impossible.unimp "longjmp size not set for dot -- needed for alternate returns"
 
     (* instructions *)
     method cfg_instr (proc : 'proc) =
+      print_string "pad: Dotasm.cfg_instr\n";
       let (cfg, proc) = proc in
       let s   = proc.Proc.symbol in
       let mangle  = Mangle.mk spec in

@@ -39,29 +39,39 @@ open Common
  *     subfunction: Elablstmt.elab_stmts taking some rtl hook,
  *      a region, a fenv, a nast.stmt list and returning a list of
  *      elaborate statements.
- *     todo: should unit test test
+ *     todo: should have some unit tests independent of nelab
  * 
  *   * DONE Rtl.Private.*, especially 'const', 'exp (in front_rtl/, 
  *     and its checker Rtldebug.typecheck, and
  *     its printer in Rtlutil.ToString.rtl)
  *     functions: Nelab.program will build a compunit containing Rtl stuff
  *      in its leaves
- *     todo: should unit test test
+ *     todo: should have some unit tests independent of front_elab/
  * 
  *   * DONE `proc Fenv.env (in front_fenv/)
  *     subfunction: Fenv.clean which takes a Dirty env and return a Clean env
- *     todo: should unit test test
+ *     note that the assembler is in the fatenv !!
+ *     todo: should have sone unit tests independent of front_elab/
  * 
  *   * Asm.assembler ?? (in front_asm/ )
  * 
  * 
  * - Cfg.S.cfg and especially Cfg.S.kind (in front_cfg/, and its printer in
- *   Cfg.S.print_node
+ *   Cfg.S.print_node) ??
  *  
  *    * Dag.block ??
  * 
- * - Zipcfg.graph and zgraph (in front_zipcfg/, 
+ * - Zipcfg.graph and zgraph (in front_zipcfg/, ) ???
  * 
+ * - Ast2ir.tgt (in front_ir/, ) ??
+ *   function: Ast2ir.translate
+ *   takes a tgt, build from ??? 
+ *   a clean fatenv, an optimizer ??, a nelab compunit
+ *   and does some side effects on the assembler in the clean fatenv.
+ * 
+ *    * - Target.?? machine ? t ? (in front_target/, ) ???
+ *  
+
  *)
 
 (*****************************************************************************)
@@ -106,14 +116,12 @@ let test_nelab file =
   let (srcmap, ast) = Driver.parse file in
   let nast = Nast.program ast in
 
-  let validator = 
-    fun rtl -> None (* ??? *)
-  in
-  let assembler = 
-    let chan = open_out "/tmp/cmm.dot" in
-    (* pad: does not really work :( create empty file *)
-    Dotasm.asm ~compress:false ~live:true chan
-  in
+  (* the assembler is rarely called by the nelab builder. It's part
+   * of the returned fatenv but it's not that used.
+   *)
+  let assembler = Dummyasm.asm in
+
+  let validator = fun rtl -> None (* ??? *) in
   let swap = true in (* ??? *)
 
   let res_or_error = 
@@ -140,12 +148,11 @@ let test_emit_asdl file =
 let test_driver_elab file =
   let (srcmap, ast) = Driver.parse file in
 
-  let chan = open_out "/tmp/cmm.dot" in
-  
-  let assembler = 
-    (* pad: does not really work :( create empty file *)
-    Dotasm.asm ~compress:false ~live:true chan
-  in
+  (* pad: does not really work :( create empty file 
+   *   let chan = open_out "/tmp/cmm.dot" in
+   *   Dotasm.asm ~compress:false ~live:true chan
+   *)
+  let assembler = Dummyasm.asm in
 
   let env_and_compunit_maybe = 
     Driver.elab 
