@@ -96,9 +96,13 @@ Generator Generator}, {\small ACM} Letters on Programming Languages and
 Systems 1, 3 (Sep 1992), 213-226.
 
 <<dummyexpander.mlb>>=
-%head {: <<utilities>> :}    
+%head {: 
+ <<utilities>> 
+ :}    
 <<terminal types>>
-%tail {: <<tail>> :}
+%tail {: 
+ <<tail>> 
+:}
 %%
 <<rules>>
 @
@@ -370,6 +374,7 @@ ireg:   App1("lobits",x,r1:ireg)          {: app1 itmp "lobits" x r1 :}
 ireg:   App1("neg",  x, r1:ireg)          {: app1 itmp "neg"  x r1 :}
 ireg:   App1("sx",   x, r1:ireg)          {: app1 itmp "sx"   x r1 :}
 ireg:   App1("zx",   x, r1:ireg)          {: app1 itmp "zx"   x r1 :}
+@ 
 
 <<rules>>=
 ireg:   App2("add",  x, r1:ireg, r2:ireg) {: app2 itmp "add"  x r1 r2 :}
@@ -401,6 +406,7 @@ freg:   App3("fadd", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fsub" x r1 r2 c:}
 freg:   App3("fsub", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fadd" x r1 r2 c:}
 freg:   App3("fdiv", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fdiv" x r1 r2 c:}
 freg:   App3("fmul", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fmul" x r1 r2 c:}
+@ 
 
 <<rules>>=
 --
@@ -433,11 +439,12 @@ let mem sp agg width addr ass=
     addr >>= fun a -> return (R.mem (U.assertion ass) sp agg width a)
 
 let reg sp i width = return (R.reg (sp, i, width))
-    
+@     
 
 <<rules>>=
 addr:       ireg  {: ireg >>= fun r -> return (fetch r) :}
 
+@ 
 <<rules>>=
 mem:        Mem('m', agg, width, addr, ass)  {: mem 'm' agg width addr ass :}
 @
@@ -502,6 +509,7 @@ let store left right width =
 let store' left right width =   (* right is a value, not a location *)
     left >>= fun l -> right >>= fun r -> 
     return (R.store l r width)
+@ 
 
 <<rules>>=
 stmt:       Store(mem,   ireg, width)       {: store mem   ireg  width :}

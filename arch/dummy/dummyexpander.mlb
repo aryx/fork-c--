@@ -1,0 +1,395 @@
+(*s: dummyexpander.mlb *)
+%head {: 
+ (*s: utilities *)
+ module R  = Rtl
+ module RP = Rtl.Private
+ module RU = Rtlutil
+ module S  = Space
+ module T  = Target
+ module C  = Camlburg
+ module D  = Rtl.Dn      (* Convert Down to private repr. *)
+ module U  = Rtl.Up       (* Convert Up    to abstract repr. *)
+ module W  = Rtlutil.Width 
+ module G  = Cfg4             (* for expanding all RTLs in a CFG *)
+ module GU = Cfgutil
+ (*x: utilities *)
+ exception Error of string
+ let error msg = raise (Error msg)
+ (*x: utilities *)
+ type state = R.rtl list * Talloc.Multiple.t
+ type 'a m  = state -> ('a * state)
+ (*x: utilities *)
+ let exec  rtl  = fun (rtls,tmp) -> ((), (rtl :: rtls,tmp)) 
+ (*x: utilities *)
+ let return a  = fun s -> (a, s)
+ let (>>=) (m: 'a m) (f: 'a -> 'b m) = fun s -> let (a,s) = m s in f a s 
+ (*x: utilities *)
+ let dtmp = function
+     | 2 -> fun(rtls, tmp as state) -> (R.reg ('d', 1, 2), state)
+     | w  -> Impossible.impossible 
+                 (Printf.sprintf "unsupported width for d-space register: %d" w)
+
+ let itmp = function
+     | 32 -> fun (rtls,tmp as state) -> (Talloc.Multiple.loc tmp 't' 32, state)
+     (*
+     | 8  -> fun (rtls,tmp as state) -> (Talloc.Multiple.loc tmp 'v'  8, state)
+     *)
+     | 8  -> fun (rtls,tmp as state) -> (Talloc.Multiple.loc tmp 't'  32, state)
+     | w  -> Impossible.impossible 
+                 (Printf.sprintf "unsupported width for int register: %d" w)
+ let ftmp = function
+     | 64 -> fun (rtls,tmp as state) -> (Talloc.Multiple.loc tmp 'u' 32, state)
+     | 32 -> fun (rtls,tmp as state) -> (Talloc.Multiple.loc tmp 'u' 32, state)
+     | 8  -> fun (rtls,tmp as state) -> (Talloc.Multiple.loc tmp 'u' 32, state)
+     | w  -> Impossible.impossible 
+                 (Printf.sprintf "unsupported width for float register: %d" w)
+ (*x: utilities *)
+ module StringSet = Set.Make(struct type t = string let compare = compare end)
+ (*x: utilities *)
+ let bool_ops2 = (* boolean valued primitive with non-boolean args *)
+     List.fold_right StringSet.add
+         ["eq"; "ge"; "geu"; "gt"; "gtu"; "le"; "leu"; "lt"; "ltu"; "ne"]
+          StringSet.empty
+
+ let is_bool_op2  op     = StringSet.mem op bool_ops2
+ let is_bool_op1  op     = op = "bool"
+ (*x: utilities *)
+ let fetch t = R.fetch t (W.loc t)
+ (*x: utilities *)
+ let bits2 n = R.bits (Bits.U.of_int n 2) 2
+
+ let app0 tmp s x =
+     let opr   = R.opr s x in
+     let exp   = R.app opr [] in
+     let width = W.exp exp in
+     tmp width >>= fun t -> 
+     (*
+     exec (R.store t exp width) >>= fun () ->
+     *)
+     return t
+
+ let app1 tmp s x arg1 =
+     arg1 >>= fun a1 ->
+     let opr   = R.opr s x in
+     let exp   = R.app opr [fetch a1] in
+     let width = W.exp exp in
+     tmp width >>= fun t ->
+     exec (R.store t exp width) >>= fun () ->
+     return t
+
+ let app2 tmp s x arg1 arg2 =
+     arg1 >>= fun a1 -> arg2 >>= fun a2 ->
+     let opr   = R.opr s x in
+     let exp   = R.app opr [fetch a1; fetch a2] in
+     let width = W.exp exp in
+     tmp width >>= fun t ->
+     exec (R.store t exp width) >>= fun () ->
+     return t
+
+ let app3 tmp s x arg1 arg2 arg3 =
+     arg1 >>= fun a1 -> arg2 >>= fun a2 -> arg3 >>= fun a3 ->
+     let opr   = R.opr s x in
+     let exp   = R.app opr [fetch a1; fetch a2; fetch a3] in
+     let width = W.exp exp in
+     tmp width >>= fun t ->
+     exec (R.store t exp width) >>= fun () ->
+     return t
+ (*x: utilities *)
+ let mem sp agg width addr ass=
+     addr >>= fun a -> return (R.mem (U.assertion ass) sp agg width a)
+
+ let reg sp i width = return (R.reg (sp, i, width))
+ (*x: utilities *)
+ let store left right width =
+     left >>= fun l -> right >>= fun r -> 
+     return (R.store l (R.fetch r width) width)
+
+ let store' left right width =   (* right is a value, not a location *)
+     left >>= fun l -> right >>= fun r -> 
+     return (R.store l r width)
+ (*e: utilities *)
+ :}    
+(*s: terminal types *)
+%term k width opr exps agg ass index bool bits link late x
+(*e: terminal types *)
+%tail {: 
+ (*s: tail *)
+ let rec map f = function
+     | []                        -> conNil ()
+     | x::xs                     -> conCons (f x) (map f xs)
+ (*x: tail *)
+ let rec exp = function
+     | RP.Const(RP.Bool(true))   -> conTrue()
+     | RP.Const(RP.Bool(false))  -> conFalse()
+     | RP.Const(k)               -> conConst(k)
+     | RP.Fetch(l,w)             -> conFetch (loc l) w
+     | RP.App((o,x),[])          -> conApp0 o x
+     | RP.App((o,x),[e1])        -> conApp1 o x (exp e1)
+     | RP.App((o,x),[e1;e2])     -> conApp2 o x (exp e1) (exp e2)
+     | RP.App((o,x),[e1;e2;e3])  -> conApp3 o x (exp e1) (exp e2) (exp e3)
+     | _                         -> error "application with too many args"
+
+ and loc = function
+     | RP.Mem(char, aff, w, e, ass) -> conMem char aff w (exp e) ass 
+     | RP.Reg(sp, i, w)          -> conReg sp i w
+     | RP.Var(s, i, w)           -> conVar ()
+     | RP.Slice(w,i,loc)         -> conSlice ()
+    
+ and stmt = function
+     | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+     | RP.Kill(loc)              -> conKill ()
+
+ and guarded (e,eff)             =  conGStmt (exp e) (stmt eff)
+
+ and rtl = function
+     | RP.Rtl(gs)                -> conRtl (map guarded gs)
+ (*x: tail *)
+ let expand tmps (r: R.rtl) = 
+     let plan = rtl (D.rtl r) in
+     try
+         match plan.rtl.Camlburg.action () ([],tmps) with
+             | (), (rtls,_) -> rtls
+     with 
+         Camlburg.Uncovered -> 
+             ( List.iter prerr_endline
+                 [ "cannot expand this RTL:"
+                 ; RU.ToUnreadableString.rtl r
+                 ]
+             ; assert false
+             )
+ (*x: tail *)
+ let cfg proc =
+     let nodes       = GU.fold_bwd proc.Proc.cfg (fun n ns -> n::ns) []
+     and tmps        = proc.Proc.temps   (* source for temporaries *)
+     and insert n i  = G.gm_insert_assign_before i n
+     and modified    = ref false in
+     let expnd node =
+         match expand tmps (G.instr node) with
+         | last :: preds ->
+             ( ignore (List.fold_left insert node preds)
+             ; G.upd_instr node (fun _ -> last)
+             ; modified := (preds <> [])
+             )
+         | [] -> assert false 
+     in    
+         ( List.iter expnd nodes
+         ; !modified
+         )
+ (*x: tail *)
+ module Make (ProcT: Lua.Lib.TYPEVIEW with type 'a t = Proc.t): 
+     Lua.Lib.USERCODE with type 'a userdata' = 'a ProcT.combined =
+ struct
+     type 'a userdata' = 'a ProcT.combined
+     module M (C : Lua.Lib.CORE with type 'a V.userdata' = 'a userdata') =
+     struct
+       module V  = C.V
+
+       let ( **-> ) = V.( **-> )
+       let proc     = ProcT.makemap V.userdata V.projection
+       let init =
+         C.register_module "Expander" 
+         [ "dummy", V.efunc (V.value **-> proc **-> V.result V.bool) (fun _ -> cfg)
+         ] 
+ 	(* FIX -- want proper stage *)
+     end (*M*)    
+ end (*Make*)            
+ (*e: tail *)
+:}
+%%
+(*s: rules *)
+const:      Const(k)
+            {: return (U.exp (RP.Const(k))) :}
+
+-- r := k   
+ireg:       const [1]
+            {:  const                                >>= fun k ->
+                itmp (W.exp k)                       >>= fun t  ->
+                exec (R.store t k (W.exp k))         >>= fun () ->
+                return t
+            :}
+
+-- r := $m[addr]            
+ireg:       Fetch(mem,width) [1]
+            {:  mem           >>= fun m ->
+                itmp width    >>= fun t -> 
+                exec (R.store t (R.fetch m width) width) >>= fun () ->
+                return t
+            :}  
+            
+-- f := $m[addr]
+freg:       Fetch(mem,width) [1]
+            {:  mem           >>= fun m ->
+                ftmp width    >>= fun u -> 
+                exec (R.store u (R.fetch m width) width) >>= fun () ->
+                return u
+            :}
+(*x: rules *)
+ireg:       Fetch(icell,width) {: icell :}
+freg:       Fetch(fcell,width) {: fcell :}    
+dreg:       Fetch(dcell,width) {: dcell :} 
+(*x: rules *)
+dreg:   App0("float_eq", x)               {: app0 dtmp "float_eq" x :}
+dreg:   App0("float_gt", x)               {: app0 dtmp "float_gt" x :}
+dreg:   App0("float_lt", x)               {: app0 dtmp "float_lt" x :}
+dreg:   App0("unordered", x)              {: app0 dtmp "unordered" x :}
+
+const:  App0("round_down", x)             {: return (bits2 3) :}  
+const:  App0("round_nearest", x)          {: return (bits2 1) :}
+const:  App0("round_up", x)               {: return (bits2 2) :}
+const:  App0("round_zero", x)             {: return (bits2 0) :}
+
+
+ireg:   App1("com",  x, r1:ireg)          {: app1 itmp "com"  x r1 :}
+ireg:   App1("lobits",x,r1:ireg)          {: app1 itmp "lobits" x r1 :}
+ireg:   App1("neg",  x, r1:ireg)          {: app1 itmp "neg"  x r1 :}
+ireg:   App1("sx",   x, r1:ireg)          {: app1 itmp "sx"   x r1 :}
+ireg:   App1("zx",   x, r1:ireg)          {: app1 itmp "zx"   x r1 :}
+(*x: rules *)
+ireg:   App2("add",  x, r1:ireg, r2:ireg) {: app2 itmp "add"  x r1 r2 :}
+ireg:   App2("and",  x, r1:ireg, r2:ireg) {: app2 itmp "and"  x r1 r2 :}
+ireg:   App2("div",  x, r1:ireg, r2:ireg) {: app2 itmp "div"  x r1 r2 :}
+ireg:   App2("divu", x, r1:ireg, r2:ireg) {: app2 itmp "divu" x r1 r2 :}
+ireg:   App2("mod",  x, r1:ireg, r2:ireg) {: app2 itmp "mod"  x r1 r2 :}
+ireg:   App2("modu", x, r1:ireg, r2:ireg) {: app2 itmp "modu" x r1 r2 :}
+ireg:   App2("mul",  x, r1:ireg, r2:ireg) {: app2 itmp "mul"  x r1 r2 :}
+ireg:   App2("or",   x, r1:ireg, r2:ireg) {: app2 itmp "or"   x r1 r2 :}
+ireg:   App2("quot", x, r1:ireg, r2:ireg) {: app2 itmp "quot" x r1 r2 :}
+ireg:   App2("rem",  x, r1:ireg, r2:ireg) {: app2 itmp "rem"  x r1 r2 :}
+ireg:   App2("rotl", x, r1:ireg, r2:ireg) {: app2 itmp "rotl" x r1 r2 :}
+ireg:   App2("rotr", x, r1:ireg, r2:ireg) {: app2 itmp "rotr" x r1 r2 :}
+ireg:   App2("shl",  x, r1:ireg, r2:ireg) {: app2 itmp "shl"  x r1 r2 :}
+ireg:   App2("shra", x, r1:ireg, r2:ireg) {: app2 itmp "shra" x r1 r2 :}
+ireg:   App2("shrl", x, r1:ireg, r2:ireg) {: app2 itmp "shrl" x r1 r2 :}
+ireg:   App2("sub",  x, r1:ireg, r2:ireg) {: app2 itmp "sub"  x r1 r2 :}
+ireg:   App2("xor",  x, r1:ireg, r2:ireg) {: app2 itmp "xor"  x r1 r2 :}
+
+freg:   App1("fneg", x, r1:freg)          {: app1 ftmp "fneg" x r1 :}
+
+freg:   App2("f2i",  x, r1:freg, r2:dreg) {: app2 itmp "f2i"  x r1 r2 :}
+freg:   App2("i2f",  x, r1:ireg, r2:dreg) {: app2 ftmp "i2f"  x r1 r2 :}
+freg:   App2("f2f",  x, r1:freg, r2:dreg) {: app2 ftmp "f2f"  x r1 r2 :}
+
+-- FP operations use a rounding mode
+freg:   App3("fadd", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fsub" x r1 r2 c:}
+freg:   App3("fsub", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fadd" x r1 r2 c:}
+freg:   App3("fdiv", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fdiv" x r1 r2 c:}
+freg:   App3("fmul", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fmul" x r1 r2 c:}
+(*x: rules *)
+--
+-- Floating point comparison results are ALWAYS stored in a hardware
+-- register. This is a hack.
+--
+
+dreg:      App2("fcmp", x, f1:freg, f2:freg) [1]
+            {:
+                f1 >>= fun f1 -> f2 >>= fun f2 ->
+                let o        = R.opr "fcmp" x in
+                let exp      = R.app o [fetch f1; fetch f2] in
+                let fpcond n = R.reg ('d', n, 2) in
+                let r        = fpcond 1 in
+                exec (R.store r exp 2) >>= fun () ->
+                return r
+            :}    
+(*x: rules *)
+addr:       ireg  {: ireg >>= fun r -> return (fetch r) :}
+
+(*x: rules *)
+mem:        Mem('m', agg, width, addr, ass)  {: mem 'm' agg width addr ass :}
+(*x: rules *)
+icell:      Reg('r', index, width) {: reg 'r' index width :} 
+icell:      Reg('t', index, width) {: reg 't' index width :} 
+icell:      Reg('g', index, width) {: reg 'g' index width :} 
+icell:      Reg('v', index, width) {: reg 'v' index width :} 
+fcell:      Reg('f', index, width) {: reg 'f' index width :} 
+fcell:      Reg('u', index, width) {: reg 'u' index width :} 
+dcell:      Reg('d', index, width) {: reg 'd' index width :} 
+ccell:      Reg('c', index, width) {: reg 'c' index width :} 
+
+error:      Reg(x:char, index, width)
+            {: error (Printf.sprintf "register in space '%c'" x) :}
+
+error:      Mem(x:char, agg, width, addr, ass) [10]
+            {: error (Printf.sprintf "cell in space '%c'" x) :}    
+(*x: rules *)
+-- t := f
+ireg:       freg [10]    
+            {:  
+                freg                                >>= fun u  ->
+                let w = W.loc u in 
+                itmp w                              >>= fun t  ->
+                exec (R.store t (R.fetch u w) w)    >>= fun () ->
+                return t
+            :} 
+
+-- f := t            
+freg:       ireg [10]    
+            {:  
+                ireg                                >>= fun t ->
+                let w = W.loc t in
+                ftmp w                              >>= fun u  ->
+                exec (R.store u (R.fetch t w) w)    >>= fun () ->
+                return u
+            :} 
+(*x: rules *)
+stmt:       Store(mem,   ireg, width)       {: store mem   ireg  width :}
+stmt:       Store(mem,   freg, width)       {: store mem   freg  width :}
+stmt:       Store(icell, ireg, width)       {: store icell ireg  width :}
+stmt:       Store(fcell, freg, width)       {: store fcell freg  width :}
+stmt:       Store(ccell, ireg, width) [1]   {: store ccell ireg  width :}
+stmt:       Store(dcell, dreg, width)       {: store dcell dreg  width :}
+stmt:       Store(dcell, const, width)      {: store' dcell const width :}
+stmt:       Store(ccell, const,width)       {: store' ccell const width :}
+(*x: rules *)
+guard:      True()  {: return (R.bool true)  :}
+guard:      False() {: return (R.bool false) :}
+
+guard:      App2(o:string, x, r1:ireg, r2:ireg) 
+            [{: if is_bool_op2 o then 0 else C.inf_cost  :}]
+            {:  
+                r1 >>= fun r1 -> r2 >>= fun r2 ->
+                let opr = R.opr o x in
+                return (R.app opr [fetch r1; fetch r2])
+            :}    
+
+-- we need an extra rule for floating point results that always
+-- stay in 'd' space.
+
+guard:      App2(o:string, x, r1:dreg, r2:dreg) 
+            [{: if is_bool_op2 o then 0 else C.inf_cost  :}]
+            {:  
+                r1 >>= fun r1 -> r2 >>= fun r2 ->
+                let opr = R.opr o x in
+                return (R.app opr [fetch r1; fetch r2])
+            :}    
+
+guard:      App1(o:string, x, r1:ireg)
+            [{: if is_bool_op1 o then 0 else C.inf_cost  :}]
+            {:  
+                r1 >>= fun r1 -> 
+                let opr = R.opr o x in
+                return (R.app opr [fetch r1])
+            :}    
+           
+gstmt:      GStmt(guard,stmt)
+            {: 
+                guard >>= fun g ->
+                stmt  >>= fun s -> 
+                return (R.guard g s) 
+            :}
+
+gstmts:     Nil() {:  return [] :}
+gstmts:     Cons(gstmt,gstmts)
+            {: gstmt  >>= fun s  -> gstmts >>= fun ss -> return (s::ss) :}
+(*x: rules *)
+rtl:        Rtl(gstmts) [1]
+            {:
+                gstmts            >>= fun rtls ->
+                exec (R.par rtls) >>= fun ()  ->
+                return ()
+            :}
+(*x: rules *)
+error:      Kill()  {: error "cannot handle Kill" :}
+error:      Var()   {: error "Var constructor" :}
+error:      Slice() {: error "Slice constrictor" :}
+(*e: rules *)
+(*e: dummyexpander.mlb *)
