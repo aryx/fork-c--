@@ -150,6 +150,10 @@ let test_nelab file =
   pr2_gen res_or_error
   
 
+let test_rtl file =
+  (* use Rtldebug ? *)
+  raise Todo
+
 (*---------------------------------------------------------------------------*)
 (* misc *)
 (*---------------------------------------------------------------------------*)
@@ -163,6 +167,7 @@ let test_driver_scan file =
 let test_emit_asdl file =
   let (srcmap, ast) = Driver.parse file in
   Driver.emit_asdl (srcmap, ast)
+
 
 let test_driver_elab file =
   let (srcmap, ast) = Driver.parse file in
@@ -183,9 +188,29 @@ let test_driver_elab file =
   pr2_gen env_and_compunit_maybe;
   ()
 
-let test_rtl file =
-  (* use Rtldebug ? *)
-  raise Todo
+let test_driver_compile file =
+  let (srcmap, ast) = Driver.parse file in
+
+  let tgt = Dummy.dummy32b' in
+  let asm = 
+      let chan = open_out "/tmp/cmm.dot" in
+      Dotasm.asm ~compress:false ~live:true chan
+  in
+  (* pad: ugly *)
+  Block._empty_vfp_hook := (fun ptrwidth ->
+    Block.relative (Vfp.mk ptrwidth) "empty block" 
+      Block.at ~size:0 ~alignment:1;
+  );
+
+  Driver.compile
+    tgt
+    (fun proc -> ()) (* ?? optimizer ? *)
+    ~exportglobals:true (* ?? *)
+    ~src:(srcmap, ast)
+    ~asm
+    ~validate:true (* ?? *)
+    ~swap:true (* ?? *);
+  ()
 
 
 (*---------------------------------------------------------------------------*)
@@ -202,6 +227,8 @@ let extra_actions () = [
     Common.mk_action_1_arg test_emit_asdl;
     "-driver_elab", "  <file>", 
     Common.mk_action_1_arg test_driver_elab;
+    "-driver_compile", "  <file>", 
+    Common.mk_action_1_arg test_driver_compile;
 
     "-test_nast", "  <file>", 
     Common.mk_action_1_arg test_nast;

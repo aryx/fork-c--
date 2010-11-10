@@ -33,10 +33,12 @@ let add exp i = RU.addk (RU.Width.exp exp) exp i
 let offset base name ptrwidth =
     RU.add ptrwidth base (Rtl.late (Idgen.offset name) ptrwidth)
 
+let _empty_vfp_hook = ref (fun ptrwidth -> failwith "_empty_vfp_hook not set")
 let empty ptrwidth = 
-  failwith "TODO: pad: port Vfp"
-(*
+  !_empty_vfp_hook ptrwidth
+(* pad: was 
     relative (Vfp.mk ptrwidth) "empty block" at ~size:0 ~alignment:1
+  but it was bringing too many dependencies
 *)
 (*x: block.ml *)
 let cathl hi lo =
