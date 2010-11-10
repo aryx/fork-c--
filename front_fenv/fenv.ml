@@ -67,10 +67,22 @@ module type Env = sig
     val  bad: unit -> 'a info
 
     (*s: bindings appearing in signature [[Env]] *)
-    type 'proc env'
-
+    (* pad: was previously an abstract type *)
+    type 'proc env' = { scopes          :    scope list (* top = hd scopes *)
+                       ; srcmap          :    Srcmap.map
+                       ; asm             :    'proc Asm.assembler
+                       ; error           :    bool
+                       ; metrics         :    Metrics.t
+                       ; extern          :    extern
+                       ; globals         :    string  list(* global registers *)
+                       ; stackdata       :    stackdata
+                       }
     (* type env = Proc.t env' *)
-    type scope
+    and scope           = { mutable venv:   ventry Strutil.Map.t
+                       ; tenv:   tentry Strutil.Map.t
+                       ; rindex: int   (* getIndex, nextIndex *)
+                       }
+
     (*s: types exposed in signature [[Env]] *)
     and  ventry        = Srcmap.rgn * (denotation * Types.ty) info
     (*x: types exposed in signature [[Env]] *)

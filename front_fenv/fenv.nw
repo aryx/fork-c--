@@ -91,6 +91,8 @@ values are present and that they are good.
 
 <<fenv.mli>>=
 <<exposed types shared by clean and dirty environments>>
+(* pad: now put also those private types in mli *)
+<<private types shared by clean and dirty environments>>
 <<exported signature [[Env]]>>
 
 module Dirty : Env
@@ -130,10 +132,22 @@ BECAUSE THE FAT ENVIRONMENT HOLDS THE ASSOCIATION BETWEEN A NAME AND ITS
 SYMBOL. WE ALREADY HAVE PLANS TO TO IMPLEMENT A LOOKUP FUNCTION IN THE
 ASSEMBLER AND TO EXPELL THE SYMBOL FROM HERE. --CL
 <<bindings appearing in signature [[Env]]>>=
-type 'proc env'
-
+(* pad: was previously an abstract type *)
+type 'proc env' = { scopes          :    scope list (* top = hd scopes *)
+                   ; srcmap          :    Srcmap.map
+                   ; asm             :    'proc Asm.assembler
+                   ; error           :    bool
+                   ; metrics         :    Metrics.t
+                   ; extern          :    extern
+                   ; globals         :    string  list(* global registers *)
+                   ; stackdata       :    stackdata
+                   }
 (* type env = Proc.t env' *)
-type scope
+and scope           = { mutable venv:   ventry Strutil.Map.t
+                   ; tenv:   tentry Strutil.Map.t
+                   ; rindex: int   (* getIndex, nextIndex *)
+                   }
+
 <<types exposed in signature [[Env]]>>
 val map : ('b -> 'a) -> 'a env' -> 'b env'
 

@@ -15,13 +15,46 @@ Breakpoint : 1
 res_or_error :
   (Ast2ir.proc Fenv.Dirty.env' * Ast2ir.proc Nelab.compunit) Error.error =
   Error.Ok
-   (<abstr>,
+   ({Fenv.Dirty.scopes =
+      [{Fenv.Dirty.venv = <abstr>; Fenv.Dirty.tenv = <abstr>;
+        Fenv.Dirty.rindex = 0}];
+     Fenv.Dirty.srcmap = <abstr>; Fenv.Dirty.asm = <obj>;
+     Fenv.Dirty.error = false;
+     Fenv.Dirty.metrics =
+      {Metrics.byteorder = Rtl.BigEndian; Metrics.wordsize = 32;
+       Metrics.pointersize = 32; Metrics.memsize = 8;
+       Metrics.float = "ieee754"; Metrics.charset = "latin1"};
+     Fenv.Dirty.extern =
+      {Fenv.imported = <abstr>; Fenv.exported = <abstr>;
+       Fenv.nam2sym = <abstr>};
+     Fenv.Dirty.globals = [];
+     Fenv.Dirty.stackdata =
+      {Fenv.soffset = 0; Fenv.smaxalign = 1; Fenv.sname = "can't happen"}},
     {Nelab.globals = [];
      Nelab.sections =
       [("text",
         [Nelab.Procedure
-          {Nelab.env = <abstr>; Nelab.sym = <obj>; Nelab.cc = "C";
-           Nelab.name = "main"; Nelab.spans = [];
+          {Nelab.env =
+            {Fenv.Dirty.scopes =
+              [{Fenv.Dirty.venv = <abstr>; Fenv.Dirty.tenv = <abstr>;
+                Fenv.Dirty.rindex = 0};
+               {Fenv.Dirty.venv = <abstr>; Fenv.Dirty.tenv = <abstr>;
+                Fenv.Dirty.rindex = 0}];
+             Fenv.Dirty.srcmap = <abstr>; Fenv.Dirty.asm = <obj>;
+             Fenv.Dirty.error = false;
+             Fenv.Dirty.metrics =
+              {Metrics.byteorder = Rtl.BigEndian; Metrics.wordsize = 32;
+               Metrics.pointersize = 32; Metrics.memsize = 8;
+               Metrics.float = "ieee754"; Metrics.charset = "latin1"};
+             Fenv.Dirty.extern =
+              {Fenv.imported = <abstr>; Fenv.exported = <abstr>;
+               Fenv.nam2sym = <abstr>};
+             Fenv.Dirty.globals = [];
+             Fenv.Dirty.stackdata =
+              {Fenv.soffset = 0; Fenv.smaxalign = 1;
+               Fenv.sname = "can't happen"}};
+           Nelab.sym = <obj>; Nelab.cc = "C"; Nelab.name = "main";
+           Nelab.spans = [];
            Nelab.formals =
             [(0, "", Ast.Variant, 32, "argc", 1);
              (1, "address", Ast.Variant, 32, "argv", 1)];
@@ -51,8 +84,27 @@ res_or_error :
            Nelab.basic_block = false}]);
        ("text",
         [Nelab.Procedure
-          {Nelab.env = <abstr>; Nelab.sym = <obj>; Nelab.cc = "C--";
-           Nelab.name = "tryout"; Nelab.spans = [];
+          {Nelab.env =
+            {Fenv.Dirty.scopes =
+              [{Fenv.Dirty.venv = <abstr>; Fenv.Dirty.tenv = <abstr>;
+                Fenv.Dirty.rindex = 0};
+               {Fenv.Dirty.venv = <abstr>; Fenv.Dirty.tenv = <abstr>;
+                Fenv.Dirty.rindex = 0}];
+             Fenv.Dirty.srcmap = <abstr>; Fenv.Dirty.asm = <obj>;
+             Fenv.Dirty.error = false;
+             Fenv.Dirty.metrics =
+              {Metrics.byteorder = Rtl.BigEndian; Metrics.wordsize = 32;
+               Metrics.pointersize = 32; Metrics.memsize = 8;
+               Metrics.float = "ieee754"; Metrics.charset = "latin1"};
+             Fenv.Dirty.extern =
+              {Fenv.imported = <abstr>; Fenv.exported = <abstr>;
+               Fenv.nam2sym = <abstr>};
+             Fenv.Dirty.globals = [];
+             Fenv.Dirty.stackdata =
+              {Fenv.soffset = 0; Fenv.smaxalign = 1;
+               Fenv.sname = "can't happen"}};
+           Nelab.sym = <obj>; Nelab.cc = "C--"; Nelab.name = "tryout";
+           Nelab.spans = [];
            Nelab.formals = [(0, "", Ast.Variant, 32, "n", 1)];
            Nelab.locals =
             [{Fenv.index = 1; Fenv.rkind = Fenv.RNone;

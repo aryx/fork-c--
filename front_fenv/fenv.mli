@@ -36,6 +36,18 @@ and continuation = { base       : Block.t;   (* always empty; used only for addr
 and convention   = string
 and aligned      = int
 (*e: exposed types shared by clean and dirty environments *)
+(* pad: now put also those private types in mli *)
+(*s: private types shared by clean and dirty environments *)
+type stackdata =      { soffset    :    int    (* current offset *)
+                      ; smaxalign  :    int    (* max stackdata align constr*)
+                      ; sname      :    string (* label for offset *)
+                      }
+(*x: private types shared by clean and dirty environments *)
+type extern         = { imported:     Strutil.Set.t
+                      ; exported:     Strutil.Set.t
+                      ; nam2sym:      Symbol.t Strutil.Map.t
+                      }
+(*e: private types shared by clean and dirty environments *)
 (*s: exported signature [[Env]] *)
 module type Env = sig
     type 'a info
@@ -43,10 +55,22 @@ module type Env = sig
     val  bad: unit -> 'a info
 
     (*s: bindings appearing in signature [[Env]] *)
-    type 'proc env'
-
+    (* pad: was previously an abstract type *)
+    type 'proc env' = { scopes          :    scope list (* top = hd scopes *)
+                       ; srcmap          :    Srcmap.map
+                       ; asm             :    'proc Asm.assembler
+                       ; error           :    bool
+                       ; metrics         :    Metrics.t
+                       ; extern          :    extern
+                       ; globals         :    string  list(* global registers *)
+                       ; stackdata       :    stackdata
+                       }
     (* type env = Proc.t env' *)
-    type scope
+    and scope           = { mutable venv:   ventry Strutil.Map.t
+                       ; tenv:   tentry Strutil.Map.t
+                       ; rindex: int   (* getIndex, nextIndex *)
+                       }
+
     (*s: types exposed in signature [[Env]] *)
     and  ventry        = Srcmap.rgn * (denotation * Types.ty) info
     (*x: types exposed in signature [[Env]] *)
