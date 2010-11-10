@@ -14,6 +14,41 @@ open Common
 (*****************************************************************************)
 
 (*
+ * Pad's driver for the different c-- analysis. Here are the important
+ * types and analysis. They are mostly in the same order than MAKESUBDIRS
+ * in the Makefile:
+ * 
+ * - DONE Common.filename
+ * 
+ * - DONE Ast.program (in parsing/, and its printer Astpp.emit)
+ *   functions: Parse_cmm.tokens, Parse_cmm.parse, Driver.parse
+ *   todo: a vof_ast that pretty prints cleanly
+ * 
+ * - DONE Nast.t (in front_nelab/)
+ *   functions: Nast.program
+ *   todo: a vof_nast that pretty prints cleanly
+ * 
+ * - 'a Nelab.compunit * 'a Fenv.Dirty.env' (in front_nelab/)
+ *   functions: Nelab.program taking lots of parameters
+ * 
+ *   'compunit' contains itself some mentions to Rtl and the 'a variable
+ *   is bounded to a polymorphic assembler passed as a parameter to the
+ *   'compunit' builder. Here are then the dependent submodules:
+ * 
+ *   * Rtl.?? (in front_rtl/, and its checker Rtldebug.typecheck, and
+ *     its printer in Rtlutil.ToString.rtl)
+ * 
+ *   * Asm.assembler ?? (in front_asm/ )
+ * 
+ *   * Fenv.??? (in front_fenv/)
+ * 
+ * - Cfg.S.cfg and especially Cfg.S.kind (in front_cfg/, and its printer in
+ *   Cfg.S.print_node
+ *  
+ *    * Dag.block ??
+ * 
+ * - Zipcfg.graph and zgraph (in front_zipcfg/, 
+ * 
  *)
 
 (*****************************************************************************)
@@ -32,22 +67,58 @@ let version = "0.1"
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* Extra action *)
+(* Subsystems actions *)
 (*****************************************************************************)
 
+(* filename -> ast *)
 let test_driver_parse file =
   let (srcmap, ast) = Driver.parse file in
+
+  (* todo: write a vof_ast so can pretty print it cleanly *)
 
   let pp = Astpp.program ast in
   let s = Pp.ppToString 0 pp in
   pr2 s;
   ()
 
-let test_driver_scan file =
-  Driver.scan file
+(* filename -> ast -> nast *)
+let test_nast file =
+  let (srcmap, ast) = Driver.parse file in
+  let nast = Nast.program ast in
+  (* todo: write a vof_nast so can pretty print that *)
+  pr2_gen nast
+
+(* filename -> ast -> nast -> nelab *)
+let test_nelab file =
+  let (srcmap, ast) = Driver.parse file in
+  let nast = Nast.program ast in
+
+  let validator = 
+    fun rtl -> None (* ??? *)
+  in
+  let assembler = 
+    let chan = open_out "/tmp/cmm.dot" in
+    (* pad: does not really work :( create empty file *)
+    Dotasm.asm ~compress:false ~live:true chan
+  in
+  let swap = true in (* ??? *)
+
+  let res_or_error = 
+    Nelab.program ~swap validator srcmap assembler nast
+  in
+  (* todo: write a vof_compunit and vof_fenv so can pretty print that *)
+  pr2_gen res_or_error
+  
+
+(*---------------------------------------------------------------------------*)
+(* misc *)
+(*---------------------------------------------------------------------------*)
 
 let test_driver_version () =
   Driver.version ()
+
+let test_driver_scan file =
+  Driver.scan file
 
 let test_emit_asdl file =
   let (srcmap, ast) = Driver.parse file in
@@ -77,20 +148,32 @@ let test_rtl file =
   (* use Rtldebug ? *)
   raise Todo
 
+
+(*---------------------------------------------------------------------------*)
+(* The command line actions *)
+(*---------------------------------------------------------------------------*)
+
 let extra_actions () = [
     "-driver_parse", "   <file>", 
     Common.mk_action_1_arg test_driver_parse;
     "-driver_scan", "   <file>", 
     Common.mk_action_1_arg test_driver_scan;
+
     "-driver_emit_asdl", "   <file>", 
     Common.mk_action_1_arg test_emit_asdl;
     "-driver_elab", "  <file>", 
     Common.mk_action_1_arg test_driver_elab;
-    "-driver_version", "   ", 
-    Common.mk_action_0_arg test_driver_version;
+
+    "-test_nast", "  <file>", 
+    Common.mk_action_1_arg test_nast;
+    "-test_nelab", "  <file>", 
+    Common.mk_action_1_arg test_nelab;
 
     "-test_rtl", "  <file>", 
     Common.mk_action_1_arg test_rtl;
+
+    "-driver_version", "   ", 
+    Common.mk_action_0_arg test_driver_version;
 ]
 
 (*****************************************************************************)
@@ -100,10 +183,6 @@ let extra_actions () = [
 
 let main_action xs = 
   raise Todo
-
-(*****************************************************************************)
-(* Extra actions *)
-(*****************************************************************************)
 
 
 (*****************************************************************************)
