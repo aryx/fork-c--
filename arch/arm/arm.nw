@@ -35,6 +35,7 @@ let unimp               = Impossible.unimp
 let impossible          = Impossible.impossible
 let rtl r = PX.Rtl r
 let (<:>) = PX.(<:>)
+@ 
 <<utilities that depend on [[byteorder]] or [[wordsize]]>>=
 let fetch_word l        = R.fetch l   wordsize
 let store_word l e      = R.store l e wordsize
@@ -131,6 +132,7 @@ let return = R.store pc (fetch_word (R.reg ra))
 module Post = struct
     <<ARM postexpander>>
 end
+@ 
 
 <<ARM postexpander>>=
 let byte_order  = byteorder
@@ -464,3 +466,4 @@ let target : Ast2ir.tgt =
     ; T.charset             = "latin1" (* REMOVE THIS FROM TARGET.T *)
     }    
 
+@ 
