@@ -15,7 +15,7 @@ SYSLIBS=
 
 LIBS=
 
-INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
+INCLUDEDIRS= $(TOP)/commons2 \
   $(TOP)/error \
 
 #  $(TOP)/h_asdl \
