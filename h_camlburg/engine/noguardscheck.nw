@@ -508,3 +508,6 @@ let gen_elf spec =
 <<twelf rule type>>
 <<twelf code generation functions>>
 @ 
+
+<<noguardscheck.mli>>=
+@ 

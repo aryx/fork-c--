@@ -46,6 +46,7 @@ mangler must be created before it can be used; it captures hidden state.
 
 <<types>>=
 type t = string -> string
+@ 
 
 <<mangler.mli>>=
 <<types>>

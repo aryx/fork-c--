@@ -352,6 +352,7 @@ by their cost.
         else
             (* composed chain_fn *) { x with number = nt }
 *)
+@ 
 <<CodeGen>>=
 let update_fn src chainrules =
     let arg     = C.recordwith x [src, C.id nt]             
@@ -362,6 +363,7 @@ let update_fn src chainrules =
                            (C.longid [x;src;camlburg;cost]))
                       (C.id x)
                       (compose chns arg)) 
+@ 
 <<CodeGen>>=
 (*  
     let rec update_number = (* update_fn *) 
