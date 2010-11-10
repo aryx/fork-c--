@@ -22,6 +22,7 @@ LIBS= \
 MAKESUBDIRS= \
    parsing \
    engine \
+   demos \
 
 INCLUDEDIRS=$(MAKESUBDIRS) \
   ../commons2 ../error ../commons3

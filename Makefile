@@ -40,6 +40,7 @@ MAKESUBDIRS= \
    error \
    commons3 \
    h_asdl \
+   h_camlburg \
    parsing \
    front_rtl \
    front_asm  front_fenv \

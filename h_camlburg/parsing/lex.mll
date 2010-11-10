@@ -39,6 +39,9 @@ rule token = parse
     eof                     { fun map -> T.EOF(map) }
   | [' ' '\t' '\r']+        { fun map -> token lexbuf map } 
   | "--" [^ '\n']*          { fun map -> token lexbuf map } (* comment *)
+  (* pad: to make easier for syncweb generated files *)
+  | "/*" [^ '\n']*          { fun map -> token lexbuf map } (* comment *)
+  | "(*" [^ '\n']*          { fun map -> token lexbuf map } (* comment *)
   | nl                      { fun map -> nl lexbuf map; token lexbuf map }
   | nl [' ' '\t' '\r']* '#' { fun map -> line lexbuf map 0; token lexbuf map }
   | '#'                     { fun map ->
