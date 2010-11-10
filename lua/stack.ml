@@ -1,47 +1,8 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-% vim: ts=8 sw=4 et:
-
-% ------------------------------------------------------------------ 
-\section{Stack Layout in Lua}
-% ------------------------------------------------------------------ 
-
-This module implements Lua primitives that allow to define the frame
-layout for a procedure in Lua. [[Blocks]] provides a list of named
-blocks that must be assembled by the layout function into one block.
-[[Freeze]] takes this block and realizes the layout by performing final
-substitutions in the procedure's code. For the names available, just see
-the list in the implementation of [[blocks]] below.
-
-The functions exported here are bound to Lua functions in module
-\module{lualink}.
-
-<<stack.mli>>=
-val blocks:
-  (Block.t -> 'a) -> ('a list -> 'a) -> ((string * 'a) list -> 'a) ->
-  Ast2ir.proc -> (string * 'a) list
-val freeze: Ast2ir.proc -> Block.t -> Ast2ir.proc
-val replace_slot_temporaries : Ast2ir.proc -> Ast2ir.proc * (string * Block.t) list
-@
-% ------------------------------------------------------------------ 
-\subsection{Implementation}
-% ------------------------------------------------------------------ 
-
-<<stack.ml>>=
+(*s: stack.ml *)
 module PA = Preast2ir
 module T  = Target
 module RP = Rtl.Private
-@
-[[blocks]] builds a list table of (named) blocks taken from the actual
-procedure.  This table will be passed to the Lua function that actually
-assembles the blocks into one that becomes the stack frame. 
-
-Some blocks are special: the blocks named [[sp]] and [[vfp]] are
-empty, but they are useful because their addresses are the
-``standard'' stack
-pointer and the virtual frame pointer respectively. It can be
-therefore used by the frame-assembling Lua function to define where the
-stack pointer points into the frame. 
-<<stack.ml>>=
+(*x: stack.ml *)
 let blocks' frozen_block block list table (g, p) =
     let blockspair p = table [ "callee", list (List.map block p.Call.callee)
                              ; "caller", list (List.map block p.Call.caller) ] in
@@ -65,7 +26,12 @@ let freeze' apply_to_proc (g, p) (stack:Block.t) =
     let solution = 
         try Rtleqn.solve pointer eqns 
         with Rtleqn.Can'tSolve -> 
-        <<complain of unsolved [[eqns]] for [[p]]>>
+        (*s: complain of unsolved [[eqns]] for [[p]] *)
+        let eqns = List.map Rtleqn.to_string eqns in
+        Impossible.impossible 
+          ("for procedure " ^ p.Proc.symbol#original_text ^ "; can't solve these eqns:\n" ^
+           String.concat "\n" eqns)
+        (*e: complain of unsolved [[eqns]] for [[p]] *)
       in
     let null = function [] -> true | _ :: _ -> false in
     let ()   = assert (null solution.Rtleqn.dependent)   in
@@ -105,25 +71,8 @@ let freeze =
     (g, p) in
   freeze' apply_to_proc
   (* unsafe simplifier is not needed until vfp is replaced *)
-@
-<<complain of unsolved [[eqns]] for [[p]]>>=
-let eqns = List.map Rtleqn.to_string eqns in
-Impossible.impossible 
-  ("for procedure " ^ p.Proc.symbol#original_text ^ "; can't solve these eqns:\n" ^
-   String.concat "\n" eqns)
-@ 
-\section{Stack slot temporaries replacement}
-<<stack.ml>>=
-<<module alias and buildings>>
-  let replace_slot_temporaries (cfg,proc) =
-<<utility functions>>
-<<determine confined and unconfined sets of registers>>
-<<build a map holding the locations of the sets>>
-<<rewrite the control flow graph>>
-<<the final result>>
-@ 
-\subsection{module alias and buildings}
-<<module alias and buildings>>=
+(*x: stack.ml *)
+(*s: module alias and buildings *)
 module RU = Rtlutil
 module RS = Register.Set
 module RM = Register.Map
@@ -144,13 +93,12 @@ struct
   let compare = Pervasives.compare
 end
 module AllocMap = Map.Make(OrderSlotTemp) 
-@
-\subsection{utility functions}
-<<utility functions>>=
+(*e: module alias and buildings *)
+  let replace_slot_temporaries (cfg,proc) =
+(*s: utility functions *)
   let PA.T target = proc.Proc.target in
-@ 
-\subsection{determine confined and unconfibed sets of registers}
-<<determine confined and unconfined sets of registers>>=
+(*e: utility functions *)
+(*s: determine confined and unconfined sets of registers *)
 
   let domTree = D.dominatorTree cfg in
 
@@ -219,9 +167,8 @@ module AllocMap = Map.Make(OrderSlotTemp)
       if data then RS.add reg set else set) 
     themap RS.empty in
 
-@    
-\subsection{build a map holding the locations of the sets}
-<<build a map holding the locations of the sets>>=
+(*e: determine confined and unconfined sets of registers *)
+(*s: build a map holding the locations of the sets *)
 
   let bu = Memalloc.relative ~anchor:target.T.vfp
     ~dbg:"Unconfined slots block" Memalloc.Down
@@ -246,9 +193,8 @@ module AllocMap = Map.Make(OrderSlotTemp)
       let alignment, size = extract_data stemp in
       let slot = MA.allocate bc ~size:(exCount size) in
       AllocMap.add stemp slot map) confined m in
-@ 
-\subsection{rewrite the control flow graph}
-<<rewrite the control flow graph>>=
+(*e: build a map holding the locations of the sets *)
+(*s: rewrite the control flow graph *)
 
   let is_tmp (s,_,_) = T.is_tmp target s in
   let memSpace = Space.Standard32.m target.T.byteorder [target.T.wordsize] in
@@ -264,12 +210,12 @@ module AllocMap = Map.Make(OrderSlotTemp)
     | l -> l in
   
   let cfg = Zipcfg.map_rtls (RU.Subst.loc ~guard:guard ~map:map) cfg in 
-@ 
-\subsection{the final result}
-<<the final result>>=
+(*e: rewrite the control flow graph *)
+(*s: the final result *)
   let unconfined_block = ("unconfined", MA.freeze bu) 
   and confined_block = ("confined", MA.freeze bc) in
   
   let blocklist = [unconfined_block ; confined_block] in
   ((cfg, proc), blocklist) 
-@
+(*e: the final result *)
+(*e: stack.ml *)

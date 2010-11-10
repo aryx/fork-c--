@@ -317,7 +317,10 @@ let init g =
     let f _ (g, p) = let g, changed = d g in (g, p), changed in
     Map.stage.V.embed f in
   <<register modules to [[g]] in alphabetical order>>
-  V.at_init g [ <<lua initialization>> ]
+  V.at_init g [ 
+  <<lua initialization>> 
+ ]
+@ 
 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Asm"
@@ -360,6 +363,7 @@ let listpair a b =
       cut (values.V.project l))
   ; V.is = (fun l -> values.V.is l && (List.length (values.V.project l) mod 2 = 0))
   } in
+@ 
 
 <<embedding/projection pairs for calling conventions>>=
 let stringtab what tbl =
@@ -458,6 +462,7 @@ C.register_module "Automaton"
   ; "register_cc" , V.efunc (Map.target **-> V.string **-> V.table **->> V.unit)
                     register_cc
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 let block = Map.block in
 C.register_module "Block" 
@@ -478,6 +483,7 @@ C.register_module "Block"
   ; "base",         V.efunc (block **->> V.string)          Block.Lua.base
   ; "constraints",  V.efunc (block **->> (V.list V.string)) Block.Lua.constraints
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Boot" 
    [ "qc--.lua",   V.String                            This.boot
@@ -553,6 +559,7 @@ C.register_module "Driver"
                          Driver.compile
   ; "reinit"    , V.efunc (V.unit  **->> V.unit)  Reinit.reset
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 let wrap_tgt f (PA.T t) = f t in
 let dump f =
@@ -615,6 +622,7 @@ let live = if Debug.on "live" then Dataflow.B.debug rset live else live in
 C.register_module "Liveness"
   [ "livenessfn", dataflow_stage (Dataflow.B.rewrite live)
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 let live_dead =
   let module D = Dataflow.B in
@@ -632,6 +640,7 @@ C.register_module "Optimize"
   ; "peepholes"             , Map.stage.V.embed Peephole.sequential
   ; "deadfn"                , dataflow_stage (Dataflow.B.rewrite live_dead)
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Placevar"
   [ "contextfn", V.efunc ((Map.proc --> Map.automaton) **->> Map.stage) Placevar.context
@@ -644,6 +653,7 @@ C.register_module "Placevar"
 *)
   ; "replace_globals", Map.stage.V.embed Placevar.replace_globals
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Rtlop"
   [ "Emit", (V.record V.value).V.embed
@@ -654,6 +664,7 @@ C.register_module "Rtlop"
     "opnames", V.efunc (V.unit **->> V.list V.string)
          (fun () -> List.sort Pervasives.compare (Rtlop.opnames ()));
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Runtime"
   [ "emit_data", V.efunc (Map.asm **->> Map.stage)
@@ -661,10 +672,12 @@ C.register_module "Runtime"
                                                 proc.Proc.symbol g; ((g, proc), false))
   ; "reg_mapping", V.efunc (Map.target **->> V.unit) Runtimedata.print_reg_map
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Simplify"
   [ "compile_time_ops", (V.list V.string).V.embed Simplify.compile_time_ops
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Stack"
   [ "freeze",  V.efunc (Map.proc **-> Map.block **->> Map.proc)   Stack.freeze
@@ -691,6 +704,7 @@ C.register_module "Stages"
   ; "replace_vfp", Map.stage.V.embed
       (fun v (g,proc) -> Backplane.of_dataflow proc.Proc.cc.Call.replace_vfp v (g,proc))
   ]  g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 let metrics (PA.T t) =
   let module T = Target in
@@ -708,6 +722,7 @@ C.register_module "Target"
     "metrics",      V.efunc (Map.target **->> V.record V.value) metrics;
     "name",         V.efunc (Map.target **->> V.string) (fun (PA.T t) -> t.Target.name);
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Targets"
   [ "dummy32l", Map.target.V.embed Dummy.dummy32l'
@@ -722,14 +737,17 @@ C.register_module "Targets"
 *)
   ; "interp",   Map.target.V.embed Interp.target'
   ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Typecheck" 
  [ "proc",      Map.stage.V.embed (fun _ proc -> Typecheck.proc proc; proc, false)
  ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 C.register_module "Unsupported" 
  [ "explain", V.efunc (V.int **-> V.int *****->> V.unit) Unsupported.explain
  ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 let floats ws _ (g, proc) =
   let rml = (PA.tgt proc).Target.rounding_mode in
@@ -804,6 +822,7 @@ C.register_module "Widen"
  ; "widenlocs",           Map.stage.V.embed widenlocs
  ; "op_count",            Map.stage.V.embed op_count
  ] g;
+@ 
 <<register modules to [[g]] in alphabetical order>>=
 let pic load_wkr use_return proc =
   let import _ = Error.error "imports not supported in PIC code" in
@@ -825,6 +844,8 @@ C.register_module "Pic"
  [ "ppc", Map.stage.V.embed pic_ppc
  ; "x86", Map.stage.V.embed pic_x86
  ] g;
+@ 
+
 <<lua initialization>>=
 "Expander.x86 = { fn = Expander.x86f, uses = { 'proper widths', 'no vars' }, \
                   name = 'Expander.x86', creates = { 'x86 invariant' }, \
