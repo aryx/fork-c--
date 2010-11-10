@@ -20,7 +20,7 @@ open Common
  * 
  * - DONE Common.filename
  * 
- * - DONE Ast.program (in parsing/, and its printer Astpp.emit)
+ * - DONE Ast.program (in parsing/, and its basic printer Astpp.emit)
  *   functions: Parse_cmm.tokens, Parse_cmm.parse, Driver.parse
  *   todo: a vof_ast that pretty prints cleanly
  * 
@@ -28,15 +28,23 @@ open Common
  *   functions: Nast.program
  *   todo: a vof_nast that pretty prints cleanly
  * 
- * - 'a Nelab.compunit * 'a Fenv.Dirty.env' (in front_nelab/)
+ * - DONE 'a Nelab.compunit * 'a Fenv.Dirty.env' (in front_nelab/)
  *   functions: Nelab.program taking lots of parameters
  * 
  *   'compunit' contains itself some mentions to Rtl and the 'a variable
  *   is bounded to a polymorphic assembler passed as a parameter to the
- *   'compunit' builder. Here are then the dependent submodules:
+ *   'compunit' builder. Here are the dependent submodules:
  * 
- *   * Rtl.?? (in front_rtl/, and its checker Rtldebug.typecheck, and
+ *   * DONE Elabstmt.stmt
+ *     subfunction: Elablstmt.elab_stmts taking some rtl hook,
+ *      a region, a fenv, a nast.stmt list and returning a list of
+ *      elaborate statements.
+ * 
+ *   * DONE Rtl.Private.*, especially 'const', 'exp (in front_rtl/, 
+ *     and its checker Rtldebug.typecheck, and
  *     its printer in Rtlutil.ToString.rtl)
+ *     functions: Nelab.program will build a compunit containing Rtl stuff
+ *      in its leaves
  * 
  *   * Asm.assembler ?? (in front_asm/ )
  * 
