@@ -6,6 +6,7 @@
 
 # This file assumes the "includer" will have set a few variables and then do a
 # include Makefile.common. Here are those variables:
+#  - TOP
 #  - SRC
 #  - INCLUDEDIRS
 
@@ -53,8 +54,8 @@ BYTECODE_STATIC=-custom
 
 SYNCFLAGS=-md5sum_in_auxfile -less_marks
 
-SYNCWEB=~/c__syncweb/syncweb $(SYNCFLAGS)
-NOWEB=~/c__syncweb/scripts/noweblatex
+SYNCWEB=~/github/syncweb/syncweb $(SYNCFLAGS)
+NOWEB=~/github/syncweb/scripts/noweblatex
 OCAMLDOC=ocamldoc $(INCLUDES)
 
 PDFLATEX=pdflatex --shell-escape 
@@ -70,7 +71,7 @@ all::
 ##############################################################################
 
 ##############################################################################
-# literate rules
+# Literate rules
 ##############################################################################
 lpclean::
 	rm -f *.aux *.toc *.log *.brf *.out
@@ -113,7 +114,7 @@ doti:
 	$(OCAMLC) -i $<
 
 clean::
-	rm -f *.cm[ioxa] *.o *.a *.cmxa *.annot
+	rm -f *.cm[ioxa] *.o *.a *.cmxa *.annot *.cmt*
 	rm -f *~ .*~ *.exe gmon.out #*#
 
 clean::
