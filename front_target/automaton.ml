@@ -1,3 +1,4 @@
+(*s: front_target/automaton.ml *)
 (*s: automaton.ml *)
 open Nopoly
 
@@ -5,28 +6,28 @@ open Nopoly
 type counter    = string
 type counterenv = string -> int ref option
 (*e: hidden types *)
-(*s: exposed types *)
+(*s: exposed types(automaton.nw) *)
 type result =
   { overflow    : Block.t
   ; regs_used   : Register.Set.t
   ; mems_used   : Rtl.loc list
   ; align_state : int   (* final alignment state of overflow block *)
   }
-(*x: exposed types *)
+(*x: exposed types(automaton.nw) *)
 type width = int
 type kind  = string
 type loc = Rtlutil.aloc =
     { fetch  : width -> Rtl.exp
     ; store  : Rtl.exp -> width -> Rtl.rtl
     }
-(*x: exposed types *)
+(*x: exposed types(automaton.nw) *)
 type methods =
     { allocate : width: int -> alignment: int -> kind: string -> loc
     ; freeze   : Register.Set.t -> Rtl.loc list -> result
     } 
-(*x: exposed types *)
+(*x: exposed types(automaton.nw) *)
 type choice_predicate = int -> string -> counterenv -> bool
-(*e: exposed types *)
+(*e: exposed types(automaton.nw) *)
 (*s: hidden types that refer to [[methods]] *)
 type t = methods
 type implementation = I of (start:Rtl.exp -> space:Rtl.space -> ctrs:counterenv -> t)
@@ -317,3 +318,4 @@ type cc_spec  = { call : stage; results : stage; cutto : stage }
 type cc_specs = (string * cc_spec) list
 let init_cc = []
 (*e: automaton.ml *)
+(*e: front_target/automaton.ml *)

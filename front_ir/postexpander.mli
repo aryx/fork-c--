@@ -1,3 +1,4 @@
+(*s: front_ir/postexpander.mli *)
 (*s: postexpander.mli *)
 (*s: types for postexpanders *)
 type temp      = Register.t
@@ -225,3 +226,4 @@ module Nostack (Address : sig type t val reg : temp -> t end) : sig
  (*e: generic expansion operations for stack machines *)
 end
 (*e: postexpander.mli *)
+(*e: front_ir/postexpander.mli *)

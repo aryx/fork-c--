@@ -1,3 +1,4 @@
+(*s: front_cfg/mflow.mli *)
 (*s: mflow.mli *)
 (*s: signatures *)
 type ('em, 'pr) map' = ('em, 'pr) Ep.pre_map =
@@ -39,3 +40,4 @@ end
 (*x: mflow.mli *)
 module MakeStandard (Pc : PC) : S
 (*e: mflow.mli *)
+(*e: front_cfg/mflow.mli *)

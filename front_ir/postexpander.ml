@@ -1,3 +1,4 @@
+(*s: front_ir/postexpander.ml *)
 (*s: postexpander.ml *)
 module DG  = Dag
 module G   = Zipcfg
@@ -270,3 +271,4 @@ module Nostack (Address : sig type t val reg : temp -> t end) = struct
   end
 end
 (*e: postexpander.ml *)
+(*e: front_ir/postexpander.ml *)

@@ -1,5 +1,6 @@
+(*s: front_rtl/register.ml *)
 (*s: register.ml *)
-(*s: exported types *)
+(*s: exported types(register.nw) *)
 open Nopoly
 
 type aggregation = 
@@ -13,13 +14,13 @@ type reg = space * int * count (* Rtl.space, index, number of cells *)
 type t = reg
 type x = Reg   of t
        | Slice of width * int * t
-(*x: exported types *)
+(*x: exported types(register.nw) *)
 module type SETX = sig
   include Set.S
   val of_list   : elt list -> t
   val to_string : t -> string    (* elements sep. by commas (no braces) *)
 end
-(*e: exported types *)
+(*e: exported types(register.nw) *)
 module Compare = struct
     type t = reg 
     let compare (((xs,_,_),xi,C xc):t) (((ys,_,_),yi,C yc):t) =
@@ -122,3 +123,4 @@ let contains ~outer ~inner = match outer, inner with
       Impossible.impossible "slice of register aggregate";
     s =<= s' && i = i' && lsb <= lsb' && lsb+w >= lsb'+w'
 (*e: register.ml *)
+(*e: front_rtl/register.ml *)

@@ -1,3 +1,4 @@
+(*s: front_rtl/reloc.mli *)
 (*s: reloc.mli *)
 type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
 
@@ -24,3 +25,4 @@ val if_bare : t -> Bits.bits option (* if not a bare value, returns None *)
 val as_simple : t -> Symbol.t option * Bits.bits
    (* checked RTE if not simple *)
 (*e: reloc.mli *)
+(*e: front_rtl/reloc.mli *)

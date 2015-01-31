@@ -1,9 +1,10 @@
 (*s: driver.ml *)
+(*s: driver.ml content *)
 module E  = Error
 module M  = Metrics
 module PA = Preast2ir
 module T  = Target
-(*x: driver.ml *)
+(*x: driver.ml content *)
 let version () =
     ( This.name     stdout 
     ; output_string stdout " "
@@ -11,7 +12,7 @@ let version () =
     ; output_string stdout 
         " (see also http://www.cminusminus.org)\n"
     )
-(*x: driver.ml *)
+(*x: driver.ml content *)
 let scan file =
     let fd          = try open_in file
                       with Sys_error(msg) -> E.error msg    in
@@ -34,7 +35,7 @@ let scan file =
         ; loop lexbuf
         ; finally ()
         )
-(*x: driver.ml *)
+(*x: driver.ml content *)
 let parse (file:string) = 
     let fd          = try open_in file
                       with Sys_error(msg) -> E.error msg    in
@@ -61,13 +62,13 @@ let parse (file:string) =
               ( finally()
               ; raise e
               )
-(*x: driver.ml *)
+(*x: driver.ml content *)
 let emit_asdl (map,ast) =
         AstUtil.sexp_wr_program ast stdout
-(*x: driver.ml *)
+(*x: driver.ml content *)
 let pretty (map,ast) = Astpp.program ast
 let print doc width channel = Pp.ppToFile channel width doc
-(*x: driver.ml *)
+(*x: driver.ml content *)
 let metrics_ok src tgt =
   let int i = string_of_int i in
   let string s = s in
@@ -90,7 +91,7 @@ let metrics_ok src tgt =
   if src.M.charset <> tgt.T.charset then
     unequal "charset" string src.M.charset tgt.T.charset;
   !outcome
-(*x: driver.ml *)
+(*x: driver.ml content *)
 let elab ~swap validate (map,ast) asm =
   Nelab.program ~swap validate map asm (Nast.program ast)
 
@@ -108,4 +109,5 @@ let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
         Ast2ir.translate (PA.T target) (Fenv.clean env) opt exportglobals compunit
     else
       Error.error "metrics of source code don't match the target"))
+(*e: driver.ml content *)
 (*e: driver.ml *)

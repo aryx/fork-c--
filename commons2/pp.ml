@@ -1,12 +1,13 @@
+(*s: commons2/pp.ml *)
 (*s: pp.ml *)
-(*s: auxiliaries *)
+(*s: auxiliaries(pp.nw) *)
 let debug   = false 
 let strlen  = String.length
 
-(*x: auxiliaries *)
+(*x: auxiliaries(pp.nw) *)
 let nl      = "\n"
 
-(*e: auxiliaries *)
+(*e: auxiliaries(pp.nw) *)
 (*s: gmode *)
 type gmode =
     | GFlat             (* hgrp *)
@@ -147,3 +148,4 @@ let block f xs =
     ^/ text "}"
 
 (*e: pp.ml *)
+(*e: commons2/pp.ml *)

@@ -1,3 +1,4 @@
+(*s: assembler/cfgutil.mli *)
 (*s: cfgutil.mli *)
 val cfg2dot : compress:bool -> live:bool -> name:string -> Zipcfg.graph -> string
 val cfg2ast : (Rtl.rtl -> Ast.stmt) -> Zipcfg.graph -> name:string -> Ast.proc
@@ -15,3 +16,4 @@ type node = F of Zipcfg.Rep.first | M of Zipcfg.Rep.middle | L of Zipcfg.Rep.las
 val numbered_layout_nodes : Zipcfg.graph -> (int * node) list
 (* val delete : Zipcfg.zgraph -> Zipcfg.graph --- delete focus *)
 (*e: cfgutil.mli *)
+(*e: assembler/cfgutil.mli *)

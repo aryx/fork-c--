@@ -1,3 +1,4 @@
+(*s: error/unsupported.ml *)
 (*s: unsupported.ml *)
 exception Unsupported
 type state = { mutable n : int; mutable explanations : (int list -> string list) list }
@@ -138,3 +139,4 @@ let popcnt ~notok ~ok =
   fail (nosupport (s "%%popcnt(bits%d)" notok))
        popcnt_n [ok; notok]
 (*e: unsupported.ml *)
+(*e: error/unsupported.ml *)

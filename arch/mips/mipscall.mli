@@ -1,3 +1,4 @@
+(*s: arch/mips/mipscall.mli *)
 (*s: mipscall.mli *)
 val cconv :
   return_to:(Rtl.exp -> Rtl.rtl) ->
@@ -5,3 +6,4 @@ val cconv :
   string -> Automaton.cc_spec ->
   Call.t
 (*e: mipscall.mli *)
+(*e: arch/mips/mipscall.mli *)

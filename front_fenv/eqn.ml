@@ -1,3 +1,4 @@
+(*s: front_fenv/eqn.ml *)
 (*s: eqn.ml *)
 open Nopoly
 
@@ -9,7 +10,7 @@ module type EXP = sig
     val print: t -> string                      (* for debugging *)
 end
 (*e: EXP *)
-(*s: S *)
+(*s: S(eqn.nw) *)
 module type S = sig
     type t                                      (* set of equations *)
     type term
@@ -26,11 +27,11 @@ module type S = sig
     val make_zero:      sum -> t -> t           (* add equation *)
     val solve:          t -> solution           (* Can'tSolve *)
 end
-(*e: S *)
+(*e: S(eqn.nw) *)
 module Make (E: EXP) = struct
     type term     = E.t
 
-    (*s: Make *)
+    (*s: Make(eqn.nw) *)
     type sum   = (int * E.t) list                 (* invariant: ordered *)
     type assoc = string * sum
 
@@ -54,7 +55,7 @@ module Make (E: EXP) = struct
 
     exception Can'tSolve of t
     let error msg = raise (Can'tSolve msg)
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let dump t =
       let spr = Printf.sprintf in
       let product (i,term) =
@@ -77,7 +78,7 @@ module Make (E: EXP) = struct
         "Eqn.t: unsolved equations\n%s\n------ solved variables:\n%s\n------ Eqn.t ends\n"
         (multiple eqn t.set) (set assoc t.env);
       flush stdout
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let rec gcd (m:int) (n:int) =
         let rec g m n = if n = 0 then m else g n (m mod n) in
             if  n < 0 then
@@ -93,7 +94,7 @@ module Make (E: EXP) = struct
                     List.map (fun (c,t) -> (c / g, t)) sum
                 else
                     sum
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let combine (k1:int) (sum1:sum) (sum2:sum) =
         let rec loop = function 
      | []                 , [] -> []
@@ -119,7 +120,7 @@ module Make (E: EXP) = struct
                 (k, x2) :: loop ([], s2)
         in
      loop (sum1,sum2)
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let split (v:string) (sum:sum) =
         let rec loop a = function
             | []             -> (0, sum)
@@ -130,12 +131,12 @@ module Make (E: EXP) = struct
                 )
         in 
             loop [] sum
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let elim (v:string) (vsum:sum) (sum:sum) =  
         match split v sum with
         | (0,_)    -> sum
         | (c,sum') -> combine c vsum sum'
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let vars (sum:sum) =
       let rec loop vs = function
         | (_, t)::s ->
@@ -145,17 +146,17 @@ module Make (E: EXP) = struct
            )
         | [] -> vs in 
       loop [] sum
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let elim_all env (sum:sum) =
       let vs = vars sum in
       List.fold_left (fun sum v -> try elim v (SM.find v env) sum
                                    with Not_found -> sum) sum vs
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let rec zero = function
        | []                        -> true
        | (0,_)::rest               -> zero rest
        | _                         -> false
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let candidate t found finished =
         let negate          = List.map (fun (c,trm) -> (-c,trm))                       in
         let unitvar (c,trm) = Auxfuns.Option.is_some (E.variable trm) && (c = 1 || c = -1) in
@@ -181,7 +182,7 @@ module Make (E: EXP) = struct
                  with Not_found -> loop (sum::accum_set) sums (* check next equation *)
         in
             loop [] t.set
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let update (v:string) (vsum:sum) t =
       let find x map = try SM.find x map with Not_found -> [] in
       let depends_on_v = find v t.deps in
@@ -194,12 +195,12 @@ module Make (E: EXP) = struct
       ; env  = SM.add v vsum env
       ; deps = List.fold_left add t.deps vs
       }
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let solver t =
       let rec loop t =
         candidate t (fun (v, vsum, t') -> loop (update v vsum t')) (fun t' -> t') in
       loop t
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let solve t =
       (* let ()     = dump t in *)
       let t         = try solver t with Can'tSolve x -> (dump x; error x)in
@@ -211,7 +212,7 @@ module Make (E: EXP) = struct
           { known     = k
           ; dependent = d
           }
-    (*x: Make *)
+    (*x: Make(eqn.nw) *)
     let rec merge sum =  match sum with
         | []       -> []
         | [_] as x -> x
@@ -232,7 +233,7 @@ module Make (E: EXP) = struct
       (* dump t; *)
       match eqn with [] -> t | _ :: _ -> r
         
-    (*e: Make *)
+    (*e: Make(eqn.nw) *)
 end    
 
 module Test = struct
@@ -300,3 +301,4 @@ module Test = struct
     (*e: Test *)
 end
 (*e: eqn.ml *)
+(*e: front_fenv/eqn.ml *)

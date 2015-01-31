@@ -1,3 +1,4 @@
+(*s: arch/x86/x86call.ml *)
 (*s: x86call.ml *)
 module A  = Automaton
 module C  = Call
@@ -223,3 +224,4 @@ let cconv ~return_to cut ccname stage =
     | _ -> Unsupported.calling_convention ccname
   in f ccname stage ~return_to cut
 (*e: x86call.ml *)
+(*e: arch/x86/x86call.ml *)

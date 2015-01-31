@@ -1,3 +1,4 @@
+(*s: error/error.ml *)
 (*s: error.ml *)
 type 'a error       = Error                     (* bad result  *)
                     | Ok        of 'a           (* good result *)
@@ -149,3 +150,4 @@ let errorRegPrt (l,r) msg =
     ; errorPrt msg
     )
 (*e: error.ml *)
+(*e: error/error.ml *)

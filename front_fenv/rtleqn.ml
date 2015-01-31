@@ -1,3 +1,4 @@
+(*s: front_fenv/rtleqn.ml *)
 (*s: rtleqn.ml *)
 open Nopoly
 
@@ -117,3 +118,4 @@ let solve ~width sums =
     with
         Solver.Can'tSolve _ -> raise Can'tSolve
 (*e: rtleqn.ml *)
+(*e: front_fenv/rtleqn.ml *)

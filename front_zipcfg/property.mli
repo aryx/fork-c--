@@ -1,3 +1,4 @@
+(*s: front_zipcfg/property.mli *)
 (*s: property.mli *)
 (*s: exposed representation *)
 type rep =
@@ -32,3 +33,4 @@ end
 (*x: property.mli *)
 module M : S
 (*e: property.mli *)
+(*e: front_zipcfg/property.mli *)

@@ -1,3 +1,4 @@
+(*s: arch/mips/mipsregs.mli *)
 (*s: mipsregs.mli *)
 module Spaces : sig
   val m : Space.t  (* memory *)
@@ -18,3 +19,4 @@ val mspace : Rtl.space
 val rspace : Rtl.space
 val fspace : Rtl.space
 (*e: mipsregs.mli *)
+(*e: arch/mips/mipsregs.mli *)

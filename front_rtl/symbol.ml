@@ -1,3 +1,4 @@
+(*s: front_rtl/symbol.ml *)
 (*s: symbol.ml *)
 (*s: class type t *)
 class type t = object
@@ -17,3 +18,4 @@ end
 let unmangled n = new unmangled n
 let with_mangler m n = new mangled m n
 (*e: symbol.ml *)
+(*e: front_rtl/symbol.ml *)

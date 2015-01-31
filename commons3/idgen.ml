@@ -1,3 +1,4 @@
+(*s: commons3/idgen.ml *)
 (*s: idgen.ml *)
 type generator = string -> string
 let count = Reinit.ref 0
@@ -20,3 +21,4 @@ module ContEntry = struct
 end
 (* add more here as needed *)
 (*e: idgen.ml *)
+(*e: commons3/idgen.ml *)

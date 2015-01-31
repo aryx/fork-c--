@@ -1,3 +1,4 @@
+(*s: front_rtl/rtlop.mli *)
 (*s: rtlop.mli *)
 val add_operator : name:string -> result_is_float:bool -> Types.tyscheme -> unit
 (*x: rtlop.mli *)
@@ -18,3 +19,4 @@ module Emit : sig
   val creators : unit -> unit
 end
 (*e: rtlop.mli *)
+(*e: front_rtl/rtlop.mli *)

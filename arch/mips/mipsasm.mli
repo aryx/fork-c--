@@ -1,3 +1,4 @@
+(*s: arch/mips/mipsasm.mli *)
 (*s: mipsasm.mli *)
 type node = Rtl.rtl Cfgx.M.node
 val make : 
@@ -5,3 +6,4 @@ val make :
   out_channel -> ('a, 'cfg, 'b, 'c) Proc.t Asm.assembler
   (* pass Cfgutil.emit or Cfgutil.emit *)
 (*e: mipsasm.mli *)
+(*e: arch/mips/mipsasm.mli *)

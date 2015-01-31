@@ -1,9 +1,10 @@
+(*s: front_fenv/metrics.ml *)
 (*s: metrics.ml *)
 (*open Nopoly*)
 let (=*=) = (=)
 
 module A = Ast
-(*s: exposed types *)
+(*s: exposed types(metrics.nw) *)
 type t = {
   byteorder   : Rtl.aggregation ; (* big/little endian, id *)
   wordsize    : int             ; (* bits *)
@@ -12,7 +13,7 @@ type t = {
   float       : string          ; (* name of float representation (def "ieee754") *)
   charset     : string          ; (* "latin1"  character encoding      *)
 }
-(*e: exposed types *)
+(*e: exposed types(metrics.nw) *)
 let default = {
   byteorder   = Rtl.Identity;
   wordsize    = 32;
@@ -75,3 +76,4 @@ let of_ast ~swap map =
   metrics n n n n n n
 (*x: metrics.ml *)
 (*e: metrics.ml *)
+(*e: front_fenv/metrics.ml *)

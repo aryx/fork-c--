@@ -1,3 +1,4 @@
+(*s: commons3/ctypes.mli *)
 (*s: ctypes.mli *)
 (*s: types *)
 type 'a ctypes = { char               : 'a
@@ -26,3 +27,4 @@ val ctypes_vararg_enum : string
 val ctypes_vararg_str  : string
 *)
 (*e: ctypes.mli *)
+(*e: commons3/ctypes.mli *)

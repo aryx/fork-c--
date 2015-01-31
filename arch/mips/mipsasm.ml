@@ -1,3 +1,4 @@
+(*s: arch/mips/mipsasm.ml *)
 (*s: mipsasm.ml *)
 module SM = Strutil.Map
 
@@ -44,7 +45,7 @@ object (this)
 
     method private print l = List.iter (output_string _fd) l
 
-    (*s: assembly methods *)
+    (*s: assembly methods(mipsasm.nw) *)
     method import s = this#new_symbol s
     method local  s = this#new_symbol s
 
@@ -81,7 +82,7 @@ object (this)
                 fprintf _fd ".word %s\n" (Asm.reloc_string const a)
 
     method emit = ()
-    (*x: assembly methods *)
+    (*x: assembly methods(mipsasm.nw) *)
     method comment s = fprintf _fd "#  %s   \n" s
     method comment s = fprintf _fd "/* %s */\n" s
     method comment s = ()
@@ -112,7 +113,8 @@ object (this)
         this#label symbol;
         Printf.fprintf _fd ".cpload $25     /* HACK! NetBSD needs this */\n";
         (emitter cfg (this#call) (this#instruction) label : unit)
-    (*e: assembly methods *)
+    (*e: assembly methods(mipsasm.nw) *)
 end
 let make emitter fd = new asm emitter fd
 (*e: mipsasm.ml *)
+(*e: arch/mips/mipsasm.ml *)

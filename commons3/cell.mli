@@ -1,3 +1,4 @@
+(*s: commons3/cell.mli *)
 (*s: cell.mli *)
 type t
 type count = C of int   (* a number of cells *)
@@ -10,3 +11,4 @@ val size     : t -> width (* number of bits in one cell *)
 
 val of_size : int -> t
 (*e: cell.mli *)
+(*e: commons3/cell.mli *)

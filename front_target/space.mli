@@ -1,3 +1,4 @@
+(*s: front_target/space.mli *)
 (*s: space.mli *)
 (*s: definitions of exported types, including [[t]] *)
 (*s: definition of type [[location_set]] *)
@@ -60,3 +61,4 @@ module Standard64 : Standard
 (*x: space.mli *)
 val stands_for : char -> Register.aggregation -> Register.width -> (Register.t -> bool)
 (*e: space.mli *)
+(*e: front_target/space.mli *)

@@ -1,3 +1,4 @@
+(*s: error/debug.ml *)
 (*s: debug.ml *)
 let debugging =
   try Str.split (Str.regexp ",") (Sys.getenv "QCDEBUG") with _ -> []
@@ -26,3 +27,4 @@ let explain () =
   Printf.eprintf "Words recognized in QCDEBUG:\n";
   List.iter (fun (w, e) -> Printf.eprintf "  %-15s  %s\n" w e) (!refs)
 (*e: debug.ml *)
+(*e: error/debug.ml *)

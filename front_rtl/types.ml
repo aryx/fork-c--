@@ -1,5 +1,6 @@
+(*s: front_rtl/types.ml *)
 (*s: types.ml *)
-(*s: exported type definitions *)
+(*s: exported type definitions(types.nw) *)
 (*s: definition of type [[size]] *)
 type key  = int
 type size = Const  of int
@@ -10,10 +11,10 @@ type size = Const  of int
 type 'a t = Bool
           | Bits of 'a 
 type ty   = int t
-(*x: exported type definitions *)
+(*x: exported type definitions(types.nw) *)
 type tyscheme = (size t) list * (size t)
 type monotype = (int  t) list * (int  t)
-(*e: exported type definitions *)
+(*e: exported type definitions(types.nw) *)
  (* types from the interface definition *)
 (*x: types.ml *)
 module E = Error
@@ -149,3 +150,4 @@ let scheme_string (args, result) =
   | n -> spr "\\/ %s . %s" (String.concat ", " (List.map keyname (Auxfuns.from 1 ~upto:n)))
                            scheme
 (*e: types.ml *)
+(*e: front_rtl/types.ml *)

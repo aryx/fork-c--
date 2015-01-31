@@ -1,3 +1,4 @@
+(*s: front_ir/expander.ml *)
 (*s: expander.ml *)
 open Nopoly
 (*s: expander module type *)
@@ -1061,3 +1062,4 @@ module IntFloatAddr (Post : Postexpander.S) = struct
   (*e: generic flow-graph expander *)
 end
 (*e: expander.ml *)
+(*e: front_ir/expander.ml *)

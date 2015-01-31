@@ -1,3 +1,4 @@
+(*s: assembler/astasm.mli *)
 (*s: astasm.mli *)
 (*s: PERSONALITY *)
 module type PERSONALITY = sig
@@ -11,11 +12,12 @@ module type PERSONALITY = sig
     val cfg2ast : proc -> Ast.proc
 end
 (*e: PERSONALITY *)
-(*s: S *)
+(*s: S(astasm.nw) *)
 module type S = sig
     type proc
     val asm: out_channel -> proc Asm.assembler
 end    
-(*e: S *)
+(*e: S(astasm.nw) *)
 module Make(P: PERSONALITY): S with type proc = P.proc
 (*e: astasm.mli *)
+(*e: assembler/astasm.mli *)

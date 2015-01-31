@@ -1,3 +1,4 @@
+(*s: front_rtl/symbol.mli *)
 (*s: symbol.mli *)
 (*s: class type t *)
 class type t = object
@@ -8,3 +9,4 @@ end
 val unmangled    : string -> t
 val with_mangler : (string -> string) -> string -> t
 (*e: symbol.mli *)
+(*e: front_rtl/symbol.mli *)

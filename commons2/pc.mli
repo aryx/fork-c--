@@ -1,3 +1,4 @@
+(*s: commons2/pc.mli *)
 (*s: pc.mli *)
 type ('t, 'v) par   = 't list -> 'v * 't list
 
@@ -31,3 +32,4 @@ val many : ('t, 'v) par -> ('t, 'v list) par
 (*x: pc.mli *)
 val some: ('t,'v)  par -> ('t,'v list) par
 (*e: pc.mli *)
+(*e: commons2/pc.mli *)

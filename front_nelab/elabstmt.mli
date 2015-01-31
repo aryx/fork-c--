@@ -1,5 +1,6 @@
+(*s: front_nelab/elabstmt.mli *)
 (*s: elabstmt.mli *)
-(*s: exposed types *)
+(*s: exposed types(elabstmt.nw) *)
 type exp = Rtl.exp
 type loc = Rtl.loc * Rtl.width
 type rtl = Rtl.rtl
@@ -8,7 +9,7 @@ type name = string
 type kind = string
 type convention = string
 type aligned    = int
-(*x: exposed types *)
+(*x: exposed types(elabstmt.nw) *)
 type actual = kind * exp * Rtl.width * aligned
 type 'a kinded = kind * 'a * aligned
 type 'a flow  = { cuts : 'a list; unwinds : 'a list; areturns : 'a list;
@@ -37,7 +38,7 @@ type stmt =
   | Return     of convention * int * int * actual list
   | Limitcheck of convention * exp * limitfailure option
 and limitfailure = { failcont : exp; reccont : exp; recname : name; }
-(*e: exposed types *)
+(*e: exposed types(elabstmt.nw) *)
 val elab_stmts :
   (Rtl.rtl -> string option) -> Srcmap.map -> Ast.region -> 'a Fenv.Dirty.env' -> 
   Nast.stmt list -> stmt list Error.error
@@ -46,3 +47,4 @@ val elab_cformals :
     Fenv.variable kinded list Error.error
 val codelabels : stmt list -> label list
 (*e: elabstmt.mli *)
+(*e: front_nelab/elabstmt.mli *)

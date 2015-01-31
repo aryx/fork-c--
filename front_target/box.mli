@@ -1,3 +1,4 @@
+(*s: front_target/box.mli *)
 (*s: box.mli *)
 type rtl = Rtl.rtl
 (*s: BOXER type *)
@@ -15,3 +16,4 @@ module GuardExp : BOXER with type t = Rtl.exp * Rtl.exp
 (*x: box.mli *)
 val assert_not_boxed : rtl -> unit
 (*e: box.mli *)
+(*e: front_target/box.mli *)

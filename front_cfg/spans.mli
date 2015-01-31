@@ -1,3 +1,4 @@
+(*s: front_cfg/spans.mli *)
 (*s: spans.mli *)
 type t
 type label   = string
@@ -27,3 +28,4 @@ val expose : t -> rep
 (*x: spans.mli *)
 val fold_live_locs : (Register.x -> 'a -> 'a) -> t -> 'a -> 'a
 (*e: spans.mli *)
+(*e: front_cfg/spans.mli *)

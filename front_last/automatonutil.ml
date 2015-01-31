@@ -1,3 +1,4 @@
+(*s: front_last/automatonutil.ml *)
 (*s: automatonutil.ml *)
 module R   = Rtl
 module RP  = Rtl.Private
@@ -12,3 +13,4 @@ let aloc a w = match alocs a w with
 | [l] -> l
 | _ -> Impossible.impossible "automaton split value across multiple locations"
 (*e: automatonutil.ml *)
+(*e: front_last/automatonutil.ml *)

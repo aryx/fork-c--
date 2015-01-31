@@ -1,3 +1,4 @@
+(*s: front_nelab/simplify.mli *)
 (*s: simplify.mli *)
 val rtl:    Rtl.rtl -> Rtl.rtl
 val exp:    Rtl.exp -> Rtl.exp
@@ -11,3 +12,4 @@ end
 (*x: simplify.mli *)
 val compile_time_ops: string list
 (*e: simplify.mli *)
+(*e: front_nelab/simplify.mli *)

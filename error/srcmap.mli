@@ -1,3 +1,4 @@
+(*s: error/srcmap.mli *)
 (*s: srcmap.mli *)
 type pos            = int
 type rgn            = pos * pos
@@ -28,3 +29,4 @@ sig
     val region      : region -> string
 end
 (*e: srcmap.mli *)
+(*e: error/srcmap.mli *)

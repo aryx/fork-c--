@@ -1,5 +1,6 @@
+(*s: front_rtl/types.mli *)
 (*s: types.mli *)
-(*s: exported type definitions *)
+(*s: exported type definitions(types.nw) *)
 (*s: definition of type [[size]] *)
 type key  = int
 type size = Const  of int
@@ -10,10 +11,10 @@ type size = Const  of int
 type 'a t = Bool
           | Bits of 'a 
 type ty   = int t
-(*x: exported type definitions *)
+(*x: exported type definitions(types.nw) *)
 type tyscheme = (size t) list * (size t)
 type monotype = (int  t) list * (int  t)
-(*e: exported type definitions *)
+(*e: exported type definitions(types.nw) *)
 (*s: appl *)
 val appl      : string -> tyscheme -> ty list -> ty       (* raises Error.ErrorExn *)
 val widthlist : string -> tyscheme -> ty list -> int list (* raises Error.ErrorExn *)
@@ -37,3 +38,4 @@ val largest_key : tyscheme -> key
 val to_string     : ty -> string
 val scheme_string : tyscheme -> string
 (*e: types.mli *)
+(*e: front_rtl/types.mli *)

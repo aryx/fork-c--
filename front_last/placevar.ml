@@ -1,3 +1,4 @@
+(*s: front_last/placevar.ml *)
 (*s: placevar.ml *)
 open Nopoly
 
@@ -245,3 +246,4 @@ let replace_globals _ (g, ({ Proc.target = tgt; Proc.global_map = gmap} as proc)
       subst in
   (G.map_rtls subst g, proc), true (* probably changed :-) *)
 (*e: placevar.ml *)
+(*e: front_last/placevar.ml *)

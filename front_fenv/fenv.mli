@@ -1,3 +1,4 @@
+(*s: front_fenv/fenv.mli *)
 (*s: fenv.mli *)
 (*s: exposed types shared by clean and dirty environments *)
 type regkind       = RReg  of string   (* hardware reg *)
@@ -126,3 +127,4 @@ val clean : 'proc Dirty.env' -> 'proc Clean.env'
 (*x: fenv.mli *)
 val denotation's_category : denotation -> string
 (*e: fenv.mli *)
+(*e: front_fenv/fenv.mli *)

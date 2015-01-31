@@ -1,3 +1,4 @@
+(*s: arch/mips/mips.ml *)
 (*s: mips.ml *)
 let arch        = "mips"                    (* architecture *)
 let wordsize    = 32
@@ -264,3 +265,4 @@ let target =
     }    
 
 (*e: mips.ml *)
+(*e: arch/mips/mips.ml *)

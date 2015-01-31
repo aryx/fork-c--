@@ -1,3 +1,4 @@
+(*s: front_nelab/elabexp.ml *)
 (*s: elabexp.ml *)
 open Nopoly
 
@@ -15,7 +16,7 @@ let (@<<) f g = fun x -> f (g x) (* function composition *)
 let is2power x = x > 0 && x land (x - 1) = 0
 (*x: elabexp.ml *)
 module M = Metrics
-(*s: utilities *)
+(*s: utilities(elabexp.nw) *)
 let tywidth a_bad_thing = function
   | Types.Bits n -> n
   | Types.Bool   -> E.error (Printf.sprintf "A boolean may not be %s" a_bad_thing)
@@ -33,20 +34,20 @@ let elab_full_ty env =
 (* pad: was << but I changed it to @<<, typo in .nw file ??? *)
 let astwidth msg env = emap (tywidth msg) @<< elab_full_ty env
 let elab_ty env = astwidth "expressed in abstract syntax" env
-(*x: utilities *)
+(*x: utilities(elabexp.nw) *)
 let no_kind_or_alignment k a f x = match k, a with
   | None, None     -> f x
   | Some _, None   -> E.error "kind permissible only on parameter or result"
   | None, Some _   -> E.error "alignment permissible only on parameter or result"
   | Some _ ,Some _ -> 
       E.error "kind and alignment permissible only on parameter or result"
-(*x: utilities *)
+(*x: utilities(elabexp.nw) *)
 let alignment n =
   if is2power n then n else E.errorf "alignment %d is not a power of 2" n
 let assertion = function
   | None -> Rtl.none
   | Some n -> Rtl.aligned (alignment n)
-(*e: utilities *)
+(*e: utilities(elabexp.nw) *)
 let loc_region r l = match l with A.NameOrMemAt(_, r) -> r | _ -> r
 let exp_region r l = match l with A.ExprAt     (_, r) -> r | _ -> r
 
@@ -171,3 +172,4 @@ let elab_kinded_name env = let _, _, f, _, _ = exprfuns env in f
 let elab_con         env = let _, _, _, f, _ = exprfuns env in f
 let elab_link        env = let _, _, _, _, f = exprfuns env in f
 (*e: elabexp.ml *)
+(*e: front_nelab/elabexp.ml *)

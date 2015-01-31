@@ -1,5 +1,6 @@
+(*s: front_ir/opshape.mli *)
 (*s: opshape.mli *)
-(*s: exported type definitions *)
+(*s: exported type definitions(opshape.nw) *)
 type opr = Rtl.Private.opr
 type exp = Rtl.Private.exp
 type 'a hi = Hi of 'a
@@ -17,10 +18,11 @@ type ('temp, 'warg) t =
   | Fpcvt  of 'temp * 'warg
   | Bool
   | Nullary
-(*e: exported type definitions *)
+(*e: exported type definitions(opshape.nw) *)
 (*x: opshape.mli *)
 val of_opr : opr -> (unit, unit) t
 val capply :
     ('exp -> 'c -> 'temp) ->
     ('exp -> 'c -> 'warg) -> opr -> 'exp list -> 'c list -> ('temp, 'warg) t
 (*e: opshape.mli *)
+(*e: front_ir/opshape.mli *)

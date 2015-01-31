@@ -1,3 +1,4 @@
+(*s: commons3/uint64.ml *)
 (*s: uint64.ml *)
 module I = Int64
 (*s: external functions *)
@@ -29,3 +30,4 @@ let ge  x y =    not (lt x y)
 let shl n x =    I.shift_left x n
 let shr n x =    I.shift_right_logical x n  
 (*e: uint64.ml *)
+(*e: commons3/uint64.ml *)

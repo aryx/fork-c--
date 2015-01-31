@@ -1,5 +1,6 @@
+(*s: front_nelab/elabstmt.ml *)
 (*s: elabstmt.ml *)
-(*s: exposed types *)
+(*s: exposed types(elabstmt.nw) *)
 type exp = Rtl.exp
 type loc = Rtl.loc * Rtl.width
 type rtl = Rtl.rtl
@@ -8,7 +9,7 @@ type name = string
 type kind = string
 type convention = string
 type aligned    = int
-(*x: exposed types *)
+(*x: exposed types(elabstmt.nw) *)
 type actual = kind * exp * Rtl.width * aligned
 type 'a kinded = kind * 'a * aligned
 type 'a flow  = { cuts : 'a list; unwinds : 'a list; areturns : 'a list;
@@ -37,7 +38,7 @@ type stmt =
   | Return     of convention * int * int * actual list
   | Limitcheck of convention * exp * limitfailure option
 and limitfailure = { failcont : exp; reccont : exp; recname : name; }
-(*e: exposed types *)
+(*e: exposed types(elabstmt.nw) *)
 module A  = Ast
 module E  = Error
 module F  = Fenv.Dirty
@@ -252,7 +253,7 @@ let elab_functions validate srcmap r env =
         else
           E.Ok f) in
     (*e: elaboration utilities *)
-    (*s: definitions of elaboration functions *)
+    (*s: definitions of elaboration functions(elabstmt.nw) *)
     let switch rg e arms =
       let rg = E.Raise.option (Auxfuns.Option.map range rg) in (* order matters *)
       let arms = E.Raise.list (List.map arm arms) in
@@ -264,7 +265,7 @@ let elab_functions validate srcmap r env =
             let arms = striparms w arms in
             if null arms then E.error "empty switch statement"
             else Switch(rg, e, arms)) in
-    (*x: definitions of elaboration functions *)
+    (*x: definitions of elaboration functions(elabstmt.nw) *)
     let span k v ss =
       let k = con k in  (* order matters *)
       E.ematch3 k (Elabexp.elab_link env v) ss (fun (k, kw) (v, vw) ss ->
@@ -272,7 +273,7 @@ let elab_functions validate srcmap r env =
           E.error "span token (key) must be a bit vector of native word size";
         insist_pointer "span value" (Types.Bits vw);
         Span ((k, v), ss)) in
-    (*x: definitions of elaboration functions *)
+    (*x: definitions of elaboration functions(elabstmt.nw) *)
     let assign lhs rhs =
       try E.ematch (E.Raise.list (List.map2 effect lhs rhs)) (fun es ->
         Assign (vrtl (srcmap, r) (Rtl.par es)))
@@ -288,7 +289,7 @@ let elab_functions validate srcmap r env =
            (List.length lhs) (List.length rhs)
        (*e: complain about length mismatch in assignment *)
       in
-    (*x: definitions of elaboration functions *)
+    (*x: definitions of elaboration functions(elabstmt.nw) *)
     let goto tgt tgts =
       let tgts = E.Raise.list (List.map (goto_target r) tgts) in (* order matters *)
       E.ematch2 (exp tgt) tgts (fun (te, t) tgts ->
@@ -296,7 +297,7 @@ let elab_functions validate srcmap r env =
         if null tgts && not (exp_is_local_code_label r tgt) then
           E.error "target list omitted and target is not a local code label";
         Goto (te, tgts)) in 
-    (*x: definitions of elaboration functions *)
+    (*x: definitions of elaboration functions(elabstmt.nw) *)
     let call left conv p args targets flows alias =
       let left  = E.Raise.list (List.map (Elabexp.elab_kinded_name env) left) in
       let args  = E.Raise.list (List.map (actual r) args) in
@@ -308,7 +309,7 @@ let elab_functions validate srcmap r env =
         E.ematch5 left args tgts flow alias (fun left args tgts flow alias ->
           insist_pointer "procedure value" pt;
           Call (left, conv, pe, args, tgts, flow, alias))) in
-    (*x: definitions of elaboration functions *)
+    (*x: definitions of elaboration functions(elabstmt.nw) *)
     let jump conv p args targets =
       let args = E.Raise.list (List.map (actual r) args) in
       let tgts = E.Raise.list (List.map (call_target r) targets) in
@@ -317,14 +318,14 @@ let elab_functions validate srcmap r env =
         E.ematch2 args tgts (fun args tgts ->
           insist_pointer "procedure value" pt;
           Jump (conv, pe, args, tgts))) in
-    (*x: definitions of elaboration functions *)
+    (*x: definitions of elaboration functions(elabstmt.nw) *)
     let cut conv k args flows =
       let args = E.Raise.list (List.map (actual r) args) in
       let flow = cut_flow r conv flows in
       E.ematch3 args (exp k) flow (fun args (k,kt) flow ->
         insist_pointer "target of 'cut to'" kt;
         Cut (conv, k, args, flow)) in
-    (*x: definitions of elaboration functions *)
+    (*x: definitions of elaboration functions(elabstmt.nw) *)
     let return conv alt args =
       let args = E.Raise.list (List.map (actual r) args) in
       let i, n = match alt with
@@ -349,7 +350,7 @@ let elab_functions validate srcmap r env =
             impossf "bad <i/n> with i = %d and n = %d, but no better error message" i n
           (*e: raise error exn with bad continuation numbers *)
         ) in
-    (*x: definitions of elaboration functions *)
+    (*x: definitions of elaboration functions(elabstmt.nw) *)
     let prim lhs conv op args flows =
       let strip_decorations = function
         | "", arg, None   -> arg
@@ -378,7 +379,7 @@ let elab_functions validate srcmap r env =
             else
               Assign (Rtl.store result (Rtl.app opr argexps) w)
         | _ -> E.error "primitive operator produces exactly one result") in
-    (*e: definitions of elaboration functions *)
+    (*e: definitions of elaboration functions(elabstmt.nw) *)
     let rec stmt s = match s with
     | N.StmtAt (s, r) -> E.catch (eprint r) (full_stmt r reachable) s
     | N.If (c, t, f) -> 
@@ -460,3 +461,4 @@ let codelabels ss =
   adds ss []
 
 (*e: elabstmt.ml *)
+(*e: front_nelab/elabstmt.ml *)

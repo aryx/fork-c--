@@ -1,3 +1,4 @@
+(*s: front_rtl/reloc.ml *)
 (*s: reloc.ml *)
 open Nopoly
 
@@ -35,3 +36,4 @@ let as_simple a =
   | Some _ -> Impossible.impossible "subtracted symbols in simple reloc" in
   fold ~const ~sym ~add ~sub a
 (*e: reloc.ml *)
+(*e: front_rtl/reloc.ml *)

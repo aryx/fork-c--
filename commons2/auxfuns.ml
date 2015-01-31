@@ -1,3 +1,4 @@
+(*s: commons2/auxfuns.ml *)
 (*s: auxfuns.ml *)
 type void = Void of void (* used as placeholder for polymorphic variable *)
 
@@ -61,3 +62,4 @@ module List = struct
   | x :: xs -> x :: take (n-1) xs
 end
 (*e: auxfuns.ml *)
+(*e: commons2/auxfuns.ml *)

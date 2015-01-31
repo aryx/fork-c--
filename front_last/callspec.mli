@@ -1,3 +1,4 @@
+(*s: front_last/callspec.mli *)
 (*s: callspec.mli *)
 val overflow      : dealloc:Call.party -> alloc:Call.party -> Call.overflow
 val c_overflow    : Call.overflow
@@ -15,7 +16,7 @@ module ReturnAddress: sig
     (* <<suggested functions>> *)
 end     
 (*x: callspec.mli *)
-(*s: type t *)
+(*s: type t(callspec.nw) *)
 type t =
     { name              : string            (* name this CC *)
     ; stack_growth      : Memalloc.growth   (* up or down *)
@@ -29,7 +30,7 @@ type t =
     ; ra                : Rtl.loc           (* where is RA, how to treat it *)
                           * ReturnAddress.style
     }
-(*e: type t *)
+(*e: type t(callspec.nw) *)
 
 (*x: callspec.mli *)
 val to_call: cutto:(unit, Mflow.cut_args) Target.map -> 
@@ -37,3 +38,4 @@ val to_call: cutto:(unit, Mflow.cut_args) Target.map ->
              Automaton.cc_spec ->
              t -> Call.t   
 (*e: callspec.mli *)
+(*e: front_last/callspec.mli *)

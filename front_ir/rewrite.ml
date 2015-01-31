@@ -1,3 +1,4 @@
+(*s: front_ir/rewrite.ml *)
 (*s: rewrite.ml *)
 module B  = Bits
 module BO = Bits.Ops
@@ -209,3 +210,4 @@ let div' w ~dst x y ~quot ~rem =
          return (O.sub w quot (O.signed w 1)),
          return quot)
 (*e: rewrite.ml *)
+(*e: front_ir/rewrite.ml *)

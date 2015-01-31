@@ -1,3 +1,4 @@
+(*s: front_target/target.mli *)
 (*s: target.mli *)
 (*s: map and machine types *)
 type ('em, 'pr) map' = ('em, 'pr) Ep.pre_map =
@@ -52,7 +53,7 @@ type capabilities = {
     fwiden      : bool;            (* use float ops literals at narrow widths? *)
   }
 (*e: auxiliary types used to define type [[t]] *)
-(*s: type t *)
+(*s: type t(target.nw) *)
 type ('proc, 'automaton, 'cc) t = { 
   (*s: components of [[t]] *)
   name: string;
@@ -96,7 +97,7 @@ type ('proc, 'automaton, 'cc) t = {
   capabilities: capabilities;
   (*e: components of [[t]] *)
  }
-(*e: type t *)
+(*e: type t(target.nw) *)
 
 (*s: exported functions *)
 val is_tmp : ('pr, 'au, 'cc) t -> Rtl.space -> bool  (* partially apply me *)
@@ -110,3 +111,4 @@ val incapable : capabilities  (* the completely useless back end *)
 (*x: target.mli *)
 val minimal_capabilities: int -> capabilities
 (*e: target.mli *)
+(*e: front_target/target.mli *)

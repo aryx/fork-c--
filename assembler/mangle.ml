@@ -1,3 +1,4 @@
+(*s: assembler/mangle.ml *)
 (*s: mangle.ml *)
 type strset         = Strutil.Set.t
 type strmap         = (string,string) Hashtbl.t
@@ -42,3 +43,4 @@ let mk spec =
     in
         mangle
 (*e: mangle.ml *)
+(*e: assembler/mangle.ml *)

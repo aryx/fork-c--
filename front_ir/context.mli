@@ -1,3 +1,4 @@
+(*s: front_ir/context.mli *)
 (*s: context.mli *)
 type 'c op = string * 'c list * 'c        (* op, arguments, result *)
 (*x: context.mli *)
@@ -11,3 +12,4 @@ val of_spaces : Space.t list -> t
 (*x: context.mli *)
 val functions : t op list -> (Rtl.Private.opr -> t list) * (Rtl.Private.opr -> t)
 (*e: context.mli *)
+(*e: front_ir/context.mli *)

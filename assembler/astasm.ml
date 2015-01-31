@@ -1,3 +1,4 @@
+(*s: assembler/astasm.ml *)
 (*s: astasm.ml *)
 module T        = Target
 module A        = Ast
@@ -15,15 +16,15 @@ module type PERSONALITY = sig
     val cfg2ast : proc -> Ast.proc
 end
 (*e: PERSONALITY *)
-(*s: S *)
+(*s: S(astasm.nw) *)
 module type S = sig
     type proc
     val asm: out_channel -> proc Asm.assembler
 end    
-(*e: S *)
+(*e: S(astasm.nw) *)
 module Make (P: PERSONALITY): S with type proc = P.proc = struct
     type proc = P.proc
-    (*s: Make *)
+    (*s: Make(astasm.nw) *)
     let pointer     = A.BitsTy(P.pointersize)
     let bits n      = A.BitsTy n
     let int n       = A.Sint( string_of_int n, Some (bits P.wordsize))
@@ -33,7 +34,7 @@ module Make (P: PERSONALITY): S with type proc = P.proc = struct
     exception Unsupported of string
     let unsupported msg = raise (Unsupported msg)
     type reloc = Reloc.t
-    (*x: Make *)
+    (*x: Make(astasm.nw) *)
     let spec =
         let reserved =
             [ "aborts"; "align"; "aligned"; "also"; "as"; "big"; "byteorder";
@@ -62,13 +63,13 @@ module Make (P: PERSONALITY): S with type proc = P.proc = struct
                 ; Mangle.reserved   = reserved
                 ; Mangle.avoid      = (fun x -> x ^ "$")
                 }
-    (*x: Make *)
+    (*x: Make(astasm.nw) *)
     let reladdr (a:reloc) =
       let const b = Rtlutil.ToAST.expr (Rtl.bits b (Bits.width b)) in
       let sym (s,_) = A.Fetch (A.Name(None,s#mangled_text,None)) in
       let binop op l r = A.BinOp(l, op, r) in
       Reloc.fold ~const ~sym ~add:(binop "+") ~sub:(binop "-") a
-    (*x: Make *)
+    (*x: Make(astasm.nw) *)
     type init  = unit
 
     class asm (fd:out_channel): [proc] Asm.assembler = 
@@ -224,8 +225,9 @@ module Make (P: PERSONALITY): S with type proc = P.proc = struct
                                  :: sections in
             Astpp.emit _fd 72 ast
     end    
-    (*x: Make *)
+    (*x: Make(astasm.nw) *)
     let asm fd = new asm fd
-    (*e: Make *)
+    (*e: Make(astasm.nw) *)
 end
 (*e: astasm.ml *)
+(*e: assembler/astasm.ml *)

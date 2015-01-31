@@ -1,3 +1,4 @@
+(*s: front_zipcfg/varmap.mli *)
 (*s: varmap.mli *)
 type reg  = Register.t
 type rset = Register.Set.t
@@ -57,3 +58,4 @@ val alloc_outreg : reg list -> rset -> rset ->         t -> rset -> bool ->
 (*x: varmap.mli *)
 val sync_maps : t -> t -> t * t
 (*e: varmap.mli *)
+(*e: front_zipcfg/varmap.mli *)

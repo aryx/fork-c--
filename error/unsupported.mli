@@ -1,3 +1,4 @@
+(*s: error/unsupported.mli *)
 (*s: unsupported.mli *)
 exception Unsupported
 val explain : int -> int list -> unit
@@ -16,3 +17,4 @@ val mulx_and_mulux : unit -> 'a
 val singlebit : op:string -> 'a
 val popcnt : notok:int -> ok:int -> 'a
 (*e: unsupported.mli *)
+(*e: error/unsupported.mli *)

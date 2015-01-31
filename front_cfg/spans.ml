@@ -1,3 +1,4 @@
+(*s: front_cfg/spans.ml *)
 (*s: spans.ml *)
 type label = string
 type link  = Reloc.t
@@ -26,3 +27,4 @@ let fold_live_locs f spans z =
   List.fold_left foldcsreg (fold spans.inalloc (fold spans.outalloc (fold spans.ra z)))
                            spans.csregs
 (*e: spans.ml *)
+(*e: front_cfg/spans.ml *)

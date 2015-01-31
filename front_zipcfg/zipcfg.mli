@@ -1,3 +1,4 @@
+(*s: front_zipcfg/zipcfg.mli *)
 (*s: zipcfg.mli *)
 type uid = Unique.uid
 type label = uid * string
@@ -192,3 +193,4 @@ val block2cfg    : 'a machine -> (Rtl.exp -> Rtl.rtl) Dag.block -> (zgraph * boo
 val cbranch2cfg  : 'a machine -> (Rtl.exp -> Rtl.rtl) Dag.cbranch ->
                      ifso:label -> ifnot:label -> zgraph -> (zgraph * bool)
 (*e: zipcfg.mli *)
+(*e: front_zipcfg/zipcfg.mli *)

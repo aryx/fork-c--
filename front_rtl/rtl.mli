@@ -1,3 +1,4 @@
+(*s: front_rtl/rtl.mli *)
 (*s: rtl.mli *)
 (*s: definitions of exported, exposed types *)
 type aggregation = Register.aggregation = 
@@ -131,3 +132,4 @@ module Up: sig
     (*e: UP *)
 end
 (*e: rtl.mli *)
+(*e: front_rtl/rtl.mli *)

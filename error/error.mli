@@ -1,3 +1,4 @@
+(*s: error/error.mli *)
 (*s: error.mli *)
 type 'a error       = Error                     (* bad result  *)
                     | Ok        of 'a           (* good result *)
@@ -74,3 +75,4 @@ val errorRegionPrt : Srcmap.region -> string -> unit
 val errorPosPrt    : Srcmap.pos -> string -> unit
 val errorRegPrt    : Srcmap.rgn -> string -> unit
 (*e: error.mli *)
+(*e: error/error.mli *)

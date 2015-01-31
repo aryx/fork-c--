@@ -1,3 +1,4 @@
+(*s: commons3/tx.ml *)
 (*s: tx.ml *)
 type t = { mutable limit : int; mutable remaining : int; mutable last : string; }
 let ts = { limit = max_int; remaining = max_int; last = "<none>"; }
@@ -25,3 +26,4 @@ let used _ = ts.limit - ts.remaining
 let last _ = ts.last
 
 (*e: tx.ml *)
+(*e: commons3/tx.ml *)

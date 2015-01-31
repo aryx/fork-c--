@@ -1,8 +1,9 @@
+(*s: front_last/dataflow.mli *)
 (*s: dataflow.mli *)
-(*s: exported types *)
+(*s: exported types(dataflow.nw) *)
 type 'a answer = Dataflow of 'a | Rewrite of Zipcfg.graph
 type txlimit = int
-(*x: exported types *)
+(*x: exported types(dataflow.nw) *)
 type 'a fact = {
   fact_name : string;                     (* documentation *)
   init_info : 'a;                         (* lattice bottom element *)
@@ -10,7 +11,7 @@ type 'a fact = {
   changed   : old:'a -> new':'a -> bool;  (* is new one bigger? *)
   prop      : 'a Unique.Prop.t;           (* access to mutable state by uid *)
 }
-(*x: exported types *)
+(*x: exported types(dataflow.nw) *)
 type 'a fact' = {
   fact_name' : string;                     (* documentation *)
   init_info' : 'a;                         (* lattice bottom element *)
@@ -19,7 +20,7 @@ type 'a fact' = {
   get'       : Zipcfg.uid -> 'a;
   set'       : Zipcfg.uid -> 'a -> unit;
 }
-(*e: exported types *)
+(*e: exported types(dataflow.nw) *)
 module B : sig
   (*s: exported types for backward analyses *)
   type ('i, 'o) computation =
@@ -97,3 +98,4 @@ end
 val limit_fun  : ('a -> 'b -> 'c option) -> ('a -> 'b -> txlimit -> 'c option)
 (*e: declarations of shared exported values *)
 (*e: dataflow.mli *)
+(*e: front_last/dataflow.mli *)

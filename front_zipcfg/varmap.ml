@@ -1,3 +1,4 @@
+(*s: front_zipcfg/varmap.ml *)
 (*s: varmap.ml *)
 open Nopoly
 
@@ -229,3 +230,4 @@ let eq' ~old:(m2, _) ~new':(m1, _) =
          with Not_found -> false in
   RM.fold (is_eq m2) m1 true (* only equality on a subset... *)
 (*e: varmap.ml *)
+(*e: front_zipcfg/varmap.ml *)

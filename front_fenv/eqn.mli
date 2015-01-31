@@ -1,3 +1,4 @@
+(*s: front_fenv/eqn.mli *)
 (*s: eqn.mli *)
 (*s: EXP *)
 module type EXP = sig
@@ -7,7 +8,7 @@ module type EXP = sig
     val print: t -> string                      (* for debugging *)
 end
 (*e: EXP *)
-(*s: S *)
+(*s: S(eqn.nw) *)
 module type S = sig
     type t                                      (* set of equations *)
     type term
@@ -24,6 +25,7 @@ module type S = sig
     val make_zero:      sum -> t -> t           (* add equation *)
     val solve:          t -> solution           (* Can'tSolve *)
 end
-(*e: S *)
+(*e: S(eqn.nw) *)
 module Make (E: EXP): S with type term = E.t
 (*e: eqn.mli *)
+(*e: front_fenv/eqn.mli *)

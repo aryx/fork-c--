@@ -1,3 +1,4 @@
+(*s: front_nelab/simplify.ml *)
 (*s: simplify.ml *)
 open Nopoly
 
@@ -560,3 +561,4 @@ let compile_time_ops =
       "lobits"; "lt"; "ltu"; "mul"; "ne"; "neg"; "or"; "shl"; "shra";
       "shrl"; " sub"; "sx"; "xor"; "zx"]
 (*e: simplify.ml *)
+(*e: front_nelab/simplify.ml *)

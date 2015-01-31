@@ -1,3 +1,4 @@
+(*s: front_ir/contn.mli *)
 (*s: contn.mli *)
 type t
 
@@ -9,3 +10,4 @@ val cut_args    : ('a, 'b, 'c) Target.t -> contn:Rtl.exp -> Mflow.cut_args
 val ovblock_exp : Rtl.exp -> int -> int -> int -> Rtl.exp
 val get_contn   : Rtl.exp * Rtl.exp -> Rtl.exp
 (*e: contn.mli *)
+(*e: front_ir/contn.mli *)

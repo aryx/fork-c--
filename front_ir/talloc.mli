@@ -1,3 +1,4 @@
+(*s: front_ir/talloc.mli *)
 (*s: talloc.mli *)
 module Single : sig
   type t       (* an allocator for one space -- a mutable type *)
@@ -16,3 +17,4 @@ module Multiple : sig
   val reg_like : t -> Register.t -> Register.t
 end
 (*e: talloc.mli *)
+(*e: front_ir/talloc.mli *)

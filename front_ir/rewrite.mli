@@ -1,3 +1,4 @@
+(*s: front_ir/rewrite.mli *)
 (*s: rewrite.mli *)
 (*s: exported type abbreviations *)
 type width = Rtl.width
@@ -134,3 +135,4 @@ type 'a pair = { hi : 'a; lo : 'a }
 val splits : width -> lsb:int -> exp -> exp pair
 val splitu : width -> lsb:int -> exp -> exp pair
 (*e: rewrite.mli *)
+(*e: front_ir/rewrite.mli *)

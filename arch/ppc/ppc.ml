@@ -1,3 +1,4 @@
+(*s: arch/ppc/ppc.ml *)
 (*s: ppc.ml *)
 open Nopoly
 
@@ -455,7 +456,7 @@ let cconv name specs =
   and addk            = RU.addk 32
   and std_sp_location = RU.add  32 vfp (R.late "minus frame size" 32)
   in 
-  (*s: transformations *)
+  (*s: transformations(ppc.nw) *)
   let autoAt = A.at mspace in 
   let linkage_base r = addk (Block.base r.A.overflow) (-24) in
   let call_actuals  =
@@ -497,7 +498,7 @@ let cconv name specs =
   and saved_nvr temps =
     let t = Talloc.Multiple.loc temps 't' in
     fun r -> t (Register.width r)
-  (*e: transformations *)
+  (*e: transformations(ppc.nw) *)
   in
   { C.name             = name
   ; C.overflow_alloc   = { C.parameter_deallocator = C.Caller
@@ -603,3 +604,4 @@ let placevars =
   Placevar.mk_automaton ~warn ~vfp ~memspace:mspace mk_stage
 (*e: variable placer *)
 (*e: ppc.ml *)
+(*e: arch/ppc/ppc.ml *)

@@ -1,9 +1,10 @@
+(*s: front_nelab/nelab.mli *)
 (*s: nelab.mli *)
-(*s: exposed types *)
+(*s: exposed types(nelab.nw) *)
 type name    = string
 type kind    = string
 type aligned = int
-(*x: exposed types *)
+(*x: exposed types(nelab.nw) *)
 type index = int
 type linktime = Reloc.t
 type 'a proc =
@@ -29,16 +30,17 @@ type 'a datum =
   | Procedure         of 'a proc
 
 type 'a section = name * 'a datum list
-(*x: exposed types *)
+(*x: exposed types(nelab.nw) *)
 type 'a compunit = {
   globals : (name * Fenv.variable) list;
   sections : 'a section list;
 }
-(*x: exposed types *)
+(*x: exposed types(nelab.nw) *)
 type validator = Rtl.rtl -> string option
-(*e: exposed types *)
+(*e: exposed types(nelab.nw) *)
 val program : swap:bool -> validator -> Srcmap.map -> 'a Asm.assembler -> Nast.t ->
   ('a Fenv.Dirty.env' * 'a compunit) Error.error
 (*x: nelab.mli *)
 val rewrite : (Auxfuns.void compunit -> Auxfuns.void compunit) -> ('a compunit -> 'a compunit)
 (*e: nelab.mli *)
+(*e: front_nelab/nelab.mli *)

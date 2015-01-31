@@ -1,3 +1,4 @@
+(*s: arch/dummy/dummy.ml *)
 (*s: dummy.ml *)
 module AN       = Automaton
 module C        = Call
@@ -156,7 +157,7 @@ module Make(A: ARCH) = struct
                     Impossible.impossible (Printf.sprintf "cannot save $%c%d" s i)
         (*x: calling convention *)
         let conv name jump specs =
-          (*s: transformations *)
+          (*s: transformations(dummy.nw) *)
           let autoAt = AN.at mspace in
           let call_actuals  =
             C.outgoing ~growth ~sp
@@ -198,7 +199,7 @@ module Make(A: ARCH) = struct
              C.outgoing ~growth ~sp ~mkauto:(fun () -> autoAt base specs.AN.cutto)
                ~autosp:(fun r -> spval)
                ~postsp:(fun _ _ -> spval) in
-          (*e: transformations *)
+          (*e: transformations(dummy.nw) *)
           { C.name             = name
           ; C.overflow_alloc  = { C.parameter_deallocator = if jump then C.Callee else C.Caller
                                 ; C.result_allocator      = C.Caller
@@ -311,3 +312,4 @@ end)
 let dummy32l' = Dummy32l.target'
 let dummy32b' = Dummy32b.target'
 (*e: dummy.ml *)
+(*e: arch/dummy/dummy.ml *)

@@ -1,5 +1,6 @@
+(*s: front_asm/asm.ml *)
 (*s: asm.ml *)
-(*s: exported type definitions *)
+(*s: exported type definitions(asm.nw) *)
 class type ['proc] assembler = object
     (*s: assembler methods *)
     (* declarations *)
@@ -41,7 +42,7 @@ class type ['proc] assembler = object
         (* should probably be called progend *)
     (*e: assembler methods *)
 end
-(*e: exported type definitions *)
+(*e: exported type definitions(asm.nw) *)
 
 class ['proc] mapped_asm f (asm : 'a assembler) : ['proc] assembler =
 object
@@ -82,3 +83,4 @@ let reloc_string const =
   let infix op a b = String.concat "" [a; " "; op; " "; b] in
   Reloc.fold ~const ~sym ~add:(infix "+") ~sub:(infix "-")
 (*e: asm.ml *)
+(*e: front_asm/asm.ml *)

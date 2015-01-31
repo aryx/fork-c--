@@ -1,3 +1,4 @@
+(*s: commons3/uint64.mli *)
 (*s: uint64.mli *)
 (*s: external functions *)
 (* external of_int:     int   -> int64                  = "uint64_i2i" *)
@@ -27,3 +28,4 @@ module Cast : sig
  external float32 :   float -> int64 = "uint64_float32"
 end
 (*e: uint64.mli *)
+(*e: commons3/uint64.mli *)

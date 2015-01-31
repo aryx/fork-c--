@@ -1,3 +1,4 @@
+(*s: commons2/rx.ml *)
 (*s: rx.ml *)
 let (=*=) = (=)
 
@@ -75,3 +76,4 @@ let matchstr e str =
     in
         loop e 0
 (*e: rx.ml *)
+(*e: commons2/rx.ml *)

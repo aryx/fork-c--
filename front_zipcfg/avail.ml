@@ -1,3 +1,4 @@
+(*s: front_zipcfg/avail.ml *)
 (*s: avail.ml *)
 module R   = Rtl
 module RP  = Rtl.Private
@@ -109,3 +110,4 @@ let to_string = function
           (RU.ToString.loc (Up.loc l)) (RU.ToString.exp (Up.exp e)) in
       String.concat "" (List.map print les)
 (*e: avail.ml *)
+(*e: front_zipcfg/avail.ml *)

@@ -1,3 +1,4 @@
+(*s: arch/mips/mipscall.ml *)
 (*s: mipscall.ml *)
 module A  = Automaton
 module C  = Call
@@ -55,7 +56,7 @@ let postprocess cconv =
 (*x: mipscall.ml *)
 let c ~return_to cut stage = 
     let stage = postprocess stage in
-    (*s: transformations *)
+    (*s: transformations(mipscall.nw) *)
     let autoAt = A.at Rg.mspace in
     let prolog =
       let autosp = (fun _  -> vfp) in
@@ -97,7 +98,7 @@ let c ~return_to cut stage =
        C.outgoing ~growth ~sp ~mkauto:(fun () -> autoAt base stage.A.cutto)
          ~autosp:(fun r -> spval)
          ~postsp:(fun _ _ -> spval) in
-    (*e: transformations *)
+    (*e: transformations(mipscall.nw) *)
     let return k n ~ra =
         if k = 0 & n = 0 then return_to ra
         else impossf "alternate return using C calling convention" in
@@ -161,3 +162,4 @@ let cconv ~return_to cut ccname stage =
     | _    -> c
   in f ~return_to cut stage
 (*e: mipscall.ml *)
+(*e: arch/mips/mipscall.ml *)

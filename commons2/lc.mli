@@ -1,3 +1,4 @@
+(*s: commons2/lc.mli *)
 (*s: lc.mli *)
 exception Error of string
 (*x: lc.mli *)
@@ -37,3 +38,4 @@ val scan: string -> 'a lexer -> (int * 'a list)
 (*x: lc.mli *)
 val scanFrom : int -> string -> 'a lexer -> (int * 'a list)
 (*e: lc.mli *)
+(*e: commons2/lc.mli *)

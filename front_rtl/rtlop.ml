@@ -1,3 +1,4 @@
+(*s: front_rtl/rtlop.ml *)
 (*s: rtlop.ml *)
 module T = Types        (* save external Types module here *)
 let (-->) = T.proc 
@@ -218,3 +219,4 @@ module Emit = struct
     Strutil.Map.iter emitop (!optypes)
 end    
 (*e: rtlop.ml *)
+(*e: front_rtl/rtlop.ml *)

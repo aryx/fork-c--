@@ -1,3 +1,4 @@
+(*s: commons2/pc.ml *)
 (*s: pc.ml *)
 exception Error of string
 let error s = raise (Error s)
@@ -57,3 +58,4 @@ let opt p =
 let some p =
     p *** many p --> (fun (x,y) -> x::y)
 (*e: pc.ml *)
+(*e: commons2/pc.ml *)

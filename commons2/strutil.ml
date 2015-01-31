@@ -1,3 +1,4 @@
+(*s: commons2/strutil.ml *)
 (*s: strutil.ml *)
 let compares (x:string) (y:string) = compare x y
 
@@ -11,3 +12,4 @@ let assoc2map pairs =
 
 let from_list xs = List.fold_left (fun set x -> Set.add x set) Set.empty xs
 (*e: strutil.ml *)
+(*e: commons2/strutil.ml *)

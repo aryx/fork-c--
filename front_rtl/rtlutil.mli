@@ -1,3 +1,4 @@
+(*s: front_rtl/rtlutil.mli *)
 (*s: rtlutil.mli *)
 type aloc = 
     { fetch  : Rtl.width -> Rtl.exp
@@ -174,3 +175,4 @@ module ToString: sig
     val const: Rtl.Private.const -> string
 end
 (*e: rtlutil.mli *)
+(*e: front_rtl/rtlutil.mli *)

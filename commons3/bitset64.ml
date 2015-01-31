@@ -1,3 +1,4 @@
+(*s: commons3/bitset64.ml *)
 (*s: bitset64.ml *)
 module B  = Bits
 module BO = Bits.Ops
@@ -35,3 +36,4 @@ let remove_range ~lsb ~width s = diff s (single_range ~lsb ~width)
 let eq = B.eq
 let subset s s' = B.eq (inter s s') s
 (*e: bitset64.ml *)
+(*e: commons3/bitset64.ml *)

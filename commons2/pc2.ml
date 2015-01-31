@@ -1,3 +1,4 @@
+(*s: commons2/pc2.ml *)
 (*s: pc2.ml *)
 (*  ------------------------------------------------------------------ 
     $Id: pc2.nw,v 1.3 2002-06-05 19:32:14 lindig Exp $
@@ -90,3 +91,4 @@ let some p =
     (fun x xs -> x::xs) 
   % p *-* many p
 (*e: pc2.ml *)
+(*e: commons2/pc2.ml *)

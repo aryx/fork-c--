@@ -1,3 +1,4 @@
+(*s: front_ir/ast2ir.ml *)
 (*s: ast2ir.ml *)
 module A  = Ast
 module AT = Automaton
@@ -27,21 +28,21 @@ let genlabel s =
   let s = Idgen.label s in
   (G.uid (), s)
 (*x: ast2ir.ml *)
-(*s: utilities *)
+(*s: utilities(ast2ir.nw) *)
 let rsx = Register.rset_to_rxset
-(*x: utilities *)
+(*x: utilities(ast2ir.nw) *)
 let (<<) f g  = fun x -> f (g x) (* function composition *)
 let impossf x = Printf.kprintf Impossible.impossible x
 let unimpf x = Printf.kprintf Impossible.unimp x
-(*x: utilities *)
+(*x: utilities(ast2ir.nw) *)
 let ( **> ) f x = f x
-(*x: utilities *)
+(*x: utilities(ast2ir.nw) *)
 let aligned_mem ~align ~base target = 
   let ( *> ) = AT.( *> ) in
   AT.at target.T.memspace ~start:base (
     AT.align_to (fun w -> min align (w / target.T.memsize)) *>
     AT.overflow ~growth:Memalloc.Up ~max_alignment:align)
-(*e: utilities *)
+(*e: utilities(ast2ir.nw) *)
 (*x: ast2ir.ml *)
 (*s: type imports *)
 type tgt = Preast2ir.tgt = 
@@ -726,3 +727,4 @@ let translate target env ~optimizer ~defineglobals =
 (*x: ast2ir.ml *)
 let () = Debug.register "return-regs" "show registers used by return statememt"
 (*e: ast2ir.ml *)
+(*e: front_ir/ast2ir.ml *)

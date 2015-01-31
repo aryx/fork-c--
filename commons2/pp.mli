@@ -1,3 +1,4 @@
+(*s: commons2/pp.mli *)
 (*s: pp.mli *)
 type doc
 
@@ -44,3 +45,4 @@ val (^/)      : doc -> doc -> doc
 (*x: pp.mli *)
 val block     : ('a -> doc) -> 'a list -> doc
 (*e: pp.mli *)
+(*e: commons2/pp.mli *)

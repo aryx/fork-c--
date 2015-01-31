@@ -1,3 +1,4 @@
+(*s: arch/ppc/ppc.mli *)
 (*s: ppc.mli *)
 module Spaces : sig
   val m : Space.t
@@ -12,3 +13,4 @@ module X      : Expander.S
 val target    : Ast2ir.tgt
 val placevars : Ast2ir.proc -> Automaton.t
 (*e: ppc.mli *)
+(*e: arch/ppc/ppc.mli *)

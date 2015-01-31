@@ -1,3 +1,4 @@
+(*s: front_nelab/topsort.mli *)
 (*s: topsort.mli *)
 (*s: signature S *)
 module type S = sig
@@ -16,3 +17,4 @@ end
 
 module Make (S: Sortable) : (S with type decl = S.decl)
 (*e: topsort.mli *)
+(*e: front_nelab/topsort.mli *)

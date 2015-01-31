@@ -1,3 +1,4 @@
+(*s: front_ir/automatongraph.ml *)
 (*s: automatongraph.ml *)
 module A    = Automaton
 let sprintf = Printf.sprintf
@@ -175,3 +176,4 @@ let summary ~what ~mk dirs =
       (NS.cardinal g.nodes) (mapsize g.edges) (List.length (interesting_paths g))
 
 (*e: automatongraph.ml *)
+(*e: front_ir/automatongraph.ml *)

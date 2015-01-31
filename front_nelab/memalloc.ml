@@ -1,3 +1,4 @@
+(*s: front_nelab/memalloc.ml *)
 (*s: memalloc.ml *)
 type growth = Up | Down
 type unchanging = 
@@ -45,3 +46,4 @@ let freeze t = match t.u.growth with
 
 let num_allocated t = t.num_allocated
 (*e: memalloc.ml *)
+(*e: front_nelab/memalloc.ml *)

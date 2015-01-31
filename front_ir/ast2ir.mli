@@ -1,3 +1,4 @@
+(*s: front_ir/ast2ir.mli *)
 (*s: ast2ir.mli *)
 (*s: type imports *)
 type tgt = Preast2ir.tgt = 
@@ -14,3 +15,4 @@ val translate : tgt
                 -> proc Nelab.compunit
                 -> unit   (* side-effects the assembler in the environment *)
 (*e: ast2ir.mli *)
+(*e: front_ir/ast2ir.mli *)

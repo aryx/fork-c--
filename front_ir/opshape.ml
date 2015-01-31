@@ -1,3 +1,4 @@
+(*s: front_ir/opshape.ml *)
 (*s: opshape.ml *)
 module SM = Strutil.Map
 module T  = Types
@@ -5,7 +6,7 @@ module T  = Types
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
  
 
-(*s: exported type definitions *)
+(*s: exported type definitions(opshape.nw) *)
 type opr = Rtl.Private.opr
 type exp = Rtl.Private.exp
 type 'a hi = Hi of 'a
@@ -23,7 +24,7 @@ type ('temp, 'warg) t =
   | Fpcvt  of 'temp * 'warg
   | Bool
   | Nullary
-(*e: exported type definitions *)
+(*e: exported type definitions(opshape.nw) *)
 (*x: opshape.ml *)
 let shape scheme = match scheme with
 | [
@@ -283,3 +284,4 @@ let cappfun t w =
 
 let capply to_temp to_warg opr = cappfun to_temp to_warg (of_opr opr)
 (*e: opshape.ml *)
+(*e: front_ir/opshape.ml *)

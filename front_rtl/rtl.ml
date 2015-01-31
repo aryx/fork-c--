@@ -1,3 +1,4 @@
+(*s: front_rtl/rtl.ml *)
 (*s: rtl.ml *)
 (*s: definitions of exported, exposed types *)
 type aggregation = Register.aggregation = 
@@ -179,3 +180,4 @@ end
 module Convert = Dn (* deprecated, for backward compatibility *)
 module Revert  = Up (* deprecated, for backward compatibility *) 
 (*e: rtl.ml *)
+(*e: front_rtl/rtl.ml *)

@@ -1,16 +1,17 @@
+(*s: arch/ppc/ppcasm.ml *)
 (*s: ppcasm.ml *)
 open Nopoly
 
 module G  = Zipcfg
 module GR = Zipcfg.Rep
 module SM = Strutil.Map
-(*s: utilities *)
+(*s: utilities(ppcasm.nw) *)
 let fprintf = Printf.fprintf
-(*x: utilities *)
+(*x: utilities(ppcasm.nw) *)
 let mask32 = Int64.pred (Int64.shift_left Int64.one 32)
-(*e: utilities *)
-(*s: definitions *)
-(*s: definition of [[manglespec]] (for the name mangler) *)
+(*e: utilities(ppcasm.nw) *)
+(*s: definitions(ppcasm.nw) *)
+(*s: definition of [[manglespec]] (for the name mangler)(ppcasm.nw) *)
 let spec =
     let reserved = [] in        (* list reserved words here so we can avoid them *)
     let id = function
@@ -29,7 +30,7 @@ let spec =
             ; Mangle.reserved   = reserved
             ; Mangle.avoid      = (fun x -> x ^ "_")
             }
-(*e: definition of [[manglespec]] (for the name mangler) *)
+(*e: definition of [[manglespec]] (for the name mangler)(ppcasm.nw) *)
 
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
   : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler = 
@@ -43,12 +44,12 @@ object (this)
       _syms <- SM.add name s _syms;
       s
 
-    (*s: private assembly state *)
+    (*s: private assembly state(ppcasm.nw) *)
     val mutable _section = "bogus section"
-    (*e: private assembly state *)
+    (*e: private assembly state(ppcasm.nw) *)
     method private print l = List.iter (output_string _fd) l
 
-    (*s: assembly methods *)
+    (*s: assembly methods(ppcasm.nw) *)
     val imports = ref ([] : string list)
 
     method import s =
@@ -72,22 +73,22 @@ object (this)
       Printf.fprintf _fd "\t.indirect_symbol _%s\n" s;
       output_string  _fd "\t.long dyld_stub_binding_helper\n";
       sym
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method export s =
       let sym = this#new_symbol s in
       Printf.fprintf _fd ".globl %s\n" sym#mangled_text;
       sym
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method local s = this#new_symbol s
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method label (s: Symbol.t) = fprintf _fd "%s:\n" s#mangled_text
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method section name =
       _section <- name;
       if name =$= "text" then fprintf _fd ".text\n"
       else fprintf _fd ".section __DATA,%s\n" name
     method current = _section
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method org n = fprintf _fd ".org %d\n" n
     method align  n = 
       let rec lg = function
@@ -98,9 +99,9 @@ object (this)
       if n <> 1 then fprintf _fd ".align %d\n" (lg n)
     method addloc n = 
       if n <> 0 then fprintf _fd ".space %d\n"  n
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method zeroes (n:int) = fprintf _fd ".space %d, 0\n" n
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method value (v:Bits.bits) = 
       let altfmt = Bits.to_hex_or_decimal_string ~declimit:256 in
       match Bits.width v with
@@ -112,21 +113,21 @@ object (this)
           fprintf _fd ".long 0x%Lx\n" (Int64.shift_right_logical i 32);
           fprintf _fd ".long 0x%Lx\n" (Int64.logand i mask32)
       | w -> Impossible.unimp ("emission width " ^ string_of_int w ^ " in ppc assembler")
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method addr a =
       match Reloc.if_bare a with
       | Some b -> this#value b
       | None -> let const bits = Printf.sprintf "0x%Lx" (Bits.U.to_int64 bits) in
                 assert (Reloc.width a = 32);
                 fprintf _fd ".long %s\n" (Asm.reloc_string const a)
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method emit = ()
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method comment s = fprintf _fd "; %s\n" s
 
     method const (s: Symbol.t) (b:Bits.bits) = 
       fprintf _fd ".set %s, 0x%Lx" s#mangled_text (Bits.U.to_int64 b)
-    (*x: assembly methods *)
+    (*x: assembly methods(ppcasm.nw) *)
     method private instruction rtl =
       output_string _fd "\t";
       output_string _fd (Ppcrec.M.to_asm rtl (!imports));
@@ -150,8 +151,9 @@ object (this)
       let label l = this#label (try SM.find l _syms with Not_found -> this#local l) in
       this#label symbol;
       (emitter proc cfg (this#call) (this#instruction) label : unit)
-    (*e: assembly methods *)
+    (*e: assembly methods(ppcasm.nw) *)
 end
-(*e: definitions *)
+(*e: definitions(ppcasm.nw) *)
 let make emitter fd = new asm emitter fd
 (*e: ppcasm.ml *)
+(*e: arch/ppc/ppcasm.ml *)

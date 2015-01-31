@@ -1,3 +1,4 @@
+(*s: front_target/target.ml *)
 (*s: target.ml *)
 (*s: map and machine types *)
 type ('em, 'pr) map' = ('em, 'pr) Ep.pre_map =
@@ -57,7 +58,7 @@ type capabilities = {
     fwiden      : bool;            (* use float ops literals at narrow widths? *)
   }
 (*e: auxiliary types used to define type [[t]] *)
-(*s: type t *)
+(*s: type t(target.nw) *)
 type ('proc, 'automaton, 'cc) t = { 
   (*s: components of [[t]] *)
   name: string;
@@ -101,7 +102,7 @@ type ('proc, 'automaton, 'cc) t = {
   capabilities: capabilities;
   (*e: components of [[t]] *)
  }
-(*e: type t *)
+(*e: type t(target.nw) *)
 (*s: boxed machine *)
 let boxmach =
   let fail _ = assert false in
@@ -238,3 +239,4 @@ let fits t space =
   try space_fits (List.find (fun s -> RU.Eq.space s.Space.space space) t.spaces)
   with Not_found -> impossf "space not found in Target.fits"
 (*e: target.ml *)
+(*e: front_target/target.ml *)

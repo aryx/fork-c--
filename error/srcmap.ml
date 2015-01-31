@@ -1,3 +1,4 @@
+(*s: error/srcmap.ml *)
 (*s: srcmap.ml *)
 type pos            = int
 type rgn            = pos * pos
@@ -125,3 +126,4 @@ module Str = struct
                 file1 l1 col2 file2 l2 col2
 end
 (*e: srcmap.ml *)
+(*e: error/srcmap.ml *)

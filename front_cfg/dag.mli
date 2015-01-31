@@ -1,3 +1,4 @@
+(*s: front_cfg/dag.mli *)
 (*s: dag.mli *)
 (*s: abstract types for dags *)
 type uid
@@ -29,3 +30,4 @@ val lookup : uid -> 'a nodeset -> 'a   (* raises Not_found *)
 val insert : uid -> 'a -> 'a nodeset -> 'a nodeset
 (*e: exported utility functions for dags *)
 (*e: dag.mli *)
+(*e: front_cfg/dag.mli *)

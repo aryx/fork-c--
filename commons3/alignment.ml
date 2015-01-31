@@ -1,3 +1,4 @@
+(*s: commons3/alignment.ml *)
 (*s: alignment.ml *)
 type t = int * int
 (*x: alignment.ml *)
@@ -10,3 +11,4 @@ let rec gcd n m =
   else gcd (m - n) n
 let alignment (n, k) = gcd n k
 (*e: alignment.ml *)
+(*e: commons3/alignment.ml *)

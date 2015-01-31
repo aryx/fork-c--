@@ -1,5 +1,6 @@
+(*s: front_rtl/register.mli *)
 (*s: register.mli *)
-(*s: exported types *)
+(*s: exported types(register.nw) *)
 open Nopoly
 
 type aggregation = 
@@ -13,13 +14,13 @@ type reg = space * int * count (* Rtl.space, index, number of cells *)
 type t = reg
 type x = Reg   of t
        | Slice of width * int * t
-(*x: exported types *)
+(*x: exported types(register.nw) *)
 module type SETX = sig
   include Set.S
   val of_list   : elt list -> t
   val to_string : t -> string    (* elements sep. by commas (no braces) *)
 end
-(*e: exported types *)
+(*e: exported types(register.nw) *)
 val width   : t -> int
 val eq      : t -> t -> bool
 val compare : t -> t -> int
@@ -40,3 +41,4 @@ val reg_int_map : t list -> int * int Map.t
 (*x: register.mli *)
 val contains : outer:x -> inner:x -> bool
 (*e: register.mli *)
+(*e: front_rtl/register.mli *)

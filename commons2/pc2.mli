@@ -1,3 +1,4 @@
+(*s: commons2/pc2.mli *)
 (*s: pc2.mli *)
 (*  ------------------------------------------------------------------ 
 
@@ -107,3 +108,4 @@ val opt: ('t,'v)  par -> 'v -> ('t,'v) par
 (* [opt p v] tries to apply [p] to the input and returns its sementic value on success
  * and [v] if [p] fails.  *)
 (*e: pc2.mli *)
+(*e: commons2/pc2.mli *)

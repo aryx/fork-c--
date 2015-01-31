@@ -1,3 +1,4 @@
+(*s: front_cfg/cfg.mli *)
 (*s: cfg.mli *)
 (*s: exported signatures *)
 module type X = sig
@@ -167,3 +168,4 @@ end
 (*x: cfg.mli *)
 module Make (X:X) : S with module X = X
 (*e: cfg.mli *)
+(*e: front_cfg/cfg.mli *)

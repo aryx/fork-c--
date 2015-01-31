@@ -1,11 +1,12 @@
+(*s: front_nelab/nelab.ml *)
 (*s: nelab.ml *)
 open Nopoly
 
-(*s: exposed types *)
+(*s: exposed types(nelab.nw) *)
 type name    = string
 type kind    = string
 type aligned = int
-(*x: exposed types *)
+(*x: exposed types(nelab.nw) *)
 type index = int
 type linktime = Reloc.t
 type 'a proc =
@@ -31,14 +32,14 @@ type 'a datum =
   | Procedure         of 'a proc
 
 type 'a section = name * 'a datum list
-(*x: exposed types *)
+(*x: exposed types(nelab.nw) *)
 type 'a compunit = {
   globals : (name * Fenv.variable) list;
   sections : 'a section list;
 }
-(*x: exposed types *)
+(*x: exposed types(nelab.nw) *)
 type validator = Rtl.rtl -> string option
-(*e: exposed types *)
+(*e: exposed types(nelab.nw) *)
 module A  = Ast
 module B  = Bits
 module E  = Error
@@ -53,15 +54,15 @@ module T  = Types
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 (*x: nelab.ml *)
-(*s: auxiliaries *)
+(*s: auxiliaries(nelab.nw) *)
 let foldl: ('a -> 'b -> 'a) -> 'a -> 'b list -> 'a = List.fold_left 
-(*x: auxiliaries *)
+(*x: auxiliaries(nelab.nw) *)
 let (--) xx yy = List.filter (fun x  -> List.mem x yy) xx 
-(*x: auxiliaries *)
+(*x: auxiliaries(nelab.nw) *)
 let error r env msg = E.errorRegionPrt (F.srcmap env,r) msg 
-(*x: auxiliaries *)
+(*x: auxiliaries(nelab.nw) *)
 let is2power x = x > 0 && x land (x - 1) = 0
-(*e: auxiliaries *)
+(*e: auxiliaries(nelab.nw) *)
 (*x: nelab.ml *)
 module type SB = sig
   type d
@@ -354,7 +355,7 @@ let program ~swap validate srcmap asm ast =
       | None -> env in
       foldl check_pair env pairs in
     (*e: definitions of name-binding functions *)
-    (*s: definitions of elaboration functions *)
+    (*s: definitions of elaboration functions(nelab.nw) *)
     let section env (secname, ds) =
       (*s: definitions of procedure-processing functions *)
       let proc env spans p =
@@ -455,7 +456,7 @@ let program ~swap validate srcmap asm ast =
               errorf r "initialized Unicode string must specify type bits16" in
       (*e: definitions of elaboration functions for data *)
       E.Raise.right (secname, E.Raise.list (data [] ds [])) in
-    (*e: definitions of elaboration functions *)
+    (*e: definitions of elaboration functions(nelab.nw) *)
     (* phase one: create environment and bind all names *)
     let env = F.empty srcmap metrics asm in
     let env = F.push env (F.emptyscope) in  (* weird, but so it is *)
@@ -475,3 +476,4 @@ let program ~swap validate srcmap asm ast =
 (*x: nelab.ml *)
 let rewrite = Obj.magic
 (*e: nelab.ml *)
+(*e: front_nelab/nelab.ml *)

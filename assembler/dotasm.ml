@@ -1,10 +1,11 @@
+(*s: assembler/dotasm.ml *)
 (*s: dotasm.ml *)
 module Asm = Asm
 
 exception Unsupported of string
 let unsupported msg = raise (Unsupported msg)
 
-(*s: Make *)
+(*s: Make(dotasm.nw) *)
 let spec =
     let reserved = [] in
     let id = function
@@ -22,7 +23,7 @@ let spec =
             ; Mangle.reserved   = reserved
             ; Mangle.avoid      = (fun x -> x ^ "_")
             }
-(*x: Make *)
+(*x: Make(dotasm.nw) *)
 class ['proc] asm cfg2dot (fd:out_channel) : ['proc] Asm.assembler =
 object (this)
     val mutable _section = "this can't happen"
@@ -72,6 +73,7 @@ object (this)
 end
 
 
-(*e: Make *)
+(*e: Make(dotasm.nw) *)
 let asm ~compress ~live fd = new asm (Cfgutil.cfg2dot ~compress ~live) fd
 (*e: dotasm.ml *)
+(*e: assembler/dotasm.ml *)

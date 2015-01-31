@@ -1,3 +1,4 @@
+(*s: front_ir/context.ml *)
 (*s: context.ml *)
 open Nopoly
 
@@ -138,3 +139,4 @@ let functions ops =
     try SM.find n resmap with Not_found -> impossf "no result context for %s" n in
   arg_contexts, result_context
 (*e: context.ml *)
+(*e: front_ir/context.ml *)

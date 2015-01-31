@@ -1,3 +1,4 @@
+(*s: arch/arm/arm.ml *)
 (*s: arm.ml *)
 module SS   = Space.Standard32
 module S    = Space
@@ -306,3 +307,4 @@ let target : Ast2ir.tgt =
     }    
 
 (*e: arm.ml *)
+(*e: arch/arm/arm.ml *)

@@ -1,3 +1,4 @@
+(*s: arch/mips/mipsregs.ml *)
 (*s: mipsregs.ml *)
 module R  = Rtl
 module S  = Space
@@ -25,3 +26,4 @@ let cc        = locations.SS.cc
 let npc       = locations.SS.npc
 
 (*e: mipsregs.ml *)
+(*e: arch/mips/mipsregs.ml *)

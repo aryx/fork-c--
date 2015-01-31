@@ -1,3 +1,4 @@
+(*s: assembler/cfgutil.ml *)
 (*s: cfgutil.ml *)
 module A  = Ast 
 module DG = Dag
@@ -181,3 +182,4 @@ let cfg2ast instr g ~name =
     , Srcmap.null
     )
 (*e: cfgutil.ml *)
+(*e: assembler/cfgutil.ml *)

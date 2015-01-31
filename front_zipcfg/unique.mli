@@ -1,9 +1,10 @@
+(*s: front_zipcfg/unique.mli *)
 (*s: unique.mli *)
 type uid
 val eq : uid -> uid -> bool
 val uid : unit -> uid
 val distinguished_uid : uid    (* distinct from any other *)
-(*s: exposed types *)
+(*s: exposed types(unique.nw) *)
 module type MAP = sig
   type 'a t
   val empty : 'a t
@@ -22,14 +23,14 @@ module type MAP = sig
 
   val map   : ('a -> 'b) -> ('a t -> 'b t)
 end
-(*x: exposed types *)
+(*x: exposed types(unique.nw) *)
 module type SET = sig
   type t
   val empty : t
   val mem : uid -> t -> bool
   val add : uid -> t -> t
 end
-(*x: exposed types *)
+(*x: exposed types(unique.nw) *)
 module type ARRAY = sig
   type 'a t
   val make : uid list -> 'a -> 'a t
@@ -37,9 +38,10 @@ module type ARRAY = sig
   val set  : 'a t -> uid -> 'a -> unit
   val update : 'a t -> uid -> ('a -> 'a) -> unit
 end
-(*e: exposed types *)
+(*e: exposed types(unique.nw) *)
 module Map : MAP
 module Set : SET
 module Array : ARRAY
 module Prop : Property.S with type list = uid
 (*e: unique.mli *)
+(*e: front_zipcfg/unique.mli *)

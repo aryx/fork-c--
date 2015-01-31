@@ -1,3 +1,4 @@
+(*s: front_ir/contn.ml *)
 (*s: contn.ml *)
 module M = Mflow
 module R = Rtl
@@ -46,3 +47,4 @@ let cut_args t ~contn =
 
 let get_contn (newpc, newsp) = newpc
 (*e: contn.ml *)
+(*e: front_ir/contn.ml *)

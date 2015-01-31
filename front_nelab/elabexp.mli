@@ -1,3 +1,4 @@
+(*s: front_nelab/elabexp.mli *)
 (*s: elabexp.mli *)
 type nm_or_mem = Ast.name_or_mem
 type link = Reloc.t
@@ -14,3 +15,4 @@ val elab_kinded_name:
 val loc_region : Ast.region -> nm_or_mem -> Ast.region
 val exp_region : Ast.region -> Ast.expr  -> Ast.region
 (*e: elabexp.mli *)
+(*e: front_nelab/elabexp.mli *)

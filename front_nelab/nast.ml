@@ -1,6 +1,7 @@
+(*s: front_nelab/nast.ml *)
 (*s: nast.ml *)
 module A = Ast
-(*s: exposed types *)
+(*s: exposed types(nast.nw) *)
 type ty  = Ast.ty
 type exp = Ast.expr
 type loc = Ast.name_or_mem
@@ -11,7 +12,7 @@ type name = string
 type kind = string
 type convention = string
 type aligned    = int
-(*x: exposed types *)
+(*x: exposed types(nast.nw) *)
 type cformal  = Ast.region * kind * name * aligned option
 type actual   = kind * exp * aligned option
 type flow     = Ast.flow list
@@ -34,14 +35,14 @@ type stmt =
   | Cut    of convention * exp * actual list * flow 
   | Return of convention * (exp * exp) option * actual list
   | Limitcheck of convention * exp * (exp * name) option (* (cookie,(failk,recname)) *)
-(*x: exposed types *)
+(*x: exposed types(nast.nw) *)
 type typedefn  = ty * name list
 type constdefn = ty option * name * exp
 type compile_time_defns = {
   types     : typedefn  marked list;
   constants : constdefn marked list;
 }
-(*x: exposed types *)
+(*x: exposed types(nast.nw) *)
 type proc = {
     region        : Ast.region;
     cc            : convention;
@@ -60,7 +61,7 @@ and  datum =
   | ReserveMem of ty * Ast.memsize * Ast.init option (*init always none on stackdata*)
   | Procedure  of proc                               (* never on stackdata *)
   | SSpan      of exp * exp * datum marked list      (* never on stackdata *)
-(*x: exposed types *)
+(*x: exposed types(nast.nw) *)
 type section = name * datum marked list
 type t = {
   target   : Ast.arch marked list;
@@ -71,7 +72,7 @@ type t = {
   udecls   : compile_time_defns;
   sections : section list
 }
-(*e: exposed types *)
+(*e: exposed types(nast.nw) *)
 let default_proc_section = "text"
 (*x: nast.ml *)
 let id ss = ss
@@ -263,3 +264,4 @@ let program ts =
       ; udecls = { types = saccums.tys; constants = saccums.consts }
       })
 (*e: nast.ml *)
+(*e: front_nelab/nast.ml *)

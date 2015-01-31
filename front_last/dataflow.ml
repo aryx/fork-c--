@@ -1,3 +1,4 @@
+(*s: front_last/dataflow.ml *)
 (*s: dataflow.ml *)
 module G  = Zipcfg
 module GR = Zipcfg.Rep
@@ -9,10 +10,10 @@ let unimpf  fmt = Printf.kprintf Impossible.unimp      fmt
 let dprintf fmt = Debug.eprintf "dataflow" fmt
 let _ = Debug.register "dataflow" "execution of generic dataflow engine"
 
-(*s: exported types *)
+(*s: exported types(dataflow.nw) *)
 type 'a answer = Dataflow of 'a | Rewrite of Zipcfg.graph
 type txlimit = int
-(*x: exported types *)
+(*x: exported types(dataflow.nw) *)
 type 'a fact = {
   fact_name : string;                     (* documentation *)
   init_info : 'a;                         (* lattice bottom element *)
@@ -20,7 +21,7 @@ type 'a fact = {
   changed   : old:'a -> new':'a -> bool;  (* is new one bigger? *)
   prop      : 'a Unique.Prop.t;           (* access to mutable state by uid *)
 }
-(*x: exported types *)
+(*x: exported types(dataflow.nw) *)
 type 'a fact' = {
   fact_name' : string;                     (* documentation *)
   init_info' : 'a;                         (* lattice bottom element *)
@@ -29,8 +30,8 @@ type 'a fact' = {
   get'       : Zipcfg.uid -> 'a;
   set'       : Zipcfg.uid -> 'a -> unit;
 }
-(*e: exported types *)
-(*s: utilities *)
+(*e: exported types(dataflow.nw) *)
+(*s: utilities(dataflow.nw) *)
 let to_fact' f =
   { fact_name' = f.fact_name
   ; init_info' = f.init_info
@@ -42,7 +43,7 @@ let to_fact' f =
 let to_fact f f' =
   {fact_name = f'.fact_name'; init_info = f'.init_info'; add_info = f'.add_info';
    changed = f'.changed'; prop = f.prop}
-(*x: utilities *)
+(*x: utilities(dataflow.nw) *)
 let run dir name fact changed entry_fact do_block txlim blocks =
   let init () = 
     List.iter (fun b -> fact.set' (GR.id b) fact.init_info') blocks;
@@ -59,7 +60,7 @@ let run dir name fact changed entry_fact do_block txlim blocks =
   init();
   Debug.eprintf name "post-init %s dataflow pass %s\n" dir name;
   iterate 1
-(*x: utilities *)
+(*x: utilities(dataflow.nw) *)
 let update fact changed =
   fun u a ->
     let old_a = fact.get' u in
@@ -73,7 +74,7 @@ let update fact changed =
         end
 
 let _ = (update : 'a fact' -> bool ref -> G.uid -> 'a -> unit)
-(*x: utilities *)
+(*x: utilities(dataflow.nw) *)
 let without_changing_entry fact go =
   let restore =
     try
@@ -85,16 +86,16 @@ let without_changing_entry fact go =
   let answer = fact.get' GR.entry_uid in
   restore();
   output, answer
-(*x: utilities *)
+(*x: utilities(dataflow.nw) *)
 let add_blocks map list =
   let add _ b bs = b :: bs in
   UM.fold add map list
-(*x: utilities *)
+(*x: utilities(dataflow.nw) *)
 let ( << ) f g = fun x -> f (g x)
-(*x: utilities *)
+(*x: utilities(dataflow.nw) *)
 let eqfact fact a a' = (* poor man's approximation of equality *)
   not (fact.changed' a a' or fact.changed' a' a)
-(*e: utilities *)
+(*e: utilities(dataflow.nw) *)
 (*s: definitions of exported functions *)
 let limit_fun f i n txlim = if txlim > 0 then f i n else None
 let limit_last f n txlim  = if txlim > 0 then f n else None
@@ -669,3 +670,4 @@ module F = struct
   (*e: forward stuff *)
 end
 (*e: dataflow.ml *)
+(*e: front_last/dataflow.ml *)

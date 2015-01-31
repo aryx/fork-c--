@@ -1,9 +1,10 @@
+(*s: assembler/dummyasm.ml *)
 (*s: dummyasm.ml *)
 module Asm = Asm
 
 let debug s = prerr_string ("Dummyasm." ^ s ^ "\n")
 
-(*s: Make *)
+(*s: Make(dummyasm.nw) *)
 class ['proc] asm () : ['proc] Asm.assembler =
 object (this)
 
@@ -77,6 +78,7 @@ object (this)
 end
 
 
-(*e: Make *)
+(*e: Make(dummyasm.nw) *)
 let asm = new asm ()
 (*e: dummyasm.ml *)
+(*e: assembler/dummyasm.ml *)

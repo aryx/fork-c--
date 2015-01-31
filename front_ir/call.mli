@@ -1,5 +1,6 @@
+(*s: front_ir/call.mli *)
 (*s: call.mli *)
-(*s: exported type definitions *)
+(*s: exported type definitions(call.nw) *)
 type kind    = string
 type width   = int
 type aligned = int
@@ -17,16 +18,16 @@ type 'insp answer =
   ; shuffle  : Rtl.rtl              (* shuffle parms where they go *)
   ; post_sp  : Rtl.rtl              (* unconditional SP adjustment post-shuffle *)
   }
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type party = Caller | Callee
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type overflow = 
     { parameter_deallocator:    party
     ; result_allocator:         party
     }
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type ('a, 'b) split_blocks = { caller : 'a; callee : 'b }
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type outgoing = types -> Rtl.exp       list -> unit    answer
 type incoming = types -> Automaton.loc list -> (Block.t -> Rtl.rtl) answer
 type ('inc, 'out) pair' = { in' : 'inc ; out : 'out }
@@ -71,9 +72,9 @@ type t = (* part of a calling convention *)
   (* these next two encapsulate knowledge of which reg. is sp *)
   ; replace_vfp    : Zipcfg.graph -> Zipcfg.graph * bool
   } 
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type valpass = unit -> Automaton.t
-(*e: exported type definitions *)
+(*e: exported type definitions(call.nw) *)
 (*x: call.mli *)
 val outgoing :
      growth:Memalloc.growth -> sp:Rtl.loc -> mkauto:valpass ->
@@ -112,3 +113,4 @@ val run_cc_on_sig_and_return :
 val run_cc_on_sig_and_print :
   (Automaton.cc_spec -> Automaton.stage) -> 'a tgt -> string -> types -> unit
 (*e: call.mli *)
+(*e: front_ir/call.mli *)

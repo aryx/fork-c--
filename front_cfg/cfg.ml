@@ -1,6 +1,6 @@
+(*s: front_cfg/cfg.ml *)
 (*s: cfg.ml *)
 open Nopoly
-
 (*s: exported signatures *)
 module type X = sig
   type jx  (* extension at join point *)
@@ -1354,3 +1354,4 @@ module Make (X:X) : S with module X = X = struct
   (*e: graph and node mutators implementation *)
 end
 (*e: cfg.ml *)
+(*e: front_cfg/cfg.ml *)

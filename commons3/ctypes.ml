@@ -1,3 +1,4 @@
+(*s: commons3/ctypes.ml *)
 (*s: ctypes.ml *)
 (*s: types *)
 type 'a ctypes = { char               : 'a
@@ -89,3 +90,4 @@ let ctypes_vararg_enum ct =
   Printf.sprintf "{ %s }" (String.concat ", " str_lst)
 let enum_int h = snd (fetch_ct enum_ct h)
 (*e: ctypes.ml *)
+(*e: commons3/ctypes.ml *)

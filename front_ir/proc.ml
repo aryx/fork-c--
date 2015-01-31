@@ -1,5 +1,6 @@
+(*s: front_ir/proc.ml *)
 (*s: proc.ml *)
-(*s: type t *)
+(*s: type t(proc.nw) *)
 type overflow = (Block.t list, Block.t list) Call.split_blocks
 type ('automaton, 'cfg, 'cc, 'tgt) t = 
     { symbol:         Symbol.t           (* of procedure *)
@@ -24,5 +25,6 @@ type ('automaton, 'cfg, 'cc, 'tgt) t =
     ; headroom:       int                 (* size of the headroom *)
     ; exp_of_lbl:     (Unique.uid * string) -> Rtl.exp (* exp of code label *)
     }
-(*e: type t *)
+(*e: type t(proc.nw) *)
 (*e: proc.ml *)
+(*e: front_ir/proc.ml *)

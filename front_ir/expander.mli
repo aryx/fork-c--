@@ -1,3 +1,4 @@
+(*s: front_ir/expander.mli *)
 (*s: expander.mli *)
 (*s: expander module type *)
 module type S = sig
@@ -19,3 +20,4 @@ end
 (*e: expander module type *)
 module IntFloatAddr (Post : Postexpander.S) : S
 (*e: expander.mli *)
+(*e: front_ir/expander.mli *)

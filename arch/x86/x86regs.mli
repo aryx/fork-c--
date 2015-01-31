@@ -1,3 +1,4 @@
+(*s: arch/x86/x86regs.mli *)
 (*s: x86regs.mli *)
 val rspace : Register.space
 val eax : Register.t
@@ -21,3 +22,4 @@ val fpustatus : Rtl.loc
 val fpcc      : Rtl.loc
 val fpround   : Register.x
 (*e: x86regs.mli *)
+(*e: arch/x86/x86regs.mli *)

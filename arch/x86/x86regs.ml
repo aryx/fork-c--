@@ -1,3 +1,4 @@
+(*s: arch/x86/x86regs.ml *)
 (*s: x86regs.ml *)
 module R = Rtl
 let rspace = ('r', Rtl.Identity, Cell.of_size 32)
@@ -31,3 +32,4 @@ let regname8 ~lsb ~base = match lsb with
 | _ -> Impossible.impossible "bad lsb in slice denoting 8-bit register"
 
 (*e: x86regs.ml *)
+(*e: arch/x86/x86regs.ml *)

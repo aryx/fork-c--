@@ -1,3 +1,4 @@
+(*s: front_zipcfg/avail.mli *)
 (*s: avail.mli *)
 type t   (* a set of available expressions *)
 val forward : Rtl.rtl -> t -> t
@@ -13,3 +14,4 @@ val subst_exp : t -> Rtl.Private.loc list -> Rtl.Private.exp -> Rtl.Private.exp
 (*x: avail.mli *)
 val to_string : t -> string
 (*e: avail.mli *)
+(*e: front_zipcfg/avail.mli *)

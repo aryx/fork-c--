@@ -1,3 +1,4 @@
+(*s: front_last/callspec.ml *)
 (*s: callspec.ml *)
 module R  = Rtl
 module RU = Rtlutil
@@ -31,7 +32,7 @@ module ReturnAddress = struct
         | SaveToTemp of char            (* save RA in a temporary   *)
 end    
 
-(*s: type t *)
+(*s: type t(callspec.nw) *)
 type t =
     { name              : string            (* name this CC *)
     ; stack_growth      : Memalloc.growth   (* up or down *)
@@ -45,7 +46,7 @@ type t =
     ; ra                : Rtl.loc           (* where is RA, how to treat it *)
                           * ReturnAddress.style
     }
-(*e: type t *)
+(*e: type t(callspec.nw) *)
 (*x: callspec.ml *)
 let old_end wordsize growth block = match growth with
 | Memalloc.Down -> RU.addk wordsize (Block.base block) (Block.size block)
@@ -167,3 +168,4 @@ let to_call ~cutto ~return auto t =
     ; C.return           = return
     }
 (*e: callspec.ml *)
+(*e: front_last/callspec.ml *)

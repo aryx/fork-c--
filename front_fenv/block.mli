@@ -1,3 +1,4 @@
+(*s: front_fenv/block.mli *)
 (*s: block.mli *)
 type t
 
@@ -41,3 +42,4 @@ module Lua: sig
     val eq : t -> t -> bool
 end
 (*e: block.mli *)
+(*e: front_fenv/block.mli *)

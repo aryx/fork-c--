@@ -1,3 +1,4 @@
+(*s: front_ir/call.ml *)
 (*s: call.ml *)
 module A  = Automaton
 module Dn = Rtl.Dn
@@ -6,7 +7,7 @@ module RP = Rtl.Private
 module RS = Register.SetX
 module RU = Rtlutil
 module Up = Rtl.Up
-(*s: exported type definitions *)
+(*s: exported type definitions(call.nw) *)
 type kind    = string
 type width   = int
 type aligned = int
@@ -24,16 +25,16 @@ type 'insp answer =
   ; shuffle  : Rtl.rtl              (* shuffle parms where they go *)
   ; post_sp  : Rtl.rtl              (* unconditional SP adjustment post-shuffle *)
   }
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type party = Caller | Callee
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type overflow = 
     { parameter_deallocator:    party
     ; result_allocator:         party
     }
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type ('a, 'b) split_blocks = { caller : 'a; callee : 'b }
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type outgoing = types -> Rtl.exp       list -> unit    answer
 type incoming = types -> Automaton.loc list -> (Block.t -> Rtl.rtl) answer
 type ('inc, 'out) pair' = { in' : 'inc ; out : 'out }
@@ -78,9 +79,9 @@ type t = (* part of a calling convention *)
   (* these next two encapsulate knowledge of which reg. is sp *)
   ; replace_vfp    : Zipcfg.graph -> Zipcfg.graph * bool
   } 
-(*x: exported type definitions *)
+(*x: exported type definitions(call.nw) *)
 type valpass = unit -> Automaton.t
-(*e: exported type definitions *)
+(*e: exported type definitions(call.nw) *)
 (*x: call.ml *)
 let ignore r s = s
 
@@ -264,3 +265,4 @@ module type SPEC = sig
 end
 (*e: specification for a calling convention *)
 (*e: call.ml *)
+(*e: front_ir/call.ml *)

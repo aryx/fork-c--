@@ -1,3 +1,4 @@
+(*s: commons2/lc.ml *)
 (*s: lc.ml *)
 let (=<=) (x:char)   (y:char)   = (=) x y
 
@@ -89,3 +90,4 @@ let saveStr l           = save String.sub l
 let scanFrom x str lexer    = lexer str x []    
 let scan str lexer          = lexer str 0 [] 
 (*e: lc.ml *)
+(*e: commons2/lc.ml *)

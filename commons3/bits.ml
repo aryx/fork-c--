@@ -1,3 +1,4 @@
+(*s: commons3/bits.ml *)
 (*s: bits.ml *)
 let (=*=) = (=)
 let (=<=) (x:char)   (y:char)   = (=) x y
@@ -346,3 +347,4 @@ module U = struct
     (*e: implementation U *)
 end
 (*e: bits.ml *)
+(*e: commons3/bits.ml *)

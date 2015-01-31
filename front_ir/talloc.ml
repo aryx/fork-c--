@@ -1,20 +1,21 @@
+(*s: front_ir/talloc.ml *)
 (*s: talloc.ml *)
 open Nopoly
 
 module S = Space
-(*s: auxiliaries *)
+(*s: auxiliaries(talloc.nw) *)
 let existsEq v =
   let rec exists = function
   | [] -> false
   | h :: t -> h = v || exists t
   in exists
-(*x: auxiliaries *)
+(*x: auxiliaries(talloc.nw) *)
 let divideby = function
   | 32 -> fun n -> n / 32
   | 8  -> fun n -> n / 8
   | 64 -> fun n -> n / 64
   | m  -> fun n -> n / m
-(*e: auxiliaries *)
+(*e: auxiliaries(talloc.nw) *)
 module Single = struct
   type t = ((*width*)int -> Register.t) * ((*width*)int -> Rtl.loc)
         
@@ -83,3 +84,4 @@ module Multiple = struct
     Single.reg (t c) (Cell.to_width ms ct)
 end
 (*e: talloc.ml *)
+(*e: front_ir/talloc.ml *)

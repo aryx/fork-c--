@@ -1,3 +1,4 @@
+(*s: commons3/bits.mli *)
 (*s: bits.mli *)
 type width = int
 
@@ -78,3 +79,4 @@ module Ops : sig
   val gtu       : bits -> bits -> bool
 end
 (*e: bits.mli *)
+(*e: commons3/bits.mli *)

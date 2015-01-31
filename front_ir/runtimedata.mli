@@ -1,3 +1,4 @@
+(*s: front_ir/runtimedata.mli *)
 (*s: runtimedata.mli *)
 type spans = Spans.t
 exception DeadValue
@@ -15,3 +16,4 @@ val stackdata  : spans -> Rtl.loc list
 (*x: runtimedata.mli *)
 val emit_global_properties : ('a, 'b, Call.t) Target.t -> 'c Asm.assembler -> unit
 (*e: runtimedata.mli *)
+(*e: front_ir/runtimedata.mli *)

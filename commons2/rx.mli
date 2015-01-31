@@ -1,3 +1,4 @@
+(*s: commons2/rx.mli *)
 (*s: rx.mli *)
 type 'a rx 
 (*x: rx.mli *)
@@ -16,3 +17,4 @@ val matches : 'a rx -> 'a list -> bool
 (*x: rx.mli *)
 val matchstr : char rx -> string -> bool
 (*e: rx.mli *)
+(*e: commons2/rx.mli *)

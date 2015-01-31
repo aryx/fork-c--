@@ -1,3 +1,4 @@
+(*s: arch/x86/x86.ml *)
 (*s: x86.ml *)
 open Nopoly
 
@@ -811,3 +812,4 @@ let placevars =
       ] in
   Placevar.mk_automaton ~warn ~vfp:tgt.T.vfp ~memspace:mspace mk_stage
 (*e: x86.ml *)
+(*e: arch/x86/x86.ml *)
