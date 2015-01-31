@@ -64,7 +64,9 @@ MAKESUBDIRS= \
 #  rtl compiler runtime \
 #  interpreter \
 
-INCLUDEDIRS=$(MAKESUBDIRS) commons/lib-sexp
+INCLUDEDIRS=$(MAKESUBDIRS) 
+
+#commons/lib-sexp
 
 ##############################################################################
 # Generic variables
@@ -166,6 +168,12 @@ dotall:
 
 tags:
 	~/pfff/stags -verbose -lang ml .
+
+graph:
+	~/pfff/codegraph.opt -derived_data -lang cmt -build .
+
+visual:
+	~/pfff/codemap -no_legend -profile -ss 2 -filter pfff .
 
 ##############################################################################
 # Literate Programming rules

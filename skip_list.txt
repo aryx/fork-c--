@@ -1,1 +1,4 @@
-dir: h_camlburg
+dir: h_camlburg/parsing
+dir: h_camlburg/demos
+file: h_camlburg/main.cmt
+
