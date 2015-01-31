@@ -24,7 +24,7 @@
 
 #misc
 commons/_darcs/
-external/core/
+external/stdlib/
 
 /h_camlburg/mlburg
 /h_camlburg/demos/test
@@ -42,3 +42,7 @@ external/core/
 /h_lua/parsing/luaparser.mli
 /h_lua/parsing/luaparser.output
 /h_lua/parsing/luascanner.ml
+/todo/h_lua/parsing/luaparser.ml
+/todo/h_lua/parsing/luaparser.mli
+/todo/h_lua/parsing/luaparser.output
+/todo/h_lua/parsing/luascanner.ml
