@@ -416,12 +416,11 @@ SRC_VIEWS= \
  arch/x86/x86rec.mli\
  arch/x86/x86regs.mli\
  arch/x86/x86regs.ml\
+ driver.mli\
+ this.mli\
+ driver.ml\
 
-X=\
- ./driver.mli\
- ./driver.ml\
- ./main.ml\
- ./this.mli\
+# ./main.ml\
 
 ##docs tests tools todo/... todo/h_lua/ todo/interpreter todo/runtime
 ##h_adsl h_camlburg
