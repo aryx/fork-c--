@@ -60,8 +60,8 @@ MAKESUBDIRS= \
    arch/dummy \
 
 
-#  h_camlburg tools \
-#  asdl rtl compiler runtime \
+#  tools \
+#  rtl compiler runtime \
 #  interpreter \
 
 INCLUDEDIRS=$(MAKESUBDIRS) commons/lib-sexp

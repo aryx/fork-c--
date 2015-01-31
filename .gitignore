@@ -38,3 +38,7 @@ external/core/
 /Fig_graph_ml2.pdf
 /Fig_graph_ml3.pdf
 /Fig_graph_ml4.pdf
+/h_lua/parsing/luaparser.ml
+/h_lua/parsing/luaparser.mli
+/h_lua/parsing/luaparser.output
+/h_lua/parsing/luascanner.ml
