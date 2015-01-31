@@ -31,9 +31,9 @@ LIBS= commons/commons.cma \
      assembler/lib.cma \
      front_last/lib.cma \
      h_camlburg/engine/lib.cma \
-     arch/interpreter/lib.cma \
      arch/ppc/lib.cma \
      arch/x86/lib.cma \
+     arch/interpreter/lib.cma \
      arch/dummy/lib.cma \
 
 # note that front_nelab and front_cfg are independent so could compile
