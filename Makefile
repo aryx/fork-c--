@@ -216,7 +216,7 @@ TEX=Cminusminus.tex
 
 # must be in the same order of the #include for syncweb multi files support
 # to work
-SRC_ORIG=Cminusminus_extra.nw
+SRC_ORIG=Cminusminus.nw Cminusminus_extra.nw
 
 SRC_VIEWS= \
  commons2/auxfuns.mli\
