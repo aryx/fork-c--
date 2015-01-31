@@ -1,5 +1,5 @@
 % -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-@ 
+ 
 % Grades     ::=    "%%Grades:" Quality Importance Urgency
 % Quality    ::=    A|B|C|D|E
 % Importance ::=    Central|Subsystem|Peripheral
@@ -7,6 +7,7 @@
 %
 % Example (at beginning of line): %%Grades: B Central Soon
 \subsection{Parser}
+
 <<luaparser.mli>>=
 module type S = sig
   type chunk
@@ -15,6 +16,7 @@ end
 module type MAKER = functor (Ast : Luaast.S) -> S with type chunk = Ast.chunk
 module MakeStandard : MAKER
 @ 
+
 <<luaparser.mly>>=
 %{
   module type S = sig
@@ -72,22 +74,22 @@ module MakeStandard : MAKER
 chunks  : chunklist ret EOF { List.rev (List.map (fun s -> A.Statement s) $2 @ $1) }
 
 chunklist : /* empty */        { [] }
-	  | chunklist stat sc      { A.Statement $2    :: $1 }
-	  | chunklist function_    { $2                :: $1 }
+   | chunklist stat sc      { A.Statement $2    :: $1 }
+   | chunklist function_    { $2                :: $1 }
           | chunklist DEBUG_PRAGMA { A.Debug ($2 <> 0) :: $1 }
-	  ;
+   ;
 
 function_     : FUNCTION funcname body  { $2 $3 (Parsing.symbol_start()) };
 
 funcname  : var             { fun ((args, v), ss) w -> A.Fundef (w, $1, args, v, ss) }
-	  | varexp ':' NAME { fun ((args, v), ss) w -> A.Methdef (w, $1, $3, args, v, ss) }
+   | varexp ':' NAME { fun ((args, v), ss) w -> A.Methdef (w, $1, $3, args, v, ss) }
           ;
 
 body :  '(' parlist ')' block END { ($2, $4 ) } ;
 
 statlist : /* empty */         { [] }
-	 | statlist stat sc    { $1 @ [$2] }
-	 ;
+  | statlist stat sc    { $1 @ [$2] }
+  ;
 
 sc	 : /* empty */ { () } | ';' { () } ;
 
@@ -104,14 +106,16 @@ stat_  : IF expr1 THEN block elsepart END { let (a, e) = $5 in A.If ($2, $4, a, 
        | LOCAL localdeclist decinit { A.Local ($2, $3) }
 
 elsepart : /* empty */    { ([], None) }
-	 | ELSE block     { ([], Some $2) }
+  | ELSE block     { ([], Some $2) }
          | ELSEIF expr1 THEN block elsepart { let (a, e) = $5 in (($2, $4)::a, e) }
+@ 
+
 <<luaparser.mly>>=
 block    :  statlist ret { $1 @ $2 } ;
 
 ret	: /* empty */          { [] }
         | RETURN exprlist sc   { [A.Return $2] }
-	;
+ ;
 
 expr1	 : expr { $1 } ;
 				
@@ -145,29 +149,29 @@ table : '{' fieldlist '}' { let (l, b) = $2 in A.Table (l, b) } ;
 functioncall : funcvalue funcParams { $1 $2 } ;
 
 funcvalue    : varexp { fun args -> A.Funcall ($1, args) }
-	     | varexp ':' NAME  { fun args -> A.Methcall ($1, $3, args) }
-	     ;
+      | varexp ':' NAME  { fun args -> A.Methcall ($1, $3, args) }
+      ;
 
 funcParams :	'(' exprlist ')' { $2 } 
-  	|	table  { [$1] }
-	;
+   |	table  { [$1] }
+ ;
 
 exprlist  :	/* empty */		{ [] }
-	  |	exprlist1		{ $1 }
-	  ;
+   |	exprlist1		{ $1 }
+   ;
 		
 exprlist1 :  expr	{ [$1] }
-	  |  exprlist1 ',' expr { $1 @ [$3] }
-	  ;
+   |  exprlist1 ',' expr { $1 @ [$3] }
+   ;
 
 parlist   :	/* empty */ { ([], false) }
           |  DOTS           { ([], true) }
           |	parlist1 opt_dots   { ($1, $2) }
-	  ;
+   ;
 		
 parlist1 :	par		  { [$1] }
-	  |	parlist1 ',' par  { $1 @ [$3] }
-	  ;
+   |	parlist1 ',' par  { $1 @ [$3] }
+   ;
 
 opt_dots  : /* empty */   { false }
           | ','  DOTS     { true  }
@@ -176,60 +180,61 @@ par : NAME	{ $1 }
     ;
 		
 fieldlist  : lfieldlist semicolonpart { ($1, $2) }
-	   | ffieldlist1 lastcomma    { ([], $1) }
-	   ;
+    | ffieldlist1 lastcomma    { ([], $1) }
+    ;
 
 semicolonpart : /* empty */    { [] }
-	      | ';' ffieldlist { $2 }
-	      ;
+       | ';' ffieldlist { $2 }
+       ;
 
 lastcomma  : /* empty */   { () }
-	   | ','           { () }
-	   ;
+    | ','           { () }
+    ;
 
 ffieldlist  : /* empty */ { [] }
             | ffieldlist1 lastcomma { $1 }
             ;   
 
 ffieldlist1 : ffield			{ [$1] }
-	   | ffieldlist1 ',' ffield	{ $1 @ [$3] }
+    | ffieldlist1 ',' ffield	{ $1 @ [$3] }
 ffield      : NAME '=' expr1  { ($1, $3) } ;
 
 lfieldlist  : /* empty */ { [] }
-	    | lfieldlist1 lastcomma { $1 }
-	    ;
+     | lfieldlist1 lastcomma { $1 }
+     ;
 
 lfieldlist1 : expr1  {[$1]}
-	    | lfieldlist1 ',' expr1 { $1 @ [$3] }
+     | lfieldlist1 ',' expr1 { $1 @ [$3] }
             ;
 
 varlist1  :	var  {[$1]}
-	  |	varlist1 ',' var	{ $1 @ [$3] }
-	  ;
+   |	varlist1 ',' var	{ $1 @ [$3] }
+   ;
 		
 var	  :	singlevar { A.Lvar $1 }
-	  |	varexp '[' expr1 ']'  { A.Lindex ($1, $3) }
-	  |	varexp '.' NAME       { A.Lindex ($1, A.Lit (A.Value.String $3)) }
-	  ;
+   |	varexp '[' expr1 ']'  { A.Lindex ($1, $3) }
+   |	varexp '.' NAME       { A.Lindex ($1, A.Lit (A.Value.String $3)) }
+   ;
 		
 singlevar :	NAME   { $1 }
-	  ;
+   ;
 
 varexp	: var { match $1 with A.Lvar x -> A.Var x | A.Lindex (t, k) -> A.Index (t, k) }
-	;
+ ;
 	  
 localdeclist  : NAME { [$1] }
-     	  | localdeclist ',' NAME { $1 @ [$3] }
-	  ;
+        | localdeclist ',' NAME { $1 @ [$3] }
+   ;
 		
 decinit	  : /* empty */  { [] }
-	  | '=' exprlist1 { $2 }
-	  ;
+   | '=' exprlist1 { $2 }
+   ;
 	  
-%%
-
+%% 
 end
+
 @
+ 
 
 % ------------------------------------------------------------------ 
 \subsection{Scanner}
@@ -608,3 +613,4 @@ and shortstring = parse (* parse an eos delimited string *)
           | P.WHILE       -> "WHILE"
           | P.WRONGTOKEN  -> "WRONGTOKEN"
     }          
+@ 

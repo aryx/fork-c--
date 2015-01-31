@@ -62,11 +62,12 @@ module type S = sig
   val state : unit -> state (* empty state, without even fallbacks *)
   val at_init : state -> string list -> unit  (* run code at startup time *)
   val initcode : state -> (string -> unit) -> unit (* for the implementation only *)
-@ If a library wants to register Lua code to be executed at startup
+@ 
+If a library wants to register Lua code to be executed at startup
 time, it can call [[at_init]].  
 No library should ever call [[initcode]]; that function is reserved
 for the implementation, which uses it to run the registered code.
-@
+
 Lua tables are not quite like Caml tables, but they are close.
 <<signatures>>=
   module Table : sig
@@ -124,8 +125,9 @@ This way, users are free to include [[n]] or not as they choose.
 <<signatures>>=
   val list    : 'a map -> 'a list map   (* does not project nil *)
   val optlist : 'a map -> 'a list map   (* projects nil to empty list *)
-@ N.B. [[optlist t = default [] (list t)]].
-@
+@ 
+N.B. [[optlist t = default [] (list t)]].
+
 If for some reason a Caml function operates on Lua values, we need an
 identity pair.  We also enable functions that expect tables.
 <<signatures>>=
@@ -215,11 +217,14 @@ module type USERDATA = sig
   val eq : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val to_string : ('a -> string) -> 'a t -> string
 end
+@ 
 <<luavalue.mli>>=
 <<signatures>>
 module Make (U : USERDATA) : S with type 'a userdata'  = 'a U.t 
 @
+
 \subsection{Implementation}
+
 <<luavalue.ml>>=
 <<signatures>>
 module Make (U : USERDATA) : S with type 'a userdata'  = 'a U.t 
@@ -227,6 +232,7 @@ module Make (U : USERDATA) : S with type 'a userdata'  = 'a U.t
   <<value toplevel>>
 end
 @ 
+
 I have to repeat the datatype definition.
 <<value toplevel>>=
 type 'a userdata'  = 'a U.t
@@ -314,6 +320,7 @@ let objname g needle =
             | k, v -> ())
           | Some _ -> ()) g.globals;
         !r
+@ 
 <<value toplevel>>=
 let activation_strings g ((uid, file, line) as srcloc, current) =
   let first tail = match objname g (Function (srcloc, fun _ -> assert false)) with
@@ -334,7 +341,8 @@ let activation_strings g ((uid, file, line) as srcloc, current) =
   | 0  -> "main of " :: file :: last
   | -1 -> first [" "; file]
   | _  -> first last
-@ 
+@
+
 \subsection{Embedding and projection}
 Now, for embedding and projection.  More repeats.
 
@@ -385,6 +393,8 @@ let float =
                       | v -> raise (Projection (v, "float")))
   ; is = (function Number _ -> true | String s -> is_float_literal s | _ -> false)
   } 
+@ 
+
 <<luafloat.mll>>=
 let digit       = ['0'-'9']
 let sign        = ['+' '-']
@@ -393,6 +403,7 @@ let number      = sign? digit+ exp?
                 | sign? digit+ '.' digit+ exp?
 rule length = parse number { Lexing.lexeme_end lexbuf } | _ { -1 }
 @ 
+
 <<value toplevel>>=
 let to_int x = 
   let n = truncate x in
@@ -413,6 +424,7 @@ let unit =  { embed = (fun () -> Nil)
             ; is = (function Nil -> true | _ -> false)
             } 
 @ 
+
 <<value toplevel>>=
 let enum typename pairs = 
   { embed = (fun v' -> try String (fst (List.find (fun (k, v) -> v = v') pairs))
@@ -424,6 +436,7 @@ let enum typename pairs =
   ; is = (function String k -> List.mem_assoc k pairs | _ -> false)
   } 
 @ 
+
 <<value toplevel>>=
 let option t = { embed = (function None -> Nil | Some x -> t.embed x)
                ; project = (function Nil -> None | v -> Some (t.project v))
@@ -435,6 +448,7 @@ let default d t =
   ; is = (function Nil -> true | v -> t.is v)
   }
 @ 
+
 <<value toplevel>>=
 let list (ty : 'a map) = 
   let table l =
@@ -548,6 +562,7 @@ let result2 r1 r2 = results (fun (v1, v2) -> [r1.embed v1; r2.embed v2])
 let runit =
   results (fun () -> []) 
           (function [] -> () | h :: _ -> raise (Projection (h, "unit result")))
+@ 
 <<value toplevel>>=
 let dots_arrow (varargs : 'a map) (result : 'b map) : ('a list -> 'b) mapf =
   let apply (f : 'a list -> 'b) = 
@@ -569,13 +584,18 @@ let func (arrow : 'a mapf) : ('a map) =
 let closure (arrow : 'a mapf) : ('a map) =
   { embed   = (fun (f : 'a) -> caml_func (arrow.embed f))
   ; project = (function Function (_, f) -> (arrow.project f : 'a)
-                      | Table t as v -> (<<project table [[t]] into a function>>)
+                      | Table t as v -> (
+    <<project table [[t]] into a function>>
+    )
                       | v -> raise (Projection (v, "function")))
-  ; is = (function Function(_, _) -> true | Table t -> <<table [[t]] is a closure>>
+  ; is = (function Function(_, _) -> true | Table t -> 
+     <<table [[t]] is a closure>>
                  | _ -> false)
   } 
 
 let efunc t f = (closure t).embed f
+@ 
+
 <<value toplevel>>=
 type alt = (value list -> value list) * (value list -> bool)
 let alt t f = (t.embed f, t.is)
@@ -589,6 +609,8 @@ let choose alts =
   caml_func run
 
 let lf = efunc (list value **-> result (list value)) List.rev
+@ 
+
 <<value toplevel>>=
 let ( <|> ) t t' =
   { project = (fun v -> if t.is v then t.project v else t'.project v)
@@ -609,6 +631,7 @@ let f = try Table.find t (String "apply")
 match f with
 | Function (_, f) -> arrow.project (fun vs -> f (v :: vs))
 | v -> raise (Projection (v, "'apply' element of table as function"))
+@ 
 <<table [[t]] is a closure>>=
 (try
   match Table.find t (String "apply") with
@@ -632,7 +655,9 @@ module Table = struct
     t
 end
 @ 
+
 \subsection{Initialization at startup time}
+
 <<value toplevel>>=
 module StringList = struct
   type t = (string -> unit) -> unit
@@ -667,3 +692,4 @@ let initcode g =
       g.startup.init_strings <- StringList.empty;
       code
     end
+@ 
