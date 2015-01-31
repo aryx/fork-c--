@@ -1,16 +1,36 @@
+
+# ocaml object files
+
 *.o
 *.cm*
 *.annot
+.depend
+*.so
+*.a
+
+
+# pfff and tools
+/TAGS
+
+# yacc
 /parsing/parse.ml
 /parsing/parse.mli
 /parsing/parse.output
 /parsing/scan.ml
+/h_camlburg/parsing/parse.output
+
+# syncweb
+.md5sum_*
+
+#misc
+commons/_darcs/
+external/core/
+
+/h_camlburg/mlburg
+/h_camlburg/demos/test
+
 /qc
 
 *Fig_graph_ml.pdf
 *Fig_graph_mli.pdf
 
-/h_camlburg/mlburg
-/h_camlburg/parsing/parse.output
-/TAGS
-/h_camlburg/demos/test
