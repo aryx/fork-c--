@@ -180,14 +180,13 @@ visual:
 ##############################################################################
 
 NWDIRS= \
-   arch/dummy arch/interpreter \
-   arch/alpha arch/arm arch/ia64 arch/mips arch/ppc arch/sparc arch/x86 \
+   arch/dummy \
+   arch/mips arch/ppc arch/x86 \
    assembler \
    commons2 commons3 \
    error \
    front_asm front_cfg front_fenv front_ir front_last front_nelab front_rtl \
    front_target front_zipcfg \
-   lua \
    parsing
 
 #docs tests tools todo/... todo/h_lua/ todo/interpreter todo/runtime

@@ -277,6 +277,7 @@ values          : value  COMMA value            { [$3  ; $1]    }
     let init () =
         Buffer.clear strBuffer
 }
+@
 
 <<rc_scan.mll>>=
 let digit       = ['0'-'9']
@@ -287,7 +288,7 @@ let float       = integer '.' integer ('E' ('+'|'-')? integer)?
 let ws          = [' ' '\r' '\011' '\012' ]
 let nl          = '\n'
 let tab         = '\t'
-
+@
 
 <<rc_scan.mll>>=
 rule scan = parse
@@ -324,6 +325,9 @@ rule scan = parse
     |  _                { let c = get lexbuf in
                             error ("illegal character `" ^ c ^ "'")
                         }    
+
+@
+
 <<rc_scan.mll>>=
 and string = parse
     | eof               { error "unterminated string" }

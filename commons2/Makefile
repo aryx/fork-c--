@@ -48,7 +48,7 @@ clean::
 # Literate Programming rules
 ##############################################################################
 
-SRCNW=auxfuns pc lc pc2 pp rx verbose strutil 
+SRCNW=auxfuns pc lc pc2 pp rx verbose strutil
 
 # TODO rc_scan  rc.nw
 
