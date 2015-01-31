@@ -179,12 +179,30 @@ visual:
 # Literate Programming rules
 ##############################################################################
 
-sync:
+NWDIRS= \
+   arch/dummy arch/interpreter \
+   arch/alpha arch/arm arch/ia64 arch/mips arch/ppc arch/sparc arch/x86 \
+   assembler \
+   commons2 commons3 \
+   error \
+   front_asm front_cfg front_fenv front_ir front_last front_nelab front_rtl \
+   front_target front_zipcfg \
+   lua \
+   parsing
+
+#docs tests tools todo/... todo/h_lua/ todo/interpreter todo/runtime
+#h_adsl h_camlburg
+
+synchere:
 #	$(SYNCWEB) -lang ocaml main.nw main.ml
 	$(SYNCWEB) -lang ocaml driver.nw driver.mli
 	$(SYNCWEB) -lang ocaml driver.nw driver.ml
 	$(SYNCWEB) -lang ocaml main2.nw this.mli
 	$(SYNCWEB) -lang ocaml main2.nw this.in
+
+sync:
+	set -e; for i in $(NWDIRS); do $(MAKE) -C $$i sync || exit 1; done 
+	make synchere
 
 
 lpdistclean::
