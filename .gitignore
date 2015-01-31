@@ -46,3 +46,6 @@ external/stdlib/
 /todo/h_lua/parsing/luaparser.mli
 /todo/h_lua/parsing/luaparser.output
 /todo/h_lua/parsing/luascanner.ml
+/h_camlburg/parsing/lex.ml
+/h_camlburg/parsing/parse.ml
+/h_camlburg/parsing/parse.mli
