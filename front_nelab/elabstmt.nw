@@ -256,7 +256,7 @@ let arm (rgs, ss) =
     | [] -> E.error "case arm has an empty range list"
     | (rg, w) :: rgs ->
         let strip w (rg, w') = if w = w' then rg else 
-         <<exn on range type mismatch>> 
+         <<exn on range type mismatch>>
         in
         ((rg :: List.map (strip w) rgs), ss), w) in
 @ 
@@ -266,11 +266,11 @@ We check this requirement and strip the width off everything in sight.
 <<elaboration utilities>>=
 let striprange w (rg, w') =
   if w = w' then rg else 
-   <<exn on case range type mismatch>> 
+   <<exn on case range type mismatch>>
    in
 let striparms w =
   let strip (arm, w') = if w = w' then arm else  
-    <<exn on arm type mismatch>> 
+    <<exn on arm type mismatch>>
   in
   List.map strip in
 @ 
@@ -312,7 +312,7 @@ let assign lhs rhs =
   try E.ematch (E.Raise.list (List.map2 effect lhs rhs)) (fun es ->
     Assign (vrtl (srcmap, r) (Rtl.par es)))
   with Invalid_argument _ -> 
-   <<complain about length mismatch in assignment>> 
+   <<complain about length mismatch in assignment>>
   in
 @ 
 <<elaboration utilities>>=

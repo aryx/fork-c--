@@ -192,7 +192,7 @@ type size = Const  of int
 @ 
 
 <<types.ml>>=
-<<exported type definitions>>  
+<<exported type definitions>>
  (* types from the interface definition *)
 @
 \emph{Rather than having a fixed operator [[Double]] we could implement a

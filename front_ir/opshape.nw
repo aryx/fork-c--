@@ -201,14 +201,14 @@ let shape scheme = match scheme with
 | [
    <<'a>>
    ; 
-   <<'a>>           
+   <<'a>>
     ], 
-    <<'a>>               
+    <<'a>>
     -> Binop ((), ())
 | [
    <<'a>>
     ], 
-    <<'a>>               
+    <<'a>>
    -> Unop ()
 | [
    <<'a>>

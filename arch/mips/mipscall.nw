@@ -321,7 +321,7 @@ let spec =
 @
 <<mipscall.ml>>=
 let c' ~return_to cut auto =
-    <<callspec specification>> 
+    <<callspec specification>>
     in
     let t = CS.to_call cut (rtn return_to) auto spec in
         { t with (* fix what callspec got wrong *)

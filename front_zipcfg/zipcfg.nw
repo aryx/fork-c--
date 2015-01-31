@@ -504,7 +504,7 @@ module Blocks : BLOCKS with type t = block UM.t = struct
   let iter = UM.iter
 end
 @ 
-<<zipcfg.ml>>=  
+<<zipcfg.ml>>=
 type graph  = Blocks.t
 type zgraph = zblock * Blocks.t
 type nodes   = zgraph -> zgraph (* sequence of nodes in Hughes's representation *)

@@ -210,7 +210,7 @@ method value (v:Bits.bits) =
 <<utilities>>=
 let mask32 = Int64.pred (Int64.shift_left Int64.one 32)
 @ 
-<<assembly methods>>=            
+<<assembly methods>>=
 method addr a =
   match Reloc.if_bare a with
   | Some b -> this#value b

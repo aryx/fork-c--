@@ -101,9 +101,9 @@ incoming overflow results, some deallocated by the
 \end{itemize}
 
 <<proc.mli>>=
-<<type t>> 
+<<type t>>
 @ 
 
-<<proc.ml>>= 
-<<type t>> 
+<<proc.ml>>=
+<<type t>>
 @

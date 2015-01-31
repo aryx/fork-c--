@@ -331,7 +331,7 @@ let simple =
 
 The [[return]] instruction for a possibly alternate return.
 
-<<calling convention>>= 
+<<calling convention>>=
 let return k n ~ra =
     if k = 0 && n = 0 
     then store pc ra

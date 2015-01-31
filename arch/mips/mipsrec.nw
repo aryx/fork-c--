@@ -419,7 +419,7 @@ and loc = function
     | RP.Slice _                -> error "cannot handle slice"
 @
 
-<<tail>>= 
+<<tail>>=
 let effect = function
     <<special cases for [[Store]]>>
     | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
