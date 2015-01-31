@@ -46,9 +46,20 @@ This module provides new Lua types like [[asm]] and [[ast]] for the
 interpreter, and a library that uses them. 
 <<driver.mli>>=
 
-val parse     : string -> Srcmap.map * Ast.program
+(* the lexer *)
 val scan      : string -> unit
+
+(* the parser *)
+val parse     : string -> Srcmap.map * Ast.program
+
+(* sexp-based AST printer *)
 val emit_asdl : Srcmap.map * Ast.program -> unit
+
+(* basic pretty printer *)
+val pretty    : Srcmap.map * Ast.program -> Pp.doc
+val print     : Pp.doc -> int -> out_channel -> unit
+
+
 
 val elab : 
   swap:bool -> 
@@ -60,18 +71,18 @@ val elab :
 val compile :
   Ast2ir.tgt -> 
   (Ast2ir.proc -> unit) -> 
-  bool(*emitglobals*) -> 
-  (Srcmap.map * Ast.program) -> 
-  Ast2ir.proc Asm.assembler -> 
-  bool(*validate*) -> 
-  bool(*swap*) -> 
+  exportglobals:bool -> 
+  src:(Srcmap.map * Ast.program) -> 
+  asm:Ast2ir.proc Asm.assembler -> 
+  validate:bool -> 
+  swap:bool -> 
   unit
    (* raises Error.ErrorExn *)
 
 val version   : unit -> unit
 
-val pretty    : Srcmap.map * Ast.toplevel list -> Pp.doc
-val print     : Pp.doc -> int -> out_channel -> unit
+
+val metrics_ok : Metrics.t -> ('a, 'b, 'c) Target.t -> bool
 
 
 @
@@ -193,9 +204,9 @@ let metrics_ok src tgt =
 let elab ~swap validate (map,ast) asm =
   Nelab.program ~swap validate map asm (Nast.program ast)
 
-let compile (PA.T target) opt exportglobals src asm validate swap =
-  failwith "TODO: pad: Driver.compile and mvaludate"
-(* 
+let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
+  (* old: failwith "TODO: pad: Driver.compile and mvaludate" *)
+
   let validate = if validate then Mvalidate.rtl target else (fun _ -> None) in
   let abort () = Error.error "compilation aborted because of errors" in
   let as_ok = function Error.Ok x -> x | Error.Error -> abort () in
@@ -207,5 +218,4 @@ let compile (PA.T target) opt exportglobals src asm validate swap =
         Ast2ir.translate (PA.T target) (Fenv.clean env) opt exportglobals compunit
     else
       Error.error "metrics of source code don't match the target"))
-*)
 @
