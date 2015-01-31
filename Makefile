@@ -416,6 +416,8 @@ SRC_VIEWS= \
  arch/x86/x86rec.mli\
  arch/x86/x86regs.mli\
  arch/x86/x86regs.ml\
+
+X=\
  ./driver.mli\
  ./driver.ml\
  ./main.ml\
