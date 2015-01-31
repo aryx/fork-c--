@@ -1,8 +1,8 @@
 
 modifs:
- - gzip *.s in test2/
  - moved files a lot and split in many directories
  - use Makefile and syncweb instead of relying on noweb and mk
+ - gzip *.s in test2/
 
  - commons2/
  - parsing/
