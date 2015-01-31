@@ -18,7 +18,9 @@ LIBS=
 INCLUDEDIRS= $(TOP)/commons2 $(TOP)/commons3 \
   $(TOP)/error \
   $(TOP)/h_asdl \
-  $(TOP)/commons $(TOP)/commons/lib-sexp \
+  $(TOP)/commons 
+
+#$(TOP)/commons/lib-sexp \
 
 ##############################################################################
 # Generic variables

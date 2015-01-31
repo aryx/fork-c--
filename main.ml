@@ -287,19 +287,19 @@ let main_action xs =
 (*****************************************************************************)
 
 let all_actions () =
- Test_parsing_cmm.actions () ++
- extra_actions () ++
+ Test_parsing_cmm.actions () @
+ extra_actions () @
  []
 
 let options () = 
   [
     "-verbose", Arg.Set verbose, 
     " ";
-  ] ++
-  Common.options_of_actions action (all_actions()) ++
-  Common.cmdline_flags_devel () ++
-  Common.cmdline_flags_verbose () ++
-  Common.cmdline_flags_other () ++
+  ] @
+  Common.options_of_actions action (all_actions()) @
+  Common2.cmdline_flags_devel () @
+  Common2.cmdline_flags_verbose () @
+  Common2.cmdline_flags_other () @
   [
   "-version",   Arg.Unit (fun () -> 
     pr2 (spf "qc-- version: %s" version);
@@ -313,7 +313,7 @@ let options () =
     raise (Common.UnixExit 0)
     ), 
   "   guess what";
-  ] ++
+  ] @
   []
 
 (*****************************************************************************)
@@ -322,7 +322,7 @@ let options () =
 
 let main () = 
   let usage_msg = 
-    "Usage: " ^ Common.basename Sys.argv.(0) ^ 
+    "Usage: " ^ Filename.basename Sys.argv.(0) ^ 
       " [options] <file or dir> " ^ "\n" ^ "Options are:"
   in
   (* does side effect on many global flags *)

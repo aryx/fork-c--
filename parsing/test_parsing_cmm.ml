@@ -38,6 +38,8 @@ let test_dump_cmm file  =
   Common.with_open_outfile temp (fun (_, chan) ->
     AstUtil.sexp_wr_toplevel_list ast chan;
   );
+  failwith "TODO lib-sexp not here anymore"
+(*
   let s = Common.read_file temp in
   (* Common.cat temp +> List.iter pr2; *)
   let sexp_opt = Sexp.parse_str s in
@@ -47,7 +49,7 @@ let test_dump_cmm file  =
       pr2 str
   | Sexp.Cont _ ->
       failwith "parse error on sexp"
-  
+*)  
 
 
 
