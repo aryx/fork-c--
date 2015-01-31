@@ -31,6 +31,8 @@ val fpround : Register.x
 @
 
 <<sparcregs.ml>>=
+open Nopoly
+
 module R  = Rtl
 module S  = Space
 module SS = Space.Standard32

@@ -1106,6 +1106,7 @@ module IntFloatAddr (Post : Postexpander.S) : S
 Here are some abbreviations and utilities.
 
 <<expander.ml>>=
+open Nopoly
 <<expander module type>>
 
 module A   = Automaton
@@ -1327,7 +1328,7 @@ let expand proc =
   <<rounding-mode checking>>
   <<context guessing>>
   let alloc_direct (allocator, _) = allocator proc.Proc.temps in
-  <<definition of [[temp_in_context]]>> 
+  <<definition of [[temp_in_context]]>>
   <<definitions of [[to_temp]], [[rtl]] and all the other generic expander functions>>
   (block, branch', expand_cbranch, call', jump', cut')
 let number = 999
@@ -1408,7 +1409,7 @@ let rec to_temp' room context e =
   | RP.App (op, args) -> (
     <<action for expanding [[op(args)]] into a temporary>>
   )
-<<other generic expander functions>> 
+<<other generic expander functions>>
 in
 @ 
 Details depend on whether the operator is a stack operator or a
