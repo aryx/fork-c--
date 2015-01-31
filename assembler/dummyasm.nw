@@ -20,6 +20,8 @@ val asm : unit Asm.assembler
 <<dummyasm.ml>>=
 module Asm = Asm
 
+let debug s = prerr_string ("Dummyasm." ^ s ^ "\n")
+
 <<Make>>
 let asm = new asm ()
 @
@@ -29,47 +31,76 @@ let asm = new asm ()
 % ------------------------------------------------------------------ 
 
 <<Make>>=
-class ['proc] v : ['proc] Asm.assembler =
+class ['proc] asm () : ['proc] Asm.assembler =
 object (this)
 
-(*
     (* declarations *)
-    method import s = Symbol.unmangled s
-    method export s = Symbol.unmangled s
-    method local  s = Symbol.unmangled s
+    method import s = 
+      debug "import";
+      Symbol.unmangled s
+    method export s = 
+      debug "export";
+      Symbol.unmangled s
+    method local  s = 
+      debug "local";
+      Symbol.unmangled s
 
-    method globals n = ()
+    method globals n = 
+      debug "globals";
+      ()
 
     (* sections *)
-    method section s = _section <- s
-    method current   = _section
+    method section s = 
+      debug "section";
+      ()
+      
+    method current   = 
+      debug "current";
+      "TODO"
 
     (* definitions *)
-    method label s   = ()
-    method const s b = ()
+    method label s   = 
+      debug "label";
+      ()
+    method const s b = 
+      debug "const";
+      ()
 
     (* locations *)
 
-    method org n    = ()
-    method align n  = ()
-    method addloc n = ()
+    method org n    = 
+      debug "org";
+      ()
+    method align n  = 
+      debug "align";
+      ()
+    method addloc n = 
+      debug "addloc";
+      ()
 
     method longjmp_size () =
-      Impossible.unimp "longjmp size not set for dot -- needed for alternate returns"
+      debug "longjmp_size";
+      failwith "longjmp_size"
 
     (* instructions *)
     method cfg_instr (proc : 'proc) =
-      let (cfg, proc) = proc in
-      let s   = proc.Proc.symbol in
-      let mangle  = Mangle.mk spec in
-      output_string fd (cfg2dot ~name:(mangle s#mangled_text) cfg)
+      debug "cfg_instr"
 
-    method zeroes n = ()
-    method value v = ()
-    method addr  a = ()
-    method comment s = ()
-    method emit = ()
-*)
+    method zeroes n = 
+      debug "zeroes";
+      ()
+    method value v = 
+      debug "value";
+      ()
+    method addr  a = 
+      debug "addr";
+      ()
+    method comment s = 
+      debug "comment";
+      ()
+    method emit = 
+      debug "emit";
+      ()
 end
 
 
