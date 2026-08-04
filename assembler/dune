@@ -1,0 +1,7 @@
+(library
+ (name cmm_assembler)
+ (wrapped false)
+ (libraries
+  cmm_commons2 cmm_commons3 cmm_error cmm_parsing cmm_h_asdl
+  cmm_front_rtl cmm_front_asm cmm_front_target cmm_front_ir
+  cmm_front_cfg cmm_front_zipcfg))

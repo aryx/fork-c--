@@ -1,0 +1,8 @@
+(library
+ (name cmm_h_camlburg_parsing)
+ (wrapped false)
+ (libraries cmm_commons2 cmm_error))
+
+(ocamllex lex)
+
+(ocamlyacc parse)

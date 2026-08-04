@@ -1,0 +1,11 @@
+; The Makefile's INCLUDEDIRS lists commons2, commons3, parsing, h_asdl,
+; but grepping error/*.ml shows it only ever references its own modules
+; (Impossible, Unsupported, Srcmap, Debug) plus stdlib - none of those
+; other dirs are actually used. Declaring them here as real dune
+; library deps would in fact create a dependency cycle (commons3
+; depends on error, and parsing depends on error), so they are
+; intentionally omitted.
+(library
+ (name cmm_error)
+ (wrapped false)
+ (libraries str))

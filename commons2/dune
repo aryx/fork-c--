@@ -1,0 +1,3 @@
+(library
+ (name cmm_commons2)
+ (wrapped false))

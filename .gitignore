@@ -49,3 +49,7 @@ external/stdlib/
 /h_camlburg/parsing/lex.ml
 /h_camlburg/parsing/parse.ml
 /h_camlburg/parsing/parse.mli
+
+# dune
+/_build/
+/bin

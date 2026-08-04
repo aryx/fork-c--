@@ -1,0 +1,25 @@
+; Split in two, unlike the single lib.cma the legacy Makefile builds here,
+; to avoid a real dune problem: Burg/Norm/Noguardscheck need Spec/Code
+; from ../parsing (aliased locally as "module S = Spec" / "module C =
+; Code"), but ../parsing's own module "Parse" collides (same name, two
+; different unwrapped libraries) with the top-level qc executable's own
+; cmm_parsing library once you follow arch/ppc|x86|dummy -> this engine
+; -> h_camlburg/parsing. In the legacy Makefile build this never bites
+; because top-level LIBS only lists engine/lib.cma, and nothing at
+; runtime actually calls into Burg (only Camlburg does, via ppcrec.ml/
+; x86rec.ml), so the linker never even pulls parse.cmo out of the
+; archive. Dune has no such lazy-archive-member story for wrapped=false
+; libraries, so instead we split the directory into the small part
+; arch/{ppc,x86,dummy} and demos/ actually need (just Camlburg, no
+; dependency on h_camlburg/parsing at all) and the part only the mlburg
+; tool itself needs (Burg/Norm/Noguardscheck, which do need Spec/Code).
+(library
+ (name cmm_h_camlburg_engine)
+ (wrapped false)
+ (modules Camlburg))
+
+(library
+ (name cmm_h_camlburg_burg)
+ (wrapped false)
+ (modules Mangler Norm Burg Noguardscheck)
+ (libraries cmm_commons2 cmm_commons3 cmm_error cmm_h_camlburg_parsing cmm_h_camlburg_engine))

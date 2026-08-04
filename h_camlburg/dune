@@ -1,0 +1,4 @@
+; TARGET=mlburg, SRC=main.ml in the legacy Makefile.
+(executable
+ (name main)
+ (libraries cmm_h_camlburg_burg))
