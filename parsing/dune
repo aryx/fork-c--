@@ -1,7 +1,7 @@
 (library
  (name cmm_parsing)
  (wrapped false)
- (libraries cmm_commons2 cmm_commons3 cmm_error cmm_h_asdl cmm_commons))
+ (libraries cmm_commons2 cmm_commons3 cmm_error cmm_h_asdl))
 
 (ocamllex scan)
 
