@@ -113,11 +113,11 @@ doti:
 .ml.mldepend: 
 	$(OCAMLC) -i $<
 
-clean::
+cleanold::
 	rm -f *.cm[ioxa] *.o *.a *.cmxa *.annot *.cmt*
 	rm -f *~ .*~ *.exe gmon.out #*#
 
-clean::
+cleanold::
 	rm -f *.aux *.toc *.log *.brf *.out
 
 distclean::

@@ -3,6 +3,19 @@
 #############################################################################
 
 ##############################################################################
+# Top rules using dune
+##############################################################################
+
+all::
+	dune build
+clean::
+	dune clean
+test::
+	echo TODO
+build-docker:
+	docker build -t "cmm" .
+
+##############################################################################
 # Variables
 ##############################################################################
 TOP=$(shell pwd)
@@ -78,11 +91,11 @@ INCLUDEDIRS=$(MAKESUBDIRS)
 ##############################################################################
 .PHONY:: all all.opt opt top clean distclean
 
-all:: 
+allold:: 
 	$(MAKE) rec 
 	$(MAKE) $(TARGET) 
 
-opt:
+optold:
 	$(MAKE) rec.opt 
 	$(MAKE) $(TARGET).opt
 
@@ -112,11 +125,11 @@ this.ml: this.in
 	cp this.in this.ml
 
 
-clean::
+cleanold::
 	rm -f $(TARGET)
-clean:: 
+cleanold:: 
 	rm -f $(TARGET).top
-clean::
+cleanold::
 	set -e; for i in $(MAKESUBDIRS); do $(MAKE) -C $$i clean; done 
 
 depend::
