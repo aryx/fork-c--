@@ -37,7 +37,7 @@ let read_share rd ins =
  let buff = (String.create l) in
  begin
    really_input ins buff 0 l ;
-   buff
+   Bytes.to_string buff
  end
       in
       if t < 0 then

@@ -249,7 +249,7 @@ let
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf; __ocaml_lex_main_rec buf lexbuf __ocaml_lex_state
 
-and scan_string buf lexbuf =
+and scan_string (buf : Buffer.t) lexbuf =
     __ocaml_lex_scan_string_rec buf lexbuf 11
 and __ocaml_lex_scan_string_rec buf lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
@@ -392,7 +392,7 @@ let
       (
         let ofs = lexbuf.lex_start_pos in
         let len = lexbuf.lex_curr_pos - ofs in
-        Buffer.add_substring buf lexbuf.lex_buffer ofs len;
+        Buffer.add_subbytes buf lexbuf.lex_buffer ofs len;
         scan_string buf lexbuf
       )
 # 399 "lexer.ml"

@@ -27,12 +27,12 @@ let unique state avoid str =
         loop str
 
 let map (f: char->char) str =
-    let str' = String.copy str in
-    let ()   = for i = 0 to String.length str - 1 do
-                str'.[i] <- f str'.[i]
+    let str' = Bytes.of_string str in
+    let ()   = for i = 0 to Bytes.length str' - 1 do
+                Bytes.set str' i (f (Bytes.get str' i))
                done
     in
-        str'
+        Bytes.to_string str'
 
 let ($$) x f = f x (* x $$ f1 $$ f2 == f2 (f1 x) *)
     

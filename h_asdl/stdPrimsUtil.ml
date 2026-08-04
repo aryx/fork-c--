@@ -12,7 +12,7 @@ let read_std_string s =
   let buff = String.create sz in
   begin
     really_input s buff 0 sz;
-    buff
+    Bytes.to_string buff
   end
 let write_identifier = write_std_string 
 let read_identifier = read_std_string

@@ -1,7 +1,9 @@
+(*
 # 1 "pre_sexp.ml.in"
 # 1 "<built-in>"
 # 1 "<command-line>"
 # 1 "pre_sexp.ml.in"
+*)
 (*pp cpp *)
 
 (* File: sexp.ml
@@ -57,7 +59,7 @@ let maybe_esc_str str =
     String.blit estr 0 res 1 elen;
     res.[0] <- '"';
     res.[elen + 1] <- '"';
-    res
+    Bytes.to_string res
   else str
 
 let pp_maybe_esc_str ppf str = pp_print_string ppf (maybe_esc_str str)
@@ -301,7 +303,7 @@ let raise_unexpected_char state ~loc pos c =
   raise_parse_error state loc err_msg
 
 (* Macro for generating parsers *)
-# 521 "pre_sexp.ml.in"
+(*# 521 "pre_sexp.ml.in"*)
 let check_str_bounds loc ~pos ~len (str : string) = if pos < 0 then invalid_arg (loc ^ ": pos < 0"); if len < 0 then invalid_arg (loc ^ ": len < 0"); let str_len = String.length str in let pos_len = pos + len in if pos_len > str_len then invalid_arg (loc ^ ": pos + len > str_len"); pos_len - 1 let mk_cont name cont state = let ws_only = state.pstack = [] && Buffer.length state.pbuf = 0 in let parse_fun ~pos ~len str = let max_pos = check_str_bounds name ~pos ~len str in cont state str ~max_pos ~pos in Cont (ws_only, parse_fun) let rec parse_str state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse" parse_str state else match str.[pos] with | '(' -> state.pstack <- [] :: state.pstack; bump_pos_cont state str ~max_pos ~pos parse_str | ')' as c -> (match state.pstack with | [] -> raise_unexpected_char state ~loc:"parse" pos c | rev_sexp_lst :: sexp_stack -> let sexp = List (List.rev rev_sexp_lst) in match sexp_stack with | [] -> Done (sexp, mk_parse_pos state (pos + 1)) | higher_rev_sexp_lst :: higher_sexp_stack -> state.pstack <- (sexp :: higher_rev_sexp_lst) :: higher_sexp_stack; bump_pos_cont state str ~max_pos ~pos parse_str) | ' ' | '\009' | '\012' -> bump_pos_cont state str ~max_pos ~pos parse_str | '\010' -> bump_line_cont state str ~max_pos ~pos parse_str | '\013' -> bump_line_cont state str ~max_pos ~pos parse_nl | ';' -> bump_pos_cont state str ~max_pos ~pos parse_comment | '"' -> bump_pos_cont state str ~max_pos ~pos parse_quoted | c -> add_bump_pos state str ~max_pos ~pos c parse_atom and parse_nl state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse_nl" parse_nl state else let pos = if str.[pos] = '\010' then pos + 1 else pos in parse_str state str ~max_pos ~pos and parse_comment state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse_comment" parse_comment state else match str.[pos] with | '\010' -> bump_line_cont state str ~max_pos ~pos parse_str | '\013' -> bump_line_cont state str ~max_pos ~pos parse_nl | _ -> bump_pos_cont state str ~max_pos ~pos parse_comment and parse_atom state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse_atom" parse_atom state else match str.[pos] with | ' ' | '\009' | '\012' -> bump_found_atom bump_text_pos state str ~max_pos ~pos parse_str | '(' -> let pbuf = state.pbuf in let atom = Atom (Buffer.contents pbuf) in (match state.pstack with | [] -> Done (atom, mk_parse_pos state pos) | rev_sexp_lst :: sexp_stack -> Buffer.clear pbuf; state.pstack <- [] :: (atom :: rev_sexp_lst) :: sexp_stack; bump_pos_cont state str ~max_pos ~pos parse_str) | ')' -> let pbuf = state.pbuf in let atom = Atom (Buffer.contents pbuf) in (match state.pstack with | [] -> Done (atom, mk_parse_pos state pos) | rev_sexp_lst :: sexp_stack -> let sexp = List (List.rev_append rev_sexp_lst [atom]) in match sexp_stack with | [] -> Done (sexp, mk_parse_pos state (pos + 1)) | higher_rev_sexp_lst :: higher_sexp_stack -> Buffer.clear pbuf; state.pstack <- (sexp :: higher_rev_sexp_lst) :: higher_sexp_stack; bump_pos_cont state str ~max_pos ~pos parse_str) | '\010' -> bump_found_atom bump_text_line state str ~max_pos ~pos parse_str | '\013' -> bump_found_atom bump_text_line state str ~max_pos ~pos parse_nl | ';' -> bump_found_atom bump_text_pos state str ~max_pos ~pos parse_comment | '"' -> bump_found_atom bump_text_pos state str ~max_pos ~pos parse_quoted | c -> add_bump_pos state str ~max_pos ~pos c parse_atom and parse_quoted state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse_quoted" parse_quoted state else match str.[pos] with | '"' -> let pbuf = state.pbuf in let atom = Atom (Buffer.contents pbuf) in (match state.pstack with | [] -> Done (atom, mk_parse_pos state (pos + 1)) | rev_sexp_lst :: sexp_stack -> Buffer.clear pbuf; state.pstack <- (atom :: rev_sexp_lst) :: sexp_stack; bump_pos_cont state str ~max_pos ~pos parse_str) | '\\' -> bump_pos_cont state str ~max_pos ~pos parse_escaped | '\010' as c -> add_bump_line state str ~max_pos ~pos c parse_quoted | '\013' as c -> add_bump_line state str ~max_pos ~pos c parse_quoted_nl | c -> add_bump_pos state str ~max_pos ~pos c parse_quoted and parse_quoted_nl state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse_quoted_nl" parse_quoted_nl state else let pos = let c = '\010' in if str.[pos] = c then ( Buffer.add_char state.pbuf c; pos + 1 ) else pos in parse_quoted state str ~max_pos ~pos and parse_escaped state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse_escaped" parse_escaped state else match str.[pos] with | '\010' -> bump_line_cont state str ~max_pos ~pos parse_skip_ws | '\013' -> bump_line_cont state str ~max_pos ~pos parse_skip_ws_nl | '0' .. '9' as c -> bump_text_pos state; let d = Char.code c - 48 in parse_dec state str ~max_pos ~pos:(pos + 1) ~count:2 ~d | 'x' -> bump_text_pos state; parse_hex state str ~max_pos ~pos:(pos + 1) ~count:2 ~d:0 | ('\\' | '"' | '\'' ) as c -> add_bump_pos state str ~max_pos ~pos c parse_quoted | 'n' -> add_bump_pos state str ~max_pos ~pos '\n' parse_quoted | 't' -> add_bump_pos state str ~max_pos ~pos '\t' parse_quoted | 'b' -> add_bump_pos state str ~max_pos ~pos '\b' parse_quoted | 'r' -> add_bump_pos state str ~max_pos ~pos '\r' parse_quoted | c -> Buffer.add_char state.pbuf '\\'; add_bump_pos state str ~max_pos ~pos c parse_quoted and parse_skip_ws state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse_skip_ws" parse_skip_ws state else match str.[pos] with | ' ' | '\009' -> bump_pos_cont state str ~max_pos ~pos parse_skip_ws | _ -> parse_quoted state str ~max_pos ~pos and parse_skip_ws_nl state str ~max_pos ~pos = if pos > max_pos then mk_cont "parse_skip_ws_nl" parse_skip_ws_nl state else let pos = if str.[pos] = '\010' then pos + 1 else pos in parse_skip_ws state str ~max_pos ~pos and parse_dec state str ~max_pos ~pos ~count ~d = if pos > max_pos then mk_cont "parse_dec" (parse_dec ~count ~d) state else match str.[pos] with | '0' .. '9' as c -> let d = 10 * d + Char.code c - 48 in if count = 1 then if d > 255 then let err_msg = sprintf "illegal decimal escape: \\%d" d in raise_parse_error state "parse_dec" err_msg else add_bump_pos state str ~max_pos ~pos (Char.chr d) parse_quoted else ( bump_text_pos state; parse_dec state str ~max_pos ~pos:(pos + 1) ~count:(count - 1) ~d) | c -> raise_unexpected_char state ~loc:"parse_dec" pos c and parse_hex state str ~max_pos ~pos ~count ~d = if pos > max_pos then mk_cont "parse_hex" (parse_hex ~count ~d) state else match str.[pos] with | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' as c -> let corr = if c >= 'a' then 87 else if c >= 'A' then 55 else 48 in let d = 16 * d + Char.code c - corr in if count = 1 then if d > 255 then let err_msg = sprintf "illegal hexadecimal escape: \\%x" d in raise_parse_error state "parse_hex" err_msg else add_bump_pos state str ~max_pos ~pos (Char.chr d) parse_quoted else ( bump_text_pos state; parse_hex state str ~max_pos ~pos:(pos + 1) ~count:(count - 1) ~d) | c -> raise_unexpected_char state ~loc:"parse_hex" pos c let parse_str ?(text_line = 1) ?(text_char = 1) ?(pos = 0) ?len str = let len = match len with | Some len -> len | None -> String.length str - pos in let max_pos = check_str_bounds "parse" ~pos ~len str in let state = { parse_pos = { text_line = text_line; text_char = text_char; buf_pos = pos; }; pstack = []; pbuf = Buffer.create 128; } in parse_str state str ~max_pos ~pos
 
 let parse = parse_str
@@ -338,7 +340,7 @@ let input_sexp ?text_line ?text_char ?(buf_pos = 0) ic =
     let c = input_char ic in
     buf.[0] <- c;
     let parse_res =
-      try this_parse ~pos:0 ~len:1 buf
+      try this_parse ~pos:0 ~len:1 (Bytes.to_string buf)
       with ParseError pe -> reraise_parse_error pe buf_pos
     in
     match parse_res with
@@ -350,15 +352,15 @@ let input_sexp ?text_line ?text_char ?(buf_pos = 0) ic =
 
 let input_rev_sexps
       ?text_line ?text_char
-      ?(buf_pos = 0) ?(buf = String.create 8192) ic =
+      ?(buf_pos = 0) ?(buf = Bytes.create 8192) ic =
   let rev_sexps_ref = ref [] in
-  let buf_len = String.length buf in
+  let buf_len = Bytes.length buf in
   let is_incomplete_ref = ref false in
   let buf_pos_ref = ref buf_pos in
   let rec loop this_parse pos len =
     if len > 0 then
       let parse_res =
-        try this_parse ~pos ~len buf
+        try this_parse ~pos ~len (Bytes.to_string buf)
         with ParseError pe -> reraise_parse_error pe !buf_pos_ref
       in
       match parse_res with
@@ -413,9 +415,9 @@ let of_string str =
   of_string_bstr "Sexp.of_string" parse " " String.length String.sub str
 
 let get_bstr_sub_str bstr pos len =
-  let str = String.create len in
-  for i = 0 to len - 1 do str.[i] <- bstr.{pos + i} done;
-  str
+  let str = Bytes.create len in
+  for i = 0 to len - 1 do Bytes.set str i bstr.{pos + i} done;
+  Bytes.to_string str
 
 let bstr_ws_buf = Array1.create char c_layout 1
 let () = bstr_ws_buf.{0} <- ' '
@@ -426,14 +428,14 @@ let of_bstr bstr =
 
 (* Loading *)
 
-let load_sexp ?(buf = String.create 8192) file =
-  let buf_len = String.length buf in
+let load_sexp ?(buf = Bytes.create 8192) file =
+  let buf_len = Bytes.length buf in
   let ic = open_in file in
   let rec loop this_parse =
     let len = input ic buf 0 buf_len in
     if len = 0 then raise End_of_file
     else
-      match this_parse ~pos:0 ~len buf with
+      match this_parse ~pos:0 ~len (Bytes.to_string buf) with
       | Done (sexp, _) -> sexp
       | Cont (_, this_parse) -> loop this_parse
   in
