@@ -32014,11 +32014,11 @@ let mk spec =
     in
 
     let newMangle s =
-        let s'   = String.copy (spec.preprocess s) in
-        let _    = for i = 0 to (String.length s') - 1 do
-                     String.set s' i (spec.replace (String.get s' i))
+        let s'   = Bytes.of_string (spec.preprocess s) in
+        let _    = for i = 0 to (Bytes.length s') - 1 do
+                     Bytes.set s' i (spec.replace (Bytes.get s' i))
                    done in
-        let s'   = avoid s' in
+        let s'   = avoid (Bytes.to_string s') in
             ( state.used <- Strutil.Set.add s'   state.used
             ; Hashtbl.add state.map s s' 
             ; s'
