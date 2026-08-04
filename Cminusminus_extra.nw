@@ -1,4 +1,9 @@
 
+%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
+%%
+%%
+%%% Example (at beginning of line): %%Grades: B Central Soon
+
 \chapter{[[commons2]]}
 
 \section{[[commons2/auxfuns.nw]]}
@@ -10,14 +15,8 @@
 <<auxfuns.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%
@@ -174,14 +173,8 @@ end
 <<lc.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{Lexer Combinators}
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%This module provides lexer combinators (LCs). They can be used for
@@ -481,13 +474,7 @@ let scan str lexer          = lexer str 0 []
 <<pc.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% l2h substitution cfg CFG
@@ -807,11 +794,6 @@ let some p =
 
 %%
 %%% ------------------------------------------------------------------ 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Alternative Parser Combinators}
 %%% ------------------------------------------------------------------ 
@@ -1028,14 +1010,8 @@ let some p =
 <<pp.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%\def\ocaml{\textsc{ocaml}}
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% l2h substitute ocaml OCaml
 %%
@@ -1528,11 +1504,6 @@ let nl      = "\n"
 \section{[[commons2/rc.nw]]}
 %%
 %%% ------------------------------------------------------------------ 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 \section{Generic Configuration Files}
@@ -1880,14 +1851,8 @@ and string = parse
 <<rx.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Regular Expressions}
 %%% ------------------------------------------------------------------ 
@@ -2066,13 +2031,7 @@ let e2 = sym 'a' *** opt (sym 'b') *** some (sym 'a')
 <<strutil.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -2122,13 +2081,7 @@ let from_list xs = List.fold_left (fun set x -> Set.add x set) Set.empty xs
 <<verbose.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Diagnostic output}
 %%
@@ -2160,16 +2113,8 @@ let eprintf k = if verbosity >= k then Printf.eprintf else ign
 <<alignment.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et:
-%%%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%%
 %%
 %%% ------------------------------------------------------------------ 
 \section{Interface to manipulate alignment constraints}
@@ -2216,13 +2161,7 @@ let alignment (n, k) = gcd n k
 <<bits.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 et sw=4:
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% TODO: parsing a floating point number from a string to a bits value.
@@ -2380,9 +2319,7 @@ val of_string:  string      -> width -> t   (* raises Overflow *)
 %%(signed) {\ocaml} number. For the conversion to succeed, the number must
 %%be within the range of the target type ($[[min_int]] \le v \le
 %%[[max_int]]$), otherwise the conversion raises [[Overflow]]. 
-%%%
 %%$$v = \sum_{i=0}^{w-2} 2^i \times b_i - 2^{w-1} \times b_{w-1}$$
-%%%
 %%This guarantees $-2^{w-1} \le v < 2^{w-1}$.
 <<interface S>>=
 val to_int:     t -> int                        (* Overflow *)
@@ -3277,13 +3214,7 @@ let zero w =
 <<bitset64.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%
@@ -3365,13 +3296,7 @@ let subset s s' = B.eq (inter s s') s
 <<cell.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 \section{Cells}
@@ -3428,13 +3353,7 @@ let of_size n = match n with
 <<ctypes.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et sts=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%%%Grades: 
@@ -3566,7 +3485,6 @@ let enum_int h = snd (fetch_ct enum_ct h)
 <<idcode.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{Code arbitrary string as an identifier}
 %%
@@ -3609,13 +3527,7 @@ let encode s =
 <<idgen.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Please add grades for this module below. The line must start with % "%%".
 %%% 
 %%
@@ -3726,7 +3638,6 @@ end
 <<reinit.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{Reinitialization}
 %%
@@ -3765,7 +3676,6 @@ let ref x =
 <<tx.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 <<tx.mli>>=
 val decrement : name:string -> from:int -> to':int -> unit
@@ -3810,14 +3720,8 @@ let last _ = ts.last
 <<uint64.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% l2h substitution C C--
 %%% l2h substitution PAL C--
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% l2h substitution asdl ASDL
 %%% l2h substitution ocaml OCaml
@@ -4114,13 +4018,7 @@ value uint64_of_string(value s)          /* ML */
 <<debug.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Diagnostic output}
 %%
@@ -4177,13 +4075,7 @@ let explain () =
 <<error.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------  
@@ -4647,13 +4539,8 @@ let errorRegPrt (l,r) msg =
 <<impossible.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% l2h substitution cfg CFG
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
 %%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% l2h substitution dots ...
@@ -4723,14 +4610,8 @@ let unimp msg =
 <<srcmap.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% l2h substitution C C--
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% l2h substitution asdl ASDL
 %%% l2h substitution ocaml OCaml
@@ -5143,7 +5024,6 @@ end
 <<unsupported.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{Announcing unsupported constructs}
 %%
@@ -5341,15 +5221,8 @@ let popcnt ~notok ~ok =
 \chapter{[[parsing]]}
 
 \section{[[parsing/ast.nw]]}
-%%%
 %%% $Id: ast.nw,v 1.13 2005-06-07 20:19:43 nr Exp $
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%%
 %%
 %%% ------------------------------------------------------------------  
 \section{Abstract Syntax Definition}\label{sec:ast}
@@ -5586,16 +5459,8 @@ expr        = ExprAt        (expr, region)
 <<astpp.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%%%
 %%% $Id: astpp.nw,v 1.11 2005-06-07 20:19:43 nr Exp $
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%%
 %%
 %%% ------------------------------------------------------------------  
 \section{AST Pretty Printer}\label{sec:astpp}
@@ -6304,13 +6169,7 @@ let emit fd ~width tl =
                         )) tl
 @
 \section{[[parsing/parser.nw]]}
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% Todo: parse %foo as abbreviation for $foo(). The change is already
@@ -7625,13 +7484,7 @@ string16    :   UNICODE LPAREN STR RPAREN      { $3 }
 <<register.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -7964,14 +7817,8 @@ let contains ~outer ~inner = match outer, inner with
 <<reloc.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Relocatable Addresses}
 %%% ------------------------------------------------------------------ 
@@ -8066,14 +7913,8 @@ let as_simple a =
 <<rtl.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 et sw=4: 
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -8608,14 +8449,8 @@ let const c     = Const c
 <<rtldebug.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et: Vi gets the first post!
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -8697,13 +8532,7 @@ let typecheck (r:Rtl.rtl) =
 <<rtlop.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% ------------------------------------------------------------------ 
 \section{Support for RTL operators}
@@ -9074,14 +8903,8 @@ end
 <<rtlutil.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% vim: ts=8 sw=4 et:
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -10604,11 +10427,6 @@ let reloc addr w =
 
 %%
 %%% ------------------------------------------------------------------ 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Symbol}
 %%% ------------------------------------------------------------------ 
@@ -10658,13 +10476,7 @@ let with_mangler m n = new mangled m n
 <<types.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% l2h substitution C C--
 %%% l2h substitution asdl ASDL
@@ -11064,13 +10876,7 @@ let scheme_string (args, result) =
 <<asm.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% ------------------------------------------------------------------ 
 \section{Abstract Assembler Interface}
@@ -11264,12 +11070,6 @@ let reloc_string const =
 <<block.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Please add grades for this module below. The line must start with % "%%".
 %%% 
 %%
@@ -11558,14 +11358,8 @@ end
 <<eqn.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim:ts=8 sw=4 et:
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -12112,13 +11906,7 @@ let _ = assert
 <<fenv.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 et sts=4 sw=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%\iffalse
@@ -13239,13 +13027,7 @@ let clean env =
 <<metrics.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%
@@ -13356,16 +13138,8 @@ let of_ast ~swap map =
 <<rtleqn.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et:
-%%%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%%
 %%
 %%% The module name const is odd. I'm sticking to it because of the
 %%% original module, but would like to find something better. rtleqn? 
@@ -13593,13 +13367,7 @@ let solve ~width sums =
 <<cfg.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=2 sw=2 et: 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% 
 %%% $Id: cfg.nw,v 1.80 2006-04-10 21:28:53 nr Exp $
@@ -15806,7 +15574,6 @@ let member n set          = IS.mem (num n) set
 <<cfgx.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 <<cfgx.mli>>=
 module X : Cfg.X
 module M : Cfg.S with module X = X
@@ -15831,13 +15598,7 @@ module M = Cfg.Make(X)
 <<dag.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=2 sw=2 et: 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% 
 %%% $Id: dag.nw,v 1.1 2006-08-24 21:19:42 dias Exp $
@@ -16155,8 +15916,6 @@ and pr_cbi pr c = match c with
 <<ep.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{Embedding-projection pairs}
 %%
@@ -16184,7 +15943,6 @@ type ('lo, 'hi) map = ('lo -> 'hi, 'hi -> 'lo) pre_map
 <<mflow.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 et sw=4:
 %%
 \section{Machine-level control flow}
@@ -16439,13 +16197,7 @@ let machine ~sp =
 <<spans.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et sts=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% inc: \usepackage{alltt}
@@ -16527,13 +16279,7 @@ let fold_live_locs f spans z =
 <<elabexp.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -16848,13 +16594,7 @@ and typed_expr exp =
 <<elabstmt.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -17485,13 +17225,7 @@ let codelabels ss =
 <<memalloc.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -17582,13 +17316,6 @@ let num_allocated t = t.num_allocated
 <<nast.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%%%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 \section{Normalized Abstract-Syntax Tree}
@@ -17952,13 +17679,7 @@ let program ts =
 <<nelab.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% Table of Contents
-%%%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
 %%
 %%This is more my idea of an elaborated representation.
 <<exposed types(nelab.nw)>>=
@@ -18779,14 +18500,8 @@ let rewrite = Obj.magic
 <<simplify.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% Come for the emacs, stay for the vim: ts=8 sw=4 et: 
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -19449,11 +19164,6 @@ let x86_carrybit w args = match args with
 @
 
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Please add grades for this module below. The line must start with % "%%".
 %%
 %%%%Grades: B Peripheral Later
@@ -19718,14 +19428,7 @@ let cycle1 =
 <<automaton.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et:
-%%%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% $Id: automaton.nw,v 1.82 2006-08-24 21:19:41 dias Exp $
 %%
@@ -20463,14 +20166,8 @@ let init_cc = []
 <<box.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: sw=4 ts=8 et:
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Please add grades for this module below. The line must start with % "%%".
 %%% 
 %%
@@ -20597,13 +20294,7 @@ module GuardExp = Combine (Guard) (Exp)
 <<float.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 \section{Support for floating-point numbers}
@@ -20645,25 +20336,17 @@ let none = "none"
 <<space.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: sw=4 ts=8 et:
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Please add grades for this module below. The line must start with % "%%".
 %%% 
 %%
 %%%%Grades: B Peripheral Later
 %%
-%%%
 %%% Todo: define rounding mode register (names: fp_mode) in space 'c';
 %%% extend 'location' location type. Since 'c' is 32 bits wide, but the
 %%% rounding mode only 2 bits wide, we take slices: RP.slice (2, 0,
 %%% fp_mode) when using it.
-%%%
 %%
 %%
 %%% ------------------------------------------------------------------ 
@@ -21001,13 +20684,7 @@ module Standard64 = Standard(struct let width = 64 end)
 <<target.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%
@@ -21714,13 +21391,7 @@ end
 <<avail.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 \section{Available expressions}
@@ -21910,13 +21581,7 @@ let to_string = function
 <<property.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%
@@ -22218,13 +21883,7 @@ end
 <<unique.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=2 sw=2 et: 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% 
 %%% $Id: unique.nw,v 1.3 2005-06-03 02:02:19 nr Exp $
@@ -22364,11 +22023,6 @@ end
 %%
 %%% inc: \usepackage{alltt}
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %-------------------------------------------------------------------
@@ -22746,13 +22400,7 @@ type def_dist = HW of hwdef
 <<zipcfg.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=2 sw=2 et: 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% 
 %%% $Id: zipcfg.nw,v 1.11 2006-08-24 21:19:43 dias Exp $
@@ -23831,13 +23479,7 @@ and cbranch2cfg m c ~ifso ~ifnot s =
 <<ast2ir.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et sts=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%%%Grades: C Central Immediate
@@ -25091,11 +24733,8 @@ let program prog =
 <<automatongraph.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 et sw=4
-%%%
 %%% $Id: automatongraph.nw,v 1.20 2006-03-08 22:33:11 nr Exp $
-%%%
 %%
 %%% ------------------------------------------------------------------ 
 \section{Automaton-Graph}
@@ -25513,13 +25152,7 @@ let summary ~what ~mk dirs =
 <<call.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et sts=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%%%Grades: C Peripheral Soon
@@ -26077,7 +25710,6 @@ end
 <<context.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
 \section{Operator Contexts}
@@ -26289,14 +25921,8 @@ let functions ops =
 <<contn.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Continuations}
 %%% ------------------------------------------------------------------ 
@@ -26425,14 +26051,8 @@ let get_contn (newpc, newsp) = newpc
 <<postexpander.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 et sw=4:
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%%%Grades: A Subsystem Later
@@ -26559,7 +26179,6 @@ let get_contn (newpc, newsp) = newpc
 %%An important special case of weird value operator is a floating-point
 %%operator, which takes ordinary floating-point operand(s) plus a
 %%rounding mode.
-%%%
 %%The other weird value operators are extended multiplies (which double
 %%with width of 
 %%their operands) and multiprecision operators such as carry, borrow, add
@@ -29107,13 +28726,7 @@ and guard state succ fail e =
 <<opshape.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%%%Grades: B Peripheral Soon
@@ -29516,13 +29129,7 @@ let capply to_temp to_warg opr = cappfun to_temp to_warg (of_opr opr)
 <<preast2ir.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et sts=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 \section{Target and proc definitions}
@@ -29552,13 +29159,7 @@ let tgt {Proc.target = T t} = t
 <<proc.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -29670,13 +29271,7 @@ type ('automaton, 'cfg, 'cc, 'tgt) t =
 <<rewrite.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 \section{Rewriting RTL operators (and related utilities)}
@@ -30308,13 +29903,7 @@ main() {
 <<runtimedata.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et sts=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% inc: \usepackage{alltt}
@@ -30837,13 +30426,7 @@ let emit_global_properties target (asm:'c Asm.assembler) =
 <<talloc.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%\begin{quote}\it
 %%    Observations and ideas: the [[Single]] module currently has no
@@ -31001,7 +30584,6 @@ let divideby = function
 @ 
 %%  
 \section{[[front_ir/typecheck.nw]]}
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et:
 %%
 %%% ------------------------------------------------------------------ 
@@ -31049,13 +30631,6 @@ let proc (cfg, p) = Zipcfg.iter_rtls rtl cfg
 <<astasm.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%%% vim: ts=8 et sw=4 sts=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -31378,13 +30953,7 @@ let asm fd = new asm fd
 <<cfgutil.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -31643,14 +31212,8 @@ let delete g n =
 <<dotasm.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Assembler Interface to DOT}
 %%% ------------------------------------------------------------------ 
@@ -31770,14 +31333,8 @@ end
 <<dummyasm.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: E Peripheral Label
 \section{Dummy Assembler}
 %%% ------------------------------------------------------------------ 
@@ -31888,11 +31445,6 @@ end
 
 %%
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% l2h substitution dots ...
@@ -32080,14 +31632,8 @@ let simple =
 <<automatonutil.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% vim: ts=8 sw=4 et:
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%%%Grades: B Peripheral Later
 %%
 %%
@@ -32131,7 +31677,6 @@ let aloc a w = match alocs a w with
 <<callspec.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim:ts=8 sw=4 et:
 %%
 %%% ------------------------------------------------------------------ 
@@ -32470,7 +32015,6 @@ else
 <<dataflow.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{A polymorphic infrastructure for dataflow problems}
 %%
@@ -33421,7 +32965,6 @@ and backward_rewrite fact comp graph =
 <<mvalidate.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{RTL Validation}
 %%
@@ -33586,13 +33129,7 @@ let rtl t r =
 <<placevar.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%%%Grades: D Peripheral Later
 %%
 \section{Placing variables into suitable temporary locations}
@@ -33946,7 +33483,6 @@ let replace_globals _ (g, ({ Proc.target = tgt; Proc.global_map = gmap} as proc)
 <<vfp.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vi users, do your worst on this line!
 %%
 \section{Virtual frame pointer}
@@ -34714,14 +34250,8 @@ let cmm = conv "C--" false
             { AN.call = simple ; AN.results = simple ; AN.cutto = simple }
 @
 \section{[[arch/dummy/dummyexpander.nw]]}
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et: 
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% ------------------------------------------------------------------ 
 \section{Code-Expander for the Dummy Target}
@@ -35452,7 +34982,6 @@ end (*Make*)
 <<arm.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
 \section{Back end for the ARM}
@@ -35933,7 +35462,6 @@ let target : Ast2ir.tgt =
 <<mips.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%
 %%% ------------------------------------------------------------------ 
@@ -36361,7 +35889,6 @@ let target =
 <<mipsasm.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
 \section{{\mips} Assembler}
@@ -36535,7 +36062,6 @@ method cfg_instr proc  =
 <<mipscall.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 %%% ------------------------------------------------------------------ 
 \section{{\mips} calling conventions}
@@ -36881,7 +36407,6 @@ let cconv ~return_to cut ccname stage =
 <<mipsrec.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et:
 %%
 %%% ------------------------------------------------------------------ 
@@ -37404,7 +36929,6 @@ let is_instruction r =
 <<mipsregs.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{MIPS spaces and registers}
 %%
@@ -37472,7 +36996,6 @@ let npc       = locations.SS.npc
 <<ppc.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% $Id: ppc.nw,v 1.71 2007-06-18 20:17:22 dias Exp $
 %%% ---------------------------------------------------------------------------
 %%
@@ -38363,13 +37886,7 @@ let placevars =
 <<ppcasm.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 et sw=4 
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -38655,7 +38172,6 @@ method cfg_instr (cfg, proc) =
 <<ppcrec.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sw=4 et:
 %%% ------------------------------------------------------------------ 
 \section{PPC Recognizer} \label{ppcrec.sec}
@@ -39071,13 +38587,7 @@ let is_instruction r =
 <<x86.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Please add grades for this module below. The line must start with % "%%".
 %%% 
 %%
@@ -40397,13 +39907,7 @@ end
 <<x86asm.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -40684,7 +40188,6 @@ module Asm = X86rec.M
 <<x86call.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{X86 calling conventions}
 %%
@@ -41413,13 +40916,7 @@ end
 <<x86rec.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -42716,7 +42213,6 @@ let is_instruction r =
 <<x86regs.mli>>
 @
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%
 \section{X86 registers}
 %%
@@ -42819,13 +42315,7 @@ let regname8 ~lsb ~base = match lsb with
 %<<driver.mli>>
 %@
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% vim: ts=8 sts=4 sw=4 et
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%
 %%% ------------------------------------------------------------------ 
@@ -43050,13 +42540,6 @@ let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
 %<<main.ml>>
 %@
 
-%%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%%% vim: ts=8 et sw=4 sts=4
-%%% Grades     ::=    "%%Grades:" Quality Importance Urgency
-%%% Quality    ::=    A|B|C|D|E
-%%% Importance ::=    Central|Subsystem|Peripheral
-%%% Urgency    ::=    Immediate|Soon|Later
-%%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
 %%% $Id: main.nw,v 1.57 2006-03-14 02:01:36 nr Exp $
 %%
