@@ -52,4 +52,3 @@ external/stdlib/
 
 # dune
 /_build/
-/bin
