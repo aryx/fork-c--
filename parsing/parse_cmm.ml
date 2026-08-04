@@ -32,7 +32,7 @@ let tokens file =
   let map = Srcmap.mk () in
   Srcmap.sync map 0 (file, 0, 0);
 
-  Common.with_open_infile file (fun chan -> 
+  UFile.with_open_in (Fpath.v file) (fun chan -> 
     let lexbuf = Lexing.from_channel chan in
     
     let rec aux acc = 
@@ -53,7 +53,7 @@ let parse file =
   let map = Srcmap.mk () in
   Srcmap.sync map 0 (file, 0, 0);
 
-  Common.with_open_infile file (fun chan ->
+  UFile.with_open_in (Fpath.v file) (fun chan ->
     let lexbuf = Lexing.from_channel chan in
   
     let ast = Parse.program (fun lexbuf -> Scan.token lexbuf map) lexbuf in

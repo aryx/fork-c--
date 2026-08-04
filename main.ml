@@ -124,7 +124,7 @@ let test_driver_parse file =
   (* todo: write a vof_ast so can pretty print it cleanly *)
   let pp = Astpp.program ast in
   let s = Pp.ppToString 0 pp in
-  pr2 s;
+  UCommon.pr2 s;
   ()
 
 (* filename -> ast -> nast *)
@@ -132,7 +132,7 @@ let test_nast file =
   let (srcmap, ast) = Driver.parse file in
   let nast = Nast.program ast in
   (* todo: write a vof_nast so can pretty print that *)
-  pr2_gen nast
+  UCommon.pr2_gen nast
 
 
 (* filename -> ast -> nast -> nelab *)
@@ -152,7 +152,7 @@ let test_nelab file =
     Nelab.program ~swap validator srcmap assembler nast
   in
   (* todo: write a vof_compunit and vof_fenv so can pretty print that *)
-  pr2_gen res_or_error
+  UCommon.pr2_gen res_or_error
 
 let test_x86 file =
   let (srcmap, ast) = Driver.parse file in
@@ -215,7 +215,7 @@ let test_driver_elab file =
       (srcmap, ast)
       assembler
   in
-  pr2_gen env_and_compunit_maybe;
+  UCommon.pr2_gen env_and_compunit_maybe;
   ()
 
 let test_driver_compile file =
@@ -249,30 +249,30 @@ let test_driver_compile file =
 
 let extra_actions () = [
     "-driver_parse", "   <file>", 
-    Common.mk_action_1_arg test_driver_parse;
+    Arg_.mk_action_1_arg test_driver_parse;
     "-driver_scan", "   <file>", 
-    Common.mk_action_1_arg test_driver_scan;
+    Arg_.mk_action_1_arg test_driver_scan;
 
     "-driver_emit_asdl", "   <file>", 
-    Common.mk_action_1_arg test_emit_asdl;
+    Arg_.mk_action_1_arg test_emit_asdl;
     "-driver_elab", "  <file>", 
-    Common.mk_action_1_arg test_driver_elab;
+    Arg_.mk_action_1_arg test_driver_elab;
     "-driver_compile", "  <file>", 
-    Common.mk_action_1_arg test_driver_compile;
+    Arg_.mk_action_1_arg test_driver_compile;
 
     "-test_nast", "  <file>", 
-    Common.mk_action_1_arg test_nast;
+    Arg_.mk_action_1_arg test_nast;
     "-test_nelab", "  <file>", 
-    Common.mk_action_1_arg test_nelab;
+    Arg_.mk_action_1_arg test_nelab;
 
     "-test_x86", "  <file>", 
-    Common.mk_action_1_arg test_x86;
+    Arg_.mk_action_1_arg test_x86;
 
     "-test_rtl", "  <file>", 
-    Common.mk_action_1_arg test_rtl;
+    Arg_.mk_action_1_arg test_rtl;
 
     "-driver_version", "   ", 
-    Common.mk_action_0_arg test_driver_version;
+    Arg_.mk_action_0_arg test_driver_version;
 ]
 
 (*****************************************************************************)
@@ -298,20 +298,22 @@ let options () =
     "-verbose", Arg.Set verbose, 
     " ";
   ] @
-  Common.options_of_actions action (all_actions()) @
+  Arg_.options_of_actions action (all_actions()) @
+(*
   Common2.cmdline_flags_devel () @
   Common2.cmdline_flags_verbose () @
   Common2.cmdline_flags_other () @
+*)
   [
   "-version",   Arg.Unit (fun () -> 
-    pr2 (spf "qc-- version: %s" version);
+    UCommon.pr2 (spf "qc-- version: %s" version);
     exit 0;
   ), 
     "  guess what";
 
   (* this can not be factorized in Common *)
   "-date",   Arg.Unit (fun () -> 
-    pr2 "version: $Date: 2010/10/26 00:44:57 $";
+    UCommon.pr2 "version: $Date: 2010/10/26 00:44:57 $";
     raise (Common.UnixExit 0)
     ), 
   "   guess what";
@@ -328,23 +330,23 @@ let main () =
       " [options] <file or dir> " ^ "\n" ^ "Options are:"
   in
   (* does side effect on many global flags *)
-  let args = Common.parse_options (options()) usage_msg Sys.argv in
+  let args = Arg_.parse_options (options()) usage_msg Sys.argv in
 
   (* must be done after Arg.parse, because Common.profile is set by it *)
-  Common.profile_code "Main total" (fun () -> 
+  Profiling.profile_code "Main total" (fun () -> 
 
     (match args with
    
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)
     (* --------------------------------------------------------- *)
-    | xs when List.mem !action (Common.action_list (all_actions())) -> 
-        Common.do_action !action xs (all_actions())
+    | xs when List.mem !action (Arg_.action_list (all_actions())) -> 
+        Arg_.do_action !action xs (all_actions())
 
     | [] when !action = "-yyy" -> 
-        pr2 "yyy"
+        UCommon.pr2 "yyy"
 
-    | _ when not (Common.null_string !action) -> 
+    | _ when not (!action <> "") -> 
         failwith ("unrecognized action or wrong params: " ^ !action)
 
     (* --------------------------------------------------------- *)
@@ -357,7 +359,7 @@ let main () =
     (* empty entry *)
     (* --------------------------------------------------------- *)
     | [] -> 
-        Common.usage usage_msg (options()); 
+        Arg_.usage usage_msg (options()); 
         failwith "too few arguments"
     )
   )
@@ -366,6 +368,6 @@ let main () =
 
 (*****************************************************************************)
 let _ =
-  Common.main_boilerplate (fun () -> 
+  UCommon.main_boilerplate (fun () -> 
       main ();
   )
