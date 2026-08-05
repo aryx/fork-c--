@@ -7,9 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `fork-c--` is Yoann Padioleau's fork of **Quick C--** (`qc--`), a retargetable
 compiler for the C-- portable assembly language (http://www.cminusminus.org,
 Norman Ramsey & Christian Lindig). Upstream is https://github.com/nrnrnr/qc--,
-also checked out locally at `/home/pad/software-src/dev-toolchain/qc--` — worth
-consulting when a module here looks truncated or when hunting for a file still
-missing from this tree.
+also checked out locally at `/home/pad/software-src/dev-toolchain/qc--`.
+
+This repo already contains essentially all of upstream — things have been
+*moved and renamed*, not dropped, and whatever is not yet integrated sits in
+`todo/`. So when something seems missing, search `todo/` first and expect a
+different name; consult the upstream checkout only as a last resort.
 
 ### The goal
 
@@ -17,6 +20,18 @@ missing from this tree.
 of the `fork-tiger` project (a Tiger compiler, `~/github/fork-tiger`). Getting a
 `.c--` file all the way to working machine code is the target; everything below
 is in service of that.
+
+`fork-tiger` is a *text*-level client: its `tigerc` emits a `.c--` file, which
+`qc` is then supposed to compile and link against tiger's runtime. So the
+concrete end-to-end milestone this fork is aiming at is roughly
+
+```bash
+tigerc demos/hello.tig > hello.c--
+qc -globals -o hello runtime/runtime.o stdlib/stdlib.a hello.c--
+```
+
+which means `qc` needs a real `main_action` (today it raises `Todo`), a working
+x86 backend, and object-file/linking support — none of which exist yet.
 
 Two consequences worth keeping in mind when making changes here:
 
@@ -207,5 +222,11 @@ obscure module was for), `docs/adding_target.tex` / `adding_backend.tex`,
 the previous line, `|` as prefix), `install.txt`, `pad.txt` (the fork's change
 log and the author's notes on the original design).
 
-Upstream's own docs are under `/home/pad/software-src/dev-toolchain/qc--/doc/`
-and are often more complete than the copies here.
+These are upstream's `doc/` files, renamed for clarity rather than rewritten, so
+citations in old papers/comments need translating: `backend.tex` ->
+`adding_backend.tex`, `newtarget.tex` -> `adding_target.tex`, `modules.txt` ->
+`archi_modules.txt`, `arch-slides.tex` -> `archi-slides.tex`, `cfg.nw` ->
+`data-cfg.nw`, `stack.nw` -> `data-stack-layout.nw`, `coding.tex` ->
+`developer-conventions.txt`, `refactor.nw` -> `todo-refactor.nw`, `working.tex`
+-> `todo-working.tex`. Man pages moved to `docs/man/`, and `buildsys.txt` /
+`PORTABILITY` to `docs/old/`.
