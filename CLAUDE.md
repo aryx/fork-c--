@@ -33,6 +33,13 @@ qc -globals -o hello runtime/runtime.o stdlib/stdlib.a hello.c--
 which means `qc` needs a real `main_action` (today it raises `Todo`), a working
 x86 backend, and object-file/linking support — none of which exist yet.
 
+This dependency is intended and settled: **`fork-tiger` depends on qc--, and
+qc-- is meant to be tiger's main backend.** Tiger may grow other backends later,
+but that is not a reason to hedge here — treat the tiger use case as the
+priority when deciding what to revive first, and do not design around the
+possibility of tiger dropping qc--. (`fork-tiger/pad.txt` notes the extra
+dependencies this brings; that cost is accepted.)
+
 Two consequences worth keeping in mind when making changes here:
 
 - Simplification is a goal, not a side effect. Prefer deleting or inlining
