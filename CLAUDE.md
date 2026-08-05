@@ -1,0 +1,172 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+`fork-c--` is Yoann Padioleau's fork of **Quick C--** (`qc--`), a retargetable
+compiler for the C-- portable assembly language (http://www.cminusminus.org,
+Norman Ramsey & Christian Lindig). The original is a ~15-year-old OCaml codebase
+written with literate programming (noweb + `mk` + Lua). The fork's work is
+mostly: reorganizing the flat source tree into directories, porting to modern
+OCaml (4.14+) / dune, replacing noweb+mk with syncweb+make, and reviving the
+compilation pipeline piece by piece (see `pad.txt`, `todo/`).
+
+Much of the original backend is still not wired up — expect `raise Todo`,
+`failwith "TODO: pad ..."`, and `Unsupported.Unsupported` in the deeper passes.
+
+## Build and run
+
+The `commons`/`profiling` libraries come from the **`semgrep-pfff-libs` git
+submodule** — the build fails with `Library "profiling" not found` if it is not
+checked out:
+
+```bash
+git submodule update --init      # required once
+dune build                       # or: make
+./bin/qc -driver_parse demos/hello.c--
+```
+
+`bin/` is a checked-in symlink to `_build/install/default/bin`, so `./bin/qc`
+works right after `dune build`. `make build-docker` (or `.github/workflows/docker.yml`)
+does a from-scratch Ubuntu 22.04 + OCaml 4.14 build via `Dockerfile`; that is
+the only CI.
+
+### Exercising the pipeline
+
+There is **no test suite wired up** (`make test` prints `echo TODO`). `tests/`
+holds the original `.tst` regression suite driven by `testdrv.lua` under `mk`,
+which does not run in this fork. In practice you test by hand with `qc`'s
+`-<action>` flags on `demos/*.c--` or `tests/src/*.c--`. Actions are registered
+in `main.ml` (`extra_actions`) and `parsing/test_parsing_cmm.ml`, roughly one
+per pipeline stage:
+
+| action | stage |
+| --- | --- |
+| `-tokens_cmm`, `-parse_cmm`, `-pp_cmm` | lexer / parser / AST pretty-printer |
+| `-driver_scan`, `-driver_parse` | same, through `Driver` |
+| `-driver_emit_asdl` | AST as ASDL s-expressions |
+| `-test_nast` | `Ast` -> `Nast` normalization |
+| `-test_nelab`, `-driver_elab` | elaboration to `Rtl` + `Fenv` env |
+| `-driver_compile` | full `Ast2ir.translate` with the `dummy` target, dot output |
+| `-test_x86` | same with the x86 target (currently hits `Unsupported`) |
+
+Known-broken: `-dump_cmm` (`failwith "TODO lib-sexp not here anymore"`),
+`-test_rtl` (`Todo`). No default action — running `qc` on a file without a flag
+raises `Todo`.
+
+## Architecture
+
+The compiler is a chain of IRs; the directory order in the top `dune`'s
+`libraries` field and in `Makefile`'s `MAKESUBDIRS` *is* the dependency order.
+`driver.ml`'s header comment is the best map of the types involved — read it
+before touching a pass.
+
+```
+.c-- source
+  parsing/         scan.mll + parse.mly -> Ast.program        (ast.asdl is the source of truth for Ast)
+  front_nelab/     Nast.program : Ast -> Nast (normalized)
+                   Nelab.program : Nast -> 'a Nelab.compunit * 'a Fenv.Dirty.env
+                     (elaboration: name resolution, typing, constant folding -> Rtl)
+  front_rtl/       Rtl: register transfer lists, the core semantic IR
+                   (+ Rtlutil printers, Rtldebug typechecker, Register/Symbol/Reloc)
+  front_fenv/      Fenv: the "fat environment" threaded through elaboration
+                   (holds the assembler, metrics, Block/Eqn stack-layout equations)
+  front_cfg/       Cfg / Dag / Mflow: control-flow graph, older representation
+  front_zipcfg/    Zipcfg: the newer zipper-based CFG (+ Property, Varmap, Avail)
+  front_target/    Target.t machine description; Automaton (calling-convention
+                   specs), Space, Box, Float
+  front_ir/        Ast2ir.translate: compunit -> procedures; Expander/Postexpander
+                   (machine-independent -> machine-dependent RTLs), Call, Contn,
+                   Proc, Talloc, Runtimedata
+  front_last/      late passes: Placevar, Vfp (virtual frame pointer), Dataflow,
+                   Mvalidate (RTL validation), Callspec
+  front_asm/       Asm.assembler: the object interface every backend implements
+  assembler/       generic Asm implementations: Astasm (emit as C-- text),
+                   Dotasm (emit CFG as graphviz), Dummyasm, Cfgutil.emit, Mangle
+  arch/{x86,ppc,dummy,interpreter,mips,arm}
+                   per-target: <arch>.ml (Target), <arch>asm.ml (Asm),
+                   <arch>call.ml (calling conventions), <arch>rec.mlb (instruction
+                   selection), <arch>regs.ml
+```
+
+Support directories: `commons2/` (Pp pretty-printer, Rx, Strutil, Lc/Pc parser
+combinators), `commons3/` (Bits, Bitset64, Uint64, Alignment, Cell, Ctypes —
+bit-level primitives), `error/` (Error, Srcmap source-position maps, Impossible,
+Unsupported), `h_asdl/` (ASDL runtime for the generated `Ast` pickler),
+`h_camlburg/` (BURG instruction-selection generator producing `mlburg`).
+
+Note the polymorphism in `'a Nelab.compunit` / `'a Fenv.env`: `'a` is the
+assembler type, so the choice of backend is threaded through elaboration rather
+than being a separate pass.
+
+### Generated files
+
+- `parsing/parse.ml` (ocamlyacc), `parsing/scan.ml` (ocamllex) — dune rules exist.
+- `arch/*/​*rec.ml` from `*.mlb` via the `mlburg` tool built in `h_camlburg/` —
+  **no dune rule**; the `.ml` is checked in and regenerated by hand.
+- `parsing/ast.ml` from `parsing/ast.asdl` via `asdlgen` — also checked in, and
+  `asdlgen` is not part of the build.
+- `this.ml` is `cp this.in this.ml` in the legacy Makefile but is checked in and
+  kept in sync manually; dune treats it as an ordinary source.
+- `cmm.opam` is generated by dune from `dune-project` (`generate_opam_files`).
+
+## Build system conventions
+
+Two build systems coexist. **dune is the default**; the per-directory
+`Makefile`s + `Makefile.common` are the legacy path, still reachable via the
+`allold` / `optold` / `rec` targets. Keep both in sync when adding a file: the
+`SRC` list in the directory's `Makefile` *and* the directory's `dune`.
+
+- Every library is `(wrapped false)` and named `cmm_<dirname>` (e.g.
+  `front_ir/` -> `cmm_front_ir`). Module names are therefore global — a new
+  module must not collide with any other module in the whole build.
+- The root `dune` replaces dune's `:standard` flags entirely with
+  `-g -bin-annot -w -a -alert -deprecated`. This is deliberate: `:standard`
+  implies `-strict-sequence`/`-strict-formats`, which cannot be turned back off
+  and which reject this legacy code. **Do not "fix" this to use `:standard`.**
+  The corollary is that dune will not warn you about unused variables, partial
+  matches, etc.
+- `h_camlburg/engine/` is split into `cmm_h_camlburg_engine` (just `Camlburg`,
+  what the backends need) and `cmm_h_camlburg_burg` (needs `h_camlburg/parsing`,
+  only the `mlburg` tool needs it). This avoids a `Parse` module clash between
+  `h_camlburg/parsing` and `parsing/`; see the long comment in that dune file
+  before restructuring it.
+
+## Literate programming
+
+The whole compiler is a syncweb literate program. Sources are two `.nw` files at
+the root: `Cminusminus.nw` (the book skeleton) and `Cminusminus_extra.nw` (the
+bulk, produced by `pfff -lpize`). `SRC_ORIG` in `Makefile` lists them **in
+`#include` order — that order matters for syncweb's multi-file support**.
+
+```bash
+make sync    # bidirectional sync between the .nw files and the .ml/.mli views
+make pdf     # noweblatex + pdflatex -> Cminusminus.tex/pdf
+```
+
+`make sync` iterates `SRC_VIEWS` in `Makefile`, a hand-maintained list of every
+`.ml`/`.mli` view. **A source file not in `SRC_VIEWS` is invisible to `make sync`;
+add new files there.** `.md5sum_*` files and `.Cminusminus.nwcache` are syncweb
+bookkeeping.
+
+Requires `syncweb` on `PATH` and `~/github/syncweb/scripts/noweblatex` (see
+`docs/latex/Makefile.common`).
+
+Consequences for editing `.ml` files:
+- `(* s: *)`, `(* e: *)`, `(* x: *)` comments are syncweb chunk markers. Never
+  edit or reorder them (already in the global CLAUDE.md, but it bites hardest here).
+- Files not listed in `SRC_VIEWS` (e.g. `main.ml`, most of `arch/`) are plain
+  source and can be edited freely.
+
+## Other docs in the tree
+
+`docs/archi.txt` (directory map, pre-fork naming), `docs/archi_modules.txt`
+(one index card per original `.nw` module — useful for figuring out what an
+obscure module was for), `docs/adding_target.tex` / `adding_backend.tex`,
+`docs/developer-conventions.txt` (original authors' style: 88 columns, `in` on
+the previous line, `|` as prefix), `install.txt`, `pad.txt` (the fork's change
+log and the author's notes on the original design).
+
+`todo/` holds parts of the original not yet revived: the C-- interpreter,
+the Lua embedding, the runtime system.
