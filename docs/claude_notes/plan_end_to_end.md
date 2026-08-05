@@ -68,7 +68,27 @@ intwiden, placevars, floatwiden, Optimize.simplify_exps, preopt,
 expand, improve, liveness, ralloc, freeze, rmvfp, *assemble, *emit_data
 ```
 
-## Step 1 — port the x86 calling-convention automata to OCaml
+## Step 1 — port the x86 calling-convention automata to OCaml — **DONE** (`011b0ef`)
+
+Landed as `arch/x86/x86cc.ml`, with `arch/x86/x86.ml:659` now reading
+`T.cc_specs = X86cc.cc_specs`. Outcome:
+
+- `qc -test_x86 demos/hello.c--` runs to completion and writes real x86
+  assembly to `/tmp/cmm.asm` — globals, `Cmm_stack_growth`, and `my_data`
+  emitted as `.byte`s. **[V]**
+- 78 of the 128 `tests/src/*.c--` files get through the x86 front end. Most of
+  the remaining 50 are the negative tests (`test-0NN.c--`) being *correctly*
+  rejected during elaboration ("literal does not fit in 8 unsigned bits",
+  "re-declaration of value bar", ...). Genuine gaps in that set are few:
+  one unknown hardware register `register7`, one "continuation escapes but is
+  not annotated with also cuts to", and four parse errors. **[V]**
+- `.section .text` is emitted but **empty** — no `main:` body. This is Gap 2
+  below, exactly as predicted. **[V]**
+
+The original write-up of this step is kept below, since it documents the
+Lua->OCaml translation rules that Steps 2-3 will need again for other targets.
+
+### (original notes)
 
 Smallest change with the largest payoff, and it needs nothing from `todo/`.
 
@@ -102,7 +122,7 @@ Suggested shape: new `arch/x86/x86cc.ml`, ~60 lines. Remember to add it to
 
 **Done when:** `qc -test_x86 demos/hello.c--` gets past the convention lookup.
 
-## Step 2 — write the phase pipeline in OCaml
+## Step 2 — write the phase pipeline in OCaml — **NEXT**
 
 Replace the `(fun proc -> ())` no-op with a real function.
 
