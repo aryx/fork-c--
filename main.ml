@@ -171,7 +171,7 @@ let test_x86 file =
 
   Driver.compile
     tgt
-    (fun proc -> ()) (* ?? optimizer ? *)
+    (X86backend.optimizer asm)
     ~exportglobals:true (* ?? *)
     ~src:(srcmap, ast)
     ~asm
