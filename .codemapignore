@@ -1,0 +1,10 @@
+
+/semgrep-pfff-libs
+
+# for codegraph_build
+#dir: h_camlburg/parsing
+#dir: h_camlburg/demos
+
+# for codegraph_build
+#file: h_camlburg/main.cmt
+
