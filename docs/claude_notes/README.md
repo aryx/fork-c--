@@ -17,5 +17,9 @@ Conventions for this directory:
 
 Index:
 
-- [plan_end_to_end.md](plan_end_to_end.md) — roadmap for getting `qc` to compile
-  a `.c--` file to a working binary, and the diagnosis of what currently blocks it.
+- [plan_tiger_hello.md](plan_tiger_hello.md) — **start here.** The narrow plan:
+  shortest path to a running tiger "hello world", with concrete commands to test
+  each step. Recommends routing through the interpreter back end first.
+- [plan_end_to_end.md](plan_end_to_end.md) — the broader roadmap for getting `qc`
+  to compile a `.c--` file to a working binary, and the diagnosis of what
+  currently blocks it. Where the two disagree, the narrow plan is newer.

@@ -4,6 +4,13 @@ Written 2026-08-05, against commit `aaa91a2`.
 Status legend: **[V]** verified by reading the code or running `qc`;
 **[I]** inferred from the upstream Lua, not yet confirmed by running anything.
 
+> **See also [plan_tiger_hello.md](plan_tiger_hello.md), which is newer and
+> narrower.** This document plans the *native x86* path and prioritises off the
+> `tests/src` suite. If the immediate goal is a running tiger program, that
+> plan's interpreter-first route is much shorter, and its priorities win where
+> the two disagree — in particular, `todo/widen.nw` is **not** needed for
+> `hello.tig`.
+
 ## The milestone
 
 ```bash
