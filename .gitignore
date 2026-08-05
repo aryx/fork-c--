@@ -21,6 +21,7 @@
 
 # syncweb
 .md5sum_*
+.*.nwcache
 
 #misc
 commons/_darcs/
