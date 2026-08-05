@@ -656,7 +656,7 @@ let tgt =
   (* control flow is solid, except [[cutto]] is a lie *)
   ; T.machine = X.machine
 
-  ; T.cc_specs         = A.init_cc
+  ; T.cc_specs         = X86cc.cc_specs
   ; T.cc_spec_to_auto  = X86call.cconv 
                            ~return_to:(fun ra -> pop_with (fun ra -> store' pc ra))
                            { T.embed = fmach.T.cutto.T.embed

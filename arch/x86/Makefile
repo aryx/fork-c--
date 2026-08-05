@@ -7,6 +7,7 @@ TARGET=lib
 
 # need camlburg for x86rec
 SRC= x86regs.ml x86call.ml \
+     x86cc.ml \
      x86rec.ml \
      x86asm.ml \
      x86.ml
