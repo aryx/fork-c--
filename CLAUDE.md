@@ -40,6 +40,10 @@ priority when deciding what to revive first, and do not design around the
 possibility of tiger dropping qc--. (`fork-tiger/pad.txt` notes the extra
 dependencies this brings; that cost is accepted.)
 
+`docs/claude_notes/plan_end_to_end.md` holds the current roadmap to that
+milestone and the diagnosis of what blocks it — read it before starting backend
+work, and re-verify its `file:line` references, which go stale.
+
 Two consequences worth keeping in mind when making changes here:
 
 - Simplification is a goal, not a side effect. Prefer deleting or inlining
