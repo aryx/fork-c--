@@ -6,14 +6,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `fork-c--` is Yoann Padioleau's fork of **Quick C--** (`qc--`), a retargetable
 compiler for the C-- portable assembly language (http://www.cminusminus.org,
-Norman Ramsey & Christian Lindig). The original is a ~15-year-old OCaml codebase
-written with literate programming (noweb + `mk` + Lua). The fork's work is
-mostly: reorganizing the flat source tree into directories, porting to modern
-OCaml (4.14+) / dune, replacing noweb+mk with syncweb+make, and reviving the
-compilation pipeline piece by piece (see `pad.txt`, `todo/`).
+Norman Ramsey & Christian Lindig). Upstream is https://github.com/nrnrnr/qc--,
+also checked out locally at `/home/pad/software-src/dev-toolchain/qc--` — worth
+consulting when a module here looks truncated or when hunting for a file still
+missing from this tree.
 
-Much of the original backend is still not wired up — expect `raise Todo`,
-`failwith "TODO: pad ..."`, and `Unsupported.Unsupported` in the deeper passes.
+### The goal
+
+**Simplify qc-- and get it working end to end**, so it can serve as the backend
+of the `fork-tiger` project (a Tiger compiler, `~/github/fork-tiger`). Getting a
+`.c--` file all the way to working machine code is the target; everything below
+is in service of that.
+
+Two consequences worth keeping in mind when making changes here:
+
+- Simplification is a goal, not a side effect. Prefer deleting or inlining
+  machinery over preserving upstream generality. The original is a research
+  compiler with a lot of configurability that this fork does not need.
+- End-to-end beats breadth. A working x86 path matters more than reviving every
+  target or optimizer.
+
+### What the fork has changed so far
+
+- **Reorganized the source tree.** Upstream is a mostly flat `src/` of `.nw`
+  files; here the code is split into `commons*/`, `error/`, `parsing/`,
+  `front_*/`, `assembler/`, `arch/*/` along pipeline order.
+- **Dropping the embedded Lua interpreter.** Upstream uses Lua both as the
+  compiler's configuration/driver language and as its test driver, which
+  complicates the whole architecture. This fork drives everything from OCaml
+  (`main.ml`/`driver.ml`) instead; the Lua machinery is parked under `todo/lua/`,
+  `todo/h_lua/`, `todo/lua-related/`.
+- **One literate program instead of many.** Upstream has a `.nw` file per
+  module; here they were merged into the single big `Cminusminus_extra.nw`
+  (via `syncweb -merge_files`) so there is a global view, with `Cminusminus.nw`
+  as the book skeleton. syncweb replaces noweb, `make` replaces `mk`.
+- **Ported to modern OCaml** (4.14+, `bytes` vs `string`, etc.) and to dune.
+
+Code is pulled over from upstream **gradually**, directory by directory.
+`todo/` is the staging area: files copied from upstream but not yet integrated,
+including the interpreter, the runtime system, the optimizers (dataflow,
+register allocation, dominators), and most of `arch/`. Moving something out of
+`todo/` into a real directory — and into the build — is the normal unit of
+progress here.
+
+Much of the original backend is therefore still not wired up — expect
+`raise Todo`, `failwith "TODO: pad ..."`, and `Unsupported.Unsupported` in the
+deeper passes. See `pad.txt` for the author's own notes on the fork and on the
+original design.
 
 ## Build and run
 
@@ -168,5 +207,5 @@ obscure module was for), `docs/adding_target.tex` / `adding_backend.tex`,
 the previous line, `|` as prefix), `install.txt`, `pad.txt` (the fork's change
 log and the author's notes on the original design).
 
-`todo/` holds parts of the original not yet revived: the C-- interpreter,
-the Lua embedding, the runtime system.
+Upstream's own docs are under `/home/pad/software-src/dev-toolchain/qc--/doc/`
+and are often more complete than the copies here.
