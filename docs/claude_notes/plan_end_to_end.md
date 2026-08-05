@@ -113,8 +113,13 @@ becomes `AN.choice [ AN.is_kind "float", AN.widen ... *> AN.useregs ...
 `stack_top_proxy_reg` is already defined in OCaml at `arch/x86/x86call.ml:43`.
 
 Then replace `T.cc_specs = A.init_cc` in `arch/x86/x86.ml:659` with the literal
-list of the eight conventions. Note `X86.layout = { creates='no late consts' }`
-(`Cminusminus_extra.nw:40762`) is pure metadata — nothing to port.
+list of the eight conventions.
+
+(Correction to an earlier draft of this note: `X86.layout` is **not** just
+metadata. `X86.layout = { creates='no late consts' }` at
+`Cminusminus_extra.nw:40762` is only the table declaration; the real stack
+layout is `X86.layout.fn` / `X86.layout["C"]` at
+`Cminusminus_extra.nw:40764-40833`, ~60 lines of Lua. See Step 2b.)
 
 Suggested shape: new `arch/x86/x86cc.ml`, ~60 lines. Remember to add it to
 `arch/x86/dune`, to `SRC` in `arch/x86/Makefile`, and to `SRC_VIEWS` in the top
@@ -122,7 +127,72 @@ Suggested shape: new `arch/x86/x86cc.ml`, ~60 lines. Remember to add it to
 
 **Done when:** `qc -test_x86 demos/hello.c--` gets past the convention lookup.
 
-## Step 2 — write the phase pipeline in OCaml — **NEXT**
+## Step 2 — write the phase pipeline in OCaml — **DONE (minimal)** (`6959a2a`)
+
+Landed as `arch/x86/x86backend.ml`; `main.ml` now passes
+`X86backend.optimizer asm` to `Driver.compile`. It runs the two phases whose
+modules were already in the build — `placevars` then `expand` — and assembles
+with `asm#cfg_instr`.
+
+`qc -test_x86 demos/hello.c--` now emits a real `main:` body, and instruction
+selection demonstrably works: `movl`/`addl`/`leal`, `call printf`, `ret`, the
+`ebx`/`esi`/`edi`/`ebp` save-restore pairs that Step 1's C convention specifies
+as non-volatile, and `$0 -> %eax` for `return(0)`. **[V]**
+
+What is still symbolic in that output, and the phase each one waits on **[V]**:
+
+| appears as | count | needs |
+| --- | --- | --- |
+| `temporary register N` | 52 | `ralloc` |
+| `%vfp`, `... := %vfp` | 5 | `rmvfp` (must run *after* freeze) |
+| `adjust %esp` | 8 | `freeze` |
+| `$out call parms:o5`, `$out ovfl results:o4+...` | 2 | `freeze` |
+
+### What running the pipeline revealed
+
+Sweeping `tests/src/*.c--` again: **65 pass, down from 78**. That number is
+worse but the situation is better — before, the optimizer was a no-op, so a
+"pass" only meant elaboration succeeded and nothing could fail downstream. The
+13 newly-failing files are the expander now being reached and hitting real
+gaps, and they cluster exactly on the phases skipped before `expand` **[V]**:
+
+- `bool.c--`, `emptyifbody.c--` — `Impossible("non-binary comparison in
+  conditional guard")` on `%bool(%lobits1(...))`. Wants `simplify_exps`.
+- `fadd.c--`, `f2.c--`, `float-002/003.c--`, `r64.c--`, `rnd2.c--`,
+  `round.c--`, `round2.c--`, `tf.c--` — "does not support 32-bit value on the
+  machine stack". Wants `floatwiden` (`Widen.x86_floats`, `Widen.store_const`).
+- `nums.c--`, `wtizzy.c--` — `Impossible("Asked for temporary ... with
+  unsupported width 8")`. Wants `intwiden` (`Widen.widenlocs`, `Widen.dpwiden`).
+
+This is good evidence that the phase *ordering* taken from
+`todo/lua/luacompile.nw:799` is right, and it **raises the priority of
+`todo/widen.nw`**, which an earlier draft of this note guessed was "probably
+deferrable". It is deferrable for `hello.c--` only.
+
+## Step 2b — the remaining phases, in the order they now matter
+
+1. **`intwiden` / `floatwiden`** — `todo/widen.nw`. Unblocks the 13 files above.
+   Cheapest real win now.
+2. **`freeze`** — two pieces. `todo/lua/stack.ml` is already plain OCaml with a
+   clean `.mli` (`Stack.freeze : Ast2ir.proc -> Block.t -> Ast2ir.proc`, 221
+   lines) and needs only to be moved into the build. The `Block.t` it takes was
+   computed by the Lua at `Cminusminus_extra.nw:40764-40833` (~60 lines) using
+   `Block.relative`/`Block.cat`/`Block.overlap_high`/`overlap_low` plus
+   `Stack.blocks`/`Stack.ccname` — all of which exist in OCaml already
+   (`front_fenv/block.ml`, `todo/lua/stack.mli`). So this is a small port, not
+   a rewrite. **[V]**
+3. **`rmvfp`** — cheap in isolation: `Backplane.of_dataflow` is three lines
+   (`todo/lua-related/backplane.nw:899`), so the phase is just
+   `let g, changed = proc.Proc.cc.Call.replace_vfp g in (g, proc), changed`,
+   and `front_last/vfp.ml` is already in the build. **But it must run after
+   `freeze`** — it rewrites `vfp` into `sp` plus a frame offset, and those
+   offsets are not known until the frame is frozen. Doing it early would
+   produce silently wrong code rather than obviously symbolic output, so it is
+   sequenced here and not taken as an easy win. **[V]**
+4. **`ralloc`** — `todo/backend/registers/dls.nw`, the largest remaining piece.
+   Needs `liveness` first (`todo/dataflow/live.nw`, `liveset.nw`).
+
+### (original notes on step 2)
 
 Replace the `(fun proc -> ())` no-op with a real function.
 
