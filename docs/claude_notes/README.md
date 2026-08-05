@@ -23,3 +23,6 @@ Index:
 - [plan_end_to_end.md](plan_end_to_end.md) — the broader roadmap for getting `qc`
   to compile a `.c--` file to a working binary, and the diagnosis of what
   currently blocks it. Where the two disagree, the narrow plan is newer.
+- [plan_reorg.md](plan_reorg.md) — proposed directory layout to replace the
+  `front_*` scheme, with the old->new file mapping, where `todo/` lands, and the
+  mechanics of renaming across the literate program.
