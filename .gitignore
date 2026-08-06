@@ -1,16 +1,38 @@
+# -*- sh -*-
 
-# ocaml object files
+# ----------------------------------------------------------------------------
+# Patterns
+# ----------------------------------------------------------------------------
 
+# OCaml object files
 *.o
 *.cm*
 *.annot
 .depend
+
+# C object files
 *.so
 *.a
 
+# latex object files
+*.aux
+*.brf
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
 
-# pfff and tools
-/TAGS
+# syncweb
+.md5sum_*
+.*.nwcache
+
+# ----------------------------------------------------------------------------
+# Specific files
+# ----------------------------------------------------------------------------
+
+# dune
+/_build/
 
 # yacc
 /parsing/parse.ml
@@ -18,10 +40,6 @@
 /parsing/parse.output
 /parsing/scan.ml
 /h_camlburg/parsing/parse.output
-
-# syncweb
-.md5sum_*
-.*.nwcache
 
 #misc
 commons/_darcs/
@@ -51,7 +69,7 @@ external/stdlib/
 /h_camlburg/parsing/parse.ml
 /h_camlburg/parsing/parse.mli
 
-# dune
-/_build/
+# latest one
+
 /docs/literate/Cminusminus.log
 /docs/literate/lineage.pdf
