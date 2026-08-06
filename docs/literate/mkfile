@@ -182,8 +182,8 @@ SRC_VIEWS= \
  $TOP/asm/mangle.mli\
  $TOP/asm/mangle.ml\
  \
- $TOP/front_last/automatonutil.mli\
- $TOP/front_last/automatonutil.ml\
+ $TOP/target/automatonutil.mli\
+ $TOP/target/automatonutil.ml\
  $TOP/front_last/callspec.mli\
  $TOP/front_last/callspec.ml\
  $TOP/cfg/dataflow/dataflow.mli\

@@ -31656,11 +31656,11 @@ let simple =
 
 \section{[[front_last/automatonutil.nw]]}
 <<front_last/automatonutil.ml>>=
-<<automatonutil.ml>>
+<<automatonutil.ml >>
 @
 
 <<front_last/automatonutil.mli>>=
-<<automatonutil.mli>>
+<<automatonutil.mli >>
 @
 
 %%
@@ -31677,20 +31677,20 @@ let simple =
 %%would be written, provided we know its width.  
 %%Function [[aloc]] expects that list to have exactly length~1,
 %%otherwise it halts with a compiler error.
-<<automatonutil.mli>>=
+<<automatonutil.mli >>=
 val alocs : Automaton.loc -> Rtl.width -> Rtl.loc list
 val aloc  : Automaton.loc -> Rtl.width -> Rtl.loc 
 @ 
 \subsection{Implementation}
 %%
-<<automatonutil.ml>>=
+<<automatonutil.ml >>=
 module R   = Rtl
 module RP  = Rtl.Private
 module Up  = Rtl.Up
 module Dn  = Rtl.Dn
 @ 
 %%
-<<automatonutil.ml>>=
+<<automatonutil.ml >>=
 let alocs aloc w =
   let RP.Rtl gs = Dn.rtl (Automaton.store aloc (Rtl.late "dummy" w) w) in
   let getloc = function _, RP.Store (l, _, _) -> Up.loc l | _, RP.Kill l -> Up.loc l in
