@@ -1,5 +1,5 @@
 (*s: front_nelab/nast.ml *)
-(*s: nast.ml *)
+(*s: nast.ml  *)
 module A = Ast
 (*s: exposed types(nast.nw) *)
 type ty  = Ast.ty
@@ -74,7 +74,7 @@ type t = {
 }
 (*e: exposed types(nast.nw) *)
 let default_proc_section = "text"
-(*x: nast.ml *)
+(*x: nast.ml  *)
 let id ss = ss
 let null = function [] -> true | _ :: _ -> false
 
@@ -89,7 +89,7 @@ let formal (r, (kind, variance, ty, name, aligned)) =
   (r, (Auxfuns.Option.get "" kind, variance, ty, name, aligned))
 let actual (kind, name, aligned) = (Auxfuns.Option.get "" kind, name, aligned)
 let convention = Auxfuns.Option.get "C--"
-(*x: nast.ml *)
+(*x: nast.ml  *)
 let rec add_datum r d ds = match d with
   | A.DatumAt (d, r) -> add_datum r d ds
   | A.Label l -> (r, Datalabel l) :: ds
@@ -97,7 +97,7 @@ let rec add_datum r d ds = match d with
   | A.MemDecl (t, s, init) -> (r, ReserveMem (t, s, init)) :: ds
 
 let fdata r = List.fold_right (add_datum r) 
-(*x: nast.ml *)
+(*x: nast.ml  *)
 type ('a) accumulation_disaster =
   { imps : (A.region * A.ty option * A.import list) list
   ; exps : (A.region * A.ty option * A.export list) list
@@ -119,7 +119,7 @@ let rec decl r accums d k = match d with
   | A.Registers rs  -> k {accums with regs = ((r, rs) :: accums.regs)}
   | A.Target    t   -> k {accums with archs = ((r, t) :: accums.archs)}
   | A.Pragma        -> k accums
-(*x: nast.ml *)
+(*x: nast.ml  *)
 let rec kmap f cons r accums xs k = match xs with
   | []      -> k [] accums
   | x :: xs ->
@@ -129,7 +129,7 @@ let rec kmap f cons r accums xs k = match xs with
 let kmap_none f r accums xs k =
   let xk f r accums x k = f r accums x (k []) in
   kmap (xk f) (fun _ _ -> []) r accums xs (fun _ -> k)
-(*x: nast.ml *)
+(*x: nast.ml  *)
 let rec body r accums b k = match b with
 | A.BodyAt(b,r) -> body r accums b k
 | A.DeclBody d  -> decl r accums d (k id)
@@ -193,13 +193,13 @@ let rec body r accums b k = match b with
  )
 | A.DataBody ds -> k id {accums with data = (fdata r ds accums.data)}
 and bodies r = kmap body (fun add ss -> add ss) r
-(*x: nast.ml *)
+(*x: nast.ml  *)
 and arm r accums a k = match a with
 | A.ArmAt (a,r) -> arm r accums a k
 | A.Case (ranges,bs) -> 
     bodies r accums bs (fun stmts accums -> k ((ranges, stmts)) accums)
 and arms r = kmap arm (fun x y -> x::y) r
-(*x: nast.ml *)
+(*x: nast.ml  *)
 let rec section r accums s k = match s with
 | A.SectionAt (s,r) ->
     section r accums s k
@@ -229,7 +229,7 @@ let rec section r accums s k = match s with
                      archs = paccums.archs;
                      data  = (r,Procedure p)::accums.data})
 and sections r = kmap_none section r
-(*x: nast.ml *)
+(*x: nast.ml  *)
 let rec toplevel r accums t k =
   let cons s ss = (s, r) :: ss in
   match t with
@@ -263,5 +263,5 @@ let program ts =
       ; sections = List.map fst ss
       ; udecls = { types = saccums.tys; constants = saccums.consts }
       })
-(*e: nast.ml *)
+(*e: nast.ml  *)
 (*e: front_nelab/nast.ml *)

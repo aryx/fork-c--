@@ -1,5 +1,5 @@
 (*s: front_nelab/simplify.ml *)
-(*s: simplify.ml *)
+(*s: simplify.ml  *)
 open Nopoly
 
 module BO = Bits.Ops
@@ -454,7 +454,7 @@ module Safe = struct
     let rtl (RP.Rtl(es))        = RP.Rtl(List.map guarded es)
     (*e: traverse RTL *)
 end    
-(*x: simplify.ml *)
+(*x: simplify.ml  *)
 module Unsafe = struct
     (*s: unsafe RTL simplification *)
     let zero w = RP.Const(RP.Bits (Bits.U.of_int 0 w))
@@ -504,7 +504,7 @@ module Unsafe = struct
 
     (*e: unsafe RTL simplification *)
 end
-(*x: simplify.ml *)
+(*x: simplify.ml  *)
 let rtl r  = try Up.rtl (Safe.rtl (Dn.rtl r))
              with Error msg -> Impossible.impossible msg
 
@@ -560,5 +560,5 @@ let compile_time_ops =
     [ "add"; "and"; "com"; "divu"; "eq"; "ge"; "geu"; "gt"; "gtu"; "le"; "leu";
       "lobits"; "lt"; "ltu"; "mul"; "ne"; "neg"; "or"; "shl"; "shra";
       "shrl"; " sub"; "sx"; "xor"; "zx"]
-(*e: simplify.ml *)
+(*e: simplify.ml  *)
 (*e: front_nelab/simplify.ml *)

@@ -1,5 +1,5 @@
 (*s: front_nelab/elabstmt.mli *)
-(*s: elabstmt.mli *)
+(*s: elabstmt.mli  *)
 (*s: exposed types(elabstmt.nw) *)
 type exp = Rtl.exp
 type loc = Rtl.loc * Rtl.width
@@ -46,5 +46,5 @@ val elab_cformals :
   Ast.region -> 'a Fenv.Dirty.env' -> Nast.cformal list ->
     Fenv.variable kinded list Error.error
 val codelabels : stmt list -> label list
-(*e: elabstmt.mli *)
+(*e: elabstmt.mli  *)
 (*e: front_nelab/elabstmt.mli *)

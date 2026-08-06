@@ -1,5 +1,5 @@
 (*s: front_nelab/nelab.ml *)
-(*s: nelab.ml *)
+(*s: nelab.ml  *)
 open Nopoly
 
 (*s: exposed types(nelab.nw) *)
@@ -53,7 +53,7 @@ module Up = Rtl.Up
 module T  = Types
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
-(*x: nelab.ml *)
+(*x: nelab.ml  *)
 (*s: auxiliaries(nelab.nw) *)
 let foldl: ('a -> 'b -> 'a) -> 'a -> 'b list -> 'a = List.fold_left 
 (*x: auxiliaries(nelab.nw) *)
@@ -63,7 +63,7 @@ let error r env msg = E.errorRegionPrt (F.srcmap env,r) msg
 (*x: auxiliaries(nelab.nw) *)
 let is2power x = x > 0 && x land (x - 1) = 0
 (*e: auxiliaries(nelab.nw) *)
-(*x: nelab.ml *)
+(*x: nelab.ml  *)
 module type SB = sig
   type d
   module Decl : Topsort.Sortable with type decl = d N.marked
@@ -72,7 +72,7 @@ module type SB = sig
   val eval : 'a F.env' -> Decl.decl -> rhs E.error
   val bind : string -> rhs E.error N.marked -> 'a F.env' -> 'a F.env'
 end
-(*x: nelab.ml *)
+(*x: nelab.ml  *)
 module SortAndBind (D : SB) = struct
   module Sort = Topsort.Make (D.Decl)
   let bind_sortable_definitions env ds =
@@ -102,7 +102,7 @@ module SortAndBind (D : SB) = struct
         ( report_cycle env offending ; bind env ds ) in
     bind env ds
 end
-(*x: nelab.ml *)
+(*x: nelab.ml  *)
 module Type = struct
   type d = N.typedefn
   module Decl = struct
@@ -121,7 +121,7 @@ module Type = struct
   let bind = F.bindt
 end
 module TypeSortBind = SortAndBind(Type)
-(*x: nelab.ml *)
+(*x: nelab.ml  *)
 module Const = struct
   type d = N.constdefn
   (*s: utility functions for constants *)
@@ -163,7 +163,7 @@ module Const = struct
     F.bindv name (r, E.ematch typed_exp (fun (b, t) -> FE.Constant b, t)) env
 end
 module ConstSortBind = SortAndBind(Const)
-(*x: nelab.ml *)
+(*x: nelab.ml  *)
 type scope = Local | Global
 (* pad: copy paste of Vfp.mk but brought too many dependencies *)
 let vfp_mk w =
@@ -473,7 +473,7 @@ let program ~swap validate srcmap asm ast =
     let env = flag ss env in
     E.ematch2 globals ss (fun globals ss ->
       (env, { globals = globals; sections = ss })))
-(*x: nelab.ml *)
+(*x: nelab.ml  *)
 let rewrite = Obj.magic
-(*e: nelab.ml *)
+(*e: nelab.ml  *)
 (*e: front_nelab/nelab.ml *)

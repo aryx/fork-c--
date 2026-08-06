@@ -1,5 +1,5 @@
 (*s: front_nelab/nast.mli *)
-(*s: nast.mli *)
+(*s: nast.mli  *)
 (*s: exposed types(nast.nw) *)
 type ty  = Ast.ty
 type exp = Ast.expr
@@ -73,5 +73,5 @@ type t = {
 }
 (*e: exposed types(nast.nw) *)
 val program : Ast.toplevel list -> t
-(*e: nast.mli *)
+(*e: nast.mli  *)
 (*e: front_nelab/nast.mli *)

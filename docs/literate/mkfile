@@ -102,20 +102,20 @@ SRC_VIEWS= \
  $TOP/front_cfg/mflow.ml\
  $TOP/front_cfg/spans.mli\
  $TOP/front_cfg/spans.ml\
- $TOP/front_nelab/elabexp.mli\
- $TOP/front_nelab/elabexp.ml\
- $TOP/front_nelab/elabstmt.mli\
- $TOP/front_nelab/elabstmt.ml\
- $TOP/front_nelab/memalloc.mli\
- $TOP/front_nelab/memalloc.ml\
- $TOP/front_nelab/nast.mli\
- $TOP/front_nelab/nast.ml\
- $TOP/front_nelab/nelab.mli\
- $TOP/front_nelab/nelab.ml\
- $TOP/front_nelab/simplify.mli\
- $TOP/front_nelab/simplify.ml\
- $TOP/front_nelab/topsort.mli\
- $TOP/front_nelab/topsort.ml\
+ $TOP/elab/elabexp.mli\
+ $TOP/elab/elabexp.ml\
+ $TOP/elab/elabstmt.mli\
+ $TOP/elab/elabstmt.ml\
+ $TOP/elab/memalloc.mli\
+ $TOP/elab/memalloc.ml\
+ $TOP/elab/nast.mli\
+ $TOP/elab/nast.ml\
+ $TOP/elab/nelab.mli\
+ $TOP/elab/nelab.ml\
+ $TOP/elab/simplify.mli\
+ $TOP/elab/simplify.ml\
+ $TOP/elab/topsort.mli\
+ $TOP/elab/topsort.ml\
  $TOP/target/automaton.mli\
  $TOP/target/automaton.ml\
  $TOP/target/box.mli\

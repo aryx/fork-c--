@@ -1,5 +1,5 @@
 (*s: front_nelab/elabexp.ml *)
-(*s: elabexp.ml *)
+(*s: elabexp.ml  *)
 open Nopoly
 
 module A  = Ast
@@ -14,7 +14,7 @@ let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let (@<<) f g = fun x -> f (g x) (* function composition *)
     
 let is2power x = x > 0 && x land (x - 1) = 0
-(*x: elabexp.ml *)
+(*x: elabexp.ml  *)
 module M = Metrics
 (*s: utilities(elabexp.nw) *)
 let tywidth a_bad_thing = function
@@ -171,5 +171,5 @@ let elab_loc         env = let _, f, _, _, _ = exprfuns env in f
 let elab_kinded_name env = let _, _, f, _, _ = exprfuns env in f
 let elab_con         env = let _, _, _, f, _ = exprfuns env in f
 let elab_link        env = let _, _, _, _, f = exprfuns env in f
-(*e: elabexp.ml *)
+(*e: elabexp.ml  *)
 (*e: front_nelab/elabexp.ml *)

@@ -1,5 +1,5 @@
 (*s: front_nelab/nelab.mli *)
-(*s: nelab.mli *)
+(*s: nelab.mli  *)
 (*s: exposed types(nelab.nw) *)
 type name    = string
 type kind    = string
@@ -40,7 +40,7 @@ type validator = Rtl.rtl -> string option
 (*e: exposed types(nelab.nw) *)
 val program : swap:bool -> validator -> Srcmap.map -> 'a Asm.assembler -> Nast.t ->
   ('a Fenv.Dirty.env' * 'a compunit) Error.error
-(*x: nelab.mli *)
+(*x: nelab.mli  *)
 val rewrite : (Auxfuns.void compunit -> Auxfuns.void compunit) -> ('a compunit -> 'a compunit)
-(*e: nelab.mli *)
+(*e: nelab.mli  *)
 (*e: front_nelab/nelab.mli *)

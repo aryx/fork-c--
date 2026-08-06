@@ -1,5 +1,5 @@
 (*s: front_nelab/memalloc.mli *)
-(*s: memalloc.mli *)
+(*s: memalloc.mli  *)
 type t          (* immutable *)
 
 type growth = Up | Down
@@ -12,5 +12,5 @@ val alignment :     t -> int                (* max alignment ever requested *)
 val current :       t -> Rtl.exp            (* obtain cursor *)
 val freeze :        t -> Block.t            (* return allocated, aligned block *)
 val num_allocated : t -> int
-(*e: memalloc.mli *)
+(*e: memalloc.mli  *)
 (*e: front_nelab/memalloc.mli *)

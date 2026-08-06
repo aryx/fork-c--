@@ -1,5 +1,5 @@
 (*s: front_nelab/topsort.ml *)
-(*s: topsort.ml *)
+(*s: topsort.ml  *)
 open Nopoly
 
 (*s: signature S *)
@@ -53,5 +53,5 @@ module Make (S: Sortable) = struct
         | dd, cc -> raise (Cycle cc)
     (*e: functions *)
 end
-(*e: topsort.ml *)
+(*e: topsort.ml  *)
 (*e: front_nelab/topsort.ml *)

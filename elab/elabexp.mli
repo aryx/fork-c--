@@ -1,5 +1,5 @@
 (*s: front_nelab/elabexp.mli *)
-(*s: elabexp.mli *)
+(*s: elabexp.mli  *)
 type nm_or_mem = Ast.name_or_mem
 type link = Reloc.t
 val aligned : Metrics.t -> Rtl.width -> Ast.aligned option -> Ast.aligned
@@ -11,8 +11,8 @@ val elab_con: 'a Fenv.Dirty.env' -> Ast.expr -> (Bits.bits * Rtl.width) Error.er
 val elab_link:'a Fenv.Dirty.env' -> Ast.expr -> (link      * Rtl.width) Error.error
 val elab_kinded_name: 
   'a Fenv.Dirty.env' -> nm_or_mem -> (string * (Rtl.loc * Rtl.width) * int) Error.error
-(*x: elabexp.mli *)
+(*x: elabexp.mli  *)
 val loc_region : Ast.region -> nm_or_mem -> Ast.region
 val exp_region : Ast.region -> Ast.expr  -> Ast.region
-(*e: elabexp.mli *)
+(*e: elabexp.mli  *)
 (*e: front_nelab/elabexp.mli *)

@@ -1,5 +1,5 @@
 (*s: front_nelab/elabstmt.ml *)
-(*s: elabstmt.ml *)
+(*s: elabstmt.ml  *)
 (*s: exposed types(elabstmt.nw) *)
 type exp = Rtl.exp
 type loc = Rtl.loc * Rtl.width
@@ -46,9 +46,9 @@ module FE = Fenv
 module N  = Nast
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let is2power x = x > 0 && x land (x - 1) = 0
-(*x: elabstmt.ml *)
+(*x: elabstmt.ml  *)
 module M = Metrics
-(*x: elabstmt.ml *)
+(*x: elabstmt.ml  *)
 let elab_functions validate srcmap r env =
   let eprint r    = E.errorRegionPrt (F.srcmap env, r) in
   let errorf r    = Printf.kprintf (fun s -> eprint r s; E.Error) in
@@ -440,7 +440,7 @@ let nullmap = Srcmap.mk ()
 let nullv   = fun _ -> None
 let elab_stmts    v m r env = fst (elab_functions v m           r env)
 let elab_cformals     r env = snd (elab_functions nullv nullmap r env)
-(*x: elabstmt.ml *)
+(*x: elabstmt.ml  *)
 let codelabels ss =
   let rec adds ss labels = List.fold_left add labels ss 
   and add labels s = match s with
@@ -460,5 +460,5 @@ let codelabels ss =
   | Limitcheck _ -> labels in
   adds ss []
 
-(*e: elabstmt.ml *)
+(*e: elabstmt.ml  *)
 (*e: front_nelab/elabstmt.ml *)

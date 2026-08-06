@@ -16293,11 +16293,11 @@ let fold_live_locs f spans z =
 
 \section{[[front_nelab/elabexp.nw]]}
 <<front_nelab/elabexp.ml>>=
-<<elabexp.ml>>
+<<elabexp.ml >>
 @
 
 <<front_nelab/elabexp.mli>>=
-<<elabexp.mli>>
+<<elabexp.mli >>
 @
 
 %%
@@ -16325,7 +16325,7 @@ let fold_live_locs f spans z =
 %%(There are no contexts in which a kind is permitted with a general lvalue.)
 %%ONE PROBLEM REMAINS: WE COULD ACCEPT A KIND ON A PRIMITIVE CALL.
 %%
-<<elabexp.mli>>=
+<<elabexp.mli >>=
 type nm_or_mem = Ast.name_or_mem
 type link = Reloc.t
 val aligned : Metrics.t -> Rtl.width -> Ast.aligned option -> Ast.aligned
@@ -16342,7 +16342,7 @@ val elab_kinded_name:
 %%we provide a way to get region of a location or expression.
 %%The first parameter is the default result in case the location or
 %%expression does not carry a region.
-<<elabexp.mli>>=
+<<elabexp.mli >>=
 val loc_region : Ast.region -> nm_or_mem -> Ast.region
 val exp_region : Ast.region -> Ast.expr  -> Ast.region
 @ 
@@ -16364,7 +16364,7 @@ val exp_region : Ast.region -> Ast.expr  -> Ast.region
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 %%
-<<elabexp.ml>>=
+<<elabexp.ml >>=
 open Nopoly
 
 module A  = Ast
@@ -16384,7 +16384,7 @@ let is2power x = x > 0 && x land (x - 1) = 0
 \subsection{The translation of types, names, and expressions}
 %%% ------------------------------------------------------------------ 
 %%
-<<elabexp.ml>>=
+<<elabexp.ml >>=
 module M = Metrics
 <<utilities(elabexp.nw)>>
 let loc_region r l = match l with A.NameOrMemAt(_, r) -> r | _ -> r
@@ -16608,11 +16608,11 @@ and typed_expr exp =
 %%
 \section{[[front_nelab/elabstmt.nw]]}
 <<front_nelab/elabstmt.ml>>=
-<<elabstmt.ml>>
+<<elabstmt.ml >>
 @
 
 <<front_nelab/elabstmt.mli>>=
-<<elabstmt.mli>>
+<<elabstmt.mli >>
 @
 
 %%
@@ -16668,7 +16668,7 @@ type stmt =
   | Limitcheck of convention * exp * limitfailure option
 and limitfailure = { failcont : exp; reccont : exp; recname : name; }
 @
-<<elabstmt.mli>>=
+<<elabstmt.mli >>=
 <<exposed types(elabstmt.nw)>>
 val elab_stmts :
   (Rtl.rtl -> string option) -> Srcmap.map -> Ast.region -> 'a Fenv.Dirty.env' -> 
@@ -16696,7 +16696,7 @@ val codelabels : stmt list -> label list
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 %%
-<<elabstmt.ml>>=
+<<elabstmt.ml >>=
 <<exposed types(elabstmt.nw)>>
 module A  = Ast
 module E  = Error
@@ -16706,7 +16706,7 @@ module N  = Nast
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let is2power x = x > 0 && x land (x - 1) = 0
 @
-<<elabstmt.ml>>=
+<<elabstmt.ml >>=
 module M = Metrics
 @ 
 %%Parameter [[reachable]] means the statement is reachable by ordinary
@@ -16715,7 +16715,7 @@ module M = Metrics
 %%restrictions: if a statement is reachable by ordinary control flow, it
 %% had better not be a continuation.
 %%Similarly, it had better not be the end of the procedure body.
-<<elabstmt.ml>>=
+<<elabstmt.ml >>=
 let elab_functions validate srcmap r env =
   let eprint r    = E.errorRegionPrt (F.srcmap env, r) in
   let errorf r    = Printf.kprintf (fun s -> eprint r s; E.Error) in
@@ -17216,7 +17216,7 @@ let prim_flow r fs =
     else
       E.Ok f) in
 @ 
-<<elabstmt.ml>>=
+<<elabstmt.ml >>=
 let codelabels ss =
   let rec adds ss labels = List.fold_left add labels ss 
   and add labels s = match s with
@@ -17239,11 +17239,11 @@ let codelabels ss =
 @ 
 \section{[[front_nelab/memalloc.nw]]}
 <<front_nelab/memalloc.ml>>=
-<<memalloc.ml>>
+<<memalloc.ml >>
 @
 
 <<front_nelab/memalloc.mli>>=
-<<memalloc.mli>>
+<<memalloc.mli >>
 @
 
 %%
@@ -17262,7 +17262,7 @@ let codelabels ss =
 %%not be used after it was frozen (allthough it is technically possible
 %%and safe).
 %%N.B. [[size]] is measured in units of [[memsize]].
-<<memalloc.mli>>=
+<<memalloc.mli >>=
 type t          (* immutable *)
 
 type growth = Up | Down
@@ -17281,7 +17281,7 @@ val num_allocated : t -> int
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 %%
-<<memalloc.ml>>=
+<<memalloc.ml >>=
 type growth = Up | Down
 type unchanging = 
     { start  : Rtl.exp     (* start address of block *)
@@ -17330,11 +17330,11 @@ let num_allocated t = t.num_allocated
 @
 \section{[[front_nelab/nast.nw]]}
 <<front_nelab/nast.ml>>=
-<<nast.ml>>
+<<nast.ml >>
 @
 
 <<front_nelab/nast.mli>>=
-<<nast.mli>>
+<<nast.mli >>
 @
 
 %%% Example (at beginning of line): %%Grades: B Central Soon
@@ -17429,20 +17429,20 @@ type t = {
   sections : section list
 }
 @ 
-<<nast.mli>>=
+<<nast.mli >>=
 <<exposed types(nast.nw)>>
 val program : Ast.toplevel list -> t
 @ 
 \section{Implementation}
 %%
 %%One abbreviation, types, and a very important constant.
-<<nast.ml>>=
+<<nast.ml >>=
 module A = Ast
 <<exposed types(nast.nw)>>
 let default_proc_section = "text"
 @ 
 %%First, some simple utility functions.
-<<nast.ml>>=
+<<nast.ml >>=
 let id ss = ss
 let null = function [] -> true | _ :: _ -> false
 
@@ -17460,7 +17460,7 @@ let convention = Auxfuns.Option.get "C--"
 @ 
 %%Conversion of [[datum]].
 %%The name [[fdata]] is short for ``fold data.''
-<<nast.ml>>=
+<<nast.ml >>=
 let rec add_datum r d ds = match d with
   | A.DatumAt (d, r) -> add_datum r d ds
   | A.Label l -> (r, Datalabel l) :: ds
@@ -17489,7 +17489,7 @@ let fdata r = List.fold_right (add_datum r)
 %%They are gathered in a record to ensure the OCaml compiler will
 %%compile calls to [[decl]] as tail calls.
 %%This bug has happened -- this is not premature optimization.
-<<nast.ml>>=
+<<nast.ml >>=
 type ('a) accumulation_disaster =
   { imps : (A.region * A.ty option * A.import list) list
   ; exps : (A.region * A.ty option * A.export list) list
@@ -17517,7 +17517,7 @@ let rec decl r accums d k = match d with
 %%a function on \mbox{[['a list]]}.
 %%The function has to supply a value to its continuation;
 %%if it doesn't, use [[kmap_none]].
-<<nast.ml>>=
+<<nast.ml >>=
 let rec kmap f cons r accums xs k = match xs with
   | []      -> k [] accums
   | x :: xs ->
@@ -17532,7 +17532,7 @@ let kmap_none f r accums xs k =
 %%The continuation~[[k]] expects an optional statement, which is represented
 %%as a value of type [[stmt list -> stmt list]].
 %%If there can be no statement, [[k]]'s first argument is~[[id]].
-<<nast.ml>>=
+<<nast.ml >>=
 let rec body r accums b k = match b with
 | A.BodyAt(b,r) -> body r accums b k
 | A.DeclBody d  -> decl r accums d (k id)
@@ -17611,7 +17611,7 @@ stmt r s k
 %%AND FOR CONTINUATION?
 %%
 %%Arm of a case statement.  Nothing interesting here.
-<<nast.ml>>=
+<<nast.ml >>=
 and arm r accums a k = match a with
 | A.ArmAt (a,r) -> arm r accums a k
 | A.Case (ranges,bs) -> 
@@ -17622,7 +17622,7 @@ and arms r = kmap arm (fun x y -> x::y) r
 %%additional argument before [[imps]].
 %%In other words, [[section]] is like [[decl]] and not like [[body]] or
 %%[[stmt]]. 
-<<nast.ml>>=
+<<nast.ml >>=
 let rec section r accums s k = match s with
 | A.SectionAt (s,r) ->
     section r accums s k
@@ -17656,7 +17656,7 @@ and sections r = kmap_none section r
 %%At top level, we accumulate sections, where a section is a named list of data.
 %%Again, we could have a declaration at top level, so we use [[cons]]
 %%and [[id]] as before.  
-<<nast.ml>>=
+<<nast.ml >>=
 let rec toplevel r accums t k =
   let cons s ss = (s, r) :: ss in
   match t with
@@ -17693,11 +17693,11 @@ let program ts =
 @ 
 \section{[[front_nelab/nelab.nw]]}
 <<front_nelab/nelab.ml>>=
-<<nelab.ml>>
+<<nelab.ml >>
 @
 
 <<front_nelab/nelab.mli>>=
-<<nelab.mli>>
+<<nelab.mli >>
 @
 
 %%% Table of Contents
@@ -17744,7 +17744,7 @@ type 'a compunit = {
   sections : 'a section list;
 }
 @ 
-<<nelab.mli>>=
+<<nelab.mli >>=
 <<exposed types(nelab.nw)>>
 val program : swap:bool -> validator -> Srcmap.map -> 'a Asm.assembler -> Nast.t ->
   ('a Fenv.Dirty.env' * 'a compunit) Error.error
@@ -17757,7 +17757,7 @@ type validator = Rtl.rtl -> string option
 %%export this horrible [[rewrite]] function, 
 %%which is another name for [[Obj.magic]].
 %%Only a function that is actually polymorphic should be passed in.
-<<nelab.mli>>=
+<<nelab.mli >>=
 val rewrite : (Auxfuns.void compunit -> Auxfuns.void compunit) -> ('a compunit -> 'a compunit)
 @ 
 %%% ------------------------------------------------------------------ 
@@ -17841,7 +17841,7 @@ val rewrite : (Auxfuns.void compunit -> Auxfuns.void compunit) -> ('a compunit -
 \subsection{Implementation -- The 30\,000 feet overview}
 %%% ------------------------------------------------------------------ 
 %%
-<<nelab.ml>>=
+<<nelab.ml >>=
 open Nopoly
 
 <<exposed types(nelab.nw)>>
@@ -17860,7 +17860,7 @@ module T  = Types
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 @ 
 %%
-<<nelab.ml>>=
+<<nelab.ml >>=
 <<auxiliaries(nelab.nw)>>
 @ 
 %%The key to understand the implementation is the fat environment
@@ -17919,7 +17919,7 @@ let is2power x = x > 0 && x land (x - 1) = 0
 %%sorted.
 %%Type~[[d]] is the declaration, which we have to be able to sort,
 %%evaluate, and bind.
-<<nelab.ml>>=
+<<nelab.ml >>=
 module type SB = sig
   type d
   module Decl : Topsort.Sortable with type decl = d N.marked
@@ -17935,7 +17935,7 @@ end
 %%because we have an illegal {\PAL} program.  When no cycle exists,
 %%declarations are processed in topological order by [[bind_one]],
 %%which enters them into [[env]].
-<<nelab.ml>>=
+<<nelab.ml >>=
 module SortAndBind (D : SB) = struct
   module Sort = Topsort.Make (D.Decl)
   let bind_sortable_definitions env ds =
@@ -17975,7 +17975,7 @@ let report_cycle env ds =
 @
 %%\subsubsection{Types}
 %%Here's how we sort and bind type definitions.
-<<nelab.ml>>=
+<<nelab.ml >>=
 module Type = struct
   type d = N.typedefn
   module Decl = struct
@@ -18008,7 +18008,7 @@ module TypeSortBind = SortAndBind(Type)
 %%it is syntactically and type-wise possible to declare a boolean value
 %%this is not permitted. The optionally provided type must match the
 %%actual type of the defining expression.
-<<nelab.ml>>=
+<<nelab.ml >>=
 module Const = struct
   type d = N.constdefn
   <<utility functions for constants>>
@@ -18075,7 +18075,7 @@ and freeLValueVars l tail = match l with
 %%In addition to being bound and checked,
 %%imports and exports have two effects
 %%
-<<nelab.ml>>=
+<<nelab.ml >>=
 type scope = Local | Global
 (* pad: copy paste of Vfp.mk but brought too many dependencies *)
 let vfp_mk w =
@@ -18509,16 +18509,16 @@ and init r ty i =
       else
         errorf r "initialized Unicode string must specify type bits16" in
 @ 
-<<nelab.ml>>=
+<<nelab.ml >>=
 let rewrite = Obj.magic
 @ 
 \section{[[front_nelab/simplify.nw]]}
 <<front_nelab/simplify.ml>>=
-<<simplify.ml>>
+<<simplify.ml >>
 @
 
 <<front_nelab/simplify.mli>>=
-<<simplify.mli>>
+<<simplify.mli >>
 @
 
 %%% Come for the emacs, stay for the vim: ts=8 sw=4 et: 
@@ -18535,7 +18535,7 @@ let rewrite = Obj.magic
 %%routines to evaluate {\rtl} expressions and to simplify {\rtl}s by
 %%evaluating expressions inside of them. The promise is, that the returned
 %%{\rtl}s and expressions are simpler as the ones provided.
-<<simplify.mli>>=
+<<simplify.mli >>=
 val rtl:    Rtl.rtl -> Rtl.rtl
 val exp:    Rtl.exp -> Rtl.exp
 val bits:   Rtl.exp -> Bits.bits    (* Error.ErrorExn, convenient function *)
@@ -18546,13 +18546,13 @@ val bool:   Rtl.exp -> bool         (* Error.ErrorExn, convenient function *)
 %%evaluate guarding expressions by elimination of registers in relations
 %%of the form $r+k = r+k'$. However, this elimination is not semantics
 %%preserving if the $r+k$ would overflow, but $k$ not.  
-<<simplify.mli>>=
+<<simplify.mli >>=
 module Unsafe: sig
     val rtl:    Rtl.rtl -> Rtl.rtl
 end
 @
 %%We export the list of operators we can evaluate at compile time. 
-<<simplify.mli>>=
+<<simplify.mli >>=
 val compile_time_ops: string list
 @
 %%
@@ -18564,7 +18564,7 @@ val compile_time_ops: string list
 %%expression (or {\rtl}) bottom up as far as possible. The final result
 %%will tell us whether it needs further ecaluation at link-time or
 %%run-time.
-<<simplify.ml>>=
+<<simplify.ml >>=
 open Nopoly
 
 module BO = Bits.Ops
@@ -18595,13 +18595,13 @@ end
 %%it tries to evaluate guarding relational expressions like $r+k < r+k'$.
 %%The simplification assumes that it is safe to eliminate the $r$ on both
 %%sides of the $<$ operator.
-<<simplify.ml>>=
+<<simplify.ml >>=
 module Unsafe = struct
     <<unsafe RTL simplification>>
 end
 @
 %%The exported functions work on the public representation of {\rtl}s.
-<<simplify.ml>>=
+<<simplify.ml >>=
 let rtl r  = try Up.rtl (Safe.rtl (Dn.rtl r))
              with Error msg -> Impossible.impossible msg
 
@@ -19177,11 +19177,11 @@ let x86_carrybit w args = match args with
 @ 
 \section{[[front_nelab/topsort.nw]]}
 <<front_nelab/topsort.ml>>=
-<<topsort.ml>>
+<<topsort.ml >>
 @
 
 <<front_nelab/topsort.mli>>=
-<<topsort.mli>>
+<<topsort.mli >>
 @
 
 %%
@@ -19286,7 +19286,7 @@ module type Sortable = sig
 end
 @
 %%
-<<topsort.mli>>=
+<<topsort.mli >>=
 <<signature S>>
 <<signature Sortable>>
 
@@ -19301,7 +19301,7 @@ module Make (S: Sortable) : (S with type decl = S.decl)
 %%topological sorting as it is outlined by Paulsen in \emph{{\small ML}
 %%for the working Programmer} \cite{paulson:91:ml}.
 %%
-<<topsort.ml>>=
+<<topsort.ml >>=
 open Nopoly
 
 <<signature S>>

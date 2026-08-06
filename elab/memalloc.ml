@@ -1,5 +1,5 @@
 (*s: front_nelab/memalloc.ml *)
-(*s: memalloc.ml *)
+(*s: memalloc.ml  *)
 type growth = Up | Down
 type unchanging = 
     { start  : Rtl.exp     (* start address of block *)
@@ -45,5 +45,5 @@ let freeze t = match t.u.growth with
           Block.at (current t) t.num_allocated t.max_alignment
 
 let num_allocated t = t.num_allocated
-(*e: memalloc.ml *)
+(*e: memalloc.ml  *)
 (*e: front_nelab/memalloc.ml *)
