@@ -71,6 +71,7 @@ type t = {
   udecls   : compile_time_defns;
   sections : section list
 }
+[@@deriving show]
 (*e: exposed types(nast.nw) *)
 val program : Ast.toplevel list -> t
 (*e: nast.mli  *)

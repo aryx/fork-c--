@@ -138,8 +138,8 @@ let pp_ast file =
 let dump_nast file =
   let (srcmap, ast) = Driver.parse file in
   let nast = Nast.program ast in
-  (* todo: write a vof_nast so can pretty print that *)
-  UCommon.pr2_gen nast
+  let s = Nast.show nast in
+  UCommon.pr2 s
 
 
 (* filename -> ast -> nast -> nelab *)

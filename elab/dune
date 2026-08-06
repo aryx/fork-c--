@@ -3,4 +3,6 @@
  (wrapped false)
  (libraries
   cmm_commons2 cmm_commons3 cmm_error cmm_parsing cmm_h_asdl
-  cmm_ir))
+  cmm_ir)
+ (preprocess (pps ppx_deriving.show))
+)
