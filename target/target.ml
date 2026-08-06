@@ -1,5 +1,5 @@
 (*s: front_target/target.ml *)
-(*s: target.ml *)
+(*s: target.ml  *)
 (*s: map and machine types *)
 type ('em, 'pr) map' = ('em, 'pr) Ep.pre_map =
     { embed   : 'em
@@ -199,13 +199,13 @@ let minimal_capabilities wordsize =
                        ; "bit",     []
                    ];}
 
-(*x: target.ml *)
+(*x: target.ml  *)
 let space t s = 
   try List.find (fun x -> RU.Eq.space x.Space.space s) t.spaces
   with Not_found ->
     let (s, _, _) = s in
     impossf "Space '%c' not found in target '%s'\n" s t.name
-(*x: target.ml *)
+(*x: target.ml  *)
 let is_tmp { spaces = spaces } =
   List.fold_right
     (fun s rest ->
@@ -214,7 +214,7 @@ let is_tmp { spaces = spaces } =
       | _ -> rest)
     spaces
     (fun _ -> false)
-(*x: target.ml *)
+(*x: target.ml  *)
 let mk_reg_ix_map spaces =
   let space_to_regs space =
     let rec list_to n =
@@ -228,7 +228,7 @@ let mk_reg_ix_map spaces =
     let keep s = match s.S.classification with S.Reg | S.Fixed -> true | _ -> false in
     List.filter keep spaces in
   Register.reg_int_map (List.concat (List.map space_to_regs regspaces))
-(*x: target.ml *)
+(*x: target.ml  *)
 let space_fits tmp =
   match tmp.Space.classification with
   | Space.Temp {Space.stands_for=ok} -> ok
@@ -238,5 +238,5 @@ let space_fits tmp =
 let fits t space =
   try space_fits (List.find (fun s -> RU.Eq.space s.Space.space space) t.spaces)
   with Not_found -> impossf "space not found in Target.fits"
-(*e: target.ml *)
+(*e: target.ml  *)
 (*e: front_target/target.ml *)

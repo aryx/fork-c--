@@ -1,5 +1,5 @@
 (*s: front_target/target.mli *)
-(*s: target.mli *)
+(*s: target.mli  *)
 (*s: map and machine types *)
 type ('em, 'pr) map' = ('em, 'pr) Ep.pre_map =
     { embed   : 'em
@@ -106,9 +106,9 @@ val fits:    ('pr, 'au, 'cc) t -> Rtl.space -> Register.t -> bool
 val mk_reg_ix_map : Space.t list -> (int * int Register.Map.t)
 (*e: exported functions *)
 val space : ('pr, 'au, 'cc) t -> Rtl.space -> Space.t
-(*x: target.mli *)
+(*x: target.mli  *)
 val incapable : capabilities  (* the completely useless back end *)
-(*x: target.mli *)
+(*x: target.mli  *)
 val minimal_capabilities: int -> capabilities
-(*e: target.mli *)
+(*e: target.mli  *)
 (*e: front_target/target.mli *)

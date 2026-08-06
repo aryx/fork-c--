@@ -1,5 +1,5 @@
 (*s: front_target/box.ml *)
-(*s: box.ml *)
+(*s: box.ml  *)
 module Dn = Rtl.Dn
 module R  = Rtl
 module RP = Rtl.Private
@@ -62,5 +62,5 @@ let assert_not_boxed r =
   match Dn.rtl r with
   | RP.Rtl gs -> List.iter check gs
 (*e: [[assert_not_boxed]] *)
-(*e: box.ml *)
+(*e: box.ml  *)
 (*e: front_target/box.ml *)

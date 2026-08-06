@@ -19444,11 +19444,11 @@ let cycle1 =
 
 \section{[[front_target/automaton.nw]]}
 <<front_target/automaton.ml>>=
-<<automaton.ml>>
+<<automaton.ml >>
 @
 
 <<front_target/automaton.mli>>=
-<<automaton.mli>>
+<<automaton.mli >>
 @
 
 %%% vim: ts=8 sw=4 et:
@@ -19505,7 +19505,7 @@ let cycle1 =
 %%automaton.
 %%
 %%The interface exports abstract types, concrete types, and values.
-<<automaton.mli>>=
+<<automaton.mli >>=
 <<abstract types>>
 <<exposed types(automaton.nw)>>
 <<registration types>>
@@ -19814,7 +19814,7 @@ type stage = S of (implementation -> implementation)
 %%believe it is correct. However, I did not review the handling of
 %%[[cellcount]]. --CL
 %%
-<<automaton.ml>>=
+<<automaton.ml >>=
 open Nopoly
 
 <<hidden types>>
@@ -19830,7 +19830,7 @@ let unimp  = Impossible.unimp
 @ 
 %%
 %%The big idea here is hooking up the end of the pipeline:
-<<automaton.ml>>=
+<<automaton.ml >>=
 let ( *> ) (S f1) (S f2) = S (fun rhs -> f1 (f2 rhs))
 
 let pipeline_end = I (
@@ -19844,7 +19844,7 @@ let pipeline_end = I (
     })
 @
 %%All the work of the implementation is in the closures.
-<<automaton.ml>>=
+<<automaton.ml >>=
 let at space ~start (S s) =
   let I f = s pipeline_end in
     f ~start ~space ~ctrs:(fun _ -> None)
@@ -19868,7 +19868,7 @@ let of_loc loc = { fetch  = R.fetch loc; store = R.store loc }
 %%\nwaddbox{wrap_choice  : (('a*(methods->methods)) list -> methods -> ctrs:counterenv -> methods) -> ('a * stage) list -> stage}
 %%\nwaddbox{wrap_counter : (Rtl.space -> int ref -> methods -> methods) -> counter -> stage}
 %%\deeperbox{40pt}
-<<automaton.ml>>=
+<<automaton.ml >>=
 let wrap  f = S (fun (I next) -> I (fun ~start ~space ~ctrs ->
                                     f (next ~start ~space ~ctrs)))
 let swrap f =
@@ -19885,7 +19885,7 @@ let wrap_choice f choices = S (fun (I next) ->
    in f choices (next ~start ~space ~ctrs) ~ctrs))
 @
 %%The overflow block is slightly interesting.
-<<automaton.ml>>=
+<<automaton.ml >>=
 type state = { mutable mem       : M.t; mutable frozen : bool
              ; mutable mems_list : R.loc list  }
 let overflow ~growth ~max_alignment next =
@@ -19931,20 +19931,20 @@ let freeze regs mems =
 @ 
 %%\paragraph{Higher-order functions for request transformers}
 %%
-<<automaton.ml>>=
+<<automaton.ml >>=
 type allocator = width: int -> alignment: int -> kind: string -> loc
 let txstage f  = wrap (fun next -> 
                         { allocate = f next.allocate; freeze = next.freeze })
 let _ = (txstage : (allocator -> allocator) -> stage)
 @ 
-<<automaton.ml>>=
+<<automaton.ml >>=
 let widths ws = txstage
   (fun nalloc ~width ~alignment ~kind ->
     if   List.exists ((=) width) ws then nalloc width alignment kind
                                     else Unsupported.automaton_widths width)
 @   
 %%Narrowing and widening.
-<<automaton.ml>>=
+<<automaton.ml >>=
 let narrower = 
   let narrow nopname wopname ~w ~n loc =
      let widen  = R.opr wopname [n; w] in 
@@ -19975,7 +19975,7 @@ let align_to f =
 %%and join point, so it passes through exactly \emph{one} choice.
 %%But for the [[freeze]] method, we thread the call straight through the
 %%whole list, so it passes through \emph{all} choices.
-<<automaton.ml>>=
+<<automaton.ml >>=
 let choice choices next ~ctrs =
     let add (p, stage) alternative =
       let follows_choice = { allocate = next.allocate
@@ -20017,7 +20017,7 @@ let is_any         w h _   = true
 @ 
 %$
 %%\paragraph{Register assignment}
-<<automaton.ml>>=
+<<automaton.ml >>=
 let wrap_counter f label =
   S (fun (I next) ->
        I (fun ~start ~space ~ctrs ->
@@ -20041,7 +20041,7 @@ let counter of_width =
 %%The first specifies whether location aggregation is allowed for values
 %%that don't fit within one register, and the second specifies whether
 %%we also need to reserve space in a later stage but throw it away.
-<<automaton.ml>>=
+<<automaton.ml >>=
 type regstate = { mutable used  : Register.Set.t }
 
 <<definition of [[combine_loc]]>>
@@ -20138,7 +20138,7 @@ let lobits w n x = R.app (R.opr "lobits" [w; n]) [x]
 %%
 %%To us an automaton as a stage, we pass on an allocation request but
 %%ignore a freeze request.
-<<automaton.ml>>=
+<<automaton.ml >>=
 let as_stage inner next = 
   fun ~start ~space ~ctrs ->
     let freeze regs mems =
@@ -20149,11 +20149,11 @@ let as_stage inner = swrap (as_stage inner)
 @
 %%
 %%\paragraph{The unit stage}
-<<automaton.ml>>=
+<<automaton.ml >>=
 let unit = wrap (fun next -> next)
 @ 
 %%\paragraph{Debugging}
-<<automaton.ml>>=
+<<automaton.ml >>=
 let debug f _ ctr next =
   let allocate ~width ~alignment ~kind =
     f width kind alignment (!ctr);
@@ -20164,7 +20164,7 @@ let debug counter f = wrap_counter (debug f) counter
 @ 
 %%
 %%\paragraph{Postprocessing a result}
-<<automaton.ml>>=
+<<automaton.ml >>=
 let postprocess (S stage) f = S (fun imp ->
   let I i = stage imp in
   I (fun ~start ~space ~ctrs ->
@@ -20175,18 +20175,18 @@ let postprocess (S stage) f = S (fun imp ->
 @ 
 %%
 %%\paragraph{Lua Registration of Calling Conventions}
-<<automaton.ml>>=
+<<automaton.ml >>=
 type cc_spec  = { call : stage; results : stage; cutto : stage }
 type cc_specs = (string * cc_spec) list
 let init_cc = []
 @ 
 \section{[[front_target/box.nw]]}
 <<front_target/box.ml>>=
-<<box.ml>>
+<<box.ml >>
 @
 
 <<front_target/box.mli>>=
-<<box.mli>>
+<<box.mli >>
 @
 
 %%% vim: sw=4 ts=8 et:
@@ -20221,7 +20221,7 @@ end
 %%  [[Combine]].
 %%THIS SHOULD BE FIXED.
 %%Finally, we have a boxing module that pairs a guard and an effect.
-<<box.mli>>=
+<<box.mli >>=
 type rtl = Rtl.rtl
 <<BOXER type>>
 module Exp      : BOXER with type t = Rtl.exp
@@ -20232,7 +20232,7 @@ module GuardExp : BOXER with type t = Rtl.exp * Rtl.exp
 @
 %%We provide a function [[assert_not_boxed]] that raises an assertion failure on any
 %%  \rtl\ that is the image of a boxing function.
-<<box.mli>>=
+<<box.mli >>=
 val assert_not_boxed : rtl -> unit
 @
 %%We embed [[exp]]s in a store instruction.
@@ -20287,7 +20287,7 @@ let assert_not_boxed r =
   match Dn.rtl r with
   | RP.Rtl gs -> List.iter check gs
 @
-<<box.ml>>=
+<<box.ml >>=
 module Dn = Rtl.Dn
 module R  = Rtl
 module RP = Rtl.Private
@@ -20310,11 +20310,11 @@ module GuardExp = Combine (Guard) (Exp)
 @
 \section{[[front_target/float.nw]]}
 <<front_target/float.ml>>=
-<<float.ml>>
+<<float.ml >>
 @
 
 <<front_target/float.mli>>=
-<<float.mli>>
+<<float.mli >>
 @
 
 %%
@@ -20333,7 +20333,7 @@ module GuardExp = Combine (Guard) (Exp)
 %%[[target]] declaration in a {\PAL} program.
 %%And function [[of_string t]] can convert a floating-point literal to a
 %%bit vector.
-<<float.mli>>=
+<<float.mli >>=
 type t
 
 val name      : t -> string
@@ -20343,7 +20343,7 @@ val ieee754 : t    (* standard IEEE 754 semantics *)
 val none    : t    (* for machines without floating-point support *)
 @ 
 %%The implementation does not exist.
-<<float.ml>>=
+<<float.ml >>=
 type t = string
 let name n = n
 let of_string _ _ _ = Impossible.unimp "Float.t"
@@ -20700,11 +20700,11 @@ module Standard64 = Standard(struct let width = 64 end)
 %%
 \section{[[front_target/target.nw]]}
 <<front_target/target.ml>>=
-<<target.ml>>
+<<target.ml >>
 @
 
 <<front_target/target.mli>>=
-<<target.mli>>
+<<target.mli >>
 @
 
 %%
@@ -20721,7 +20721,7 @@ module Standard64 = Standard(struct let width = 64 end)
 %%Consequently, targets must be described by an {\ocaml} value that can
 %%be passed at run-time (rather than by a module, which can not). 
 %%
-<<target.mli>>=
+<<target.mli >>=
 <<map and machine types>>
 val boxmach : unit machine
 <<type cc>>
@@ -21100,12 +21100,12 @@ type capabilities = {
 %%\end{itemize}
 %%
 %%An incapable back end has no capabilities whatever.
-<<target.mli>>=
+<<target.mli >>=
 val incapable : capabilities  (* the completely useless back end *)
 @
 %%
 %%[[minimal_capabilities]] returns a minimal set of capabilities, given the word size.
-<<target.mli>>=
+<<target.mli >>=
 val minimal_capabilities: int -> capabilities
 @ 
 %%
@@ -21115,7 +21115,7 @@ val minimal_capabilities: int -> capabilities
 %%
 %%The implementation does not hold any surprises. We use module [[Map]]
 %%to implement lookup tables for registers and calling conventions.
-<<target.ml>>=
+<<target.ml >>=
 <<map and machine types>>
 module DG = Dag
 module M  = Mflow
@@ -21198,14 +21198,14 @@ let minimal_capabilities wordsize =
                    ];}
 
 @
-<<target.ml>>=
+<<target.ml >>=
 let space t s = 
   try List.find (fun x -> RU.Eq.space x.Space.space s) t.spaces
   with Not_found ->
     let (s, _, _) = s in
     impossf "Space '%c' not found in target '%s'\n" s t.name
 @
-<<target.ml>>=
+<<target.ml >>=
 let is_tmp { spaces = spaces } =
   List.fold_right
     (fun s rest ->
@@ -21217,7 +21217,7 @@ let is_tmp { spaces = spaces } =
 @ 
 %%Given a list of spaces, it is quite easy to map the fixed or hardware registers
 %%to small integers.
-<<target.ml>>=
+<<target.ml >>=
 let mk_reg_ix_map spaces =
   let space_to_regs space =
     let rec list_to n =
@@ -21232,7 +21232,7 @@ let mk_reg_ix_map spaces =
     List.filter keep spaces in
   Register.reg_int_map (List.concat (List.map space_to_regs regspaces))
 @
-<<target.ml>>=
+<<target.ml >>=
 let space_fits tmp =
   match tmp.Space.classification with
   | Space.Temp {Space.stands_for=ok} -> ok

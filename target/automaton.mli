@@ -1,5 +1,5 @@
 (*s: front_target/automaton.mli *)
-(*s: automaton.mli *)
+(*s: automaton.mli  *)
 (*s: abstract types *)
 type t
 (*x: abstract types *)
@@ -87,5 +87,5 @@ val debug : counter -> (int -> string -> int -> int -> unit) -> stage
 (*x: exported values *)
 val init_cc : cc_specs
 (*e: exported values *)
-(*e: automaton.mli *)
+(*e: automaton.mli  *)
 (*e: front_target/automaton.mli *)

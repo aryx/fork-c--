@@ -1,5 +1,5 @@
 (*s: front_target/automaton.ml *)
-(*s: automaton.ml *)
+(*s: automaton.ml  *)
 open Nopoly
 
 (*s: hidden types *)
@@ -40,7 +40,7 @@ module B   = Block
 module M   = Memalloc
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let unimp  = Impossible.unimp
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let ( *> ) (S f1) (S f2) = S (fun rhs -> f1 (f2 rhs))
 
 let pipeline_end = I (
@@ -52,7 +52,7 @@ let pipeline_end = I (
       (fun regs mems -> 
        {overflow = block; regs_used = regs; mems_used = mems; align_state = 0})
     })
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let at space ~start (S s) =
   let I f = s pipeline_end in
     f ~start ~space ~ctrs:(fun _ -> None)
@@ -64,7 +64,7 @@ let freeze     t                     = t.freeze Register.Set.empty []
 let fetch  loc = loc.fetch
 let store  loc = loc.store
 let of_loc loc = { fetch  = R.fetch loc; store = R.store loc }
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let wrap  f = S (fun (I next) -> I (fun ~start ~space ~ctrs ->
                                     f (next ~start ~space ~ctrs)))
 let swrap f =
@@ -79,7 +79,7 @@ let wrap_choice f choices = S (fun (I next) ->
                             (p, downchoice c ~start ~space ~ctrs))
                  choices
    in f choices (next ~start ~space ~ctrs) ~ctrs))
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 type state = { mutable mem       : M.t; mutable frozen : bool
              ; mutable mems_list : R.loc list  }
 let overflow ~growth ~max_alignment next =
@@ -116,17 +116,17 @@ let overflow ~growth ~max_alignment next =
     { allocate = allocate; freeze = freeze }
 let overflow ~growth ~max_alignment = 
   swrap (overflow ~growth ~max_alignment) 
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 type allocator = width: int -> alignment: int -> kind: string -> loc
 let txstage f  = wrap (fun next -> 
                         { allocate = f next.allocate; freeze = next.freeze })
 let _ = (txstage : (allocator -> allocator) -> stage)
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let widths ws = txstage
   (fun nalloc ~width ~alignment ~kind ->
     if   List.exists ((=) width) ws then nalloc width alignment kind
                                     else Unsupported.automaton_widths width)
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let narrower = 
   let narrow nopname wopname ~w ~n loc =
      let widen  = R.opr wopname [n; w] in 
@@ -148,7 +148,7 @@ let widen f = txstage
 
 let align_to f =
   txstage (fun nalloc ~width:w ~alignment ~kind -> nalloc w (f w) kind)
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let choice choices next ~ctrs =
     let add (p, stage) alternative =
       let follows_choice = { allocate = next.allocate
@@ -187,7 +187,7 @@ let counter_is c f _ _ env = match env c with Some i -> f (!i) | None -> false
 let is_kind    h'  w h _   = h =$= h'
 let is_width   w'  w h _   = w = w'
 let is_any         w h _   = true
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let wrap_counter f label =
   S (fun (I next) ->
        I (fun ~start ~space ~ctrs ->
@@ -203,7 +203,7 @@ let counter of_width =
     let loc = nalloc ~width ~alignment ~kind in
     (ctr := !ctr + of_width width ; loc)
   in (fun ctr next -> { allocate = f ctr next.allocate; freeze = next.freeze })
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 type regstate = { mutable used  : Register.Set.t }
 
 (*s: definition of [[combine_loc]] *)
@@ -287,7 +287,7 @@ let pad =
       nalloc ~width ~alignment ~kind
     in { next with allocate = f next.allocate }
   in wrap_counter padcounter
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let as_stage inner next = 
   fun ~start ~space ~ctrs ->
     let freeze regs mems =
@@ -295,9 +295,9 @@ let as_stage inner next =
         overflow = Block.at start 0 0; align_state = 0 } in
     { allocate = inner.allocate; freeze = freeze }
 let as_stage inner = swrap (as_stage inner)
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let unit = wrap (fun next -> next)
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let debug f _ ctr next =
   let allocate ~width ~alignment ~kind =
     f width kind alignment (!ctr);
@@ -305,7 +305,7 @@ let debug f _ ctr next =
   { allocate = allocate; freeze = next.freeze }
 
 let debug counter f = wrap_counter (debug f) counter
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 let postprocess (S stage) f = S (fun imp ->
   let I i = stage imp in
   I (fun ~start ~space ~ctrs ->
@@ -313,9 +313,9 @@ let postprocess (S stage) f = S (fun imp ->
       { allocate = m.allocate
       ; freeze = (fun rs ms -> f (m.freeze rs ms))
       } ))
-(*x: automaton.ml *)
+(*x: automaton.ml  *)
 type cc_spec  = { call : stage; results : stage; cutto : stage }
 type cc_specs = (string * cc_spec) list
 let init_cc = []
-(*e: automaton.ml *)
+(*e: automaton.ml  *)
 (*e: front_target/automaton.ml *)

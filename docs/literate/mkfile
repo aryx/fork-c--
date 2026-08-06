@@ -116,16 +116,16 @@ SRC_VIEWS= \
  $TOP/front_nelab/simplify.ml\
  $TOP/front_nelab/topsort.mli\
  $TOP/front_nelab/topsort.ml\
- $TOP/front_target/automaton.mli\
- $TOP/front_target/automaton.ml\
- $TOP/front_target/box.mli\
- $TOP/front_target/box.ml\
- $TOP/front_target/float.mli\
- $TOP/front_target/float.ml\
+ $TOP/target/automaton.mli\
+ $TOP/target/automaton.ml\
+ $TOP/target/box.mli\
+ $TOP/target/box.ml\
+ $TOP/target/float.mli\
+ $TOP/target/float.ml\
  $TOP/ir/space.mli\
  $TOP/ir/space.ml\
- $TOP/front_target/target.mli\
- $TOP/front_target/target.ml\
+ $TOP/target/target.mli\
+ $TOP/target/target.ml\
  $TOP/front_zipcfg/avail.mli\
  $TOP/front_zipcfg/avail.ml\
  $TOP/front_zipcfg/property.mli\
