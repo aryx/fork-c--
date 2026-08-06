@@ -1,5 +1,5 @@
 (*s: assembler/mangle.ml *)
-(*s: mangle.ml *)
+(*s: mangle.ml  *)
 type strset         = Strutil.Set.t
 type strmap         = (string,string) Hashtbl.t
 
@@ -9,11 +9,11 @@ type spec           = { preprocess:  string -> string
                       ; reserved:    string list
                       ; avoid:       string -> string
                       }
-(*x: mangle.ml *)
+(*x: mangle.ml  *)
 type state          = { mutable used: strset
                       ; map:          strmap (* is also mutable *)
                       }
-(*x: mangle.ml *)
+(*x: mangle.ml  *)
 let mk spec =
     let state    = { used = Strutil.Set.empty
                    ; map  = Hashtbl.create 997 (* initial size *)
@@ -42,5 +42,5 @@ let mk spec =
         with Not_found -> newMangle s
     in
         mangle
-(*e: mangle.ml *)
+(*e: mangle.ml  *)
 (*e: assembler/mangle.ml *)

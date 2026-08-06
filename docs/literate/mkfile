@@ -6,8 +6,7 @@ SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml
 DOC=Cminusminus
 VERSION=1
 
-# must be in the same order of the #include for syncweb multi files support
-# to work
+# must be in the same order of the #include
 SRC_ORIG=Cminusminus.nw Cminusminus_extra.nw
 
 SRC_VIEWS= \
@@ -47,6 +46,7 @@ SRC_VIEWS= \
  $TOP/commons/commons3/tx.ml\
  $TOP/commons/commons3/uint64.mli\
  $TOP/commons/commons3/uint64.ml\
+ \
  $TOP/error/debug.mli\
  $TOP/error/debug.ml\
  $TOP/error/error.mli\
@@ -57,6 +57,7 @@ SRC_VIEWS= \
  $TOP/error/srcmap.ml\
  $TOP/error/unsupported.mli\
  $TOP/error/unsupported.ml\
+ \
  $TOP/parsing/astpp.mli\
  $TOP/parsing/astpp.ml\
  \
@@ -102,6 +103,7 @@ SRC_VIEWS= \
  $TOP/cfg/front_cfg/mflow.ml\
  $TOP/cfg/front_cfg/spans.mli\
  $TOP/cfg/front_cfg/spans.ml\
+ \
  $TOP/elab/elabexp.mli\
  $TOP/elab/elabexp.ml\
  $TOP/elab/elabstmt.mli\
@@ -116,16 +118,20 @@ SRC_VIEWS= \
  $TOP/elab/simplify.ml\
  $TOP/elab/topsort.mli\
  $TOP/elab/topsort.ml\
+ \
  $TOP/target/automaton.mli\
  $TOP/target/automaton.ml\
  $TOP/target/box.mli\
  $TOP/target/box.ml\
  $TOP/target/float.mli\
  $TOP/target/float.ml\
+ \
  $TOP/ir/space.mli\
  $TOP/ir/space.ml\
+ \
  $TOP/target/target.mli\
  $TOP/target/target.ml\
+ \
  $TOP/cfg/front_zipcfg/avail.mli\
  $TOP/cfg/front_zipcfg/avail.ml\
  $TOP/cfg/front_zipcfg/property.mli\
@@ -164,16 +170,18 @@ SRC_VIEWS= \
  \
  $TOP/ir/talloc.mli\
  $TOP/ir/talloc.ml\
- $TOP/assembler/astasm.mli\
- $TOP/assembler/astasm.ml\
- $TOP/assembler/cfgutil.mli\
- $TOP/assembler/cfgutil.ml\
- $TOP/assembler/dotasm.mli\
- $TOP/assembler/dotasm.ml\
- $TOP/assembler/dummyasm.mli\
- $TOP/assembler/dummyasm.ml\
- $TOP/assembler/mangle.mli\
- $TOP/assembler/mangle.ml\
+ \
+ $TOP/asm/astasm.mli\
+ $TOP/asm/astasm.ml\
+ $TOP/asm/cfgutil.mli\
+ $TOP/asm/cfgutil.ml\
+ $TOP/asm/dotasm.mli\
+ $TOP/asm/dotasm.ml\
+ $TOP/asm/dummyasm.mli\
+ $TOP/asm/dummyasm.ml\
+ $TOP/asm/mangle.mli\
+ $TOP/asm/mangle.ml\
+ \
  $TOP/front_last/automatonutil.mli\
  $TOP/front_last/automatonutil.ml\
  $TOP/front_last/callspec.mli\
@@ -186,6 +194,7 @@ SRC_VIEWS= \
  $TOP/front_last/placevar.ml\
  $TOP/front_last/vfp.mli\
  $TOP/front_last/vfp.ml\
+ \
  $TOP/arch/dummy/dummy.mli\
  $TOP/arch/dummy/dummy.ml\
  $TOP/arch/arm/arm.mli\
@@ -213,6 +222,7 @@ SRC_VIEWS= \
  $TOP/arch/x86/x86rec.mli\
  $TOP/arch/x86/x86regs.mli\
  $TOP/arch/x86/x86regs.ml\
+ \
  $TOP/driver/driver.mli\
  $TOP/driver/this.mli\
  $TOP/driver/driver.ml\
@@ -259,5 +269,3 @@ index:V:
 #	rm -f $(LPSRC) .md5sum_*
 #
 #include $(TOP)/docs/latex/Makefile.common
-
-

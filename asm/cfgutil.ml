@@ -1,5 +1,5 @@
 (*s: assembler/cfgutil.ml *)
-(*s: cfgutil.ml *)
+(*s: cfgutil.ml  *)
 module A  = Ast 
 module DG = Dag
 module G  = Zipcfg
@@ -9,14 +9,14 @@ module P  = Proc
 module PA = Preast2ir
 module T  = Target
 module UM = Unique.Map 
-(*x: cfgutil.ml *)
+(*x: cfgutil.ml  *)
 let block_name g uid =
   try
     (match UM.find uid (G.to_blocks g) with
     | GR.Entry, _ -> "<entry>"
     | GR.Label ((_, l), _, _), _ -> l)
   with Not_found -> "<unknown-uid>"
-(*x: cfgutil.ml *)
+(*x: cfgutil.ml  *)
 let pr = Printf.eprintf
 let pr_first = function
   | GR.Entry -> pr "<entry>\n"
@@ -56,7 +56,7 @@ let print_cfg g =
     with Not_found -> Unique.Map.iter (print_block g) (G.to_blocks g) in
   let () = Printf.eprintf "END CFG\n" in
   flush stderr
-(*x: cfgutil.ml *)
+(*x: cfgutil.ml  *)
 let matches next = match next with
 | None -> (fun _ -> false)
 | Some (u, l) -> (fun (u', l') -> Unique.eq u u')
@@ -86,7 +86,7 @@ let emit proc cfg call_emit rtl_emit sym_emit =
     | _ -> rtl_emit (GR.last_instr l) in
     GR.fold_fwd_block first middle last b () in
   G.fold_layout block () cfg
-(*x: cfgutil.ml *)
+(*x: cfgutil.ml  *)
 let extend_with preds nodes =
   let rec add_predecessors visited candidates = match candidates with
   | [] -> visited
@@ -155,7 +155,7 @@ let cfg2dot ~compress ~live ~name g =
   let body = List.fold_right (fun n t -> dotnode n :: "\n" :: t) nodes body     in
   let _ = Rtlutil.ToAST.verbosity oldv in
   String.concat "" (openg :: pagesize :: compress :: body)
-(*x: cfgutil.ml *)
+(*x: cfgutil.ml  *)
 let cfg2ast instr g ~name =
   let block b next prev' =
     let mid n prev' = instr (GR.mid_instr n) :: prev' in
@@ -181,5 +181,5 @@ let cfg2ast instr g ~name =
     , List.rev_map (fun s -> Ast.StmtBody s) stmts'
     , Srcmap.null
     )
-(*e: cfgutil.ml *)
+(*e: cfgutil.ml  *)
 (*e: assembler/cfgutil.ml *)

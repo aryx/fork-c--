@@ -1,5 +1,5 @@
 (*s: assembler/astasm.mli *)
-(*s: astasm.mli *)
+(*s: astasm.mli  *)
 (*s: PERSONALITY *)
 module type PERSONALITY = sig
     val wordsize:       int
@@ -19,5 +19,5 @@ module type S = sig
 end    
 (*e: S(astasm.nw) *)
 module Make(P: PERSONALITY): S with type proc = P.proc
-(*e: astasm.mli *)
+(*e: astasm.mli  *)
 (*e: assembler/astasm.mli *)

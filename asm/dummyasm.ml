@@ -1,5 +1,5 @@
 (*s: assembler/dummyasm.ml *)
-(*s: dummyasm.ml *)
+(*s: dummyasm.ml  *)
 module Asm = Asm
 
 let debug s = prerr_string ("Dummyasm." ^ s ^ "\n")
@@ -80,5 +80,5 @@ end
 
 (*e: Make(dummyasm.nw) *)
 let asm = new asm ()
-(*e: dummyasm.ml *)
+(*e: dummyasm.ml  *)
 (*e: assembler/dummyasm.ml *)

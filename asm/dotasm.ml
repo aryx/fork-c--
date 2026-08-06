@@ -1,5 +1,5 @@
 (*s: assembler/dotasm.ml *)
-(*s: dotasm.ml *)
+(*s: dotasm.ml  *)
 module Asm = Asm
 
 exception Unsupported of string
@@ -75,5 +75,5 @@ end
 
 (*e: Make(dotasm.nw) *)
 let asm ~compress ~live fd = new asm (Cfgutil.cfg2dot ~compress ~live) fd
-(*e: dotasm.ml *)
+(*e: dotasm.ml  *)
 (*e: assembler/dotasm.ml *)

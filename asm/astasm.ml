@@ -1,5 +1,5 @@
 (*s: assembler/astasm.ml *)
-(*s: astasm.ml *)
+(*s: astasm.ml  *)
 module T        = Target
 module A        = Ast
 module Asm      = Asm
@@ -229,5 +229,5 @@ module Make (P: PERSONALITY): S with type proc = P.proc = struct
     let asm fd = new asm fd
     (*e: Make(astasm.nw) *)
 end
-(*e: astasm.ml *)
+(*e: astasm.ml  *)
 (*e: assembler/astasm.ml *)
