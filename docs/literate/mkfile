@@ -176,8 +176,8 @@ SRC_VIEWS= \
  $TOP/front_last/automatonutil.ml\
  $TOP/front_last/callspec.mli\
  $TOP/front_last/callspec.ml\
- $TOP/front_last/dataflow.mli\
- $TOP/front_last/dataflow.ml\
+ $TOP/cfg/dataflow/dataflow.mli\
+ $TOP/cfg/dataflow/dataflow.ml\
  $TOP/front_last/mvalidate.mli\
  $TOP/front_last/mvalidate.ml\
  $TOP/front_last/placevar.mli\

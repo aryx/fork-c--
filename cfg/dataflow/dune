@@ -1,0 +1,6 @@
+(library
+ (name cmm_cfg_dataflow)
+ (wrapped false)
+ (libraries 
+   cmm_front_cfg cmm_front_zipcfg
+))

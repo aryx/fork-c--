@@ -32038,11 +32038,11 @@ else
 %%
 \section{[[front_last/dataflow.nw]]}
 <<front_last/dataflow.ml>>=
-<<dataflow.ml>>
+<<dataflow.ml >>
 @
 
 <<front_last/dataflow.mli>>=
-<<dataflow.mli>>
+<<dataflow.mli >>
 @
 
 %%
@@ -32131,7 +32131,7 @@ let to_fact f f' =
    changed = f'.changed'; prop = f.prop}
 @
 %%Here is the overall structure of the module:
-<<dataflow.mli>>=
+<<dataflow.mli >>=
 <<exported types(dataflow.nw)>>
 module B : sig
   <<exported types for backward analyses>>
@@ -32302,7 +32302,7 @@ val limit_fun  : ('a -> 'b -> 'c option) -> ('a -> 'b -> txlimit -> 'c option)
 @
 \section{Implementation}
 %%
-<<dataflow.ml>>=
+<<dataflow.ml >>=
 module G  = Zipcfg
 module GR = Zipcfg.Rep
 module P  = Unique.Prop

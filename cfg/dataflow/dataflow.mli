@@ -1,5 +1,5 @@
 (*s: front_last/dataflow.mli *)
-(*s: dataflow.mli *)
+(*s: dataflow.mli  *)
 (*s: exported types(dataflow.nw) *)
 type 'a answer = Dataflow of 'a | Rewrite of Zipcfg.graph
 type txlimit = int
@@ -97,5 +97,5 @@ end
 (*s: declarations of shared exported values *)
 val limit_fun  : ('a -> 'b -> 'c option) -> ('a -> 'b -> txlimit -> 'c option)
 (*e: declarations of shared exported values *)
-(*e: dataflow.mli *)
+(*e: dataflow.mli  *)
 (*e: front_last/dataflow.mli *)
