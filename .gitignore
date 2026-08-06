@@ -53,3 +53,5 @@ external/stdlib/
 
 # dune
 /_build/
+/docs/literate/Cminusminus.log
+/docs/literate/lineage.pdf

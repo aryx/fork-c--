@@ -1,11 +1,16 @@
 \documentclass[twocolumn]{report}
 
+\input{latex/Packages}
+\input{latex/Noweb}
+\input{latex/Config}
+\input{latex/Macros}
+
 %******************************************************************************
 % Prelude
 %******************************************************************************
-\newif\iffinal
-\newif\ifverbose
-\finaltrue\verbosefalse
+%\newif\iffinal
+%\newif\ifverbose
+%\finaltrue\verbosefalse
 % see also other newif in Macros.tex
 
 %------------------------------------------------------------------------------
@@ -43,62 +48,10 @@
 % - TODO add figures
 % - TODO add explanations
 
-%------------------------------------------------------------------------------
-% Packages
-%------------------------------------------------------------------------------
-
-\usepackage{docs/latex/noweb}
- \noweboptions{footnotesizecode,nomargintag}
- %note: allow chunk on different pages, less white space at bottom of pages
- \def\nwendcode{\endtrivlist \endgroup}
- \let\nwdocspar=\par
-\usepackage{xspace}
-\usepackage{verbatim}
-%note: required by noweblatexpad for the \t \l \n in this file
-\usepackage{fancyvrb}
-\usepackage{url}
-\iffinal
-\usepackage{hyperref}
- \hypersetup{colorlinks=true}
-\fi
-\usepackage[pageref]{backref}
- \def\backref{{\footnotesize cited page(s)}~}
-%\usepackage{cleveref} %\cref
-%\usepackage{multirow}
-\usepackage{booktabs} 
- \newcommand{\otoprule}{\midrule[\heavyrulewidth]}
-\usepackage{graphicx}
- %\usepackage[margin=0.5in]{geometry}
- %  but eat the bottom when very low
- %\usepackage{fullpage} is deprecated 
- % => do the more manual below:
- \addtolength{\oddsidemargin}{-.850in}
- \addtolength{\evensidemargin}{-.850in}
- \addtolength{\textwidth}{1.70in}
- \addtolength{\topmargin}{-.850in}
- \addtolength{\textheight}{1.70in}
-%\usepackage{minitoc}
-
-%------------------------------------------------------------------------------
-% Macros
-%------------------------------------------------------------------------------
-\input{docs/latex/Macros}
-
-%------------------------------------------------------------------------------
-% Config
-%------------------------------------------------------------------------------
-\allcodefalse
-% used for forward decl, pragmas, func decl, extern decl, stats, #ifdef,
-% debugging macros
-
-%\setcounter{tocdepth}{1}
-
+\begin{document}
 %******************************************************************************
 % Title
 %******************************************************************************
-
-\begin{document}
-
 \title{
 {\Huge 
 Principia Softwarica: C-- Compiler Backend [[qc]]
@@ -115,7 +68,7 @@ Yoann Padioleau\\
 \onecolumn
 \hrule
 \begin{quote}
-    Copyright \copyright{} 2010, 2015 Yoann Padioleau \\
+    Copyright \copyright{} 2010, 2015, 2026 Yoann Padioleau \\
     Permission is granted to copy, distribute and/or modify this document,
     except all the source code it contains, under the terms of the GNU Free
     Documentation License, Version 1.3.
@@ -124,24 +77,22 @@ Yoann Padioleau\\
 
 %CONFIG: \dominitoc
 
-\iffinal
 \begingroup
 \hypersetup{linkcolor=blue}
 % need to s/onecolumn/twocolumn in report.cls :) for \tableofcontents
-\twocolumn
+%\twocolumn
 \tableofcontents
 \endgroup
-\else
-\tableofcontents
-\fi
+
+%###############################################################################
 
 %******************************************************************************
-% Body
-%******************************************************************************
-
 \chapter{Introduction}
+%******************************************************************************
 
+%******************************************************************************
 \section{Motivations}
+%******************************************************************************
 
 The goal of this book is to present in full details the source code of
 a compiler backend.
@@ -163,7 +114,7 @@ Here are other candidates that were considered but ultimately discarded:
 \section{Requirements}
 
 \section{About this document}
-#include "docs/latex/About.nw"
+%#include "docs/latex/About.nw"
 
 \section{Copyright}
 
@@ -203,7 +154,10 @@ License.
 
 \chapter{Conclusion}
 
+
+%###############################################################################
 \appendix
+%###############################################################################
 
 \chapter{Debugging}
 
@@ -215,9 +169,9 @@ License.
 
 \chapter{Extra Code}
 
-\ifallcode
+%\ifallcode
 #include "Cminusminus_extra.nw"
-\fi
+%\fi
 
 \chapter{Changelog}
 \label{sec:changelog}

@@ -1,0 +1,262 @@
+TOP=../..
+
+SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml 
+#SYNCWEBFLAGS=-debug
+
+DOC=Cminusminus
+VERSION=1
+
+# must be in the same order of the #include for syncweb multi files support
+# to work
+SRC_ORIG=Cminusminus.nw Cminusminus_extra.nw
+
+SRC_VIEWS= \
+ $TOP/commons2/auxfuns.mli\
+ $TOP/commons2/auxfuns.ml\
+ $TOP/commons2/lc.mli\
+ $TOP/commons2/lc.ml\
+ $TOP/commons2/pc.mli\
+ $TOP/commons2/pc.ml\
+ $TOP/commons2/pc2.mli\
+ $TOP/commons2/pc2.ml\
+ $TOP/commons2/pp.mli\
+ $TOP/commons2/pp.ml\
+ $TOP/commons2/rx.mli\
+ $TOP/commons2/rx.ml\
+ $TOP/commons2/strutil.mli\
+ $TOP/commons2/strutil.ml\
+ $TOP/commons2/verbose.mli\
+ $TOP/commons2/verbose.ml\
+ $TOP/commons3/alignment.mli\
+ $TOP/commons3/alignment.ml\
+ $TOP/commons3/bits.mli\
+ $TOP/commons3/bits.ml\
+ $TOP/commons3/bitset64.mli\
+ $TOP/commons3/bitset64.ml\
+ $TOP/commons3/cell.mli\
+ $TOP/commons3/cell.ml\
+ $TOP/commons3/ctypes.mli\
+ $TOP/commons3/ctypes.ml\
+ $TOP/commons3/idcode.mli\
+ $TOP/commons3/idcode.ml\
+ $TOP/commons3/idgen.mli\
+ $TOP/commons3/idgen.ml\
+ $TOP/commons3/reinit.mli\
+ $TOP/commons3/reinit.ml\
+ $TOP/commons3/tx.mli\
+ $TOP/commons3/tx.ml\
+ $TOP/commons3/uint64.mli\
+ $TOP/commons3/uint64.ml\
+ $TOP/error/debug.mli\
+ $TOP/error/debug.ml\
+ $TOP/error/error.mli\
+ $TOP/error/error.ml\
+ $TOP/error/impossible.mli\
+ $TOP/error/impossible.ml\
+ $TOP/error/srcmap.mli\
+ $TOP/error/srcmap.ml\
+ $TOP/error/unsupported.mli\
+ $TOP/error/unsupported.ml\
+ $TOP/parsing/astpp.mli\
+ $TOP/parsing/astpp.ml\
+ $TOP/front_rtl/register.mli\
+ $TOP/front_rtl/register.ml\
+ $TOP/front_rtl/reloc.mli\
+ $TOP/front_rtl/reloc.ml\
+ $TOP/front_rtl/rtl.mli\
+ $TOP/front_rtl/rtl.ml\
+ $TOP/front_rtl/rtldebug.mli\
+ $TOP/front_rtl/rtldebug.ml\
+ $TOP/front_rtl/rtlop.mli\
+ $TOP/front_rtl/rtlop.ml\
+ $TOP/front_rtl/rtlutil.mli\
+ $TOP/front_rtl/rtlutil.ml\
+ $TOP/front_rtl/symbol.mli\
+ $TOP/front_rtl/symbol.ml\
+ $TOP/front_rtl/types.mli\
+ $TOP/front_rtl/types.ml\
+ $TOP/front_asm/asm.mli\
+ $TOP/front_asm/asm.ml\
+ $TOP/front_fenv/block.mli\
+ $TOP/front_fenv/block.ml\
+ $TOP/front_fenv/eqn.mli\
+ $TOP/front_fenv/eqn.ml\
+ $TOP/front_fenv/fenv.mli\
+ $TOP/front_fenv/fenv.ml\
+ $TOP/front_fenv/metrics.mli\
+ $TOP/front_fenv/metrics.ml\
+ $TOP/front_fenv/rtleqn.mli\
+ $TOP/front_fenv/rtleqn.ml\
+ $TOP/front_cfg/cfg.mli\
+ $TOP/front_cfg/cfg.ml\
+ $TOP/front_cfg/cfgx.mli\
+ $TOP/front_cfg/cfgx.ml\
+ $TOP/front_cfg/dag.mli\
+ $TOP/front_cfg/dag.ml\
+ $TOP/front_cfg/ep.mli\
+ $TOP/front_cfg/ep.ml\
+ $TOP/front_cfg/mflow.mli\
+ $TOP/front_cfg/mflow.ml\
+ $TOP/front_cfg/spans.mli\
+ $TOP/front_cfg/spans.ml\
+ $TOP/front_nelab/elabexp.mli\
+ $TOP/front_nelab/elabexp.ml\
+ $TOP/front_nelab/elabstmt.mli\
+ $TOP/front_nelab/elabstmt.ml\
+ $TOP/front_nelab/memalloc.mli\
+ $TOP/front_nelab/memalloc.ml\
+ $TOP/front_nelab/nast.mli\
+ $TOP/front_nelab/nast.ml\
+ $TOP/front_nelab/nelab.mli\
+ $TOP/front_nelab/nelab.ml\
+ $TOP/front_nelab/simplify.mli\
+ $TOP/front_nelab/simplify.ml\
+ $TOP/front_nelab/topsort.mli\
+ $TOP/front_nelab/topsort.ml\
+ $TOP/front_target/automaton.mli\
+ $TOP/front_target/automaton.ml\
+ $TOP/front_target/box.mli\
+ $TOP/front_target/box.ml\
+ $TOP/front_target/float.mli\
+ $TOP/front_target/float.ml\
+ $TOP/front_target/space.mli\
+ $TOP/front_target/space.ml\
+ $TOP/front_target/target.mli\
+ $TOP/front_target/target.ml\
+ $TOP/front_zipcfg/avail.mli\
+ $TOP/front_zipcfg/avail.ml\
+ $TOP/front_zipcfg/property.mli\
+ $TOP/front_zipcfg/property.ml\
+ $TOP/front_zipcfg/unique.mli\
+ $TOP/front_zipcfg/unique.ml\
+ $TOP/front_zipcfg/varmap.mli\
+ $TOP/front_zipcfg/varmap.ml\
+ $TOP/front_zipcfg/zipcfg.mli\
+ $TOP/front_zipcfg/zipcfg.ml\
+ $TOP/front_ir/ast2ir.mli\
+ $TOP/front_ir/ast2ir.ml\
+ $TOP/front_ir/automatongraph.mli\
+ $TOP/front_ir/automatongraph.ml\
+ $TOP/front_ir/call.mli\
+ $TOP/front_ir/call.ml\
+ $TOP/front_ir/context.mli\
+ $TOP/front_ir/context.ml\
+ $TOP/front_ir/contn.mli\
+ $TOP/front_ir/contn.ml\
+ $TOP/front_ir/postexpander.mli\
+ $TOP/front_ir/postexpander.ml\
+ $TOP/front_ir/expander.mli\
+ $TOP/front_ir/expander.ml\
+ $TOP/front_ir/opshape.mli\
+ $TOP/front_ir/opshape.ml\
+ $TOP/front_ir/preast2ir.mli\
+ $TOP/front_ir/preast2ir.ml\
+ $TOP/front_ir/proc.mli\
+ $TOP/front_ir/proc.ml\
+ $TOP/front_ir/rewrite.mli\
+ $TOP/front_ir/rewrite.ml\
+ $TOP/front_ir/runtimedata.mli\
+ $TOP/front_ir/runtimedata.ml\
+ $TOP/front_ir/talloc.mli\
+ $TOP/front_ir/talloc.ml\
+ $TOP/assembler/astasm.mli\
+ $TOP/assembler/astasm.ml\
+ $TOP/assembler/cfgutil.mli\
+ $TOP/assembler/cfgutil.ml\
+ $TOP/assembler/dotasm.mli\
+ $TOP/assembler/dotasm.ml\
+ $TOP/assembler/dummyasm.mli\
+ $TOP/assembler/dummyasm.ml\
+ $TOP/assembler/mangle.mli\
+ $TOP/assembler/mangle.ml\
+ $TOP/front_last/automatonutil.mli\
+ $TOP/front_last/automatonutil.ml\
+ $TOP/front_last/callspec.mli\
+ $TOP/front_last/callspec.ml\
+ $TOP/front_last/dataflow.mli\
+ $TOP/front_last/dataflow.ml\
+ $TOP/front_last/mvalidate.mli\
+ $TOP/front_last/mvalidate.ml\
+ $TOP/front_last/placevar.mli\
+ $TOP/front_last/placevar.ml\
+ $TOP/front_last/vfp.mli\
+ $TOP/front_last/vfp.ml\
+ $TOP/arch/dummy/dummy.mli\
+ $TOP/arch/dummy/dummy.ml\
+ $TOP/arch/arm/arm.mli\
+ $TOP/arch/arm/arm.ml\
+ $TOP/arch/mips/mips.mli\
+ $TOP/arch/mips/mips.ml\
+ $TOP/arch/mips/mipsasm.mli\
+ $TOP/arch/mips/mipsasm.ml\
+ $TOP/arch/mips/mipscall.mli\
+ $TOP/arch/mips/mipscall.ml\
+ $TOP/arch/mips/mipsrec.mli\
+ $TOP/arch/mips/mipsregs.mli\
+ $TOP/arch/mips/mipsregs.ml\
+ $TOP/arch/ppc/ppc.mli\
+ $TOP/arch/ppc/ppc.ml\
+ $TOP/arch/ppc/ppcasm.mli\
+ $TOP/arch/ppc/ppcasm.ml\
+ $TOP/arch/ppc/ppcrec.mli\
+ $TOP/arch/x86/x86.mli\
+ $TOP/arch/x86/x86.ml\
+ $TOP/arch/x86/x86asm.mli\
+ $TOP/arch/x86/x86asm.ml\
+ $TOP/arch/x86/x86call.mli\
+ $TOP/arch/x86/x86call.ml\
+ $TOP/arch/x86/x86rec.mli\
+ $TOP/arch/x86/x86regs.mli\
+ $TOP/arch/x86/x86regs.ml\
+ $TOP/driver.mli\
+ $TOP/this.mli\
+ $TOP/driver.ml\
+
+
+<$TOP/docs/latex/mkcommon
+
+index:V:
+    echo TODO
+
+
+
+#TEXMAIN=Cminusminus.nw
+#TEX=Cminusminus.tex
+
+# ./main.ml\
+
+##docs tests tools todo/... todo/h_lua/ todo/interpreter todo/runtime
+##h_adsl h_camlburg
+
+#old: when was splitted in many .nw
+#NWDIRS= \
+#   arch/dummy \
+#   arch/mips arch/ppc arch/x86 \
+#   assembler \
+#   commons2 commons3 \
+#   error \
+#   front_asm front_cfg front_fenv front_ir front_last front_nelab front_rtl \
+#   front_target front_zipcfg \
+#   parsing
+#
+##docs tests tools todo/... todo/h_lua/ todo/interpreter todo/runtime
+##h_adsl h_camlburg
+#
+#synchere:
+##	$(SYNCWEB) -lang ocaml main.nw main.ml
+#	$(SYNCWEB) -lang ocaml driver.nw driver.mli
+#	$(SYNCWEB) -lang ocaml driver.nw driver.ml
+#	$(SYNCWEB) -lang ocaml main2.nw this.mli
+#	$(SYNCWEB) -lang ocaml main2.nw this.in
+#
+#sync:
+#	set -e; for i in $(NWDIRS); do $(MAKE) -C $$i sync || exit 1; done 
+#	make synchere
+#
+#
+#lpdistclean::
+#	rm -f $(LPSRC) .md5sum_*
+#
+#include $(TOP)/docs/latex/Makefile.common
+
+
