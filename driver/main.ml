@@ -24,9 +24,6 @@ module Common2 = Common
  * - DONE Ast.program (in parsing/, and its basic printer Astpp.emit)
  *   functions: Parse_cmm.tokens, Parse_cmm.parse, Driver.parse
  * 
- *   todo: a vof_ast that pretty prints cleanly not using the asdl-based
- *    not so good sexp printer
- * 
  * - DONE Nast.t (in front_nelab/)
  *   functions: Nast.program
  * 
@@ -116,6 +113,11 @@ let version = "0.1"
 (* Subsystems actions *)
 (*****************************************************************************)
 
+(* filename -> tokens *)
+let dump_tokens file =
+  Driver.scan file
+
+(* filename -> ast *)
 let dump_ast file =
   let (_srcmap, ast) = Driver.parse file in
 
@@ -123,6 +125,7 @@ let dump_ast file =
   UCommon.pr2 s;
   ()
 
+(* pretty printer *)
 let pp_ast file =
   let (srcmap, ast) = Driver.parse file in
   let pp = Astpp.program ast in
@@ -131,9 +134,8 @@ let pp_ast file =
   ()
 
 
-
 (* filename -> ast -> nast *)
-let test_nast file =
+let dump_nast file =
   let (srcmap, ast) = Driver.parse file in
   let nast = Nast.program ast in
   (* todo: write a vof_nast so can pretty print that *)
@@ -196,8 +198,6 @@ let test_rtl file =
 let test_driver_version () =
   Driver.version ()
 
-let dump_tokens file =
-  Driver.scan file
 
 let test_emit_asdl file =
   let (srcmap, ast) = Driver.parse file in
@@ -259,6 +259,8 @@ let extra_actions () = [
     Arg_.mk_action_1_arg dump_ast;
     "-pp_ast", "   <file>", 
     Arg_.mk_action_1_arg pp_ast;
+    "-dump_nast", "  <file>", 
+    Arg_.mk_action_1_arg dump_nast;
 
     "-driver_emit_asdl", "   <file>", 
     Arg_.mk_action_1_arg test_emit_asdl;
@@ -267,8 +269,6 @@ let extra_actions () = [
     "-driver_compile", "  <file>", 
     Arg_.mk_action_1_arg test_driver_compile;
 
-    "-test_nast", "  <file>", 
-    Arg_.mk_action_1_arg test_nast;
     "-test_nelab", "  <file>", 
     Arg_.mk_action_1_arg test_nelab;
 
