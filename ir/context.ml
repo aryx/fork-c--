@@ -1,5 +1,5 @@
 (*s: front_ir/context.ml *)
-(*s: context.ml *)
+(*s: context.ml  *)
 open Nopoly
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
@@ -103,7 +103,7 @@ let except base exns =
 let nonbool ~int ~fp ~rm ~overrides = except (nonboolops ~int ~fp ~rm) overrides
 let full ~int ~fp ~rm ~bool ~overrides =
   except (nonboolops ~int ~fp ~rm @ boolops ~int ~fp ~bool) overrides
-(*x: context.ml *)
+(*x: context.ml  *)
 type t = (Talloc.Multiple.t -> int -> Register.t) * (Register.t -> bool)
 let spacename (s, _, _) = s
 let of_space s =
@@ -128,7 +128,7 @@ let rec of_spaces l = match l with
       let a' = a' m in
       fun w -> if w = acellwidth then a w else a' w in
     alloc, (fun r -> o r || o' r)
-(*x: context.ml *)
+(*x: context.ml  *)
 module SM = Strutil.Map
 let functions ops =
   let resmap = List.fold_left (fun m (n, a, r)-> SM.add n r m) SM.empty ops in
@@ -138,5 +138,5 @@ let functions ops =
   let result_context (n, _) =
     try SM.find n resmap with Not_found -> impossf "no result context for %s" n in
   arg_contexts, result_context
-(*e: context.ml *)
+(*e: context.ml  *)
 (*e: front_ir/context.ml *)

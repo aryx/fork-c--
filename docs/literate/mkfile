@@ -142,8 +142,8 @@ SRC_VIEWS= \
  $TOP/front_ir/automatongraph.ml\
  $TOP/front_ir/call.mli\
  $TOP/front_ir/call.ml\
- $TOP/front_ir/context.mli\
- $TOP/front_ir/context.ml\
+ $TOP/ir/context.mli\
+ $TOP/ir/context.ml\
  $TOP/front_ir/contn.mli\
  $TOP/front_ir/contn.ml\
  $TOP/front_ir/postexpander.mli\
