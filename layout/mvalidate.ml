@@ -1,13 +1,13 @@
 (*s: front_last/mvalidate.ml *)
-(*s: mvalidate.ml *)
+(*s: mvalidate.ml  *)
 open Nopoly
 
 module RP   = Rtl.Private
 module Down = Rtl.Dn
 module Up   = Rtl.Up
-(*x: mvalidate.ml *)
+(*x: mvalidate.ml  *)
 exception RTLInvalid of string
-(*x: mvalidate.ml *)
+(*x: mvalidate.ml  *)
 let () = Debug.register "mvalidate" "debug machine-environment validator"
 let rtl t r =
   let remove_bits = function
@@ -136,5 +136,5 @@ let rtl t r =
     if List.for_all check es then None
     else Some "No explanation"
   with RTLInvalid s -> Some s
-(*e: mvalidate.ml *)
+(*e: mvalidate.ml  *)
 (*e: front_last/mvalidate.ml *)

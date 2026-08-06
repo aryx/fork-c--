@@ -1,5 +1,5 @@
 (*s: front_last/callspec.ml *)
-(*s: callspec.ml *)
+(*s: callspec.ml  *)
 module R  = Rtl
 module RU = Rtlutil
 module W  = Rtlutil.Width
@@ -47,7 +47,7 @@ type t =
                           * ReturnAddress.style
     }
 (*e: type t(callspec.nw) *)
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let old_end wordsize growth block = match growth with
 | Memalloc.Down -> RU.addk wordsize (Block.base block) (Block.size block)
 | Memalloc.Up   -> Block.base block
@@ -67,10 +67,10 @@ let std_sp_location wordsize =
 let mk_automaton wordsize memspace block_name automaton = fun () ->
     Block.srelative (vfp wordsize) block_name (A.at memspace)
       automaton
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let ra t    = fst t.ra
 let style t = snd t.ra
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let prolog t auto = 
   let autosp = (fun a -> young_end (wordsize t) t.stack_growth a.A.overflow) in
   C.incoming ~growth:t.stack_growth ~sp:(R.reg t.sp)
@@ -80,7 +80,7 @@ let prolog t auto =
     ~autosp:autosp
     ~postsp:(fun _ _ -> std_sp_location (wordsize t)) 
     ~insp:(fun a _ _ -> autosp a)
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let epilog t auto =
     C.outgoing ~growth:t.stack_growth ~sp:(R.reg t.sp)
         ~mkauto:(mk_automaton (wordsize t) (memspace t) 
@@ -95,13 +95,13 @@ let epilog t auto =
                     (fun a _ -> 
                         young_end (wordsize t) t.stack_growth a.A.overflow)
                 )
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let call_actuals t auto =
     C.outgoing ~growth:t.stack_growth ~sp:(R.reg t.sp)
         ~mkauto:(mk_automaton (wordsize t) (memspace t) "out call parms" auto.A.call)
         ~autosp:(fun r  -> std_sp_location (wordsize t))
         ~postsp:(fun a sp -> young_end (wordsize t) t.stack_growth a.A.overflow)
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let call_results t auto =
     let autosp = (fun a   -> young_end (wordsize t) t.stack_growth a.A.overflow) in
     C.incoming ~growth:t.stack_growth ~sp:(R.reg t.sp)
@@ -109,7 +109,7 @@ let call_results t auto =
       ~autosp
       ~postsp:(fun _ _ -> std_sp_location (wordsize t)) 
       ~insp:(fun a _ _ -> autosp a)
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let also_cuts_to t auto =
     let autosp = (fun r   -> std_sp_location (wordsize t)) in
     C.incoming ~growth:t.stack_growth ~sp:(R.reg t.sp)
@@ -124,9 +124,9 @@ let cut_actuals t auto base =
         ~autosp:(fun r   -> R.fetch (R.reg t.sp) (wordsize t))
         ~postsp:(fun _ _ -> R.fetch (R.reg t.sp) (wordsize t))
 
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let ra_on_entry t block = R.fetch (ra t) (wordsize t)
-(*x: callspec.ml *)
+(*x: callspec.ml  *)
 let ra_on_exit t saved_ra block temp = match style t with
     | ReturnAddress.KeepInPlace  -> saved_ra 
     | ReturnAddress.SaveToTemp s -> Talloc.Multiple.loc temp s (wordsize t) 
@@ -167,5 +167,5 @@ let to_call ~cutto ~return auto t =
     ; C.saved_nvr        = t.save_nvr
     ; C.return           = return
     }
-(*e: callspec.ml *)
+(*e: callspec.ml  *)
 (*e: front_last/callspec.ml *)

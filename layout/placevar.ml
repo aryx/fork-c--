@@ -1,5 +1,5 @@
 (*s: front_last/placevar.ml *)
-(*s: placevar.ml *)
+(*s: placevar.ml  *)
 open Nopoly
 
 module A  = Automaton
@@ -46,12 +46,12 @@ let replace_var store_var fetch_var store_global fetch_global r =
   (*e: walk RTL *)
   walkRtl r
 (*e: replace var *)
-(*x: placevar.ml *)
+(*x: placevar.ml  *)
 module IntMod  = struct type t = int            let compare = compare end
 module IM = Map.Make (IntMod)
 module NM = Unique.Map
 module SM = Strutil.Map
-(*x: placevar.ml *)
+(*x: placevar.ml  *)
 (*s: define context count structures *)
 type counts = { mutable intc   : float
               ; mutable floatc : float
@@ -209,9 +209,9 @@ let context autmtn _ (g, ({ Proc.target = PA.T tgt; Proc.formals = formals;
   RT.upd_all_spans upd_var g;
   (*e: add variable placements to spans *)
   (g, proc), !changed
-(*x: placevar.ml *)
+(*x: placevar.ml  *)
 let () = Debug.register "placevar" "variable placer"
-(*x: placevar.ml *)
+(*x: placevar.ml  *)
 let ( *> ) = A.( *> )
 
 let from_temps proc space = (* stage to allocate a temporary location *)
@@ -230,7 +230,7 @@ let mk_automaton ~warn ~vfp ~memspace mk_stage (g, proc) =
     {A.allocate = alloc; A.freeze = methods.A.freeze} in
   Block.srelative vfp "variables placed in memory" (A.at memspace)
   ( A.wrap warn *> mk_stage ~temps:(from_temps proc) *> A.as_stage proc.Proc.priv )
-(*x: placevar.ml *)
+(*x: placevar.ml  *)
 let replace_globals _ (g, ({ Proc.target = tgt; Proc.global_map = gmap} as proc)) =
   let subst = RU.Subst.aloc ~guard:(function RP.Global _ -> true | _ -> false)
                 ~map:(function RP.Global (_, i, _) -> gmap.(i)
@@ -245,5 +245,5 @@ let replace_globals _ (g, ({ Proc.target = tgt; Proc.global_map = gmap} as proc)
     else
       subst in
   (G.map_rtls subst g, proc), true (* probably changed :-) *)
-(*e: placevar.ml *)
+(*e: placevar.ml  *)
 (*e: front_last/placevar.ml *)

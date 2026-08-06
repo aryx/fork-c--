@@ -1,5 +1,5 @@
 (*s: front_last/vfp.ml *)
-(*s: vfp.ml *)
+(*s: vfp.ml  *)
 module D  = Dataflow
 module G  = Zipcfg
 module GR = Zipcfg.Rep
@@ -16,7 +16,7 @@ let mk w = Rtl.fetch (Rtl.reg (('V', Rtl.Identity, Cell.of_size w), 0, Rtl.C 1))
 let is_vfp = function
   | RP.Reg (('V', _, _), 0, _) -> true
   | _ -> false
-(*x: vfp.ml *)
+(*x: vfp.ml  *)
 let unknown = max_int
 let matcher = { P.embed = (fun a -> P.Vfp a);
                 P.project = (function P.Vfp a -> Some a | _ -> None);
@@ -40,7 +40,7 @@ let fact sp = {
   D.changed = (fun ~old:(_, k) ~new':(_, k') -> k <> k');
   D.prop = prop;
 }
-(*x: vfp.ml *)
+(*x: vfp.ml  *)
 let replace_with ~sp =
   let w = RU.Width.loc sp in
   let spval = R.fetch sp w in
@@ -152,9 +152,9 @@ let replace_with ~sp =
     { D.F.name = "replace vfp";
       D.F.middle_out = middle_out; D.F.last_outs = last_outs; } in
   D.F.rewrite (fact, repl) ~entry_fact:(Dn.exp spval, 0)
-(*x: vfp.ml *)
+(*x: vfp.ml  *)
 let () = Debug.register "vfp" "stack adjustments for virtual frame pointer"
-(*x: vfp.ml *)
+(*x: vfp.ml  *)
 let mk_space w = 
     { Space.space = ('V', Rtl.Identity, Cell.of_size w)
     ; Space.doc = "holds the virtual frame pointer"
@@ -163,5 +163,5 @@ let mk_space w =
     ; Space.widths = [w]
     ; Space.classification = Space.Fixed
     }
-(*e: vfp.ml *)
+(*e: vfp.ml  *)
 (*e: front_last/vfp.ml *)

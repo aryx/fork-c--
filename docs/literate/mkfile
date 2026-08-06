@@ -184,16 +184,17 @@ SRC_VIEWS= \
  \
  $TOP/target/automatonutil.mli\
  $TOP/target/automatonutil.ml\
- $TOP/front_last/callspec.mli\
- $TOP/front_last/callspec.ml\
+ $TOP/TODO/arch/callspec.mli\
+ $TOP/TODO/arch/callspec.ml\
  $TOP/cfg/dataflow/dataflow.mli\
  $TOP/cfg/dataflow/dataflow.ml\
- $TOP/front_last/mvalidate.mli\
- $TOP/front_last/mvalidate.ml\
- $TOP/front_last/placevar.mli\
- $TOP/front_last/placevar.ml\
- $TOP/front_last/vfp.mli\
- $TOP/front_last/vfp.ml\
+ \
+ $TOP/layout/mvalidate.mli\
+ $TOP/layout/mvalidate.ml\
+ $TOP/layout/placevar.mli\
+ $TOP/layout/placevar.ml\
+ $TOP/layout/vfp.mli\
+ $TOP/layout/vfp.ml\
  \
  $TOP/arch/dummy/dummy.mli\
  $TOP/arch/dummy/dummy.ml\

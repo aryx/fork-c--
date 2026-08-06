@@ -1,21 +1,21 @@
 (*s: front_last/callspec.mli *)
-(*s: callspec.mli *)
+(*s: callspec.mli  *)
 val overflow      : dealloc:Call.party -> alloc:Call.party -> Call.overflow
 val c_overflow    : Call.overflow
 val tail_overflow : Call.overflow
-(*x: callspec.mli *)
+(*x: callspec.mli  *)
 type nvr_saver = Talloc.Multiple.t -> Register.t -> Rtl.loc
 (* suggested by NR, but not used 
  * val save_nvrs: Space.t list -> nvr_saver
  *)
-(*x: callspec.mli *)
+(*x: callspec.mli  *)
 module ReturnAddress: sig
     type style  =
         | KeepInPlace           (* leave RA where it is     *)
         | SaveToTemp  of char   (* save RA in a temporary of this space  *)
     (* <<suggested functions>> *)
 end     
-(*x: callspec.mli *)
+(*x: callspec.mli  *)
 (*s: type t(callspec.nw) *)
 type t =
     { name              : string            (* name this CC *)
@@ -32,10 +32,10 @@ type t =
     }
 (*e: type t(callspec.nw) *)
 
-(*x: callspec.mli *)
+(*x: callspec.mli  *)
 val to_call: cutto:(unit, Mflow.cut_args) Target.map -> 
              return:(int -> int -> ra:Rtl.exp -> Rtl.rtl) -> 
              Automaton.cc_spec ->
              t -> Call.t   
-(*e: callspec.mli *)
+(*e: callspec.mli  *)
 (*e: front_last/callspec.mli *)
