@@ -201,3 +201,67 @@ Recommended: conservative first as one atomic commit, verify `dune build` and
   [plan_tiger_hello.md](plan_tiger_hello.md), which adds files to
   `front_last/`-and-friends. Pick an order: either land `freeze` first and then
   reorganize, or reorganize now while the tree is quiet.
+
+## Postmortem: what this plan got wrong (2026-08-06)
+
+Everything above is the plan as written on 2026-08-05. The reorg was carried out
+on 2026-08-06 and `dune build` is green again. **The table in
+[Old -> new, file by file](#old---new-file-by-file) was left as-is for the
+record — three of its rows are wrong and were not followed.** The errors all
+have the same root cause: the table sorts modules by *what they are*
+(data structure vs pass vs helper) when the only constraint that actually binds
+is *what they depend on*.
+
+### The three false rows
+
+1. **`front_ir/ proc call contn talloc preast2ir -> ir/` ("the data half").**
+   Only `talloc` is core. The other four mention `Target`, `Automaton`,
+   `Memalloc`, `Zipcfg`, `Cfgx` and `Mflow` *in their `.mli`s*, all of which sit
+   above `ir/`. They are data structures, but *back-end* data structures,
+   defined in terms of the machine description. They went to `codegen/` with
+   `ast2ir`/`expander`/`postexpander`. Nothing below `front_ir` consumed them,
+   so this was free — the only cost was hitting the cycle first.
+
+2. **`front_ir/ context -> target/` [I].** Its deps are only `Space`, `Talloc`,
+   `Register`, `Rtl`, `Cell` — nothing from the machine description. It went to
+   `ir/`. (`automatongraph`, the other half of that row, does need `Automaton`;
+   it ended up in `codegen/`, though `target/` would also work.)
+
+3. **`front_last/ callspec automatonutil -> target/`.** `automatonutil` is fine
+   (`Automaton` + `Rtl` only). `callspec` is not: it needs `Call`, which lives
+   in `codegen/`, *above* `target/` — so this row would have introduced a fresh
+   cycle of exactly the same shape as #1. It belongs in `codegen/`. Note its
+   only live consumer is `arch/mips/mipscall.ml`, and mips is not in the build,
+   so deleting it or parking it in `TODO/` is also defensible.
+
+### Two things the plan missed that made the move easier
+
+- **`space` is not a target module.** `front_target/space.ml` references only
+  `Rtl`, `Register`, `Cell`, `Impossible` — it is core vocabulary filed under
+  `target` by accident, the same category error the plan already caught for
+  `Asm` (see [the trap](#one-trap-do-not-put-asm-with-target)). Moving it *down*
+  into `ir/` is what unblocked `talloc`, and it means `ir/` has **no edge to
+  `target/` at all**.
+- **`Vfp` does not actually pin anything low.** Every reference to it from below
+  is already commented out or behind a hook: `ir/block.ml` (the
+  `_empty_vfp_hook` ref), `target/target.ml` and `target.mli` (inside a comment),
+  `elab/nelab.ml` (an inlined copy, "brought too many dependencies"),
+  `codegen/runtimedata.ml` (disabled). So `layout/` can sit cleanly above
+  `codegen/` and below `arch/`, as the plan assumed.
+
+### Deferred on purpose, not forgotten
+
+- `cfg/` and `commons/` are directories holding the *old* sub-libraries rather
+  than one flattened library each: `cfg/{front_cfg,front_zipcfg,dataflow}` and
+  `commons/{commons2,commons3}`.
+- The dune `(name ...)` fields still carry pre-reorg library names:
+  `cmm_front_target` in `target/`, `cmm_front_ir` in `codegen/`,
+  `cmm_front_nelab` in `elab/`, `cmm_assembler` in `asm/`, `cmm_h_*` under
+  `tools/`. One mechanical sweep, best done last.
+  When flattening `commons/`, the merged library must be named `cmm_commons`,
+  **not** `commons` — that name is already taken by the `semgrep-pfff-libs`
+  library that `parsing/dune` and `driver/dune` depend on.
+- The [cost and mechanics](#cost-and-mechanics) bookkeeping — the per-directory
+  legacy `Makefile`s and the dir-qualified chunk names in
+  `Cminusminus_extra.nw` — was skipped. dune and `docs/literate/mkfile`'s
+  `SRC_VIEWS` were kept current; `make` and `make sync` were not.
