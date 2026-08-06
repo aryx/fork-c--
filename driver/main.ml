@@ -116,15 +116,21 @@ let version = "0.1"
 (* Subsystems actions *)
 (*****************************************************************************)
 
-(* filename -> ast *)
-let test_driver_parse file =
-  let (srcmap, ast) = Driver.parse file in
+let dump_ast file =
+  let (_srcmap, ast) = Driver.parse file in
 
-  (* todo: write a vof_ast so can pretty print it cleanly *)
+  let s = Ast.show_program ast in
+  UCommon.pr2 s;
+  ()
+
+let pp_ast file =
+  let (srcmap, ast) = Driver.parse file in
   let pp = Astpp.program ast in
   let s = Pp.ppToString 0 pp in
   UCommon.pr2 s;
   ()
+
+
 
 (* filename -> ast -> nast *)
 let test_nast file =
@@ -190,7 +196,7 @@ let test_rtl file =
 let test_driver_version () =
   Driver.version ()
 
-let test_driver_scan file =
+let dump_tokens file =
   Driver.scan file
 
 let test_emit_asdl file =
@@ -247,10 +253,12 @@ let test_driver_compile file =
 (*---------------------------------------------------------------------------*)
 
 let extra_actions () = [
-    "-driver_parse", "   <file>", 
-    Arg_.mk_action_1_arg test_driver_parse;
-    "-driver_scan", "   <file>", 
-    Arg_.mk_action_1_arg test_driver_scan;
+    "-dump_tokens", "   <file>", 
+    Arg_.mk_action_1_arg dump_tokens;
+    "-dump_ast", "   <file>", 
+    Arg_.mk_action_1_arg dump_ast;
+    "-pp_ast", "   <file>", 
+    Arg_.mk_action_1_arg pp_ast;
 
     "-driver_emit_asdl", "   <file>", 
     Arg_.mk_action_1_arg test_emit_asdl;

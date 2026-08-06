@@ -165,4 +165,4 @@
   
   and program = (toplevel list)
   
-[@@deriving show]
+[@@deriving show { with_path = false }]
