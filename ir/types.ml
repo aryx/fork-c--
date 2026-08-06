@@ -1,5 +1,5 @@
 (*s: front_rtl/types.ml *)
-(*s: types.ml *)
+(*s: types.ml content *)
 (*s: exported type definitions(types.nw) *)
 (*s: definition of type [[size]] *)
 type key  = int
@@ -16,7 +16,7 @@ type tyscheme = (size t) list * (size t)
 type monotype = (int  t) list * (int  t)
 (*e: exported type definitions(types.nw) *)
  (* types from the interface definition *)
-(*x: types.ml *)
+(*x: types.ml content *)
 module E = Error
 module S = Map.Make(struct type t=key let compare=compare end)
 
@@ -28,7 +28,7 @@ let to_string = function
 
 let lookup key env = S.find key env 
 let dump env       = let f key data res = (key,data)::res in S.fold f env []
-(*x: types.ml *)
+(*x: types.ml content *)
 let match' opname sigma expected actual =
   let to_string' = function
     | Bool -> to_string Bool
@@ -56,7 +56,7 @@ let match' opname sigma expected actual =
     | Bits(Half x)  , Bits y                     -> S.add x (y*2) sigma
     
     | _             , _                          -> badarg()
-(*x: types.ml *)
+(*x: types.ml content *)
 let subst opname sigma = function
     | Bool             -> Bool
     | Bits(Const x)    -> Bits x
@@ -67,7 +67,7 @@ let subst opname sigma = function
                                 impossf "internal error (2) in application")
     | Bits(Half x)     -> (try Bits((lookup x sigma)/2) with Not_found ->
                                 impossf "internal error (3) in application")
-(*x: types.ml *)
+(*x: types.ml content *)
 let wrongargs opname args' args =
   E.errorf "operator %s expected %d arguments, got %d"
     opname (List.length args') (List.length args)
@@ -76,13 +76,13 @@ let appl opname (args',r) args =
   let sigma = try List.fold_left2 (match' opname) S.empty args' args with
               | Invalid_argument _ -> wrongargs opname args' args in
   subst opname sigma r
-(*x: types.ml *)
+(*x: types.ml content *)
 let widthlist opname (args',r) args =
   let sigma = try List.fold_left2 (match' opname) S.empty args' args with
               | Invalid_argument _ -> wrongargs opname args' args in
   let sorted = List.sort (fun (key1,_) (key2,_) -> compare key1 key2) (dump sigma) in
   List.map snd sorted
-(*x: types.ml *)
+(*x: types.ml content *)
 let rtlop = Str.regexp "^\\([A-Za-z0-9_]*[A-Za-z_]\\)\\([0-9]+\\)?$"
 
 let split op =
@@ -94,7 +94,7 @@ let split op =
             (basename, size)
     else
         impossf "illegal operator %%%s?" op
-(*x: types.ml *)
+(*x: types.ml content *)
 (*s: key size *)
 let largest_key (args, res) =
   let rec count k = function
@@ -120,7 +120,7 @@ let instantiate ((args,ret):tyscheme) ~widths  =
     | Bits (Const k) -> Bits k
     | Bool           -> Bool in
   (List.map inst args, inst ret)
-(*x: types.ml *)
+(*x: types.ml content *)
 let fixbits x        = assert (x > 0); Bits(Const x)
 let var    x         = assert (x > 0); Bits(Var x)
 let double x         = assert (x > 0); Bits(Double x)
@@ -128,7 +128,7 @@ let half   x         = assert (x > 0); Bits(Half x)
 let bool             = Bool
 let bits x           = Bits x
 let proc args res    = (args,res)
-(*x: types.ml *)
+(*x: types.ml content *)
 let keyname = function
 | 1 -> "n"
 | 2 -> "m"
@@ -149,5 +149,5 @@ let scheme_string (args, result) =
   | 0 -> scheme
   | n -> spr "\\/ %s . %s" (String.concat ", " (List.map keyname (Auxfuns.from 1 ~upto:n)))
                            scheme
-(*e: types.ml *)
+(*e: types.ml content *)
 (*e: front_rtl/types.ml *)

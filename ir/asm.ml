@@ -1,5 +1,5 @@
 (*s: front_asm/asm.ml *)
-(*s: asm.ml *)
+(*s: asm.ml content *)
 (*s: exported type definitions(asm.nw) *)
 class type ['proc] assembler = object
     (*s: assembler methods *)
@@ -77,10 +77,10 @@ object
     method emit = asm#emit
 end
 let map f asm = new mapped_asm f asm
-(*x: asm.ml *)
+(*x: asm.ml content *)
 let reloc_string const =
   let sym (s, _) = s#mangled_text in
   let infix op a b = String.concat "" [a; " "; op; " "; b] in
   Reloc.fold ~const ~sym ~add:(infix "+") ~sub:(infix "-")
-(*e: asm.ml *)
+(*e: asm.ml content *)
 (*e: front_asm/asm.ml *)

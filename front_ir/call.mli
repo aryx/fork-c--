@@ -1,5 +1,5 @@
 (*s: front_ir/call.mli *)
-(*s: call.mli *)
+(*s: call.mli  *)
 (*s: exported type definitions(call.nw) *)
 type kind    = string
 type width   = int
@@ -75,7 +75,7 @@ type t = (* part of a calling convention *)
 (*x: exported type definitions(call.nw) *)
 type valpass = unit -> Automaton.t
 (*e: exported type definitions(call.nw) *)
-(*x: call.mli *)
+(*x: call.mli  *)
 val outgoing :
      growth:Memalloc.growth -> sp:Rtl.loc -> mkauto:valpass ->
      autosp:(Automaton.result -> Rtl.exp) ->
@@ -85,7 +85,7 @@ val incoming :
      autosp:(Automaton.result -> Rtl.exp) ->
      postsp:(Automaton.result -> Rtl.exp -> Rtl.exp) ->
      insp:(Automaton.result -> Rtl.exp -> Block.t -> Rtl.exp) -> incoming
-(*x: call.mli *)
+(*x: call.mli  *)
 type 'a tgt = ('a, (Rtl.exp -> Automaton.t), t) Target.t
 
 val register_cc : 
@@ -95,7 +95,7 @@ val register_cc :
 
 (* val get_cc : ('a, 'cc) Target.t -> string -> 'cc *)
 val get_cc : ('p, 'a, 'cc) Target.t -> string -> 'cc
-(*x: call.mli *)
+(*x: call.mli  *)
 val dump_proc      : 'a tgt -> string -> types -> unit
 val dump_return    : 'a tgt -> string -> types -> unit
 val dump_cutto     : 'a tgt -> string -> types -> unit
@@ -107,10 +107,10 @@ val summary_return : 'a tgt -> string -> types -> unit
 val summary_cutto  : 'a tgt -> string -> types -> unit
 
 val path_2_in_overflow : 'a tgt -> string -> unit
-(*x: call.mli *)
+(*x: call.mli  *)
 val run_cc_on_sig_and_return :
   (Automaton.cc_spec -> Automaton.stage) -> 'a tgt -> string -> types -> string list list
 val run_cc_on_sig_and_print :
   (Automaton.cc_spec -> Automaton.stage) -> 'a tgt -> string -> types -> unit
-(*e: call.mli *)
+(*e: call.mli  *)
 (*e: front_ir/call.mli *)

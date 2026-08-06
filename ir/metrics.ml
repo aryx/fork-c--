@@ -1,5 +1,5 @@
 (*s: front_fenv/metrics.ml *)
-(*s: metrics.ml *)
+(*s: metrics.ml content *)
 (*open Nopoly*)
 let (=*=) = (=)
 
@@ -74,6 +74,6 @@ let of_ast ~swap map =
     | (r,A.Charset s)      :: aa -> metrics bo w p m f (merges r "charset" s c) aa in
   let n = Error.Ok None in
   metrics n n n n n n
-(*x: metrics.ml *)
-(*e: metrics.ml *)
+(*x: metrics.ml content *)
+(*e: metrics.ml content *)
 (*e: front_fenv/metrics.ml *)

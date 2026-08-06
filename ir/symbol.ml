@@ -1,5 +1,5 @@
 (*s: front_rtl/symbol.ml *)
-(*s: symbol.ml *)
+(*s: symbol.ml content *)
 (*s: class type t *)
 class type t = object
     method mangled_text:    string
@@ -17,5 +17,5 @@ class mangled (mangle:string->string) (n:string) : t = object
 end
 let unmangled n = new unmangled n
 let with_mangler m n = new mangled m n
-(*e: symbol.ml *)
+(*e: symbol.ml content *)
 (*e: front_rtl/symbol.ml *)

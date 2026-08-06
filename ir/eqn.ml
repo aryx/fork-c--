@@ -1,5 +1,5 @@
 (*s: front_fenv/eqn.ml *)
-(*s: eqn.ml *)
+(*s: eqn.ml content *)
 open Nopoly
 
 (*s: EXP *)
@@ -300,5 +300,5 @@ module Test = struct
 
     (*e: Test *)
 end
-(*e: eqn.ml *)
+(*e: eqn.ml content *)
 (*e: front_fenv/eqn.ml *)

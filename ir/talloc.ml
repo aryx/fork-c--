@@ -1,5 +1,5 @@
 (*s: front_ir/talloc.ml *)
-(*s: talloc.ml *)
+(*s: talloc.ml  *)
 open Nopoly
 
 module S = Space
@@ -51,7 +51,7 @@ module Single = struct
   let reg (reg, _) = reg
   let loc (_, loc) = loc
 end
-(*x: talloc.ml *)
+(*x: talloc.ml  *)
 module Multiple = struct
   let fail c =
     prerr_string ("Space '" ^ Char.escaped c ^ "' is not a temporary space\n");
@@ -83,5 +83,5 @@ module Multiple = struct
   let reg_like (t:t) ((c, _, ms) as _space, _, ct) =
     Single.reg (t c) (Cell.to_width ms ct)
 end
-(*e: talloc.ml *)
+(*e: talloc.ml  *)
 (*e: front_ir/talloc.ml *)

@@ -1,9 +1,9 @@
 (*s: front_rtl/rtlop.ml *)
-(*s: rtlop.ml *)
+(*s: rtlop.ml content *)
 module T = Types        (* save external Types module here *)
 let (-->) = T.proc 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
 let predefined = 
   (* the four values below characterize the proper interpretation of a
      result, but the only information we actually use is a Boolean
@@ -104,20 +104,20 @@ let predefined =
   ;  "bitTransfer"  , int,   [T.var 1; T.var 1; T.var 1; T.var 1; T.var 1] --> T.var 1 
                     
   ] 
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
 let optypes  = ref (Strutil.assoc2map (List.map (fun (o, _, t) -> (o, t)) predefined))
 let opfloats = ref (Strutil.assoc2map (List.map (fun (o, f, _) -> (o, f)) predefined))
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
 let add_operator ~name:o ~result_is_float:f t =
   if Strutil.Map.mem o (!optypes) then
     impossf "registered a duplicate RTL operator %%%s" o;
   optypes  := Strutil.Map.add o t (!optypes);
   opfloats := Strutil.Map.add o f (!opfloats)
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
 let print_shapes () = 
   Strutil.Map.iter (fun o t ->
     Printf.printf "%16s : %s\n" o (Types.scheme_string t)) (!optypes)
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
 let visible = function
   | "bitExtract" | "bitInsert" | "bitTransfer" | "f2f_implicit_round" -> false
   | "fcmp" | "float_lt" | "float_eq" | "float_gt" | "unordered" -> false (*expunged*)
@@ -127,7 +127,7 @@ let fold f z =
   Strutil.Map.fold (fun o t z -> if visible o then f o t z else z) (!optypes) z
 
 let opnames () = fold (fun o _ os -> o :: os) []
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
 let findopname name t =
   try Strutil.Map.find name t
   with Not_found ->
@@ -137,7 +137,7 @@ let findopname name t =
 let findop op = findopname (fst (Rtl.Dn.opr op))
 let mono op = let _, ws = Rtl.Dn.opr op in Types.instantiate (findop op (!optypes)) ws
 let has_floating_result op = findop op (!opfloats)
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
 module Translate = struct
   let prefix opname argtys =
     try 
@@ -150,7 +150,7 @@ module Translate = struct
       )            
     with
     | Not_found  -> Error.errorf "unknown operator %%%s" opname
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
   let binops = Strutil.assoc2map 
       [  "+"      , "add"
       ;  "-"      , "sub"
@@ -184,7 +184,7 @@ module Translate = struct
     try prefix (Strutil.Map.find op unops) 
     with Not_found -> Impossible.impossible ("unknown unary symbolic operator "^op)
 end
-(*x: rtlop.ml *)
+(*x: rtlop.ml content *)
 let ws = ["w"; "w'"; "w3"; "w4"; "w5"]
 let args = ["x"; "y"; "z"; "u"; "v"]
 
@@ -218,5 +218,5 @@ module Emit = struct
     pf "(* This code generated automatically by Rtlop.Emit.creators *)\n";
     Strutil.Map.iter emitop (!optypes)
 end    
-(*e: rtlop.ml *)
+(*e: rtlop.ml content *)
 (*e: front_rtl/rtlop.ml *)

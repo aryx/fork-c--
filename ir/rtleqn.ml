@@ -1,5 +1,5 @@
 (*s: front_fenv/rtleqn.ml *)
-(*s: rtleqn.ml *)
+(*s: rtleqn.ml  *)
 open Nopoly
 
 module Dn = Rtl.Dn
@@ -11,7 +11,7 @@ type solution =
     { known:        (string * Rtl.exp) list
     ; dependent:    (string * Rtl.exp) list
     }
-(*x: rtleqn.ml *)
+(*x: rtleqn.ml  *)
 type term =
     | Const of Rtl.exp
     | Var   of string
@@ -19,7 +19,7 @@ type term =
 
 type sum = (int * term) list
 type t   = sum                  (* equation, sum == 0 *)
-(*x: rtleqn.ml *)
+(*x: rtleqn.ml  *)
 module ToString = struct
     let term = function
         | Const(exp) -> "(" ^ Rtlutil.ToString.exp exp ^ ")"
@@ -41,13 +41,13 @@ module ToString = struct
       side pos ^ " = " ^ side neg
 end
 let to_string = ToString.t
-(*x: rtleqn.ml *)
+(*x: rtleqn.ml  *)
 let sym x   = [(1, Var x)]
 let int i   = if i = 0 then [] else [(i, Unit)]
 let const k = [(1, Const (Up.exp k))]
 let add x y = x @ y
 let sub x y = x @ List.map (fun (i,y) -> (-i,y)) y
-(*x: rtleqn.ml *)
+(*x: rtleqn.ml  *)
 let exp e = 
     let rec exp = function
     | RP.Const(RP.Bits(b))      -> int (Bits.S.to_int b)
@@ -58,7 +58,7 @@ let exp e =
     | x                         -> const x
     in
         exp (Dn.exp e)
-(*x: rtleqn.ml *)
+(*x: rtleqn.ml  *)
 let equate e1 e2 = 
     let t  = sub (exp e1) (exp e2) in
     let () = if Debug.on "rtleqn" then
@@ -66,7 +66,7 @@ let equate e1 e2 =
                  (ToString.t (exp e1)) (ToString.t (exp e2)) in
     t
 let () = Debug.register "rtleqn" "RTL equation solver"
-(*x: rtleqn.ml *)
+(*x: rtleqn.ml  *)
 module T = struct
     type t = term
     let variable = function         (* identify variable *)
@@ -86,7 +86,7 @@ module T = struct
     let print   = ToString.term
 end
 module Solver = Eqn.Make(T)         (* equation solver over terms *)
-(*x: rtleqn.ml *)
+(*x: rtleqn.ml  *)
 let rtl ~(width:int) (e:sum) = 
     let add    = Rtlutil.add width in
     let mult   = Rtl.opr "mul" [width] in 
@@ -106,7 +106,7 @@ let rtl ~(width:int) (e:sum) =
         match e with
         | []    -> Rtl.bits (Bits.zero width) width
         | s::ss -> loop (summand s) ss 
-(*x: rtleqn.ml *)
+(*x: rtleqn.ml  *)
 let solve ~width sums =
     try
         let eqns   = List.fold_right Solver.make_zero sums Solver.empty in
@@ -117,5 +117,5 @@ let solve ~width sums =
                 }
     with
         Solver.Can'tSolve _ -> raise Can'tSolve
-(*e: rtleqn.ml *)
+(*e: rtleqn.ml  *)
 (*e: front_fenv/rtleqn.ml *)

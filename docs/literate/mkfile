@@ -59,6 +59,7 @@ SRC_VIEWS= \
  $TOP/error/unsupported.ml\
  $TOP/parsing/astpp.mli\
  $TOP/parsing/astpp.ml\
+ \
  $TOP/ir/register.mli\
  $TOP/ir/register.ml\
  $TOP/ir/reloc.mli\
@@ -75,18 +76,20 @@ SRC_VIEWS= \
  $TOP/ir/symbol.ml\
  $TOP/ir/types.mli\
  $TOP/ir/types.ml\
- $TOP/front_asm/asm.mli\
- $TOP/front_asm/asm.ml\
- $TOP/front_fenv/block.mli\
- $TOP/front_fenv/block.ml\
- $TOP/front_fenv/eqn.mli\
- $TOP/front_fenv/eqn.ml\
- $TOP/front_fenv/fenv.mli\
- $TOP/front_fenv/fenv.ml\
- $TOP/front_fenv/metrics.mli\
- $TOP/front_fenv/metrics.ml\
- $TOP/front_fenv/rtleqn.mli\
- $TOP/front_fenv/rtleqn.ml\
+ $TOP/ir/asm.mli\
+ $TOP/ir/asm.ml\
+ \
+ $TOP/ir/block.mli\
+ $TOP/ir/block.ml\
+ $TOP/ir/eqn.mli\
+ $TOP/ir/eqn.ml\
+ $TOP/ir/fenv.mli\
+ $TOP/ir/fenv.ml\
+ $TOP/ir/metrics.mli\
+ $TOP/ir/metrics.ml\
+ $TOP/ir/rtleqn.mli\
+ $TOP/ir/rtleqn.ml\
+ \
  $TOP/front_cfg/cfg.mli\
  $TOP/front_cfg/cfg.ml\
  $TOP/front_cfg/cfgx.mli\
@@ -119,8 +122,8 @@ SRC_VIEWS= \
  $TOP/front_target/box.ml\
  $TOP/front_target/float.mli\
  $TOP/front_target/float.ml\
- $TOP/front_target/space.mli\
- $TOP/front_target/space.ml\
+ $TOP/ir/space.mli\
+ $TOP/ir/space.ml\
  $TOP/front_target/target.mli\
  $TOP/front_target/target.ml\
  $TOP/front_zipcfg/avail.mli\
@@ -157,8 +160,8 @@ SRC_VIEWS= \
  $TOP/front_ir/rewrite.ml\
  $TOP/front_ir/runtimedata.mli\
  $TOP/front_ir/runtimedata.ml\
- $TOP/front_ir/talloc.mli\
- $TOP/front_ir/talloc.ml\
+ $TOP/ir/talloc.mli\
+ $TOP/ir/talloc.ml\
  $TOP/assembler/astasm.mli\
  $TOP/assembler/astasm.ml\
  $TOP/assembler/cfgutil.mli\

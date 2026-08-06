@@ -3,4 +3,4 @@
  (wrapped false)
  (libraries
   cmm_commons2 cmm_commons3 cmm_error cmm_parsing cmm_h_asdl
-  cmm_front_rtl cmm_front_fenv cmm_front_nelab cmm_front_cfg))
+  cmm_ir cmm_front_nelab cmm_front_cfg))

@@ -1,5 +1,5 @@
 (*s: front_rtl/types.mli *)
-(*s: types.mli *)
+(*s: types.mli content *)
 (*s: exported type definitions(types.nw) *)
 (*s: definition of type [[size]] *)
 type key  = int
@@ -37,5 +37,5 @@ val largest_key : tyscheme -> key
 (*e: abbrevs *)
 val to_string     : ty -> string
 val scheme_string : tyscheme -> string
-(*e: types.mli *)
+(*e: types.mli content *)
 (*e: front_rtl/types.mli *)

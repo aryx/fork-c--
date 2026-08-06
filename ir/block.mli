@@ -1,15 +1,15 @@
 (*s: front_fenv/block.mli *)
-(*s: block.mli *)
+(*s: block.mli content *)
 type t
 
 val base:           t -> Rtl.exp
 val size:           t -> int
 val alignment:      t -> int
 val constraints:    t -> Rtleqn.t list
-(*x: block.mli *)
+(*x: block.mli content *)
 val at:                 base:Rtl.exp -> size:int -> alignment:int -> t
 val with_constraint:    t -> Rtleqn.t -> t
-(*x: block.mli *)
+(*x: block.mli content *)
 val relative  : Rtl.exp -> string -> (base:Rtl.exp  -> 'a) -> 'a
   (* construct address at unknown offset and call function *)
 val srelative : Rtl.exp -> string -> (start:Rtl.exp -> 'a) -> 'a
@@ -17,16 +17,16 @@ val srelative : Rtl.exp -> string -> (start:Rtl.exp -> 'a) -> 'a
 
 (* pad: ugly *)
 val _empty_vfp_hook: (Rtl.width -> t) ref
-(*x: block.mli *)
+(*x: block.mli content *)
 exception OverlapHigh
 type placement      = High | Low
 val cathl:          t -> t -> t
 val overlap:        placement -> t -> t -> t   (* OverlapHigh *)
-(*x: block.mli *)
+(*x: block.mli content *)
 val adjust:         t -> t                  (* size is multiple of alignment *)
 val cathl_list:     Rtl.width -> t list -> t
 val overlap_list:   Rtl.width -> placement -> t list -> t
-(*x: block.mli *)
+(*x: block.mli content *)
 module Lua: sig
     val relative:   t -> string -> int (*size*) -> int (* align *) -> t
     (* observer *)
@@ -41,5 +41,5 @@ module Lua: sig
 
     val eq : t -> t -> bool
 end
-(*e: block.mli *)
+(*e: block.mli content *)
 (*e: front_fenv/block.mli *)

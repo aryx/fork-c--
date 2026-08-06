@@ -7488,11 +7488,11 @@ string16    :   UNICODE LPAREN STR RPAREN      { $3 }
 
 \section{[[front_rtl/register.nw]]}
 <<front_rtl/register.ml>>=
-<<register.ml>>
+<<register.ml content>>
 @
 
 <<front_rtl/register.mli>>=
-<<register.mli>>
+<<register.mli content>>
 @
 
 %%
@@ -7565,19 +7565,19 @@ end
 @
 %%We can ask the width of a register.
 %%We also provide safe comparisons.
-<<register.mli>>=
+<<register.mli content>>=
 <<exported types(register.nw)>>
 val width   : t -> int
 val eq      : t -> t -> bool
 val compare : t -> t -> int
 @ 
 %%We can also query extended registers.
-<<register.mli>>=
+<<register.mli content>>=
 val widthx : x -> int
 val eqx    : x -> x -> bool
 @ 
 %%We have two kinds of sets.
-<<register.mli>>=
+<<register.mli content>>=
 module SetX: SETX  with type elt = x
 module MapX: Map.S with type key = x
 module Set:  SETX  with type elt = t
@@ -7587,7 +7587,7 @@ module Map:  Map.S with type key = t
 %%type [[t]] by returning the register or the register from which we are taking a slice,
 %%as appropriate.
 %%We can also convert between different types of sets.
-<<register.mli>>=
+<<register.mli content>>=
 val promote_x     : x -> t
 val rset_to_rxset : Set.t  -> SetX.t
 val promote_rxset : SetX.t -> Set.t
@@ -7596,11 +7596,11 @@ val promote_rxset : SetX.t -> Set.t
 %%[[reg_int_map]] maps a list of $n$ integers into the numbers $[0..n-1]$, in
 %%alphanumeric order (by space, then index).
 %%Additionally, we return the number of registers in the first element of the pair.
-<<register.mli>>=
+<<register.mli content>>=
 val reg_int_map : t list -> int * int Map.t
 @ 
 %%We need to check whether one register contains another.
-<<register.mli>>=
+<<register.mli content>>=
 val contains : outer:x -> inner:x -> bool
 @
 %%Registers are exported to Lua as a new \emph{userdata} type.
@@ -7624,7 +7624,7 @@ end
 %%in an earlier version of code that could safely use the polymorphic
 %%[[compare]], 
 %%a monomorphic version improved compile time by over~10\%.
-<<register.ml>>=
+<<register.ml content>>=
 <<exported types(register.nw)>>
 module Compare = struct
     type t = reg 
@@ -7664,7 +7664,7 @@ module CompareX = struct
 end
 @ 
 %%
-<<register.ml>>=
+<<register.ml content>>=
 module SetX = struct
   module S = Set.Make(CompareX)
   include S
@@ -7691,11 +7691,11 @@ module Set = struct
 end
 @ 
 %%
-<<register.ml>>=
+<<register.ml content>>=
 module MapX = Map.Make(CompareX)
 module Map  = Map.Make(Compare)
 @
-<<register.ml>>=
+<<register.ml content>>=
 let promote_x = function Reg r | Slice (_, _, r) -> r
 let rset_to_rxset set = Set.fold (fun r rst -> SetX.add (Reg r) rst) set SetX.empty
 let promote_rxset set =
@@ -7703,7 +7703,7 @@ let promote_rxset set =
             set Set.empty
 @
 %%Creating the integer map is rather simple.
-<<register.ml>>=
+<<register.ml content>>=
 let reg_int_map regs =
   let cmp ((s1,_,_),i1,_) ((s2,_,_),i2,_) =
     match comparec s1 s2 with 0 -> comparei i1 i2 | n -> n in
@@ -7788,7 +7788,7 @@ function Register.range(r1, r2)
 end
 @ 
 %%
-<<register.ml>>=
+<<register.ml content>>=
 let width ((_, _, ms), _, c) = Cell.to_width ms c
 let widthx = function
   | Reg r -> width r
@@ -7804,7 +7804,7 @@ let rec eqx x x' = match x, x' with
 %%we will go to their house and spit in their food.
 %%If nobody does such a bad thing, a slice contains a register if and
 %%only if the slice is the whole register.
-<<register.ml>>=
+<<register.ml content>>=
 let contains ~outer ~inner = match outer, inner with
 | Reg ((s, _, _), i, C c), Reg ((s', _, _), i', C c') ->
     s =<= s' && i' >= i && i' + c' <= i + c
@@ -7821,11 +7821,11 @@ let contains ~outer ~inner = match outer, inner with
 @ 
 \section{[[front_rtl/reloc.nw]]}
 <<front_rtl/reloc.ml>>=
-<<reloc.ml>>
+<<reloc.ml content>>
 @
 
 <<front_rtl/reloc.mli>>=
-<<reloc.mli>>
+<<reloc.mli content>>
 @
 
 %%
@@ -7845,7 +7845,7 @@ let contains ~outer ~inner = match outer, inner with
 %%expression, which might conceivably undergo a PIC transformation.
 %%For that reason, to make a relocatable address from a symbol, it is
 %%necessary to supply a suitable function.
-<<reloc.mli>>=
+<<reloc.mli content>>=
 type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
 
 type exp = Pos of symbol * Rtl.width | Neg of symbol * Rtl.width
@@ -7876,7 +7876,7 @@ val as_simple : t -> Symbol.t option * Bits.bits
 %%% ------------------------------------------------------------------ 
 %%
 %%No known need for efficiency here.
-<<reloc.ml>>=
+<<reloc.ml content>>=
 open Nopoly
 
 type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
@@ -7898,7 +7898,7 @@ let fold ~const ~sym ~add ~sub (ss, c) =
   | _                                    -> List.fold_left extend (const c) ss
 @
 %$
-<<reloc.ml>>=
+<<reloc.ml content>>=
 let width (_, b) = Bits.width b
 let if_bare = function ([], b) -> Some b | (_::_, _) -> None
 let as_simple a =
@@ -7917,11 +7917,11 @@ let as_simple a =
 @ 
 \section{[[front_rtl/rtl.nw]]}
 <<front_rtl/rtl.ml>>=
-<<rtl.ml>>
+<<rtl.ml content>>
 @
 
 <<front_rtl/rtl.mli>>=
-<<rtl.mli>>
+<<rtl.mli content>>
 @
 
 %%% vim: ts=8 et sw=4: 
@@ -7951,7 +7951,7 @@ let as_simple a =
 %%share \emph{common} types.  The public part includes function that
 %%converts public values into private values and thus makes their details
 %%accessible. 
-<<rtl.mli>>=
+<<rtl.mli content>>=
 <<definitions of exported, exposed types>>
 
 module Private: sig
@@ -7963,7 +7963,7 @@ end
 %%A value can be converted from public to private view and vice versa.
 %%Module [[Dn]] provides conversion from public to private view, [[Up]]
 %%from private to public.
-<<rtl.mli>>=
+<<rtl.mli content>>=
 module Dn: sig 
     <<DN>>
 end
@@ -8252,7 +8252,7 @@ type rtl        = Rtl of guarded list
 %%definitions to obtain the implementation.  The same is true for common
 %%data types. 
 %%
-<<rtl.ml>>=
+<<rtl.ml content>>=
 <<definitions of exported, exposed types>>
 
 module Private = struct
@@ -8453,11 +8453,11 @@ let const c     = Const c
 @
 \section{[[front_rtl/rtldebug.nw]]}
 <<front_rtl/rtldebug.ml>>=
-<<rtldebug.ml>>
+<<rtldebug.ml content>>
 @
 
 <<front_rtl/rtldebug.mli>>=
-<<rtldebug.mli>>
+<<rtldebug.mli content>>
 @
 
 %%% vim: ts=8 sw=4 et: Vi gets the first post!
@@ -8468,7 +8468,7 @@ let const c     = Const c
 \section{Functions for Debugging RTLs}
 %%% ------------------------------------------------------------------ 
 %%
-<<rtldebug.mli>>=
+<<rtldebug.mli content>>=
 exception TypeCheck of Rtl.rtl
 val typecheck:     Rtl.rtl -> unit      (* raises TypeCheck *)
 @
@@ -8477,7 +8477,7 @@ val typecheck:     Rtl.rtl -> unit      (* raises TypeCheck *)
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 %%
-<<rtldebug.ml>>=
+<<rtldebug.ml content>>=
 open Nopoly
 
 module RP = Rtl.Private
@@ -8536,11 +8536,11 @@ let typecheck (r:Rtl.rtl) =
 @
 \section{[[front_rtl/rtlop.nw]]}
 <<front_rtl/rtlop.ml>>=
-<<rtlop.ml>>
+<<rtlop.ml content>>
 @
 
 <<front_rtl/rtlop.mli>>=
-<<rtlop.mli>>
+<<rtlop.mli content>>
 @
 
 %%
@@ -8572,7 +8572,7 @@ let typecheck (r:Rtl.rtl) =
 %%To name machine-dependent operators, each back end should pick a
 %%unique prefix, e.g., [[x86_]].
 %%It is a checked run-time error to register an operator twice.
-<<rtlop.mli>>=
+<<rtlop.mli content>>=
 val add_operator : name:string -> result_is_float:bool -> Types.tyscheme -> unit
 @
 %%\paragraph{Extracting type information}
@@ -8588,7 +8588,7 @@ val add_operator : name:string -> result_is_float:bool -> Types.tyscheme -> unit
 %%The [[fold]] function enables one to visit all the operators, and
 %%[[print_shapes]] was useful once as a guide to hand-writing a generic
 %%code expander (see module [[Opshape]] for more information on shapes).
-<<rtlop.mli>>=
+<<rtlop.mli content>>=
 val mono : Rtl.opr -> Types.monotype      (* Not_found *)
 val has_floating_result : Rtl.opr -> bool
 val fold : (string -> Types.tyscheme -> 'a -> 'a) -> 'a -> 'a
@@ -8596,7 +8596,7 @@ val print_shapes : unit -> unit
 @ 
 %%We also provide, outside of the [[Types]] submodule, the ability to
 %%enumerate the names of all the operators.
-<<rtlop.mli>>=
+<<rtlop.mli content>>=
 val opnames : unit -> string list  (* names of all source-language operators *)
 @ 
 %%\paragraph{Translation from surface {\PAL} into RTL operators}
@@ -8608,7 +8608,7 @@ val opnames : unit -> string list  (* names of all source-language operators *)
 %%into [[%sub]] when binary but [[%neg]] when unary.
 %%Each translation returns the type of the operator's result and
 %%an {\rtl} operator that implements the {\PAL} operator.
-<<rtlop.mli>>=
+<<rtlop.mli content>>=
 module Translate : sig
   val prefix : string -> Types.ty list -> Types.ty * Rtl.opr (*ErrorExn*)
   val binary : string -> Types.ty list -> Types.ty * Rtl.opr (*ErrorExn*)
@@ -8619,7 +8619,7 @@ end
 %%
 %%Calling [[Emit.creators]] emits an implementation of the functions in
 %%[[Rewrite.Ops]].   Handy.
-<<rtlop.mli>>=
+<<rtlop.mli content>>=
 module Emit : sig
   val creators : unit -> unit
 end
@@ -8628,7 +8628,7 @@ end
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 %%
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 module T = Types        (* save external Types module here *)
 let (-->) = T.proc 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
@@ -8647,7 +8647,7 @@ let impossf fmt = Printf.kprintf Impossible.impossible fmt
 %%the result have the same width. If the type variable of the result is
 %%not identical to one of the arguments, the operator is polymorphic in
 %%its return size. 
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 let predefined = 
   (* the four values below characterize the proper interpretation of a
      result, but the only information we actually use is a Boolean
@@ -8750,11 +8750,11 @@ let predefined =
   ] 
 @ 
 %%
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 let optypes  = ref (Strutil.assoc2map (List.map (fun (o, _, t) -> (o, t)) predefined))
 let opfloats = ref (Strutil.assoc2map (List.map (fun (o, f, _) -> (o, f)) predefined))
 @ 
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 let add_operator ~name:o ~result_is_float:f t =
   if Strutil.Map.mem o (!optypes) then
     impossf "registered a duplicate RTL operator %%%s" o;
@@ -8762,7 +8762,7 @@ let add_operator ~name:o ~result_is_float:f t =
   opfloats := Strutil.Map.add o f (!opfloats)
 @ 
 %%We once printed operators' signatures.
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 let print_shapes () = 
   Strutil.Map.iter (fun o t ->
     Printf.printf "%16s : %s\n" o (Types.scheme_string t)) (!optypes)
@@ -8770,7 +8770,7 @@ let print_shapes () =
 %%Some operators are not visible.
 %%An operator is invisible if it is for internal use only or if it has
 %%been expunged from the {\PAL} specification.
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 let visible = function
   | "bitExtract" | "bitInsert" | "bitTransfer" | "f2f_implicit_round" -> false
   | "fcmp" | "float_lt" | "float_eq" | "float_gt" | "unordered" -> false (*expunged*)
@@ -8781,7 +8781,7 @@ let fold f z =
 
 let opnames () = fold (fun o _ os -> o :: os) []
 @ 
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 let findopname name t =
   try Strutil.Map.find name t
   with Not_found ->
@@ -8818,7 +8818,7 @@ let has_floating_result op = findop op (!opfloats)
 %%If an operator name has a numerical component, it denotes the size of
 %%the result. Such a size always becomes the last element in the width
 %%list of an operator. 
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 module Translate = struct
   let prefix opname argtys =
     try 
@@ -8835,7 +8835,7 @@ module Translate = struct
 %%Infix and prefix symbols are stored in tables.
 %%Nothing should go wrong  in lookup because the only symbols that make
 %%it this far should have been blessed by the parser.
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
   let binops = Strutil.assoc2map 
       [  "+"      , "add"
       ;  "-"      , "sub"
@@ -8870,7 +8870,7 @@ module Translate = struct
     with Not_found -> Impossible.impossible ("unknown unary symbolic operator "^op)
 end
 @        
-<<rtlop.ml>>=
+<<rtlop.ml content>>=
 let ws = ["w"; "w'"; "w3"; "w4"; "w5"]
 let args = ["x"; "y"; "z"; "u"; "v"]
 
@@ -8907,11 +8907,11 @@ end
 @
 \section{[[front_rtl/rtlutil.nw]]}
 <<front_rtl/rtlutil.ml>>=
-<<rtlutil.ml>>
+<<rtlutil.ml content>>
 @
 
 <<front_rtl/rtlutil.mli>>=
-<<rtlutil.mli>>
+<<rtlutil.mli content>>
 @
 
 %%
@@ -8927,7 +8927,7 @@ end
 \subsection{Important types}
 %%To avoid circularity, this type is defined here, but it really goes in
 %%module [[Automaton]].
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 type aloc = 
     { fetch  : Rtl.width -> Rtl.exp
     ; store  : Rtl.exp -> Rtl.width -> Rtl.rtl
@@ -8938,7 +8938,7 @@ type aloc =
 %%These functions reassociate constants.
 %%It can be mildly useful to partially apply them to a width.
 %%N.B. [[addk x 0 === x]] always.
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 val add  : Rtl.width -> Rtl.exp -> Rtl.exp -> Rtl.exp
 val addk : Rtl.width -> Rtl.exp -> int     -> Rtl.exp
 @ 
@@ -8946,18 +8946,18 @@ val addk : Rtl.width -> Rtl.exp -> int     -> Rtl.exp
 %%Although we gain some convenience,
 %%we lose some redundancy; use these functions only where the width is
 %%not readily available.
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 val fetch : Rtl.loc -> Rtl.exp
 val store : Rtl.loc -> Rtl.exp -> Rtl.rtl
 @ 
 %%For convenience, conversion of a relocatable address back to an expression. 
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 val reloc : Reloc.t -> Rtl.width -> Rtl.exp
 @ 
 %%It's useful to check and see if a location is a hardware register.
 %%It is a checked run-time error to call [[to_hardware l]] unless
 %%[[is_hardware l]].
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 val is_hardware : Rtl.Private.loc -> bool
 val to_hardware : Rtl.Private.loc -> Register.x
 @ 
@@ -8966,7 +8966,7 @@ val to_hardware : Rtl.Private.loc -> Register.x
 %%% ------------------------------------------------------------------ 
 %%Calling these functions avoids polymorphic
 %%equality and comparison, which could fault at run time by comparing a function.
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module Eq : sig
   val space : Rtl.space         -> Rtl.space         -> bool
   val const : Rtl.Private.const -> Rtl.Private.const -> bool
@@ -8989,7 +8989,7 @@ end
 %%Locations and non-boolean expressions have a \emph{width} that can be
 %%observed.  It is a checked run-time error to pass a boolean expression
 %%to [[exp]].
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module Width: sig
     val loc:    Rtl.loc -> int
     val exp:    Rtl.exp -> int
@@ -9003,7 +9003,7 @@ end
 %%
 %%The form of an {\rtl} expression tells whether it is a compile-time
 %%constant, link-time constant, or run-time expression.
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module Time: sig
     val compile:    Rtl.exp -> bool (* true, iff compile-time const *)
     val link:       Rtl.exp -> bool (* true, off compile-time or link-time *)
@@ -9031,7 +9031,7 @@ end
 %%    should imply this. We need another fold over memory locations that
 %%    reports aliasing informations.
 %%\end{quote}
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module ReadWrite: sig
     type 'a observert = Register.t -> 'a -> 'a
     type 'a observerx = Register.x -> 'a -> 'a
@@ -9041,7 +9041,7 @@ module ReadWrite: sig
     val sets_promote: Rtl.rtl -> (Register.Set.t * Register.Set.t)
 end
 @ 
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module ReadWriteKill: sig
     type 'a observert = Register.t -> 'a -> 'a
     type 'a observerx = Register.x -> 'a -> 'a
@@ -9054,7 +9054,7 @@ module ReadWriteKill: sig
 end
 @ 
 %%Sometimes we need to know about all locations, not just registers.
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module FullReadWriteKill: sig
     type 'a observer = Rtl.Private.loc -> 'a -> 'a
     val fold: read: 'a observer -> write: 'a observer -> kill: 'a observer ->
@@ -9067,7 +9067,7 @@ end
 %%
 %%We can search for operators, locations, or constants satisfying a
 %%given predicate.
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module Exists : sig
   module Opr : sig
     val rtl : (Rtl.opr -> bool) -> Rtl.rtl -> bool
@@ -9082,7 +9082,7 @@ module Exists : sig
 end 
 @ 
 %%If a location satisfying a predicate exists, we can find it.
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module Find : sig
   module Loc : sig
     val exp : (Rtl.Private.loc -> bool) -> Rtl.Private.exp -> Rtl.Private.loc option
@@ -9091,7 +9091,7 @@ end
 @    
 %%We fold over locations of type [[Register.x]] or
 %%locations that appear under [[Fetch]].
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module Fold : sig
   module RegX : sig
     val loc : (Register.x -> 'a -> 'a) -> Rtl.loc -> 'a -> 'a
@@ -9115,7 +9115,7 @@ end
 %%We have a special case, [[store_uses']] to check whether a location
 %%may alias with the locations used in a store (either the rhs or the
 %%addressing expression).
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module MayAlias : sig
   val regs   : Register.t -> Register.t -> bool   
   val locs   : Rtl.loc -> Rtl.loc -> bool  (* useful to partially apply *)
@@ -9136,7 +9136,7 @@ end
 %%that contain [[Rtl.link]] values that later must be substituted for
 %%compile-time constants. Substitutions for locations, registers. and
 %%expressions are provided by the [[Subst]] sub-module:
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module Subst: sig
     val loc:        guard:(Rtl.Private.loc -> bool)               
                     -> map:(Rtl.Private.loc -> Rtl.Private.loc) 
@@ -9200,7 +9200,7 @@ end
 %%and source register pair if the input {\rtl} consists of a single,
 %%unconditional assignment with any number of unconditional kills. If the
 %%{\rtl} has a different form, [[singleAssignment]] returns [[None]].
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module RTLType: sig
     val singleAssignment:    Rtl.rtl -> (Register.t * Register.t) option
 end
@@ -9216,7 +9216,7 @@ end
 %%{\AST} a pretty printer (in module \module{ast}) translates it back to
 %%{\small ASCII} codes. This module provides a translation from an {\rtl}
 %%to a {\PAL} statement.
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module ToAST: sig
     type verbosity =    Low | High             (* default is High   *)
     val verbosity:      verbosity -> verbosity (* returns old value *)
@@ -9233,7 +9233,7 @@ end
 %%For debugging, we want to represent {\rtl}s as strings. The string
 %%representation is meant to be human-, but not necessarily
 %%machine-readable. 
-<<rtlutil.mli>>=
+<<rtlutil.mli content>>=
 module ToUnreadableString: sig
     val regx: Register.x -> string
     val reg:  Register.t -> string
@@ -9255,7 +9255,7 @@ end
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 %%
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 open Nopoly
 
 module R   = Rtl
@@ -9285,7 +9285,7 @@ let fetch l   = R.fetch l   (Width.loc l)
 let store l e = R.store l e (Width.loc l)
 @ 
 %%
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 <<define common ReadWriteKill Higher Order Fns>>
 
 module ReadWrite = struct
@@ -9320,7 +9320,7 @@ module Time = struct
     <<Time>>
 end    
 @ 
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 let rec is_hardware = function
   | RP.Reg r -> true
   | RP.Slice (w, lsb, r) -> is_hardware r
@@ -9340,7 +9340,7 @@ let rec to_hardware = function
 %%register pair if the input {\rtl} consists of a single, unconditional
 %%assignment with any number of unconditional kills. If the {\rtl} has a
 %%different form, [[singleAssignment]] returns [[None]].
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 module RTLType = struct
     <<RTLType>>
 end
@@ -10015,7 +10015,7 @@ let loc l = Pp.ppToString 66 (loc (Dn.loc l))
 %%\end{code}
 %%
 %%The following code is a little more careful:
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 module Down = Rtl.Dn
 module MayAlias = struct
   let regs ((s,_,_), i, R.C c) ((s',_,_), i', R.C c') =
@@ -10134,10 +10134,10 @@ end
 @ 
 %$
 %%
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 @ 
 \section{Reassociating arithemtic}
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 let add' w =
   let addop = R.opr "add" [w] in
   fun x y -> R.app addop [x; y]
@@ -10170,7 +10170,7 @@ let add w =
   | _ -> add x y
 @ 
 \subsection{Operator search}
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 module Exists = struct
   module Loc = struct
     let exp = MayAlias.has_loc
@@ -10222,7 +10222,7 @@ module Exists = struct
 end 
 @ 
 %%
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 module Find = struct
   module Loc = struct
     let exp f e =
@@ -10239,7 +10239,7 @@ module Find = struct
   end
 end 
 @ 
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 module Fold = struct
   module RegX = struct
     let loc f l z =
@@ -10275,7 +10275,7 @@ module Fold = struct
   end
 end 
 @ 
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 <<comparisons>>
 module Eq = struct
   let space  ((s:char), _, _)  ((s':char), _, _) = s =<= s'
@@ -10419,7 +10419,7 @@ module Compare = struct
   let rtl (RP.Rtl l) (RP.Rtl r) = Auxfuns.compare_list guarded l r
 end
 @ 
-<<rtlutil.ml>>=
+<<rtlutil.ml content>>=
 let reloc addr w =
   let const b = R.bits b w in
   let sym (s, mk) = mk s w in
@@ -10429,11 +10429,11 @@ let reloc addr w =
 @ 
 \section{[[front_rtl/symbol.nw]]}
 <<front_rtl/symbol.ml>>=
-<<symbol.ml>>
+<<symbol.ml content>>
 @
 
 <<front_rtl/symbol.mli>>=
-<<symbol.mli>>
+<<symbol.mli content>>
 @
 
 %%
@@ -10458,12 +10458,12 @@ end
 %%
 %%Since we only define types, interface and implementation are the same.
 %%
-<<symbol.mli>>=
+<<symbol.mli content>>=
 <<class type t>>
 val unmangled    : string -> t
 val with_mangler : (string -> string) -> string -> t
 @
-<<symbol.ml>>=
+<<symbol.ml content>>=
 <<class type t>>
 class unmangled (n:string) : t = 
 object(this)
@@ -10480,11 +10480,11 @@ let with_mangler m n = new mangled m n
 %%
 \section{[[front_rtl/types.nw]]}
 <<front_rtl/types.ml>>=
-<<types.ml>>
+<<types.ml content>>
 @
 
 <<front_rtl/types.mli>>=
-<<types.mli>>
+<<types.mli content>>
 @
 
 %%
@@ -10651,7 +10651,7 @@ val largest_key : tyscheme -> key
   (* return the largest key in the type scheme, or 0 if no keys *)
 @
 %%Finally, here we put together the interface file.
-<<types.mli>>=
+<<types.mli content>>=
 <<exported type definitions(types.nw)>>
 <<appl>>
 <<abbrevs>>
@@ -10674,7 +10674,7 @@ type size = Const  of int
           | Half   of key
 @ 
 %%
-<<types.ml>>=
+<<types.ml content>>=
 <<exported type definitions(types.nw)>>
  (* types from the interface definition *)
 @
@@ -10686,7 +10686,7 @@ type size = Const  of int
 %%problems with circular dependencies among types. What is the right
 %%formalism here? -- CL}
 %% 
-<<types.ml>>=
+<<types.ml content>>=
 module E = Error
 module S = Map.Make(struct type t=key let compare=compare end)
 
@@ -10725,7 +10725,7 @@ let dump env       = let f key data res = (key,data)::res in S.fold f env []
 %%
 %%\emph{Is it possible to define a general match function where [[Double]]
 %%can show up in all positions? -- CL}
-<<types.ml>>=
+<<types.ml content>>=
 let match' opname sigma expected actual =
   let to_string' = function
     | Bool -> to_string Bool
@@ -10758,7 +10758,7 @@ let match' opname sigma expected actual =
 %%and returns a [[ty]].  In the context of C-- this must always succeed,
 %%because primitive operators are predefined and only their type schemes
 %%are used for matching and substitution.
-<<types.ml>>=
+<<types.ml content>>=
 let subst opname sigma = function
     | Bool             -> Bool
     | Bits(Const x)    -> Bits x
@@ -10774,7 +10774,7 @@ let subst opname sigma = function
 %%values at the argument positions of a [[tyscheme]].  The resulting
 %%substitution is applied to the result [[size t]] to get the result
 %%[[ty]].
-<<types.ml>>=
+<<types.ml content>>=
 let wrongargs opname args' args =
   E.errorf "operator %s expected %d arguments, got %d"
     opname (List.length args') (List.length args)
@@ -10787,7 +10787,7 @@ let appl opname (args',r) args =
 %%The [[widthlist]] function takes the type of a primitive (a
 %%[[tyscheme]]) and a list of argument types and returns the sizes bound
 %%by the variables in the type scheme.
-<<types.ml>>=
+<<types.ml content>>=
 let widthlist opname (args',r) args =
   let sigma = try List.fold_left2 (match' opname) S.empty args' args with
               | Invalid_argument _ -> wrongargs opname args' args in
@@ -10796,7 +10796,7 @@ let widthlist opname (args',r) args =
 @
 %%The implementation of [[spilt]] uses regular expressions to split off
 %%a trailing number.
-<<types.ml>>=
+<<types.ml content>>=
 let rtlop = Str.regexp "^\\([A-Za-z0-9_]*[A-Za-z_]\\)\\([0-9]+\\)?$"
 
 let split op =
@@ -10815,7 +10815,7 @@ let split op =
 %%in the (zero based) width list instantiates [[Var]] $n+1$ in the
 %%[[tyscheme]]. It is a checked run-time error if [[tyscheme]] contains a
 %%variable [[Var]] $x$ where $x > |[[width]]|$. 
-<<types.ml>>=
+<<types.ml content>>=
 <<key size>>
 let instantiate ((args,ret):tyscheme) ~widths  =
   if List.length widths <> largest_key (args, ret) then
@@ -10836,7 +10836,7 @@ let instantiate ((args,ret):tyscheme) ~widths  =
   (List.map inst args, inst ret)
 @        
 %%The implementation of the abbreviations is trivial:
-<<types.ml>>=
+<<types.ml content>>=
 let fixbits x        = assert (x > 0); Bits(Const x)
 let var    x         = assert (x > 0); Bits(Var x)
 let double x         = assert (x > 0); Bits(Double x)
@@ -10853,7 +10853,7 @@ let largest_key (args, res) =
     | (Bits (Var n) | Bits (Double n) | Bits (Half n)) :: ws -> count (max k n) ws in
   count 0 (res :: args)
 @ 
-<<types.ml>>=
+<<types.ml content>>=
 let keyname = function
 | 1 -> "n"
 | 2 -> "m"
@@ -10879,14 +10879,15 @@ let scheme_string (args, result) =
 %******************************************************************************
 \chapter{[[front_asm]]}
 %******************************************************************************
+%NOW in ir/
 
 \section{[[front_asm/asm.nw]]}
 <<front_asm/asm.ml>>=
-<<asm.ml>>
+<<asm.ml content>>
 @
 
 <<front_asm/asm.mli>>=
-<<asm.mli>>
+<<asm.mli content>>
 @
 
 %%
@@ -10902,7 +10903,7 @@ let scheme_string (args, result) =
 %%compiler must be functorized over the different assemblers we have
 %%chosen to use a very polymorphic interface that uses Objective Caml's
 %%object system.
-<<asm.mli>>=
+<<asm.mli content>>=
 <<exported type definitions(asm.nw)>>
 
 val map : ('a -> 'b) -> 'b assembler -> 'a assembler
@@ -11028,7 +11029,7 @@ method emit: unit                       (* finalize *)
 %%method subsequently.
 %%
 %%
-<<asm.ml>>=
+<<asm.ml content>>=
 <<exported type definitions(asm.nw)>>
 
 class ['proc] mapped_asm f (asm : 'a assembler) : ['proc] assembler =
@@ -11065,7 +11066,7 @@ object
 end
 let map f asm = new mapped_asm f asm
 @ 
-<<asm.ml>>=
+<<asm.ml content>>=
 let reloc_string const =
   let sym (s, _) = s#mangled_text in
   let infix op a b = String.concat "" [a; " "; op; " "; b] in
@@ -11078,11 +11079,11 @@ let reloc_string const =
 
 \section{[[front_fenv/block.nw]]}
 <<front_fenv/block.ml>>=
-<<block.ml>>
+<<block.ml content>>
 @
 
 <<front_fenv/block.mli>>=
-<<block.mli>>
+<<block.mli content>>
 @
 
 %%% Please add grades for this module below. The line must start with % "%%".
@@ -11111,7 +11112,7 @@ let reloc_string const =
 %%additional constraints for the base address that result from block
 %%operations. All four properties can be observed.
 %%
-<<block.mli>>=
+<<block.mli content>>=
 type t
 
 val base:           t -> Rtl.exp
@@ -11126,7 +11127,7 @@ val constraints:    t -> Rtleqn.t list
 %%to mention them explicitly.  Having said that, [[with_constraint]] adds
 %%a constraint to an existing block.
 %%
-<<block.mli>>=
+<<block.mli content>>=
 val at:                 base:Rtl.exp -> size:int -> alignment:int -> t
 val with_constraint:    t -> Rtleqn.t -> t
 @
@@ -11143,7 +11144,7 @@ val with_constraint:    t -> Rtleqn.t -> t
 %%
 %%Function [[srelative]] is just like [[relative]], except that its
 %%argument uses a different label.  To hell with labels!
-<<block.mli>>=
+<<block.mli content>>=
 val relative  : Rtl.exp -> string -> (base:Rtl.exp  -> 'a) -> 'a
   (* construct address at unknown offset and call function *)
 val srelative : Rtl.exp -> string -> (start:Rtl.exp -> 'a) -> 'a
@@ -11159,7 +11160,7 @@ val _empty_vfp_hook: (Rtl.width -> t) ref
 %%life times are disjoint can be overlapped into one block where they
 %%share memory.
 %%
-<<block.mli>>=
+<<block.mli content>>=
 exception OverlapHigh
 type placement      = High | Low
 val cathl:          t -> t -> t
@@ -11185,7 +11186,7 @@ val overlap:        placement -> t -> t -> t   (* OverlapHigh *)
 %%functions take the width of an address expression as argument;
 %%if the list is empty, then an empty block is returned.
 %%
-<<block.mli>>=
+<<block.mli content>>=
 val adjust:         t -> t                  (* size is multiple of alignment *)
 val cathl_list:     Rtl.width -> t list -> t
 val overlap_list:   Rtl.width -> placement -> t list -> t
@@ -11199,7 +11200,7 @@ val overlap_list:   Rtl.width -> placement -> t list -> t
 %%compile-time constant derived from the string argument. The other two
 %%arguments provide size and alignment.
 %%
-<<block.mli>>=
+<<block.mli content>>=
 module Lua: sig
     val relative:   t -> string -> int (*size*) -> int (* align *) -> t
     (* observer *)
@@ -11218,7 +11219,7 @@ end
 %%
 \subsection{Implementation}
 %%
-<<block.ml>>=
+<<block.ml content>>=
 module C  = Rtleqn
 module RU = Rtlutil
 
@@ -11253,7 +11254,7 @@ let srelative anchor dbg f = relative anchor dbg (fun ~base -> f ~start:base)
 %%$n$-aligned. Function [[add]] adds an integer to an {\rtl} expression
 %%and returns an {\rtl} expression.
 %%
-<<block.ml>>=
+<<block.ml content>>=
 let align x n = Auxfuns.round_up_to ~multiple_of:n x
 let add exp i = RU.addk (RU.Width.exp exp) exp i
 @
@@ -11263,7 +11264,7 @@ let add exp i = RU.addk (RU.Width.exp exp) exp i
 %%[[empty]] provides an empty block addressed from the virtual frame
 %%pointer. 
 %%
-<<block.ml>>=
+<<block.ml content>>=
 let offset base name ptrwidth =
     RU.add ptrwidth base (Rtl.late (Idgen.offset name) ptrwidth)
 
@@ -11283,7 +11284,7 @@ let empty ptrwidth =
 %%block's alignment. The alignment of the resulting block is the maximum
 %%of the two incoming alignments.
 %%
-<<block.ml>>=
+<<block.ml content>>=
 let cathl hi lo =
     let size' = align (size lo) (alignment hi) in
         { base          = base lo
@@ -11297,7 +11298,7 @@ let cathl hi lo =
 %%Overlapping at the high is impossible if a precondition isn't met. We
 %%check it and raise [[OverlapHigh]] when it is violated.
 %%
-<<block.ml>>=
+<<block.ml content>>=
 type placement = High | Low
 exception OverlapHigh
 
@@ -11322,7 +11323,7 @@ let overlap place x y = match place with
 %%
 %%\paragraph{Convenience Functions}
 %%
-<<block.ml>>=
+<<block.ml content>>=
 let adjust t = { t with size = align (size t) (alignment t) }
 let cathl_list w = function
   | [] -> empty w
@@ -11340,7 +11341,7 @@ let overlap_list w p = function
 %%The Lua version of [[relative]] differs from the Caml version in that
 %%the anchor address is the base address of an existing block.
 %%
-<<block.ml>>=
+<<block.ml content>>=
 module Lua = struct 
     let size      = size 
     let alignment = alignment 
@@ -11367,11 +11368,11 @@ end
 %%
 \section{[[front_fenv/eqn.nw]]}
 <<front_fenv/eqn.ml>>=
-<<eqn.ml>>
+<<eqn.ml content>>
 @
 
 <<front_fenv/eqn.mli>>=
-<<eqn.mli>>
+<<eqn.mli content>>
 @
 
 %%% vim:ts=8 sw=4 et:
@@ -11537,7 +11538,7 @@ module type S = sig
 end
 @ 
 %%
-<<eqn.mli>>=
+<<eqn.mli content>>=
 <<EXP>>
 <<S(eqn.nw)>>
 module Make (E: EXP): S with type term = E.t
@@ -11554,7 +11555,7 @@ module Make (E: EXP): S with type term = E.t
 %%following holds: $t_i \prec t_j \Rightarrow i < j$. In addition, no term
 %%$t$ appears twice in a sum.
 %%
-<<eqn.ml>>=
+<<eqn.ml content>>=
 open Nopoly
 
 <<EXP>>
@@ -11915,11 +11916,11 @@ let _ = assert
 @ 
 \section{[[front_fenv/fenv.nw]]}
 <<front_fenv/fenv.ml>>=
-<<fenv.ml>>
+<<fenv.ml content>>
 @
 
 <<front_fenv/fenv.mli>>=
-<<fenv.mli>>
+<<fenv.mli content>>
 @
 
 %%% vim: ts=8 et sts=4 sw=4
@@ -12007,7 +12008,7 @@ end
 %%of [[info]] and [[partial]].  A clean environment ensures that all
 %%values are present and that they are good.
 %%
-<<fenv.mli>>=
+<<fenv.mli content>>=
 <<exposed types shared by clean and dirty environments>>
 (* pad: now put also those private types in mli *)
 <<private types shared by clean and dirty environments>>
@@ -12247,7 +12248,7 @@ and  ventry        = Srcmap.rgn * (denotation * Types.ty) info
 @ 
 %%For error messages, we provide a way of saying what kind of thing a
 %%symbol denotes.
-<<fenv.mli>>=
+<<fenv.mli content>>=
 val denotation's_category : denotation -> string
 @
 %%Bindings for types, which are also scoped, are much simpler. A
@@ -12526,7 +12527,7 @@ val symbol:   'p env' -> string -> Symbol.t
 %%is thus the generic functor [[Env]] which is described in the
 %%following section.
 %%
-<<fenv.ml>>=
+<<fenv.ml content>>=
 module E            = Error     (* handy abbreviations *)
 module T            = Types
 module Asm          = Asm    
@@ -12536,7 +12537,7 @@ module Asm          = Asm
 %%[[Dirty]].  Different [[Arg]] implementations are passed to functor
 %%[[Env]] to create [[Clean]] and [[Dirty]].
 %%
-<<fenv.ml>>=
+<<fenv.ml content>>=
 module type Arg = sig
     type 'a partial
     type 'a info
@@ -12575,7 +12576,7 @@ end
 %%implementation of this module.  The arguments to [[Env]] are
 %%implementations of [[Arg]].
 %%
-<<fenv.ml>>=
+<<fenv.ml content>>=
 <<exposed types shared by clean and dirty environments>>
 <<private types shared by clean and dirty environments>>
 <<exported signature [[Env]]>>
@@ -12584,7 +12585,7 @@ module Env (Arg: Arg) = struct
 end
 @ 
 %%
-<<fenv.ml>>=
+<<fenv.ml content>>=
 module Dirty = Env (struct
     type 'a partial = 'a option
     type 'a info    = 'a Error.error
@@ -12597,7 +12598,7 @@ module Dirty = Env (struct
 end)
 @ 
 %%
-<<fenv.ml>>=
+<<fenv.ml content>>=
 module Clean = Env (struct
     type 'a partial             = 'a 
     type 'a info                = 'a
@@ -12685,7 +12686,7 @@ and scope           = { mutable venv:   ventry Strutil.Map.t
 let error r map msg = E.errorRegionPrt (map,r) msg 
 @
 %%
-<<fenv.ml>>=
+<<fenv.ml content>>=
 let denotation's_category = function
   | Label (Proc  _) -> "procedure"
   | Label (Code  _) -> "code label"
@@ -13008,21 +13009,21 @@ let globals env = List.rev env.globals
 %%the use of patterns in most cases such that values must be copied
 %%explicitly.
 %%
-<<fenv.ml>>=
+<<fenv.ml content>>=
 let clean_env map =
     let copy key data map = match data with
     | pos, E.Ok den -> Strutil.Map.add key (pos, den) map
     | _,   E.Error  -> assert false in
     Strutil.Map.fold copy map Strutil.Map.empty      
 @ 
-<<fenv.ml>>=
+<<fenv.ml content>>=
 let clean_scope s =
     { Clean.tenv   = clean_env s.Dirty.tenv
     ; Clean.venv   = clean_env s.Dirty.venv
     ; Clean.rindex = s.Dirty.rindex
     }
 @ 
-<<fenv.ml>>=
+<<fenv.ml content>>=
 let clean env =
     { Clean.scopes    = List.map clean_scope env.Dirty.scopes
     ; Clean.srcmap    = env.Dirty.srcmap 
@@ -13036,11 +13037,11 @@ let clean env =
 @
 \section{[[front_fenv/metrics.nw]]}
 <<front_fenv/metrics.ml>>=
-<<metrics.ml>>
+<<metrics.ml content>>
 @
 
 <<front_fenv/metrics.mli>>=
-<<metrics.mli>>
+<<metrics.mli content>>
 @
 
 %%
@@ -13055,7 +13056,7 @@ let clean env =
 %%when elaborating a {\PAL} program or when bootstrapping a [[Target.t]].
 %%It also provides a consistency check that sprays error messages when
 %%things are not consistent. 
-<<metrics.mli>>=
+<<metrics.mli content>>=
 <<exposed types(metrics.nw)>>
 val default : t
 val of_ast  : 
@@ -13076,7 +13077,7 @@ type t = {
 }
 @
 \section{Implementation}
-<<metrics.ml>>=
+<<metrics.ml content>>=
 (*open Nopoly*)
 let (=*=) = (=)
 
@@ -13143,15 +13144,15 @@ let of_ast ~swap map =
   let n = Error.Ok None in
   metrics n n n n n n
 @ 
-<<metrics.ml>>=
+<<metrics.ml content>>=
 @
 \section{[[front_fenv/rtleqn.nw]]}
 <<front_fenv/rtleqn.ml>>=
-<<rtleqn.ml>>
+<<rtleqn.ml >>
 @
 
 <<front_fenv/rtleqn.mli>>=
-<<rtleqn.mli>>
+<<rtleqn.mli >>
 @
 
 %%% vim: ts=8 sw=4 et:
@@ -13170,7 +13171,7 @@ let of_ast ~swap map =
 %%constants.
 %%The equations themselves typically arise from constraints in the
 %%[[Block]] module.
-<<rtleqn.mli>>=
+<<rtleqn.mli >>=
 exception Can'tSolve
 
 type t              (* equation *)
@@ -13214,7 +13215,7 @@ val to_string : t -> string (* for debugging *)
 %%equation solver. The general idea is that complicated (and possibly
 %%non-linear) terms are treated as constant with respect to equation
 %%solving.
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 open Nopoly
 
 module Dn = Rtl.Dn
@@ -13231,7 +13232,7 @@ type solution =
 %%sum of terms.  
 %%A term is a constant, a variable, or one ([[Unit]]). An equation is
 %%a sum whose value is known to be zero.
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 type term =
     | Const of Rtl.exp
     | Var   of string
@@ -13241,7 +13242,7 @@ type sum = (int * term) list
 type t   = sum                  (* equation, sum == 0 *)
 @
 %%To aid debugging, we have a printable representation of terms. 
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 module ToString = struct
     let term = function
         | Const(exp) -> "(" ^ Rtlutil.ToString.exp exp ^ ")"
@@ -13266,7 +13267,7 @@ let to_string = ToString.t
 @
 %%Here are constructor functions for simple sums. We use them when we
 %%parse an {\rtl} expression into a sum.
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 let sym x   = [(1, Var x)]
 let int i   = if i = 0 then [] else [(i, Unit)]
 let const k = [(1, Const (Up.exp k))]
@@ -13278,7 +13279,7 @@ let sub x y = x @ List.map (fun (i,y) -> (-i,y)) y
 %%{\rtl} expression and create a sum representation for it. 
 %%Any expression we
 %%don't know how to handle becomes a constant.
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 let exp e = 
     let rec exp = function
     | RP.Const(RP.Bits(b))      -> int (Bits.S.to_int b)
@@ -13293,7 +13294,7 @@ let exp e =
 %%An equation is a sum whose value is zero. The [[equate]] function
 %%simply subtract both sides from each other to obtain a sum of value
 %%zero.
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 let equate e1 e2 = 
     let t  = sub (exp e1) (exp e2) in
     let () = if Debug.on "rtleqn" then
@@ -13311,7 +13312,7 @@ let () = Debug.register "rtleqn" "RTL equation solver"
 %%\item [[T.make_zero]]: adds a sum that is known to be zero to an
 %%       equation set.
 %%\end{itemize}
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 module T = struct
     type t = term
     let variable = function         (* identify variable *)
@@ -13335,7 +13336,7 @@ module Solver = Eqn.Make(T)         (* equation solver over terms *)
 %%The result as it is returned by the equation solver associates a variable
 %%with a sum. Since we need to return {\rtl} expressions, we have to
 %%unparse a sum into an expression. 
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 let rtl ~(width:int) (e:sum) = 
     let add    = Rtlutil.add width in
     let mult   = Rtl.opr "mul" [width] in 
@@ -13359,7 +13360,7 @@ let rtl ~(width:int) (e:sum) =
 %%Here we solve the equation system. We have a list of sums that we feed
 %%into the linear equation solver. Once we obtain the result, we translate
 %%it back to {\rtl}s. 
-<<rtleqn.ml>>=
+<<rtleqn.ml >>=
 let solve ~width sums =
     try
         let eqns   = List.fold_right Solver.make_zero sums Solver.empty in
@@ -20351,11 +20352,11 @@ let none = "none"
 @ 
 \section{[[front_target/space.nw]]}
 <<front_target/space.ml>>=
-<<space.ml>>
+<<space.ml >>
 @
 
 <<front_target/space.mli>>=
-<<space.mli>>
+<<space.mli >>
 @
 
 %%% vim: sw=4 ts=8 et:
@@ -20382,7 +20383,7 @@ let none = "none"
 %%
 %%The function [[checked]] asserts that its argument satisfies a few
 %%simple invariants, then returns that argument.
-<<space.mli>>=
+<<space.mli >>=
 <<definitions of exported types, including [[t]]>>
 val checked : t -> t
 <<definition of signature [[Standard]]>>
@@ -20523,7 +20524,7 @@ type location_set =
     }
 @ 
 %%We make it easy to build a simple predicate.
-<<space.mli>>=
+<<space.mli >>=
 val stands_for : char -> Register.aggregation -> Register.width -> (Register.t -> bool)
 @    
 %%
@@ -20532,14 +20533,14 @@ val stands_for : char -> Register.aggregation -> Register.width -> (Register.t -
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 %%
-<<space.ml>>=
+<<space.ml >>=
 open Nopoly
 
 <<definitions of exported types, including [[t]]>>
 <<definition of signature [[Standard]]>>
 @
 %%
-<<space.ml>>=
+<<space.ml >>=
 let indexwidth n =
   let rec wid = function
     | 0 -> 0
@@ -20567,7 +20568,7 @@ let stands_for s agg w =
 %%argument. Maybe we need to extend the argument signature for 64-bit
 %%architectures.
 %%
-<<space.ml>>=
+<<space.ml >>=
 module Standard(A:sig val width: int end) = struct
   type generator  = Rtl.aggregation -> Rtl.width list -> t
   type tgenerator = Rtl.aggregation -> Rtl.width      -> t
@@ -25171,11 +25172,11 @@ let summary ~what ~mk dirs =
 @ 
 \section{[[front_ir/call.nw]]}
 <<front_ir/call.ml>>=
-<<call.ml>>
+<<call.ml >>
 @
 
 <<front_ir/call.mli>>=
-<<call.mli>>
+<<call.mli >>
 @
 
 %%% vim: ts=8 sw=4 et sts=4
@@ -25299,7 +25300,7 @@ let summary ~what ~mk dirs =
 %%\end{itemize}
 %%
 \subsection{Interface}
-<<call.mli>>=
+<<call.mli >>=
 <<exported type definitions(call.nw)>>
 @ 
 <<exported type definitions(call.nw)>>=
@@ -25452,7 +25453,7 @@ type t = (* part of a calling convention *)
 %%to the amateur.  The [[postsp]] parameter is a bit tricky too.
 %%PROBLEM: [[autosp]] SEEMS TO BE RELEVANT ONLY FOR INCOMING CASE??
 %%NOT CLEAR.
-<<call.mli>>=
+<<call.mli >>=
 val outgoing :
      growth:Memalloc.growth -> sp:Rtl.loc -> mkauto:valpass ->
      autosp:(Automaton.result -> Rtl.exp) ->
@@ -25471,7 +25472,7 @@ type valpass = unit -> Automaton.t
 \subsection{Registration of Calling Conventions from Lua}
 %%We also now have some code to allow the registration of new calling conventions
 %%from Lua.
-<<call.mli>>=
+<<call.mli >>=
 type 'a tgt = ('a, (Rtl.exp -> Automaton.t), t) Target.t
 
 val register_cc : 
@@ -25484,7 +25485,7 @@ val get_cc : ('p, 'a, 'cc) Target.t -> string -> 'cc
 @
 %%
 %%We provide a general mechanism for analyzing calling convention automata.
-<<call.mli>>=
+<<call.mli >>=
 val dump_proc      : 'a tgt -> string -> types -> unit
 val dump_return    : 'a tgt -> string -> types -> unit
 val dump_cutto     : 'a tgt -> string -> types -> unit
@@ -25503,7 +25504,7 @@ val path_2_in_overflow : 'a tgt -> string -> unit
 %%The first returns a list of locations used to pass values;
 %%a value may occupy more than one location.
 %%The second prints this information in suitable diagnostic form.
-<<call.mli>>=
+<<call.mli >>=
 val run_cc_on_sig_and_return :
   (Automaton.cc_spec -> Automaton.stage) -> 'a tgt -> string -> types -> string list list
 val run_cc_on_sig_and_print :
@@ -25513,7 +25514,7 @@ val run_cc_on_sig_and_print :
 \subsection{Implementation}
 %%
 %%A consummation most devoutly to be wished.
-<<call.ml>>=
+<<call.ml >>=
 module A  = Automaton
 module Dn = Rtl.Dn
 module R  = Rtl
@@ -25524,7 +25525,7 @@ module Up = Rtl.Up
 <<exported type definitions(call.nw)>>
 @ 
 %%
-<<call.ml>>=
+<<call.ml >>=
 let ignore r s = s
 
 let too_small growth sp target =
@@ -25576,7 +25577,7 @@ let incoming ~growth ~sp ~mkauto ~autosp ~postsp ~insp types formals =
 @
 %%
 %%Some utilities.  DOCO HERE.
-<<call.ml>>=
+<<call.ml >>=
 type 'a tgt = ('a, (Rtl.exp -> Automaton.t), t) Target.t
 
 let add_cc specs name ~call ~results ~cutto = 
@@ -25621,7 +25622,7 @@ let summary_cutto  x =
 %%
 %%And now we generate signatures that cause 1 and 2 parameters, respectively,
 %%to end up in an overflow block.
-<<call.ml>>=
+<<call.ml >>=
 let findpath_1_in_overflow autofun target ccname =
   let wordsize  = target.Target.wordsize  in
   let automaton = autofun (get_ccspec target ccname) in
@@ -25676,7 +25677,7 @@ let run_cc_on_sig_and_print autofun target ccname tys =
 %%THIS STUFF IS PARTIALLY MIGRATED TO \module{Callspec}.
 %%CLONED AND MODIFIED BROKEN WINDOWS!  HOW EMBARRASSING\ldots
 %%
-<<call.ml>>=
+<<call.ml >>=
 <<specification for a calling convention>>
 @ 
 %%
@@ -25940,11 +25941,11 @@ let functions ops =
 @
 \section{[[front_ir/contn.nw]]}
 <<front_ir/contn.ml>>=
-<<contn.ml>>
+<<contn.ml >>
 @
 
 <<front_ir/contn.mli>>=
-<<contn.mli>>
+<<contn.mli >>
 @
 
 %%
@@ -25986,7 +25987,7 @@ let functions ops =
 %%stack-pointer location and the address of the continuation code to
 %%[[init_code]]. The call returns a list of instructions that perform the
 %%initialization of the block.
-<<contn.mli>>=
+<<contn.mli >>=
 type t
 
 val init_code     : t -> Mflow.cut_args -> Rtl.rtl
@@ -26002,7 +26003,7 @@ val with_overflow : ('a, 'b, 'c) Target.t -> overflow:Block.t -> t
 %%The [[get_contn]] function takes pointers to a pc * sp pair
 %%from a continuation and returns a pointer to the continuation.
 %%
-<<contn.mli>>=
+<<contn.mli >>=
 val cut_args    : ('a, 'b, 'c) Target.t -> contn:Rtl.exp -> Mflow.cut_args
 val ovblock_exp : Rtl.exp -> int -> int -> int -> Rtl.exp
 val get_contn   : Rtl.exp * Rtl.exp -> Rtl.exp
@@ -26012,7 +26013,7 @@ val get_contn   : Rtl.exp * Rtl.exp -> Rtl.exp
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 %%
-<<contn.ml>>=
+<<contn.ml >>=
 module M = Mflow
 module R = Rtl
 module T = Target
@@ -29148,11 +29149,11 @@ let capply to_temp to_warg opr = cappfun to_temp to_warg (of_opr opr)
 @ 
 \section{[[front_ir/preast2ir.nw]]}
 <<front_ir/preast2ir.ml>>=
-<<preast2ir.ml>>
+<<preast2ir.ml >>
 @
 
 <<front_ir/preast2ir.mli>>=
-<<preast2ir.mli>>
+<<preast2ir.mli >>
 @
 
 %%% vim: ts=8 sw=4 et sts=4
@@ -29167,22 +29168,22 @@ and basic_proc = (Automaton.t, unit, Call.t, tgt) Proc.t
 type proc = Zipcfg.graph * basic_proc
 type old_proc = (Automaton.t, Rtl.rtl Cfgx.M.cfg, Call.t, tgt) Proc.t
 @
-<<preast2ir.mli>>=
+<<preast2ir.mli >>=
 <<type defs>>
 val tgt : basic_proc -> (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
 @
 %%
-<<preast2ir.ml>>=
+<<preast2ir.ml >>=
 <<type defs>>
 let tgt {Proc.target = T t} = t
 @ 
 \section{[[front_ir/proc.nw]]}
 <<front_ir/proc.ml>>=
-<<proc.ml>>
+<<proc.ml >>
 @
 
 <<front_ir/proc.mli>>=
-<<proc.mli>>
+<<proc.mli >>
 @
 
 %%
@@ -29281,11 +29282,11 @@ type ('automaton, 'cfg, 'cc, 'tgt) t =
 %%                               may require access to a procedure-specific environment.
 %%\end{itemize}
 %%
-<<proc.mli>>=
+<<proc.mli >>=
 <<type t(proc.nw)>>
 @ 
 %%
-<<proc.ml>>=
+<<proc.ml >>=
 <<type t(proc.nw)>>
 @
 \section{[[front_ir/rewrite.nw]]}
@@ -30445,11 +30446,11 @@ let emit_global_properties target (asm:'c Asm.assembler) =
 @ 
 \section{[[front_ir/talloc.nw]]}
 <<front_ir/talloc.ml>>=
-<<talloc.ml>>
+<<talloc.ml >>
 @
 
 <<front_ir/talloc.mli>>=
-<<talloc.mli>>
+<<talloc.mli >>
 @
 
 %%
@@ -30487,7 +30488,7 @@ let emit_global_properties target (asm:'c Asm.assembler) =
 %%space passed to [[Single.for_space]] must be a temporary space.
 %%Functions [[reg]] and [[loc]] provide different interfaces to the
 %%allocator.  It may be useful to partially apply [[reg]] to [[t]].
-<<talloc.mli>>=
+<<talloc.mli >>=
 module Single : sig
   type t       (* an allocator for one space -- a mutable type *)
 
@@ -30507,7 +30508,7 @@ end
 %%It may be useful to partially apply [[reg]] and [[loc]] to~[[t]] and a
 %%space.  More interfaces could be added.  It is a checked run-time error
 %%to ask for a space that is not a temporary space on the original list.
-<<talloc.mli>>=
+<<talloc.mli >>=
 module Multiple : sig
   type t       (* an allocator for multiple spaces -- a mutable type *)
 
@@ -30522,7 +30523,7 @@ end
 \subsection{Implementation}
 %%% ---------------------------------------------------------------- %
 %%
-<<talloc.ml>>=
+<<talloc.ml >>=
 open Nopoly
 
 module S = Space
@@ -30565,7 +30566,7 @@ let existsEq v =
   | h :: t -> h = v || exists t
   in exists
 @ 
-<<talloc.ml>>=
+<<talloc.ml >>=
 module Multiple = struct
   let fail c =
     prerr_string ("Space '" ^ Char.escaped c ^ "' is not a temporary space\n");

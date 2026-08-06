@@ -1,5 +1,5 @@
 (*s: front_ir/contn.ml *)
-(*s: contn.ml *)
+(*s: contn.ml  *)
 module M = Mflow
 module R = Rtl
 module T = Target
@@ -46,5 +46,5 @@ let cut_args t ~contn =
   {Mflow.new_pc=R.fetch pc w; Mflow.new_sp=R.fetch sp w}
 
 let get_contn (newpc, newsp) = newpc
-(*e: contn.ml *)
+(*e: contn.ml  *)
 (*e: front_ir/contn.ml *)

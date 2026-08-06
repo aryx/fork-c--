@@ -1,5 +1,5 @@
 (*s: front_fenv/block.ml *)
-(*s: block.ml *)
+(*s: block.ml content *)
 module C  = Rtleqn
 module RU = Rtlutil
 
@@ -27,10 +27,10 @@ let relative anchor dbg f =
   let w = RU.Width.exp anchor in
   f ~base:(RU.add w anchor (Rtl.late (Idgen.offset dbg) w))
 let srelative anchor dbg f = relative anchor dbg (fun ~base -> f ~start:base)
-(*x: block.ml *)
+(*x: block.ml content *)
 let align x n = Auxfuns.round_up_to ~multiple_of:n x
 let add exp i = RU.addk (RU.Width.exp exp) exp i
-(*x: block.ml *)
+(*x: block.ml content *)
 let offset base name ptrwidth =
     RU.add ptrwidth base (Rtl.late (Idgen.offset name) ptrwidth)
 
@@ -41,7 +41,7 @@ let empty ptrwidth =
     relative (Vfp.mk ptrwidth) "empty block" at ~size:0 ~alignment:1
   but it was bringing too many dependencies
 *)
-(*x: block.ml *)
+(*x: block.ml content *)
 let cathl hi lo =
     let size' = align (size lo) (alignment hi) in
         { base          = base lo
@@ -50,7 +50,7 @@ let cathl hi lo =
         ; constraints   = C.equate (add (base lo) size') (base hi)  
                           :: (constraints lo) @ (constraints hi) 
         }
-(*x: block.ml *)
+(*x: block.ml content *)
 type placement = High | Low
 exception OverlapHigh
 
@@ -71,7 +71,7 @@ let overlap place x y = match place with
                                    (add (base y) (size y))
                           :: (constraints x) @ (constraints y)
         }           
-(*x: block.ml *)
+(*x: block.ml content *)
 let adjust t = { t with size = align (size t) (alignment t) }
 let cathl_list w = function
   | [] -> empty w
@@ -79,7 +79,7 @@ let cathl_list w = function
 let overlap_list w p = function
   | [] -> empty w
   | b :: bs -> List.fold_left (overlap p) b bs
-(*x: block.ml *)
+(*x: block.ml content *)
 module Lua = struct 
     let size      = size 
     let alignment = alignment 
@@ -98,5 +98,5 @@ module Lua = struct
       Rtlutil.Eq.exp (Rtl.Dn.exp b1.base) (Rtl.Dn.exp b2.base) (* ignore constraints! *)
 
 end
-(*e: block.ml *)
+(*e: block.ml content *)
 (*e: front_fenv/block.ml *)

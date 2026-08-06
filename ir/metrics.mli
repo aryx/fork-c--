@@ -1,5 +1,5 @@
 (*s: front_fenv/metrics.mli *)
-(*s: metrics.mli *)
+(*s: metrics.mli content *)
 (*s: exposed types(metrics.nw) *)
 type t = {
   byteorder   : Rtl.aggregation ; (* big/little endian, id *)
@@ -14,5 +14,5 @@ val default : t
 val of_ast  : 
   swap:bool -> Srcmap.map -> (Ast.region * Ast.arch) list -> 
   t Error.error
-(*e: metrics.mli *)
+(*e: metrics.mli content *)
 (*e: front_fenv/metrics.mli *)

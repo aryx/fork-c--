@@ -1,5 +1,5 @@
 (*s: front_asm/asm.mli *)
-(*s: asm.mli *)
+(*s: asm.mli content *)
 (*s: exported type definitions(asm.nw) *)
 class type ['proc] assembler = object
     (*s: assembler methods *)
@@ -47,5 +47,5 @@ end
 val map : ('a -> 'b) -> 'b assembler -> 'a assembler
 val reloc_string : (Bits.bits -> string) -> Reloc.t -> string
      (* make string form of relocatable address using mangled text of symbols *)
-(*e: asm.mli *)
+(*e: asm.mli content *)
 (*e: front_asm/asm.mli *)

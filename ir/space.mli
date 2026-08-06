@@ -1,5 +1,5 @@
 (*s: front_target/space.mli *)
-(*s: space.mli *)
+(*s: space.mli  *)
 (*s: definitions of exported types, including [[t]] *)
 (*s: definition of type [[location_set]] *)
 type location_set =
@@ -58,7 +58,7 @@ end
 (*e: definition of signature [[Standard]] *)
 module Standard32 : Standard
 module Standard64 : Standard
-(*x: space.mli *)
+(*x: space.mli  *)
 val stands_for : char -> Register.aggregation -> Register.width -> (Register.t -> bool)
-(*e: space.mli *)
+(*e: space.mli  *)
 (*e: front_target/space.mli *)

@@ -1,21 +1,21 @@
 (*s: front_rtl/rtlutil.mli *)
-(*s: rtlutil.mli *)
+(*s: rtlutil.mli content *)
 type aloc = 
     { fetch  : Rtl.width -> Rtl.exp
     ; store  : Rtl.exp -> Rtl.width -> Rtl.rtl
     }
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 val add  : Rtl.width -> Rtl.exp -> Rtl.exp -> Rtl.exp
 val addk : Rtl.width -> Rtl.exp -> int     -> Rtl.exp
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 val fetch : Rtl.loc -> Rtl.exp
 val store : Rtl.loc -> Rtl.exp -> Rtl.rtl
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 val reloc : Reloc.t -> Rtl.width -> Rtl.exp
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 val is_hardware : Rtl.Private.loc -> bool
 val to_hardware : Rtl.Private.loc -> Register.x
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module Eq : sig
   val space : Rtl.space         -> Rtl.space         -> bool
   val const : Rtl.Private.const -> Rtl.Private.const -> bool
@@ -30,18 +30,18 @@ module Compare : sig
   val exp   : Rtl.Private.exp   -> Rtl.Private.exp   -> int
   val rtl   : Rtl.Private.rtl   -> Rtl.Private.rtl   -> int
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module Width: sig
     val loc:    Rtl.loc -> int
     val exp:    Rtl.exp -> int
     val exp':   Rtl.Private.exp -> int
 end 
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module Time: sig
     val compile:    Rtl.exp -> bool (* true, iff compile-time const *)
     val link:       Rtl.exp -> bool (* true, off compile-time or link-time *)
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module ReadWrite: sig
     type 'a observert = Register.t -> 'a -> 'a
     type 'a observerx = Register.x -> 'a -> 'a
@@ -50,7 +50,7 @@ module ReadWrite: sig
     val sets: Rtl.rtl -> (Register.SetX.t * Register.SetX.t)
     val sets_promote: Rtl.rtl -> (Register.Set.t * Register.Set.t)
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module ReadWriteKill: sig
     type 'a observert = Register.t -> 'a -> 'a
     type 'a observerx = Register.x -> 'a -> 'a
@@ -61,13 +61,13 @@ module ReadWriteKill: sig
     val sets: Rtl.rtl -> Register.SetX.t * Register.SetX.t * Register.SetX.t
     val sets_promote: Rtl.rtl -> Register.Set.t * Register.Set.t * Register.Set.t
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module FullReadWriteKill: sig
     type 'a observer = Rtl.Private.loc -> 'a -> 'a
     val fold: read: 'a observer -> write: 'a observer -> kill: 'a observer ->
                     Rtl.rtl -> 'a -> 'a
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module Exists : sig
   module Opr : sig
     val rtl : (Rtl.opr -> bool) -> Rtl.rtl -> bool
@@ -80,13 +80,13 @@ module Exists : sig
     val rtl : (Rtl.Private.const -> bool) -> Rtl.rtl -> bool
   end
 end 
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module Find : sig
   module Loc : sig
     val exp : (Rtl.Private.loc -> bool) -> Rtl.Private.exp -> Rtl.Private.loc option
   end
 end 
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module Fold : sig
   module RegX : sig
     val loc : (Register.x -> 'a -> 'a) -> Rtl.loc -> 'a -> 'a
@@ -95,7 +95,7 @@ module Fold : sig
     val rtl : (Rtl.Private.loc -> 'a -> 'a) -> Rtl.Private.rtl -> 'a -> 'a
   end
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module MayAlias : sig
   val regs   : Register.t -> Register.t -> bool   
   val locs   : Rtl.loc -> Rtl.loc -> bool  (* useful to partially apply *)
@@ -105,7 +105,7 @@ module MayAlias : sig
   val store_uses' :
         Rtl.Private.loc -> (Rtl.Private.loc * Rtl.Private.exp * int) -> bool
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module Subst: sig
     val loc:        guard:(Rtl.Private.loc -> bool)               
                     -> map:(Rtl.Private.loc -> Rtl.Private.loc) 
@@ -146,11 +146,11 @@ module Subst: sig
                     Rtl.Private.exp -> Rtl.Private.exp
     end
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module RTLType: sig
     val singleAssignment:    Rtl.rtl -> (Register.t * Register.t) option
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module ToAST: sig
     type verbosity =    Low | High             (* default is High   *)
     val verbosity:      verbosity -> verbosity (* returns old value *)
@@ -158,7 +158,7 @@ module ToAST: sig
     val expr:           Rtl.exp  -> Ast.expr 
     val rtl:            Rtl.rtl  -> Ast.stmt 
 end
-(*x: rtlutil.mli *)
+(*x: rtlutil.mli content *)
 module ToUnreadableString: sig
     val regx: Register.x -> string
     val reg:  Register.t -> string
@@ -174,5 +174,5 @@ module ToString: sig
     val loc: Rtl.loc -> string
     val const: Rtl.Private.const -> string
 end
-(*e: rtlutil.mli *)
+(*e: rtlutil.mli content *)
 (*e: front_rtl/rtlutil.mli *)

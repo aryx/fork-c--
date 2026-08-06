@@ -1,5 +1,5 @@
 (*s: front_ir/call.ml *)
-(*s: call.ml *)
+(*s: call.ml  *)
 module A  = Automaton
 module Dn = Rtl.Dn
 module R  = Rtl
@@ -82,7 +82,7 @@ type t = (* part of a calling convention *)
 (*x: exported type definitions(call.nw) *)
 type valpass = unit -> Automaton.t
 (*e: exported type definitions(call.nw) *)
-(*x: call.ml *)
+(*x: call.ml  *)
 let ignore r s = s
 
 let too_small growth sp target =
@@ -131,7 +131,7 @@ let incoming ~growth ~sp ~mkauto ~autosp ~postsp ~insp types formals =
     ; post_sp  = R.guard (ne sp postsp)               setsp
     ; pre_sp   = R.guard (too_small growth sp postsp) setsp
     }
-(*x: call.ml *)
+(*x: call.ml  *)
 type 'a tgt = ('a, (Rtl.exp -> Automaton.t), t) Target.t
 
 let add_cc specs name ~call ~results ~cutto = 
@@ -172,7 +172,7 @@ let summary_return x =
   dump (Automatongraph.summary ~what:"results")    (fun s -> s.A.results) x
 let summary_cutto  x =
   dump (Automatongraph.summary ~what:"cont parms") (fun s -> s.A.cutto) x
-(*x: call.ml *)
+(*x: call.ml  *)
 let findpath_1_in_overflow autofun target ccname =
   let wordsize  = target.Target.wordsize  in
   let automaton = autofun (get_ccspec target ccname) in
@@ -216,7 +216,7 @@ let run_cc_on_sig_and_print autofun target ccname tys =
   let print (w, k, a) ls =
     Printf.printf "\"%s\":%d@%d => { %s }\n" k w a (String.concat "," ls) in
   List.iter2 print tys locs
-(*x: call.ml *)
+(*x: call.ml  *)
 (*s: specification for a calling convention *)
 type call_t = t
 module type SPEC = sig
@@ -264,5 +264,5 @@ module type SPEC = sig
   val to_call : t -> call_t
 end
 (*e: specification for a calling convention *)
-(*e: call.ml *)
+(*e: call.ml  *)
 (*e: front_ir/call.ml *)

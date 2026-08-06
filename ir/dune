@@ -1,4 +1,4 @@
 (library
- (name cmm_front_rtl)
+ (name cmm_ir)
  (wrapped false)
  (libraries cmm_commons2 cmm_commons3 cmm_error cmm_parsing cmm_h_asdl))

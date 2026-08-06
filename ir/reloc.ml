@@ -1,5 +1,5 @@
 (*s: front_rtl/reloc.ml *)
-(*s: reloc.ml *)
+(*s: reloc.ml content *)
 open Nopoly
 
 type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
@@ -19,7 +19,7 @@ let fold ~const ~sym ~add ~sub (ss, c) =
   match ss with
   | Pos (s, w) :: ss when Bits.is_zero c -> List.fold_left extend (sym s)   ss
   | _                                    -> List.fold_left extend (const c) ss
-(*x: reloc.ml *)
+(*x: reloc.ml content *)
 let width (_, b) = Bits.width b
 let if_bare = function ([], b) -> Some b | (_::_, _) -> None
 let as_simple a =
@@ -35,5 +35,5 @@ let as_simple a =
   | None -> (s, Bits.Ops.sub b b')
   | Some _ -> Impossible.impossible "subtracted symbols in simple reloc" in
   fold ~const ~sym ~add ~sub a
-(*e: reloc.ml *)
+(*e: reloc.ml content *)
 (*e: front_rtl/reloc.ml *)

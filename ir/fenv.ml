@@ -1,9 +1,9 @@
 (*s: front_fenv/fenv.ml *)
-(*s: fenv.ml *)
+(*s: fenv.ml content *)
 module E            = Error     (* handy abbreviations *)
 module T            = Types
 module Asm          = Asm    
-(*x: fenv.ml *)
+(*x: fenv.ml content *)
 module type Arg = sig
     type 'a partial
     type 'a info
@@ -12,7 +12,7 @@ module type Arg = sig
     val asgood  : 'a info -> 'a option
     val bad     : unit -> 'a info
 end
-(*x: fenv.ml *)
+(*x: fenv.ml content *)
 (*s: exposed types shared by clean and dirty environments *)
 type regkind       = RReg  of string   (* hardware reg *)
                    | RKind of string   (* calling convention kind *)
@@ -363,7 +363,7 @@ module Env (Arg: Arg) = struct
  let globals env = List.rev env.globals
  (*e: body of functor [[Env]] *)
 end
-(*x: fenv.ml *)
+(*x: fenv.ml content *)
 module Dirty = Env (struct
     type 'a partial = 'a option
     type 'a info    = 'a Error.error
@@ -374,7 +374,7 @@ module Dirty = Env (struct
         | Error.Ok(x) -> Some x
         | Error.Error -> None
 end)
-(*x: fenv.ml *)
+(*x: fenv.ml content *)
 module Clean = Env (struct
     type 'a partial             = 'a 
     type 'a info                = 'a
@@ -383,7 +383,7 @@ module Clean = Env (struct
     let asgood x                = Some x
     let bad  x                  = assert false
 end)
-(*x: fenv.ml *)
+(*x: fenv.ml content *)
 let denotation's_category = function
   | Label (Proc  _) -> "procedure"
   | Label (Code  _) -> "code label"
@@ -393,19 +393,19 @@ let denotation's_category = function
   | Continuation _  -> "continuation"
   | Import (_, _)   -> "imported symbol"
   | Variable _      -> "register variable"
-(*x: fenv.ml *)
+(*x: fenv.ml content *)
 let clean_env map =
     let copy key data map = match data with
     | pos, E.Ok den -> Strutil.Map.add key (pos, den) map
     | _,   E.Error  -> assert false in
     Strutil.Map.fold copy map Strutil.Map.empty      
-(*x: fenv.ml *)
+(*x: fenv.ml content *)
 let clean_scope s =
     { Clean.tenv   = clean_env s.Dirty.tenv
     ; Clean.venv   = clean_env s.Dirty.venv
     ; Clean.rindex = s.Dirty.rindex
     }
-(*x: fenv.ml *)
+(*x: fenv.ml content *)
 let clean env =
     { Clean.scopes    = List.map clean_scope env.Dirty.scopes
     ; Clean.srcmap    = env.Dirty.srcmap 
@@ -416,5 +416,5 @@ let clean env =
     ; Clean.globals   = env.Dirty.globals
     ; Clean.extern    = env.Dirty.extern
     }
-(*e: fenv.ml *)
+(*e: fenv.ml content *)
 (*e: front_fenv/fenv.ml *)

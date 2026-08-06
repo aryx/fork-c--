@@ -1,5 +1,5 @@
 (*s: front_rtl/rtl.ml *)
-(*s: rtl.ml *)
+(*s: rtl.ml content *)
 (*s: definitions of exported, exposed types *)
 type aggregation = Register.aggregation = 
     | BigEndian
@@ -179,5 +179,5 @@ end
 
 module Convert = Dn (* deprecated, for backward compatibility *)
 module Revert  = Up (* deprecated, for backward compatibility *) 
-(*e: rtl.ml *)
+(*e: rtl.ml content *)
 (*e: front_rtl/rtl.ml *)

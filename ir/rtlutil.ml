@@ -1,5 +1,5 @@
 (*s: front_rtl/rtlutil.ml *)
-(*s: rtlutil.ml *)
+(*s: rtlutil.ml content *)
 open Nopoly
 
 module R   = Rtl
@@ -46,7 +46,7 @@ end
 
 let fetch l   = R.fetch l   (Width.loc l)
 let store l e = R.store l e (Width.loc l)
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 (*s: define common ReadWriteKill Higher Order Fns *)
 let fold handle_reg handle_slice handle_mem ~read ~write ~kill r z = 
   let rec rtl (z:'a) (RP.Rtl gs)  = List.fold_left guarded z gs
@@ -567,7 +567,7 @@ module Time = struct
         | _                   -> false
     (*e: Time *)
 end    
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 let rec is_hardware = function
   | RP.Reg r -> true
   | RP.Slice (w, lsb, r) -> is_hardware r
@@ -581,7 +581,7 @@ let rec to_hardware = function
       | Rg.Slice (w', lsb', r) -> Rg.Slice(w', lsb+lsb', r))
   | l -> Printf.kprintf Impossible.impossible
            "to_hardware given non-harware location %s" (ToString.location' l)
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 module RTLType = struct
     (*s: RTLType *)
     let singleAssignment rtl = 
@@ -598,7 +598,7 @@ module RTLType = struct
         | RP.Rtl(fst::rst) -> if List.for_all is_kill rst then is_move fst else None
     (*e: RTLType *)
 end
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 module Down = Rtl.Dn
 module MayAlias = struct
   let regs ((s,_,_), i, R.C c) ((s',_,_), i', R.C c') =
@@ -714,8 +714,8 @@ Printf.eprintf "--> comparing stack slots %s+%d and %s+%d\n" sym n sym' n';
   let store_uses' l (l', r', _) =
     exp' l r' || match l' with RP.Mem (_, _, e, _) -> exp' l e | _ -> false
 end
-(*x: rtlutil.ml *)
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
+(*x: rtlutil.ml content *)
 let add' w =
   let addop = R.opr "add" [w] in
   fun x y -> R.app addop [x; y]
@@ -746,7 +746,7 @@ let add w =
   fun x y -> match (Down.exp y) with
   | RP.Const c -> addc w x c
   | _ -> add x y
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 module Exists = struct
   module Loc = struct
     let exp = MayAlias.has_loc
@@ -796,7 +796,7 @@ module Exists = struct
       fun r -> rtl (R.Dn.rtl r)
   end
 end 
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 module Find = struct
   module Loc = struct
     let exp f e =
@@ -812,7 +812,7 @@ module Find = struct
       has [e] []
   end
 end 
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 module Fold = struct
   module RegX = struct
     let loc f l z =
@@ -847,7 +847,7 @@ module Fold = struct
       List.fold_left guarded z effs
   end
 end 
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 (*s: comparisons *)
 module Compare = struct
   let less    = -1
@@ -989,12 +989,12 @@ module Eq = struct
   let exp   e e' = Compare.exp   e e' = 0
   let rtl   r r' = Compare.rtl   r r' = 0
 end
-(*x: rtlutil.ml *)
+(*x: rtlutil.ml content *)
 let reloc addr w =
   let const b = R.bits b w in
   let sym (s, mk) = mk s w in
   let infix op a b = R.app (R.opr op [w]) [a; b] in
   let add, sub = infix "add", infix "sub" in
   Reloc.fold ~const ~sym ~add ~sub addr
-(*e: rtlutil.ml *)
+(*e: rtlutil.ml content *)
 (*e: front_rtl/rtlutil.ml *)

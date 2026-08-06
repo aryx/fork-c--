@@ -1,5 +1,5 @@
 (*s: front_target/space.ml *)
-(*s: space.ml *)
+(*s: space.ml  *)
 open Nopoly
 
 (*s: definitions of exported types, including [[t]] *)
@@ -57,7 +57,7 @@ module type Standard = sig
   val vfp : Rtl.exp  (* the virtual frame pointer, $V[0] *)
 end
 (*e: definition of signature [[Standard]] *)
-(*x: space.ml *)
+(*x: space.ml  *)
 let indexwidth n =
   let rec wid = function
     | 0 -> 0
@@ -79,7 +79,7 @@ let checked s =
 let stands_for s agg w =
   (fun ((s', agg', c), _, Register.C ct) ->
     s' =<= s && agg =*= agg' && ct = 1 && Cell.size c = w)
-(*x: space.ml *)
+(*x: space.ml  *)
 module Standard(A:sig val width: int end) = struct
   type generator  = Rtl.aggregation -> Rtl.width list -> t
   type tgenerator = Rtl.aggregation -> Rtl.width      -> t
@@ -207,5 +207,5 @@ end
 module Standard32 = Standard(struct let width = 32 end)
 module Standard64 = Standard(struct let width = 64 end)
 
-(*e: space.ml *)
+(*e: space.ml  *)
 (*e: front_target/space.ml *)

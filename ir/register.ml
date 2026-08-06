@@ -1,5 +1,5 @@
 (*s: front_rtl/register.ml *)
-(*s: register.ml *)
+(*s: register.ml content *)
 (*s: exported types(register.nw) *)
 open Nopoly
 
@@ -57,7 +57,7 @@ module CompareX = struct
     | Reg _, Slice _  -> -1
     | Reg r, Reg r'   -> Compare.compare r r'
 end
-(*x: register.ml *)
+(*x: register.ml content *)
 module SetX = struct
   module S = Set.Make(CompareX)
   include S
@@ -82,22 +82,22 @@ module Set = struct
         Printf.sprintf "%c%d:%d" s i n in
     String.concat ", " (List.map elt (elements s))
 end
-(*x: register.ml *)
+(*x: register.ml content *)
 module MapX = Map.Make(CompareX)
 module Map  = Map.Make(Compare)
-(*x: register.ml *)
+(*x: register.ml content *)
 let promote_x = function Reg r | Slice (_, _, r) -> r
 let rset_to_rxset set = Set.fold (fun r rst -> SetX.add (Reg r) rst) set SetX.empty
 let promote_rxset set =
   SetX.fold (fun r rst -> match r with Reg r | Slice (_,_,r) -> Set.add r rst)
             set Set.empty
-(*x: register.ml *)
+(*x: register.ml content *)
 let reg_int_map regs =
   let cmp ((s1,_,_),i1,_) ((s2,_,_),i2,_) =
     match comparec s1 s2 with 0 -> comparei i1 i2 | n -> n in
   let order = List.sort cmp regs in
   (List.fold_left (fun (i,map) r -> (i+1, Map.add r i map)) (0, Map.empty) order)
-(*x: register.ml *)
+(*x: register.ml content *)
 let width ((_, _, ms), _, c) = Cell.to_width ms c
 let widthx = function
   | Reg r -> width r
@@ -108,7 +108,7 @@ let rec eqx x x' = match x, x' with
 | Slice (w, lsb, r), Slice (w', lsb', r') -> w = w && lsb = lsb && eq r r'
 | Reg _, Slice _ -> false
 | Slice _, Reg _ -> false
-(*x: register.ml *)
+(*x: register.ml content *)
 let contains ~outer ~inner = match outer, inner with
 | Reg ((s, _, _), i, C c), Reg ((s', _, _), i', C c') ->
     s =<= s' && i' >= i && i' + c' <= i + c
@@ -122,5 +122,5 @@ let contains ~outer ~inner = match outer, inner with
     if c <> 1 || c' <> 1 then
       Impossible.impossible "slice of register aggregate";
     s =<= s' && i = i' && lsb <= lsb' && lsb+w >= lsb'+w'
-(*e: register.ml *)
+(*e: register.ml content *)
 (*e: front_rtl/register.ml *)

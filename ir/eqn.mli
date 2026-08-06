@@ -1,5 +1,5 @@
 (*s: front_fenv/eqn.mli *)
-(*s: eqn.mli *)
+(*s: eqn.mli content *)
 (*s: EXP *)
 module type EXP = sig
     type t                                      (* a term *)
@@ -27,5 +27,5 @@ module type S = sig
 end
 (*e: S(eqn.nw) *)
 module Make (E: EXP): S with type term = E.t
-(*e: eqn.mli *)
+(*e: eqn.mli content *)
 (*e: front_fenv/eqn.mli *)

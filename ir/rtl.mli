@@ -1,5 +1,5 @@
 (*s: front_rtl/rtl.mli *)
-(*s: rtl.mli *)
+(*s: rtl.mli content *)
 (*s: definitions of exported, exposed types *)
 type aggregation = Register.aggregation = 
     | BigEndian
@@ -109,7 +109,7 @@ val store_cvt : loc -> exp -> width -> rtl
 (*x: types and functions exported at top level *)
 val locwidth : loc -> width
 (*e: types and functions exported at top level *)
-(*x: rtl.mli *)
+(*x: rtl.mli content *)
 module Dn: sig 
     (*s: DN *)
     val exp:        exp         -> Private.exp
@@ -131,5 +131,5 @@ module Up: sig
     val const  :    Private.const     -> exp
     (*e: UP *)
 end
-(*e: rtl.mli *)
+(*e: rtl.mli content *)
 (*e: front_rtl/rtl.mli *)

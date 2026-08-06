@@ -1,5 +1,5 @@
 (*s: front_rtl/register.mli *)
-(*s: register.mli *)
+(*s: register.mli content *)
 (*s: exported types(register.nw) *)
 open Nopoly
 
@@ -24,21 +24,21 @@ end
 val width   : t -> int
 val eq      : t -> t -> bool
 val compare : t -> t -> int
-(*x: register.mli *)
+(*x: register.mli content *)
 val widthx : x -> int
 val eqx    : x -> x -> bool
-(*x: register.mli *)
+(*x: register.mli content *)
 module SetX: SETX  with type elt = x
 module MapX: Map.S with type key = x
 module Set:  SETX  with type elt = t
 module Map:  Map.S with type key = t
-(*x: register.mli *)
+(*x: register.mli content *)
 val promote_x     : x -> t
 val rset_to_rxset : Set.t  -> SetX.t
 val promote_rxset : SetX.t -> Set.t
-(*x: register.mli *)
+(*x: register.mli content *)
 val reg_int_map : t list -> int * int Map.t
-(*x: register.mli *)
+(*x: register.mli content *)
 val contains : outer:x -> inner:x -> bool
-(*e: register.mli *)
+(*e: register.mli content *)
 (*e: front_rtl/register.mli *)

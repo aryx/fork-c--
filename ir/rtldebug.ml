@@ -1,5 +1,5 @@
 (*s: front_rtl/rtldebug.ml *)
-(*s: rtldebug.ml *)
+(*s: rtldebug.ml content *)
 open Nopoly
 
 module RP = Rtl.Private
@@ -55,5 +55,5 @@ let typecheck (r:Rtl.rtl) =
                                       )
     and rtl (RP.Rtl rtl)           = List.iter guarded rtl in 
     rtl (Rtl.Dn.rtl r)
-(*e: rtldebug.ml *)
+(*e: rtldebug.ml content *)
 (*e: front_rtl/rtldebug.ml *)
