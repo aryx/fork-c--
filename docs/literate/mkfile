@@ -9,6 +9,8 @@ VERSION=1
 # must be in the same order of the #include
 SRC_ORIG=Cminusminus.nw Cminusminus_extra.nw
 
+#TODO: sync also ast.asdl (or ast.ml generated code)
+
 SRC_VIEWS= \
  $TOP/commons/commons2/auxfuns.mli\
  $TOP/commons/commons2/auxfuns.ml\
