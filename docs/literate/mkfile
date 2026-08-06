@@ -59,22 +59,22 @@ SRC_VIEWS= \
  $TOP/error/unsupported.ml\
  $TOP/parsing/astpp.mli\
  $TOP/parsing/astpp.ml\
- $TOP/front_rtl/register.mli\
- $TOP/front_rtl/register.ml\
- $TOP/front_rtl/reloc.mli\
- $TOP/front_rtl/reloc.ml\
- $TOP/front_rtl/rtl.mli\
- $TOP/front_rtl/rtl.ml\
- $TOP/front_rtl/rtldebug.mli\
- $TOP/front_rtl/rtldebug.ml\
- $TOP/front_rtl/rtlop.mli\
- $TOP/front_rtl/rtlop.ml\
- $TOP/front_rtl/rtlutil.mli\
- $TOP/front_rtl/rtlutil.ml\
- $TOP/front_rtl/symbol.mli\
- $TOP/front_rtl/symbol.ml\
- $TOP/front_rtl/types.mli\
- $TOP/front_rtl/types.ml\
+ $TOP/ir/register.mli\
+ $TOP/ir/register.ml\
+ $TOP/ir/reloc.mli\
+ $TOP/ir/reloc.ml\
+ $TOP/ir/rtl.mli\
+ $TOP/ir/rtl.ml\
+ $TOP/ir/rtldebug.mli\
+ $TOP/ir/rtldebug.ml\
+ $TOP/ir/rtlop.mli\
+ $TOP/ir/rtlop.ml\
+ $TOP/ir/rtlutil.mli\
+ $TOP/ir/rtlutil.ml\
+ $TOP/ir/symbol.mli\
+ $TOP/ir/symbol.ml\
+ $TOP/ir/types.mli\
+ $TOP/ir/types.ml\
  $TOP/front_asm/asm.mli\
  $TOP/front_asm/asm.ml\
  $TOP/front_fenv/block.mli\
