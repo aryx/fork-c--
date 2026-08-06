@@ -208,9 +208,11 @@ SRC_VIEWS= \
  $TOP/arch/x86/x86rec.mli\
  $TOP/arch/x86/x86regs.mli\
  $TOP/arch/x86/x86regs.ml\
- $TOP/driver.mli\
- $TOP/this.mli\
- $TOP/driver.ml\
+ $TOP/main/driver.mli\
+ $TOP/main/this.mli\
+ $TOP/main/driver.ml\
+
+# ./main/main.ml\
 
 
 <$TOP/docs/latex/mkcommon
@@ -223,7 +225,6 @@ index:V:
 #TEXMAIN=Cminusminus.nw
 #TEX=Cminusminus.tex
 
-# ./main.ml\
 
 ##docs tests tools todo/... todo/h_lua/ todo/interpreter todo/runtime
 ##h_adsl h_camlburg
