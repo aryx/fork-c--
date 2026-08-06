@@ -523,7 +523,7 @@ let scan str lexer          = lexer str 0 []
 %%[['v]] together with the list of remaining tokens in the input. A
 %%successful parse typically means that a parser succeeds and
 %%returns with an empty list of remaining tokens.  Since [[parser]] is a
-%%keyword in \ocaml~the corresponding type was named [[par].  When a
+%%keyword in \ocaml~the corresponding type was named [[par]].  When a
 %%parser fails it raises the [[Error]] exception. 
 %%
 %%We use the following convention for type variables:  [[t]] for token,
@@ -636,9 +636,9 @@ val ( ||| ): ('t,'v)  par -> ('t,'v)  par -> ('t,'v)  par
 <<pc.mli>>=
 val ( --> ): ('t,'v1) par -> ('v1 -> 'v2) -> ('t,'v2) par
 @ 
-%%When the semantic value for a parser is fixed one could use [[ p -->
-%%(fun _ -> x)]]. The [[return]] function does just this: [[p -->
-%%return x]]. So [[return]] is not a parser or parser combinator but a
+%%When the semantic value for a parser is fixed one could use
+%%[[ p --> (fun _ -> x)]]. The [[return]] function does just this:
+%%[[p --> return x]]. So [[return]] is not a parser or parser combinator but a
 %%function intended to be used on the rigth hand side of [[-->]].
 <<pc.mli>>=
 val return: 'v1 -> 'v2 -> 'v1
@@ -1088,8 +1088,8 @@ val text : string -> doc
 %%followed by a number of spaces.  The pretty printer makes this
 %%decision based on the available space.  So think of a [[break]] as a
 %%space that might come out as a newline.  To give the pretty printer
-%%enough flexibility documents must be joined with [[break]]s:  [[x ^^
-%%break ^^ y]]. 
+%%enough flexibility documents must be joined with [[break]]s:
+%%[[x ^^ break ^^ y]].
 %%   
 <<pp.mli>>=
 val break : doc
@@ -2551,7 +2551,7 @@ let to_hex_or_decimal_string ~declimit (i,w) =
     Printf.sprintf "0x%Lx" (zx64 i w)
 @ 
 %%% ------------------------------------------------------------------ 
-\subsection Arithmetic}
+\subsection{Arithmetic}
 %%% ------------------------------------------------------------------ 
 %%
 <<bits.ml>>=
@@ -2955,11 +2955,11 @@ type bits       = bitvector * width
 @ 
 %%We provide the same interface to [[bits]] as the evaluating
 %%instantiation.
-<<bits.mli ((residualizing))>>=
-<<interface>>
-
-@ 
-%%% ------------------------------------------------------------------ 
+%%claude: the chunk that was used here referenced an "interface" chunk which is
+%%defined nowhere (already dangling upstream); the real interface is split in
+%%the "interface S" and "interface U" chunks above. Removed so syncweb -to_tex
+%%does not fail with "could not find key for interface".
+%%% ------------------------------------------------------------------
 \subsection{Residualizing instantiation --- Implementation}
 %%% ------------------------------------------------------------------ 
 %%
@@ -11002,8 +11002,8 @@ method emit: unit                       (* finalize *)
 %%a symbol. In a textual assembler this typically done by emitting a
 %%label. The [[const]] method binds a symbol to an explicitly given value.
 %%
-%%The location counter of the current section can be manipulated: [[align
-%%n]] aligns to the next multiple of [[n]], [[addloc n]] increments it,
+%%The location counter of the current section can be manipulated:
+%%[[align n]] aligns to the next multiple of [[n]], [[addloc n]] increments it,
 %%and [[org n]] sets it to [[n]]. In all cases [[n]] must be positive.
 %%
 %%The main task of an assembler is to emit data and instructions. 
@@ -11136,8 +11136,9 @@ val with_constraint:    t -> Rtleqn.t -> t
 %%this problem.  Calling [[relative e s f]] builds an address at unknown
 %%offset from [[e]], where the name [[s]] is used somehow in constructing
 %%the address (for debugging).  It then calls function [[f]] on this
-%%address.  Example use is [[relative vfp "slot" at ~size:0
-%%~alignment:1]].  This function might more properly live in module
+%%address.  Example use is
+%%[[relative vfp "slot" at ~size:0 ~alignment:1]].
+%%This function might more properly live in module
 %%[[Idgen]].
 %%
 %%Function [[srelative]] is just like [[relative]], except that its
@@ -31226,10 +31227,9 @@ let cfg2ast instr g ~name =
     , Srcmap.null
     )
 @ 
-<<old cfgutil.ml>>=
-let delete g n =
-  <<replace focus with empty subgraph>>
-@
+%%claude: removed the dead <<old cfgutil.ml>> chunk here; it was never used and
+%%its body referenced a "replace focus with empty subgraph" chunk that is
+%%defined nowhere (already dangling upstream), which made syncweb -to_tex fail.
 \section{[[assembler/dotasm.nw]]}
 <<assembler/dotasm.ml>>=
 <<dotasm.ml>>
@@ -36474,8 +36474,8 @@ val to_string:      Rtl.rtl -> string
 %%
 <<mipsrec.mlb>>=
 %head {: <<head>> :}
-%tail {: <<tail>> :}
-%term <<terminal types>>
+%tail {: <<tail(mipsrec.nw)>> :}
+%term <<terminal types(mipsrec.nw)>>
 %%
 <<rules(mipsrec.nw)>>
 @
@@ -38537,20 +38537,20 @@ let rec exp = function
 %%appears in two places.
 <<case for [[ha16(e)]]>>=
 | RP.App (("shl", [32]), [
-   <<pic_hi16 + pic_15>>
+   <<[[pic_hi16]] + [[pic_15]]>>
    ; RP.Const (RP.Bits k16)]) 
    when Bits.eq k16 (Bits.U.of_int 16 32) && Bits.eq k16' (Bits.U.of_int 16 32)
      && Bits.eq k15 (Bits.U.of_int 15 32) && RU.Eq.exp e e' ->
      conHa16 (exp e)
 @ 
-<<pic_hi16 + pic_15>>=
+<<[[pic_hi16]] + [[pic_15]]>>=
 RP.App(("add", [32]), [
-  <<pic_hi16>>
+  <<[[pic_hi16]]>>
   ; 
   <<pic15>>
   ])
 @ 
-<<pic_hi16>>=
+<<[[pic_hi16]]>>=
 RP.App(("shrl", [32]), [e; RP.Const (RP.Bits k16')])
 @ 
 <<pic15>>=

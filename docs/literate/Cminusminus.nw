@@ -1,9 +1,18 @@
 \documentclass[twocolumn]{report}
 
 \input{latex/Packages}
-\input{latex/Noweb}
+%claude: inlined latex/Noweb.tex (shared with principia-softwarica, where it
+%claude: uses ../docs/latex/ paths that only resolve when the book directory
+%claude: sits at the repo root; here the book lives in docs/literate/).
+\usepackage{latex/noweb}
+ \noweboptions{footnotesizecode,nomargintag}
+ %note: allow chunk on different pages, less white space at bottom of pages
+ \def\nwendcode{\endtrivlist \endgroup}
+ \let\nwdocspar=\par
+\usepackage{latex/syncweb}
 \input{latex/Config}
 \input{latex/Macros}
+\input{Macros_cmm}
 
 %******************************************************************************
 % Prelude
@@ -157,6 +166,8 @@ License.
 
 %###############################################################################
 \appendix
+%claude: see Macros_cmm.tex; more than 26 appendix chapters here
+\renewcommand{\thechapter}{\AlphAlph{\value{chapter}}}
 %###############################################################################
 
 \chapter{Debugging}
@@ -188,21 +199,12 @@ License.
 %\chapter{References} 
 \addcontentsline{toc}{section}{References}
 
-\begin{thebibliography}{99}
-
-\bibitem[1]{wp-literate-programming} Donald Knuth,,
-{\em Literate Programming}, 
-\url{http://en.wikipedia.org/wiki/Literate\_Program}
-
-\bibitem[2]{noweb} Norman Ramsey,
-{\em Noweb}, 
-\url{http://www.cs.tufts.edu/~nr/noweb/}
-
-\bibitem[3]{syncweb} Yoann Padioleau,
-{\em Syncweb, literate programming meets unison}, 
-\url{http://padator.org/software/project-syncweb/readme.txt}
-
-\end{thebibliography}
+%claude: use the shared Principia.bib like the other books, instead of a
+%claude: hand-written thebibliography. mkcommon always runs bibtex, which
+%claude: aborts mk when the .aux has no \bibdata/\bibstyle/\citation.
+\nocite{lp-book,noweb,syncweb}
+\bibliography{latex/Principia}
+\bibliographystyle{alpha}
 
 %******************************************************************************
 % Postlude

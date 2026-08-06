@@ -1,0 +1,43 @@
+%------------------------------------------------------------------------------
+% C-- specific shortcuts
+%------------------------------------------------------------------------------
+% claude: the original Quick C-- documentation defined these in doc/macros.tex
+% (kept here as ../macros.tex). We do not \input that file because its second
+% half redefines the noweb \nwstartdeflinemarkup/\nwenddeflinemarkup hooks and
+% does a \RequirePackage{noweb}, which conflicts with the latex/noweb.sty
+% loaded from Cminusminus.nw. So the shorthands are redefined here in the
+% principia style (see latex/Macros.tex and its \plan / \unix).
+
+% claude: the "Extra Code" appendix holds one chapter per source directory, so
+% the book has more than 26 appendix chapters and the default \Alph numbering
+% overflows with "Counter too large". \AlphAlph continues with AA, AB, ...
+\usepackage{alphalph}
+
+\newcommand{\PAL}{C-{}-\xspace}
+\let\C\PAL
+\let\pal\PAL
+\newcommand{\qcc}{QC-{}-\xspace}
+
+\newcommand{\asdl}{ASDL\xspace}
+\newcommand{\rtl}{RTL\xspace}
+\newcommand{\ir}{IR\xspace}
+\newcommand{\AST}{AST\xspace}
+\newcommand{\cfg}{CFG\xspace}
+\newcommand{\burg}{BURG\xspace}
+\newcommand{\mips}{MIPS\xspace}
+\newcommand{\sled}{SLED\xspace}
+\newcommand{\sparc}{SPARC\xspace}
+
+% claude: used in math mode too, hence the \ifmmode dance (from ../macros.tex)
+\def\vfp{\relax\ifmmode\mathit{VFP}\else VFP\fi}
+\def\sp{\relax\ifmmode\mathit{SP}\else SP\fi}
+% claude: the C-- papers write assignment as ':=', not as the LaTeX arrow
+\def\gets{\mathrel{:=}}
+
+\newcommand{\module}[1]{\texttt{#1.nw}}
+\def\remark#1{\marginpar{\raggedright\hbadness=10000
+        \def\baselinestretch{0.8}\scriptsize
+        \it #1\par}}
+\def\interface#1{\section{Interface: #1}}
+\def\implementation#1{\section{Implementation: #1}}
+\newenvironment{cl}{\begin{quote}\it}{\end{quote}}
