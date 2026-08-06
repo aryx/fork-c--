@@ -90,18 +90,18 @@ SRC_VIEWS= \
  $TOP/ir/rtleqn.mli\
  $TOP/ir/rtleqn.ml\
  \
- $TOP/front_cfg/cfg.mli\
- $TOP/front_cfg/cfg.ml\
- $TOP/front_cfg/cfgx.mli\
- $TOP/front_cfg/cfgx.ml\
- $TOP/front_cfg/dag.mli\
- $TOP/front_cfg/dag.ml\
- $TOP/front_cfg/ep.mli\
- $TOP/front_cfg/ep.ml\
- $TOP/front_cfg/mflow.mli\
- $TOP/front_cfg/mflow.ml\
- $TOP/front_cfg/spans.mli\
- $TOP/front_cfg/spans.ml\
+ $TOP/cfg/front_cfg/cfg.mli\
+ $TOP/cfg/front_cfg/cfg.ml\
+ $TOP/cfg/front_cfg/cfgx.mli\
+ $TOP/cfg/front_cfg/cfgx.ml\
+ $TOP/cfg/front_cfg/dag.mli\
+ $TOP/cfg/front_cfg/dag.ml\
+ $TOP/cfg/front_cfg/ep.mli\
+ $TOP/cfg/front_cfg/ep.ml\
+ $TOP/cfg/front_cfg/mflow.mli\
+ $TOP/cfg/front_cfg/mflow.ml\
+ $TOP/cfg/front_cfg/spans.mli\
+ $TOP/cfg/front_cfg/spans.ml\
  $TOP/elab/elabexp.mli\
  $TOP/elab/elabexp.ml\
  $TOP/elab/elabstmt.mli\
@@ -126,16 +126,16 @@ SRC_VIEWS= \
  $TOP/ir/space.ml\
  $TOP/target/target.mli\
  $TOP/target/target.ml\
- $TOP/front_zipcfg/avail.mli\
- $TOP/front_zipcfg/avail.ml\
- $TOP/front_zipcfg/property.mli\
- $TOP/front_zipcfg/property.ml\
- $TOP/front_zipcfg/unique.mli\
- $TOP/front_zipcfg/unique.ml\
- $TOP/front_zipcfg/varmap.mli\
- $TOP/front_zipcfg/varmap.ml\
- $TOP/front_zipcfg/zipcfg.mli\
- $TOP/front_zipcfg/zipcfg.ml\
+ $TOP/cfg/front_zipcfg/avail.mli\
+ $TOP/cfg/front_zipcfg/avail.ml\
+ $TOP/cfg/front_zipcfg/property.mli\
+ $TOP/cfg/front_zipcfg/property.ml\
+ $TOP/cfg/front_zipcfg/unique.mli\
+ $TOP/cfg/front_zipcfg/unique.ml\
+ $TOP/cfg/front_zipcfg/varmap.mli\
+ $TOP/cfg/front_zipcfg/varmap.ml\
+ $TOP/cfg/front_zipcfg/zipcfg.mli\
+ $TOP/cfg/front_zipcfg/zipcfg.ml\
  $TOP/front_ir/ast2ir.mli\
  $TOP/front_ir/ast2ir.ml\
  $TOP/front_ir/automatongraph.mli\
