@@ -60,8 +60,8 @@ SRC_VIEWS= \
  $TOP/error/unsupported.mli\
  $TOP/error/unsupported.ml\
  \
- $TOP/parsing/astpp.mli\
- $TOP/parsing/astpp.ml\
+ $TOP/ast/astpp.mli\
+ $TOP/ast/astpp.ml\
  \
  $TOP/ir/register.mli\
  $TOP/ir/register.ml\

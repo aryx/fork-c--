@@ -1,5 +1,5 @@
 (*s: parsing/astpp.ml *)
-(*s: astpp.ml *)
+(*s: astpp.ml  *)
 module A = Ast
 module P = Pp
 module E = Error
@@ -10,16 +10,16 @@ let (^^)   = P.(^^)
 let (^/)   = P.(^/)
 let (~~) x = x
 let nonempty = function [] -> false | _ :: _ -> true
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let nest       = P.nest 4 
 
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let commablock f xs =
     nest begin
     ~~ P.list (P.text "," ^^ P.break) f xs
     end
 
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let angrp x =
     P.agrp begin 
     ~~ nest begin
@@ -33,7 +33,7 @@ let fngrp x =
        ~~ x
        end
     end
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let unzip = List.split
 let zip   = List.combine
 
@@ -41,17 +41,17 @@ let zip   = List.combine
 let id i        = P.text i
 let int n       = P.text (string_of_int n)
 let semi        = P.text ";"
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let comment x   = P.vgrp (P.text "// " ^^ P.text x)
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let str s       = P.text ("\"" ^ String.escaped s ^ "\"")
 let char i      = P.text ("'"  ^ Char.escaped(Char.chr i) ^ "'")
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let rec ty = function
     | A.TyAt(x,_)       -> ty x
     | A.BitsTy(n)       -> P.text "bits"  ^^ int n
     | A.TypeSynonym(name)   -> P.text name
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let aligned = function
   | Some i -> P.text " aligned" ^/ int i 
   | None   -> P.empty
@@ -72,7 +72,7 @@ let rec lvalue = function
                     List.fold_left (fun h n -> h ^^ P.text "," ^/ P.text n) head ns
            end	
         ^^ P.text "]"
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 and glvalue = function
     | x, None   -> lvalue x
     | x, Some e -> P.agrp(lvalue x  ^/ P.text "when" ^/ expr e)
@@ -82,7 +82,7 @@ and actual = function
     | ( None     , e, a) -> P.agrp (expr e ^^ aligned a)
 
 and actuals xs = P.agrp (P.text "(" ^^ P.commalist actual xs ^^ P.text ")")
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 and expr e = 
     let with_ty t p = match t with None -> p | Some t -> p ^^ P.text "::" ^^ ty t in
     match e with
@@ -105,7 +105,7 @@ and expr e =
                            end
     | A.UnOp(op,e)        -> P.agrp (P.text op ^^ expr e)
     | A.PrimOp(n,xs)      -> P.agrp (P.text "%" ^^ id n ^^ actuals xs)
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let memsize = function
     | A.NoSize        -> P.empty
     | A.DynSize       -> P.text "[]"
@@ -138,7 +138,7 @@ let rec datum = function
     | A.Align(a)            -> P.agrp (P.text "align" ^/ int a ^^ semi)
     | A.MemDecl(t,m,Some i) -> P.agrp (ty t ^^ memsize m ^/ init i ^^ semi)
     | A.MemDecl(t,m,None)   -> P.agrp (ty t ^^ memsize m ^^ semi) 
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let formal (_, (h, v, t, n, a)) =
     P.agrp begin
     ~~ (match h with Some hint -> str hint ^^ P.break | None -> P.empty)
@@ -149,7 +149,7 @@ let formal (_, (h, v, t, n, a)) =
     end
 
 let formals xs = P.agrp (P.text "(" ^^ P.commalist formal xs ^^ P.text ")")
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let cformal (_, h, n, a) =
     P.agrp begin
     ~~ (match h with Some hint -> str hint ^^ P.break | None -> P.empty)
@@ -158,7 +158,7 @@ let cformal (_, h, n, a) =
     end
 
 let cformals xs = P.agrp (P.text "(" ^^ P.commalist cformal xs ^^ P.text ")")
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let register is_global (v , hint, t, n, reg) = 
     angrp begin 
     ~~ (if v =*= A.Invariant then P.text "invariant" ^^ P.break else P.empty)
@@ -169,7 +169,7 @@ let register is_global (v , hint, t, n, reg) =
     ^^ (match reg with Some r -> P.break ^^ str r | None -> P.empty)
     ^^ semi
     end 
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let altcont (e1,e2) =   
             P.agrp begin 
             ~~ P.text "<" 
@@ -216,7 +216,7 @@ let panns = function
 let conv = function
     | Some cc       -> P.agrp (P.text "foreign" ^/ str cc)
     | None          -> P.empty 
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let opt_ty t = ( match t with 
                | Some t -> P.break ^^ ty t
                | None   -> P.empty
@@ -250,7 +250,7 @@ let architecture = function
 let range = function
     | A.Point(e)        -> expr e
     | A.Range(e1,e2)    -> P.agrp(expr e1 ^/ P.text ".." ^/ expr e2)
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let rec stmt = function
     | A.StmtAt(x,_)   -> stmt x
     
@@ -284,7 +284,7 @@ let rec stmt = function
         ~~ P.agrp (P.text "span" ^/ expr e1 ^/ expr e2)
         ^/ P.block (body false) ss
         end
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
     | A.AssignStmt(lhs,rhs)          -> 
         let rec combine = function (* error tolerant *)
             | []   , []    -> []
@@ -305,7 +305,7 @@ let rec stmt = function
                ^^ semi
                end
             end
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
     | A.CallStmt(lhs, cc, e, args, ts, fs) -> 
         angrp begin
         ~~ ( if nonempty lhs
@@ -333,7 +333,7 @@ let rec stmt = function
         ^^ (if nonempty fs then P.break ^^ panns fs else P.empty)
         ^^ semi
         end
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
     | A.PrimStmt(lhs, cc, n, args, fs)     -> 
         angrp begin
         ~~ ( if nonempty lhs then 
@@ -469,7 +469,7 @@ and proc (cc,n,fs,ss,_) =
        end 
     ^/ P.text "}" 
     end
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 and decl is_global = function
     | A.DeclAt(x,_) -> decl is_global x
     | A.Import( t, ns) -> 
@@ -515,7 +515,7 @@ and decl is_global = function
             ^^ semi
             end
     | A.Pragma        -> comment "pragma"
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 and arm = function
     | A.ArmAt(x,_)          -> arm x
     | A.Case(ranges, stmts) ->
@@ -536,7 +536,7 @@ and section  = function (* inside a section *)
         ~~ P.agrp (P.text "span" ^/ expr e1 ^/ expr e2)
         ^/ P.block section ss
         end
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let rec toplevel = function
     | A.ToplevelAt(x, _)  -> toplevel x
     | A.Section(name, ss) -> 
@@ -553,10 +553,10 @@ let program ds = P.vgrp begin
                   end
                                             
 let pp = program
-(*x: astpp.ml *)
+(*x: astpp.ml  *)
 let emit fd ~width tl =
     List.iter (fun t -> ( P.ppToFile fd width (toplevel t)
                         ; output_string fd "\n\n"
                         )) tl
-(*e: astpp.ml *)
+(*e: astpp.ml  *)
 (*e: parsing/astpp.ml *)

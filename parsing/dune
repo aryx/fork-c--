@@ -3,7 +3,9 @@
  (wrapped false)
  (libraries 
    commons commons.unsafe; pull lots of deps ... but long term we want to use commons anyway no?
-   cmm_commons2 cmm_commons3 cmm_error cmm_h_asdl))
+   cmm_commons2 cmm_commons3 cmm_error cmm_h_asdl
+   cmm_ast
+))
 
 (ocamllex scan)
 

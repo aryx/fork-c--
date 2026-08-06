@@ -5461,11 +5461,11 @@ expr        = ExprAt        (expr, region)
 %%
 \section{[[parsing/astpp.nw]]}
 <<parsing/astpp.ml>>=
-<<astpp.ml>>
+<<astpp.ml >>
 @
 
 <<parsing/astpp.mli>>=
-<<astpp.mli>>
+<<astpp.mli >>
 @
 
 %%% $Id: astpp.nw,v 1.11 2005-06-07 20:19:43 nr Exp $
@@ -5495,7 +5495,7 @@ expr        = ExprAt        (expr, region)
 %%The [[emit]] function is specialized and more efficient in certain
 %%cases. It is here to help John Dias emit large programs.
 %%
-<<astpp.mli>>=
+<<astpp.mli >>=
 val decl       : bool -> Ast.decl  -> Pp.doc
 val stmt       : Ast.stmt          -> Pp.doc
 val program    : Ast.toplevel list -> Pp.doc
@@ -5512,7 +5512,7 @@ val emit       : out_channel -> width:int -> Ast.toplevel list -> unit
 %%printed concrete syntax in a purely functional way. The abstract
 %%representation is than written to an open file.
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 module A = Ast
 module P = Pp
 module E = Error
@@ -5547,14 +5547,14 @@ let f (x,y,z) =
 %%determined by the pretty printer.  It is easiest to think of
 %%[[break]]s as spaces that might be turned into line breaks.
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let nest       = P.nest 4 
 
 @ 
 %%The [[commablock]] is just a handy special case of the [[block]]
 %%defined in [[Pp]]. 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let commablock f xs =
     nest begin
     ~~ P.list (P.text "," ^^ P.break) f xs
@@ -5567,7 +5567,7 @@ let commablock f xs =
 %%separately. Only breaks at the end of a line is turned into a newline
 %%to make new room -- as many as possible breaks are printed as spaces.
 %%    
-<<astpp.ml>>=
+<<astpp.ml >>=
 let angrp x =
     P.agrp begin 
     ~~ nest begin
@@ -5587,7 +5587,7 @@ let fngrp x =
 %%syntax.  Since the overall purpose of this is clear we don't comment
 %%the code much.
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let unzip = List.split
 let zip   = List.combine
 
@@ -5601,18 +5601,18 @@ let semi        = P.text ";"
 %%only created for informational purposes in this module.  The argument
 %%passed to [[comment]] must not contain only matching [[/*]] and [[*/]]
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let comment x   = P.vgrp (P.text "// " ^^ P.text x)
 @
 %%
 %%Todo:  write functions that escape unprintable characters in literals.
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let str s       = P.text ("\"" ^ String.escaped s ^ "\"")
 let char i      = P.text ("'"  ^ Char.escaped(Char.chr i) ^ "'")
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let rec ty = function
     | A.TyAt(x,_)       -> ty x
     | A.BitsTy(n)       -> P.text "bits"  ^^ int n
@@ -5620,7 +5620,7 @@ let rec ty = function
 @
 %%
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let aligned = function
   | Some i -> P.text " aligned" ^/ int i 
   | None   -> P.empty
@@ -5645,7 +5645,7 @@ let rec lvalue = function
 %%
 %%A [[glvalue]] is an optionally guarded lvalue.
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 and glvalue = function
     | x, None   -> lvalue x
     | x, Some e -> P.agrp(lvalue x  ^/ P.text "when" ^/ expr e)
@@ -5657,7 +5657,7 @@ and actual = function
 and actuals xs = P.agrp (P.text "(" ^^ P.commalist actual xs ^^ P.text ")")
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 and expr e = 
     let with_ty t p = match t with None -> p | Some t -> p ^^ P.text "::" ^^ ty t in
     match e with
@@ -5683,7 +5683,7 @@ and expr e =
 @ 
 %$
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let memsize = function
     | A.NoSize        -> P.empty
     | A.DynSize       -> P.text "[]"
@@ -5718,7 +5718,7 @@ let rec datum = function
     | A.MemDecl(t,m,None)   -> P.agrp (ty t ^^ memsize m ^^ semi) 
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let formal (_, (h, v, t, n, a)) =
     P.agrp begin
     ~~ (match h with Some hint -> str hint ^^ P.break | None -> P.empty)
@@ -5731,7 +5731,7 @@ let formal (_, (h, v, t, n, a)) =
 let formals xs = P.agrp (P.text "(" ^^ P.commalist formal xs ^^ P.text ")")
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let cformal (_, h, n, a) =
     P.agrp begin
     ~~ (match h with Some hint -> str hint ^^ P.break | None -> P.empty)
@@ -5743,7 +5743,7 @@ let cformals xs = P.agrp (P.text "(" ^^ P.commalist cformal xs ^^ P.text ")")
 @ 
 %%    
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let register is_global (v , hint, t, n, reg) = 
     angrp begin 
     ~~ (if v =*= A.Invariant then P.text "invariant" ^^ P.break else P.empty)
@@ -5756,7 +5756,7 @@ let register is_global (v , hint, t, n, reg) =
     end 
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let altcont (e1,e2) =   
             P.agrp begin 
             ~~ P.text "<" 
@@ -5806,7 +5806,7 @@ let conv = function
 @ 
 %%
 %%    
-<<astpp.ml>>=
+<<astpp.ml >>=
 let opt_ty t = ( match t with 
                | Some t -> P.break ^^ ty t
                | None   -> P.empty
@@ -5842,7 +5842,7 @@ let range = function
     | A.Range(e1,e2)    -> P.agrp(expr e1 ^/ P.text ".." ^/ expr e2)
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let rec stmt = function
     | A.StmtAt(x,_)   -> stmt x
     
@@ -5883,7 +5883,7 @@ let rec stmt = function
 %%Guards are thus re-combined with the left hand side of an assignment
 %%before it is printed.
 %%        
-<<astpp.ml>>=
+<<astpp.ml >>=
     | A.AssignStmt(lhs,rhs)          -> 
         let rec combine = function (* error tolerant *)
             | []   , []    -> []
@@ -5906,7 +5906,7 @@ let rec stmt = function
             end
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
     | A.CallStmt(lhs, cc, e, args, ts, fs) -> 
         angrp begin
         ~~ ( if nonempty lhs
@@ -5936,7 +5936,7 @@ let rec stmt = function
         end
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
     | A.PrimStmt(lhs, cc, n, args, fs)     -> 
         angrp begin
         ~~ ( if nonempty lhs then 
@@ -6074,7 +6074,7 @@ and proc (cc,n,fs,ss,_) =
     end
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 and decl is_global = function
     | A.DeclAt(x,_) -> decl is_global x
     | A.Import( t, ns) -> 
@@ -6122,7 +6122,7 @@ and decl is_global = function
     | A.Pragma        -> comment "pragma"
 @ 
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 and arm = function
     | A.ArmAt(x,_)          -> arm x
     | A.Case(ranges, stmts) ->
@@ -6146,7 +6146,7 @@ and section  = function (* inside a section *)
 @ 
 %%       
 %%       
-<<astpp.ml>>=
+<<astpp.ml >>=
 let rec toplevel = function
     | A.ToplevelAt(x, _)  -> toplevel x
     | A.Section(name, ss) -> 
@@ -6171,7 +6171,7 @@ let pp = program
 %%are emitted. The [[Astasm]] module was changes accordingly to use
 %%[[emit]].
 %%
-<<astpp.ml>>=
+<<astpp.ml >>=
 let emit fd ~width tl =
     List.iter (fun t -> ( P.ppToFile fd width (toplevel t)
                         ; output_string fd "\n\n"
