@@ -1,6 +1,8 @@
 (*s: stdPrims.mli *)
 type std_int = int
+[@@deriving show]
 type std_string = string
+[@@deriving show]
 
 (* TODO properly support these operations *)
 type identifier = std_string

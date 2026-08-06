@@ -4,4 +4,6 @@
  (libraries 
    cmm_commons2 ; Pp
    cmm_h_asdl ; stdPrims
-  ))
+  )
+ (preprocess (pps ppx_deriving.show))
+)
