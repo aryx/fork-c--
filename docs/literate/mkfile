@@ -11,42 +11,42 @@ VERSION=1
 SRC_ORIG=Cminusminus.nw Cminusminus_extra.nw
 
 SRC_VIEWS= \
- $TOP/commons2/auxfuns.mli\
- $TOP/commons2/auxfuns.ml\
- $TOP/commons2/lc.mli\
- $TOP/commons2/lc.ml\
- $TOP/commons2/pc.mli\
- $TOP/commons2/pc.ml\
- $TOP/commons2/pc2.mli\
- $TOP/commons2/pc2.ml\
- $TOP/commons2/pp.mli\
- $TOP/commons2/pp.ml\
- $TOP/commons2/rx.mli\
- $TOP/commons2/rx.ml\
- $TOP/commons2/strutil.mli\
- $TOP/commons2/strutil.ml\
- $TOP/commons2/verbose.mli\
- $TOP/commons2/verbose.ml\
- $TOP/commons3/alignment.mli\
- $TOP/commons3/alignment.ml\
- $TOP/commons3/bits.mli\
- $TOP/commons3/bits.ml\
- $TOP/commons3/bitset64.mli\
- $TOP/commons3/bitset64.ml\
- $TOP/commons3/cell.mli\
- $TOP/commons3/cell.ml\
- $TOP/commons3/ctypes.mli\
- $TOP/commons3/ctypes.ml\
- $TOP/commons3/idcode.mli\
- $TOP/commons3/idcode.ml\
- $TOP/commons3/idgen.mli\
- $TOP/commons3/idgen.ml\
- $TOP/commons3/reinit.mli\
- $TOP/commons3/reinit.ml\
- $TOP/commons3/tx.mli\
- $TOP/commons3/tx.ml\
- $TOP/commons3/uint64.mli\
- $TOP/commons3/uint64.ml\
+ $TOP/commons/commons2/auxfuns.mli\
+ $TOP/commons/commons2/auxfuns.ml\
+ $TOP/commons/commons2/lc.mli\
+ $TOP/commons/commons2/lc.ml\
+ $TOP/commons/commons2/pc.mli\
+ $TOP/commons/commons2/pc.ml\
+ $TOP/commons/commons2/pc2.mli\
+ $TOP/commons/commons2/pc2.ml\
+ $TOP/commons/commons2/pp.mli\
+ $TOP/commons/commons2/pp.ml\
+ $TOP/commons/commons2/rx.mli\
+ $TOP/commons/commons2/rx.ml\
+ $TOP/commons/commons2/strutil.mli\
+ $TOP/commons/commons2/strutil.ml\
+ $TOP/commons/commons2/verbose.mli\
+ $TOP/commons/commons2/verbose.ml\
+ $TOP/commons/commons3/alignment.mli\
+ $TOP/commons/commons3/alignment.ml\
+ $TOP/commons/commons3/bits.mli\
+ $TOP/commons/commons3/bits.ml\
+ $TOP/commons/commons3/bitset64.mli\
+ $TOP/commons/commons3/bitset64.ml\
+ $TOP/commons/commons3/cell.mli\
+ $TOP/commons/commons3/cell.ml\
+ $TOP/commons/commons3/ctypes.mli\
+ $TOP/commons/commons3/ctypes.ml\
+ $TOP/commons/commons3/idcode.mli\
+ $TOP/commons/commons3/idcode.ml\
+ $TOP/commons/commons3/idgen.mli\
+ $TOP/commons/commons3/idgen.ml\
+ $TOP/commons/commons3/reinit.mli\
+ $TOP/commons/commons3/reinit.ml\
+ $TOP/commons/commons3/tx.mli\
+ $TOP/commons/commons3/tx.ml\
+ $TOP/commons/commons3/uint64.mli\
+ $TOP/commons/commons3/uint64.ml\
  $TOP/error/debug.mli\
  $TOP/error/debug.ml\
  $TOP/error/error.mli\
@@ -208,9 +208,9 @@ SRC_VIEWS= \
  $TOP/arch/x86/x86rec.mli\
  $TOP/arch/x86/x86regs.mli\
  $TOP/arch/x86/x86regs.ml\
- $TOP/main/driver.mli\
- $TOP/main/this.mli\
- $TOP/main/driver.ml\
+ $TOP/driver/driver.mli\
+ $TOP/driver/this.mli\
+ $TOP/driver/driver.ml\
 
 # ./main/main.ml\
 
