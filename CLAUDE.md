@@ -11,7 +11,7 @@ also checked out locally at `/home/pad/software-src/dev-toolchain/qc--`.
 
 This repo already contains essentially all of upstream — things have been
 *moved and renamed*, not dropped, and whatever is not yet integrated sits in
-`todo/`. So when something seems missing, search `todo/` first and expect a
+`TODO/`. So when something seems missing, search `TODO/` first and expect a
 different name; consult the upstream checkout only as a last resort.
 
 ### The goal
