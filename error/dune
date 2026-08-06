@@ -8,4 +8,6 @@
 (library
  (name cmm_error)
  (wrapped false)
- (libraries str))
+ (libraries str)
+ (preprocess (pps ppx_deriving.show))
+)
