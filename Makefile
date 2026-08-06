@@ -186,7 +186,7 @@ graph:
 	~/pfff/codegraph.opt -derived_data -lang cmt -build .
 
 visual:
-	~/pfff/codemap -no_legend -profile -ss 2 -filter pfff .
+	codemap . -no_legend -screen_size 2 # # -filter pfff .
 
 ##############################################################################
 # Literate Programming rules

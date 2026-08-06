@@ -26,6 +26,14 @@
     -alert -deprecated ; silence deprecated-stdlib alerts (Pervasives, Stream, String.uppercase, ...)
    ))))
 
+; principia/ is a symlink to ~/github/principia-softwarica, which contains
+; further symlinks pointing back at its own root (SRC/cmd/ROOT), and dune
+; refuses to scan the same path twice ("Path principia has already been
+; scanned. Cannot scan it again through symlink principia/SRC/cmd/ROOT").
+; Nothing in there is part of this build anyway, so keep dune out of it.
+; Same workaround as in ~/github/xix's root dune.
+(dirs :standard \ principia)
+
 ; NB: this.ml is normally derived from this.in via the top Makefile's
 ; "this.ml: this.in" rule ("cp this.in this.ml"), but this.ml is also
 ; checked into git directly (kept in sync manually), so dune just
