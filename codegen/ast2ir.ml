@@ -1,5 +1,5 @@
 (*s: front_ir/ast2ir.ml *)
-(*s: ast2ir.ml *)
+(*s: ast2ir.ml  *)
 module A  = Ast
 module AT = Automaton
 module C  = Call
@@ -27,7 +27,7 @@ type label   = G.uid * string
 let genlabel s =
   let s = Idgen.label s in
   (G.uid (), s)
-(*x: ast2ir.ml *)
+(*x: ast2ir.ml  *)
 (*s: utilities(ast2ir.nw) *)
 let rsx = Register.rset_to_rxset
 (*x: utilities(ast2ir.nw) *)
@@ -43,7 +43,7 @@ let aligned_mem ~align ~base target =
     AT.align_to (fun w -> min align (w / target.T.memsize)) *>
     AT.overflow ~growth:Memalloc.Up ~max_alignment:align)
 (*e: utilities(ast2ir.nw) *)
-(*x: ast2ir.ml *)
+(*x: ast2ir.ml  *)
 (*s: type imports *)
 type tgt = Preast2ir.tgt = 
   T of (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
@@ -111,7 +111,7 @@ end
 (*s: types for nonvolatile registers *)
 type 'a nvr = { reg : 'a; tmp : 'a }   (* for callee-saves info *)
 (*e: types for nonvolatile registers *)
-(*x: ast2ir.ml *)
+(*x: ast2ir.ml  *)
 (* I have to choose the value  *)
 let headroom = ref 1024 
 let set_headroom n = headroom := n
@@ -724,7 +724,7 @@ let translate target env ~optimizer ~defineglobals =
   (*e: function [[program]], which translates an entire program *)
   in
   program
-(*x: ast2ir.ml *)
+(*x: ast2ir.ml  *)
 let () = Debug.register "return-regs" "show registers used by return statememt"
-(*e: ast2ir.ml *)
+(*e: ast2ir.ml  *)
 (*e: front_ir/ast2ir.ml *)

@@ -1,5 +1,5 @@
 (*s: front_ir/ast2ir.mli *)
-(*s: ast2ir.mli *)
+(*s: ast2ir.mli  *)
 (*s: type imports *)
 type tgt = Preast2ir.tgt = 
   T of (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
@@ -14,5 +14,5 @@ val translate : tgt
                 -> defineglobals: bool
                 -> proc Nelab.compunit
                 -> unit   (* side-effects the assembler in the environment *)
-(*e: ast2ir.mli *)
+(*e: ast2ir.mli  *)
 (*e: front_ir/ast2ir.mli *)

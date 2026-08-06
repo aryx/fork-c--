@@ -1,5 +1,5 @@
 (*s: front_ir/rewrite.ml *)
-(*s: rewrite.ml *)
+(*s: rewrite.ml  *)
 module B  = Bits
 module BO = Bits.Ops
 module DG = Dag
@@ -120,7 +120,7 @@ let div_overflows w x y =
 let (mod) w x y = O.sub w x (O.mul w y (O.div  w x y))
 let modu  w x y = O.sub w x (O.mul w y (O.divu w x y))
 let rem   w x y = O.sub w x (O.mul w y (O.quot w x y))
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 let sxlo n w x =
   let shamt = O.unsigned w (w-n) in
   O.shra w (O.shl w x shamt) shamt
@@ -128,7 +128,7 @@ let sxlo n w x =
 let zxlo n w x =
   let shamt = O.unsigned w (w-n) in
   O.shrl w (O.shl w x shamt) shamt
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 let popcnt w ~dst x =
   if w <> 32 then
     Unsupported.popcnt ~notok:w ~ok:32;
@@ -149,19 +149,19 @@ let popcnt w ~dst x =
   tmploc @:= (tmpval & mask3) + ((tmpval >> 2) & mask3)  <:>
   tmploc @:= ((tmpval + (tmpval >> 4)) & maskF)  <:>
   tmploc @:= ((tmpval * mask01) >> 24)   (* AMD guide *)
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 let regpair ~hi ~lo =
   let hw = RU.Width.exp hi in
   let lw = RU.Width.exp lo in
   let w = hw + lw in
   O.(or) w (O.shl w (O.zx hw w hi) (O.unsigned w lw)) (O.zx lw w lo)
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 let slice w n ~lsb e =
   if lsb = 0 then
     O.lobits w n e
   else
     O.lobits w n (O.shrl w e (O.unsigned w lsb))
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 type 'a pair = { hi : 'a; lo : 'a }
 
 let splitu w ~lsb:n e =
@@ -170,7 +170,7 @@ let splitu w ~lsb:n e =
   let n  = O.unsigned w n in
   let hi = O.shl w (O.shrl w e n) n in
   { hi = hi; lo = lo }
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 let splits w ~lsb:n e =
   assert (0 < n && n < w);
   let lo     = O.sx n w (O.lobits w n e) in
@@ -178,7 +178,7 @@ let splits w ~lsb:n e =
   let n      = O.unsigned w n in
   let hi     = O.shl w (O.add w (O.shrl w e n) adjust) n in
   { hi = hi; lo = lo }
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 let div2 w ~dst x y =
   let return e = DG.Rtl (R.store dst e w) in
   let one  = O.signed w 1 in
@@ -190,7 +190,7 @@ let div2 w ~dst x y =
          DG.If (DG.cond (O.gt w x zero),
                 return (O.sub w (O.quot w (O.sub w x one) y) one),
                 return (O.quot w x y)))
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 let div1_3 w ~dst x y =
   let return e = DG.Rtl (R.store dst e w) in
   let one  = O.signed w 1 in
@@ -202,12 +202,12 @@ let div1_3 w ~dst x y =
   DG.If (DG.cond (O.eq w x zero),
          return zero,
          return (O.sub w (O.quot w (O.sub w x one) y) one))))
-(*x: rewrite.ml *)
+(*x: rewrite.ml  *)
 let div' w ~dst x y ~quot ~rem =
   let return e = DG.Rtl (R.store dst e w) in
   DG.If (DG.cond (O.conjoin (O.lt w (O.xor w x y) (O.signed w 0))
                             (O.ne w rem (O.signed w 0))),
          return (O.sub w quot (O.signed w 1)),
          return quot)
-(*e: rewrite.ml *)
+(*e: rewrite.ml  *)
 (*e: front_ir/rewrite.ml *)

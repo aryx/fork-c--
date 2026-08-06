@@ -1,12 +1,12 @@
 (*s: front_ir/automatongraph.ml *)
-(*s: automatongraph.ml *)
+(*s: automatongraph.ml  *)
 module A    = Automaton
 let sprintf = Printf.sprintf
 let printf  = Printf.printf
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 type ty = int * string * int (* width * kind * alignment *)
 type path =     ty list                         (* leads to a node *)
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 type node    =  { regs:     Register.Set.t
                 ; align:    int
                 }
@@ -16,7 +16,7 @@ let compare_nodes (x:node) (y:node) =
     | 0 -> Register.Set.compare x.regs y.regs
     | x -> x
     )
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 type edge =     node * ty
 
 let compare_edges (x:edge) (y:edge) =
@@ -24,7 +24,7 @@ let compare_edges (x:edge) (y:edge) =
     | 0 -> compare_nodes (fst x) (fst y)
     | x -> x
     )
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 module NS = Set.Make (struct type t=node let compare=compare_nodes end)
 module ES = Set.Make (struct type t=edge let compare=compare_edges end)
 module T  = Map.Make (struct type t=edge let compare=compare_edges end)
@@ -38,13 +38,13 @@ let graph node = { nodes = NS.add node NS.empty
                  ; start = node
                  ; edges = T.empty
                  }
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let mem edge graph = T.mem edge graph.edges     (* is edge in graph? *)
 let add (n,t as edge) node graph =              (* add endpoint of edge *)
     assert (NS.mem n graph.nodes);
     { graph with edges = T.add edge node graph.edges
                ; nodes = NS.add node graph.nodes }
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 module ToString = struct
     let register ((sp,_,_),i,_) = sprintf "$%c%i" sp i
     let ty (width,kind,a) = sprintf "%s::%d@%d" kind width a
@@ -63,7 +63,7 @@ module ToString = struct
         let edges = T.fold add_edge g.edges [] in
             String.concat "\n" edges
 end
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 module ToDot = struct
     let size = function
         | 32 -> ""
@@ -96,7 +96,7 @@ module ToDot = struct
         ; printf "}\n"
         )
 end
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let goto mk path =
     let t    = mk ()                        in
     let ()   = List.iter (fun (w,h,a) -> ignore (A.allocate t w h a)) path in
@@ -104,13 +104,13 @@ let goto mk path =
         { regs  = res.A.regs_used     
         ; align = res.A.align_state
         }
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let registers loc =
     let c   = Rtl.bits (Bits.zero 32) 32 in
     let rtl = A.store loc c 32 in
     let (read, written) = Rtlutil.ReadWrite.sets rtl in
         written
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let rec follow (mk:unit->Automaton.t) (dirs: ty list) graph path node ty =
     let path  = path @ [ty]  in
     let node' = goto mk path in
@@ -124,7 +124,7 @@ let rec follow (mk:unit->Automaton.t) (dirs: ty list) graph path node ty =
 and dfs mk dirs graph path node =   (* call this *)
     List.fold_left 
         (fun graph ty -> follow mk dirs graph path node ty) graph dirs
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let _dump g = print_endline (ToString.graph g)
 
 let print ~mk dirs =
@@ -132,15 +132,15 @@ let print ~mk dirs =
     let g       = graph init            in
     let g       = dfs mk dirs g [] init in
     ToDot.graph g
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let next graph edge = T.find edge graph.edges
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let outgoing graph node =
     let add_label (src, label) dst labels =
         if compare_nodes src node = 0 then label :: labels else labels
     in    
         T.fold add_label graph.edges []
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let rec explore graph (visited:ES.t) (path:path) (paths:path list list) node =
     let labels  = outgoing graph node in
     let paths  = (List.map (fun l -> l::path) labels) :: paths in
@@ -155,7 +155,7 @@ let rec explore graph (visited:ES.t) (path:path) (paths:path list list) node =
             (fun (paths,visited) edge -> follow edge visited paths)
             (paths,visited)
             (List.map (fun ty -> (node,ty)) labels)
-(*x: automatongraph.ml *)
+(*x: automatongraph.ml  *)
 let interesting_paths graph = 
     let (paths,_) = explore graph ES.empty [] [] graph.start in
         List.map List.rev (List.concat paths)
@@ -175,5 +175,5 @@ let summary ~what ~mk dirs =
     Printf.printf "Automaton graph for %s has %d nodes, %d edges, %d paths\n" what
       (NS.cardinal g.nodes) (mapsize g.edges) (List.length (interesting_paths g))
 
-(*e: automatongraph.ml *)
+(*e: automatongraph.ml  *)
 (*e: front_ir/automatongraph.ml *)

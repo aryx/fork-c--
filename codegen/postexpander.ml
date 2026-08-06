@@ -1,5 +1,5 @@
 (*s: front_ir/postexpander.ml *)
-(*s: postexpander.ml *)
+(*s: postexpander.ml  *)
 module DG  = Dag
 module G   = Zipcfg
 module R   = Rtl
@@ -142,7 +142,7 @@ module type S = sig
   (*e: generic expansion operations for stack machines *)
 end
 (*e: signature of a postexpander *)
-(*x: postexpander.ml *)
+(*x: postexpander.ml  *)
 module Alloc = struct
   let badslot : width -> int -> Automaton.loc =
     fun _ -> Impossible.impossible "slot allocator misconfigured"
@@ -167,7 +167,7 @@ let forget_allocators () =
   Alloc.valid := false;
   Alloc.theslot := Alloc.badslot;
   Alloc.thetemp := Alloc.badtemp
-(*x: postexpander.ml *)
+(*x: postexpander.ml  *)
 module Expand = struct
   let bad : exp block -> brtl block =
     fun _ -> Impossible.impossible "block expander misconfigured"
@@ -210,14 +210,14 @@ let forget_expanders () =
   Expand.theblock   := Expand.bad;
   Expand.thebranch  := Expand.badb;
   Expand.thecbranch := Expand.badcb
-(*x: postexpander.ml *)
+(*x: postexpander.ml  *)
 let (<:>) = DG.(<:>)
-(*x: postexpander.ml *)
+(*x: postexpander.ml  *)
 module RO = struct
   let lobits w w' x = Rtl.app (Rtl.opr "lobits" [w;w';]) [x; ]
   let zx w w' x = Rtl.app (Rtl.opr "zx" [w;w';]) [x; ]
 end
-(*x: postexpander.ml *)
+(*x: postexpander.ml  *)
 let warg_val = function
   | WTemp (Register.Reg t) -> R.fetch (R.reg t) (Register.width t)
   | WTemp (Register.Slice (w, lsb, t)) -> R.fetch (R.slice w ~lsb (R.reg t)) w
@@ -239,7 +239,7 @@ let with_hw ~hard ~soft ~temp block =
       let set     = DG.Rtl (R.store hardloc (warg_val soft) n) in
       let restore = DG.Rtl (R.store hardloc (RO.lobits w n tval) n) in
       Expand.block (save <:> set) <:> block <:> Expand.block restore
-(*x: postexpander.ml *)
+(*x: postexpander.ml  *)
 module Nostack (Address : sig type t val reg : temp -> t end) = struct
   let imposs = Impossible.impossible
   let opclass _ = Register
@@ -270,5 +270,5 @@ module Nostack (Address : sig type t val reg : temp -> t end) = struct
     let store_pop_cvt_rm _ _ _ _ = imposs "stack op on register machine"
   end
 end
-(*e: postexpander.ml *)
+(*e: postexpander.ml  *)
 (*e: front_ir/postexpander.ml *)

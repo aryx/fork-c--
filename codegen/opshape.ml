@@ -1,5 +1,5 @@
 (*s: front_ir/opshape.ml *)
-(*s: opshape.ml *)
+(*s: opshape.ml  *)
 module SM = Strutil.Map
 module T  = Types
 
@@ -25,7 +25,7 @@ type ('temp, 'warg) t =
   | Bool
   | Nullary
 (*e: exported type definitions(opshape.nw) *)
-(*x: opshape.ml *)
+(*x: opshape.ml  *)
 let shape scheme = match scheme with
 | [
    (*s: 'a *)
@@ -186,7 +186,7 @@ let shapetab = Rtlop.fold (fun o t z -> SM.add o (shape t) z) SM.empty
 
 let of_opr (o, _) =
   try SM.find o shapetab with _ -> impossf "operator %%%s has no shape" o
-(*x: opshape.ml *)
+(*x: opshape.ml  *)
 let args () = impossf "wrong number of arguments to operator"
 let appfun t w = function
   | Binop  _ -> (function [x; y]    -> Binop  (t x, t y)      | _ -> args())
@@ -201,7 +201,7 @@ let appfun t w = function
   | Fpcvt  _ -> (function [x;r ]    -> Fpcvt  (t x, w r)      | _ -> args())
   | Bool     -> (function _         -> Bool)
   | Nullary  -> (function []        -> Nullary                | _ -> args())
-(*x: opshape.ml *)
+(*x: opshape.ml  *)
 let cappfun t w = 
   let binop cs es =
     match es, cs with
@@ -283,5 +283,5 @@ let cappfun t w =
   | Nullary  -> nullary
 
 let capply to_temp to_warg opr = cappfun to_temp to_warg (of_opr opr)
-(*e: opshape.ml *)
+(*e: opshape.ml  *)
 (*e: front_ir/opshape.ml *)

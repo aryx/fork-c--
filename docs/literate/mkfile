@@ -136,30 +136,32 @@ SRC_VIEWS= \
  $TOP/cfg/front_zipcfg/varmap.ml\
  $TOP/cfg/front_zipcfg/zipcfg.mli\
  $TOP/cfg/front_zipcfg/zipcfg.ml\
- $TOP/front_ir/ast2ir.mli\
- $TOP/front_ir/ast2ir.ml\
- $TOP/front_ir/automatongraph.mli\
- $TOP/front_ir/automatongraph.ml\
- $TOP/front_ir/call.mli\
- $TOP/front_ir/call.ml\
+ \
+ $TOP/codegen/ast2ir.mli\
+ $TOP/codegen/ast2ir.ml\
+ $TOP/codegen/automatongraph.mli\
+ $TOP/codegen/automatongraph.ml\
+ $TOP/codegen/call.mli\
+ $TOP/codegen/call.ml\
  $TOP/ir/context.mli\
  $TOP/ir/context.ml\
- $TOP/front_ir/contn.mli\
- $TOP/front_ir/contn.ml\
- $TOP/front_ir/postexpander.mli\
- $TOP/front_ir/postexpander.ml\
- $TOP/front_ir/expander.mli\
- $TOP/front_ir/expander.ml\
- $TOP/front_ir/opshape.mli\
- $TOP/front_ir/opshape.ml\
- $TOP/front_ir/preast2ir.mli\
- $TOP/front_ir/preast2ir.ml\
- $TOP/front_ir/proc.mli\
- $TOP/front_ir/proc.ml\
- $TOP/front_ir/rewrite.mli\
- $TOP/front_ir/rewrite.ml\
- $TOP/front_ir/runtimedata.mli\
- $TOP/front_ir/runtimedata.ml\
+ $TOP/codegen/contn.mli\
+ $TOP/codegen/contn.ml\
+ $TOP/codegen/postexpander.mli\
+ $TOP/codegen/postexpander.ml\
+ $TOP/codegen/expander.mli\
+ $TOP/codegen/expander.ml\
+ $TOP/codegen/opshape.mli\
+ $TOP/codegen/opshape.ml\
+ $TOP/codegen/preast2ir.mli\
+ $TOP/codegen/preast2ir.ml\
+ $TOP/codegen/proc.mli\
+ $TOP/codegen/proc.ml\
+ $TOP/codegen/rewrite.mli\
+ $TOP/codegen/rewrite.ml\
+ $TOP/codegen/runtimedata.mli\
+ $TOP/codegen/runtimedata.ml\
+ \
  $TOP/ir/talloc.mli\
  $TOP/ir/talloc.ml\
  $TOP/assembler/astasm.mli\

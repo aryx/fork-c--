@@ -1,5 +1,5 @@
 (*s: front_ir/expander.ml *)
-(*s: expander.ml *)
+(*s: expander.ml  *)
 open Nopoly
 (*s: expander module type *)
 module type S = sig
@@ -42,11 +42,11 @@ module Dn  = Rtl.Dn
 let upassn = Rtl.Up.assertion
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let unimpf  fmt = Printf.kprintf Impossible.unimp fmt
-(*x: expander.ml *)
+(*x: expander.ml  *)
 let fetch l = RP.Fetch (Dn.loc l, RU.Width.loc l)
 let width e = RU.Width.exp (Up.exp e)
-(*x: expander.ml *)
-(*x: expander.ml *)
+(*x: expander.ml  *)
+(*x: expander.ml  *)
 module D = struct (* debugging *)
   let () = Debug.register "expander" "code expander"
   let eprintf = Printf.eprintf 
@@ -117,9 +117,9 @@ module D = struct (* debugging *)
   let exp' e = Rtlutil.ToString.exp e
   let loc  l = Rtlutil.ToString.loc (Up.loc l)
 end
-(*x: expander.ml *)
+(*x: expander.ml  *)
 let _ = Sys.set_signal Sys.sigterm (Sys.Signal_handle (fun _ -> exit 0))
-(*x: expander.ml *)
+(*x: expander.ml  *)
 module IntFloatAddr (Post : Postexpander.S) = struct
   let pc_lhs = Dn.loc Post.pc_lhs
   let pc_rhs = Dn.loc Post.pc_rhs
@@ -1061,5 +1061,5 @@ module IntFloatAddr (Post : Postexpander.S) = struct
     }
   (*e: generic flow-graph expander *)
 end
-(*e: expander.ml *)
+(*e: expander.ml  *)
 (*e: front_ir/expander.ml *)

@@ -1,5 +1,5 @@
 (*s: front_ir/postexpander.mli *)
-(*s: postexpander.mli *)
+(*s: postexpander.mli  *)
 (*s: types for postexpanders *)
 type temp      = Register.t
 type rtl       = Rtl.rtl
@@ -183,7 +183,7 @@ module type S = sig
   (*e: generic expansion operations for stack machines *)
 end
 (*e: signature of a postexpander *)
-(*x: postexpander.mli *)
+(*x: postexpander.mli  *)
 module Nostack (Address : sig type t val reg : temp -> t end) : sig
  (*s: generic expansion operations for stack machines *)
  val opclass : operator -> operator_class
@@ -225,5 +225,5 @@ module Nostack (Address : sig type t val reg : temp -> t end) : sig
  val is_stack_top_proxy : Rtl.Private.loc -> bool
  (*e: generic expansion operations for stack machines *)
 end
-(*e: postexpander.mli *)
+(*e: postexpander.mli  *)
 (*e: front_ir/postexpander.mli *)

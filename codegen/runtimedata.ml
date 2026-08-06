@@ -1,5 +1,5 @@
 (*s: front_ir/runtimedata.ml *)
-(*s: runtimedata.ml *)
+(*s: runtimedata.ml  *)
 module B  = Bits
 module G  = Zipcfg
 module GR = Zipcfg.Rep
@@ -40,7 +40,7 @@ let upd_spans upd spans =
   Array.iteri (fun i l -> spans.S.vars.(i) <- maybe_upd l) spans.S.vars
 
 let upd_all_spans upd g = Zipcfg.iter_spans (upd_spans upd) g
-(*x: runtimedata.ml *)
+(*x: runtimedata.ml  *)
 let emit_as_asm (PA.T target) asm ~procsym cfg =
   (*s: gather the [[spans]] in order *)
   let add_spans (first, _ as b) _ spans =
@@ -217,15 +217,15 @@ let emit_as_asm (PA.T target) asm ~procsym cfg =
   emit_sd_spans ();
   List.iter emit_site_spans spans;
   asm#section prev_section
-(*x: runtimedata.ml *)
+(*x: runtimedata.ml  *)
 let user_spans spans = (S.expose spans).S.users
 let stackdata  spans = (S.expose spans).S.sds
-(*x: runtimedata.ml *)
+(*x: runtimedata.ml  *)
 let print_reg_map (PA.T tgt) =
   let (n, map) = tgt.T.reg_ix_map in
   Printf.printf "Target has %d registers:\n" n;
   RM.iter (fun ((s,_,_),i,_) n -> Printf.printf "  %c[%d] -> %d\n" s i n) map
-(*x: runtimedata.ml *)
+(*x: runtimedata.ml  *)
 let emit_global_properties target (asm:'c Asm.assembler) =
   let cc = Call.get_cc target "C--" in
   let growth = match cc.Call.stack_growth with Memalloc.Up -> 1 | Memalloc.Down -> -1 in
@@ -238,5 +238,5 @@ let emit_global_properties target (asm:'c Asm.assembler) =
   asm#value (Bits.S.of_int growth wordsize)
   
 
-(*e: runtimedata.ml *)
+(*e: runtimedata.ml  *)
 (*e: front_ir/runtimedata.ml *)

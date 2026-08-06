@@ -1,5 +1,5 @@
 (*s: front_ir/rewrite.mli *)
-(*s: rewrite.mli *)
+(*s: rewrite.mli  *)
 (*s: exported type abbreviations *)
 type width = Rtl.width
 type exp   = Rtl.exp
@@ -7,7 +7,7 @@ type loc   = Rtl.loc
 type block = exp Postexpander.block
 type temp  = Register.t
 (*e: exported type abbreviations *)
-(*x: rewrite.mli *)
+(*x: rewrite.mli  *)
 module Ops : sig
   (*s: type signatures for applying standard operators *)
   val _NaN : width -> width -> exp -> exp
@@ -98,7 +98,7 @@ module Ops : sig
   val signed   : width -> int -> exp
   val unsigned : width -> int -> exp
 end
-(*x: rewrite.mli *)
+(*x: rewrite.mli  *)
 val div' : width -> dst:loc -> exp -> exp -> quot:exp -> rem:exp -> block
   (* uses: comparisons, add, sub *)
 
@@ -107,7 +107,7 @@ val div2 : width -> dst:loc -> exp -> exp -> block
 
 val div1_3 : width -> dst:loc -> exp -> exp -> block
   (* 1--3 conditional branches *)
-(*x: rewrite.mli *)
+(*x: rewrite.mli  *)
 val div_overflows : width -> exp -> exp -> exp
   (* uses: conjoin, eq *)
 
@@ -119,20 +119,20 @@ val modu : width -> exp -> exp -> exp
 
 val rem  : width -> exp -> exp -> exp
   (* uses : quot, mul, sub *)
-(*x: rewrite.mli *)
+(*x: rewrite.mli  *)
 val popcnt : width -> dst:loc -> exp -> block (* for 32 bits only *)
-(*x: rewrite.mli *)
+(*x: rewrite.mli  *)
 val sxlo : width -> width -> exp -> exp
   (* uses : shl, shra *)
 val zxlo : width -> width -> exp -> exp
   (* uses : shl, shrl *)
-(*x: rewrite.mli *)
+(*x: rewrite.mli  *)
 val regpair : hi:exp -> lo:exp -> exp
-(*x: rewrite.mli *)
+(*x: rewrite.mli  *)
 val slice : width -> width -> lsb:int -> exp -> exp
-(*x: rewrite.mli *)
+(*x: rewrite.mli  *)
 type 'a pair = { hi : 'a; lo : 'a }
 val splits : width -> lsb:int -> exp -> exp pair
 val splitu : width -> lsb:int -> exp -> exp pair
-(*e: rewrite.mli *)
+(*e: rewrite.mli  *)
 (*e: front_ir/rewrite.mli *)
