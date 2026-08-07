@@ -12,9 +12,13 @@ let (>=) = Pervasives.(>=)
 let (<)  = Pervasives.(<)
 let (>)  = Pervasives.(>)
 (*x: bits.ml *)
+
 type width      = int
+[@@deriving show]
 type bits       = int64 * width
+[@@deriving show]
 type t          = bits 
+[@@deriving show]
 
 let width (_,w) = w
 let check w = if w <= 0 || w > 64 then impossf "unsupported bitwidth %d" w

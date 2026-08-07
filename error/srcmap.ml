@@ -1,7 +1,10 @@
 (*s: error/srcmap.ml *)
 (*s: srcmap.ml *)
 type pos            = int
+[@@deriving show]
 type rgn            = pos * pos
+[@@deriving show]
+
 type location       = string    (* file   *)
                     * int       (* line   *)
                     * int       (* column *)
@@ -14,6 +17,10 @@ type map =          { mutable points:       syncpoint array
                     ; mutable top:          int
                     ; files :               (string, string) Hashtbl.t
                     }
+let pp_map fmt _map = 
+  Format.fprintf fmt "<srcmap>"
+let show_map _map = "<srcmap>"
+
 type point          = map * pos
 type region         = map * rgn
 (*x: srcmap.ml *)

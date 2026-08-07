@@ -9,9 +9,12 @@ type aggregation =
     | Identity
 type space = char * aggregation * Cell.t   (* name, byte order, cell size *)
 type count = Cell.count = C of int
+[@@deriving show]
 type width = int
 type reg = space * int * count (* Rtl.space, index, number of cells *)
 type t = reg
+[@@deriving show]
+
 type x = Reg   of t
        | Slice of width * int * t
 (*x: exported types(register.nw) *)

@@ -2,6 +2,7 @@
 (*s: error.mli *)
 type 'a error       = Error                     (* bad result  *)
                     | Ok        of 'a           (* good result *)
+[@@deriving show]
 
 exception ErrorExn  of string
 val error :         string -> 'a (* ErrorExn *)

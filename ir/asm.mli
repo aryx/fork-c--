@@ -44,6 +44,12 @@ class type ['proc] assembler = object
 end
 (*e: exported type definitions(asm.nw) *)
 
+val pp_assembler :
+  (Format.formatter -> 'proc -> unit) ->
+  Format.formatter ->
+  'proc assembler ->
+  unit
+
 val map : ('a -> 'b) -> 'b assembler -> 'a assembler
 val reloc_string : (Bits.bits -> string) -> Reloc.t -> string
      (* make string form of relocatable address using mangled text of symbols *)

@@ -11,6 +11,8 @@ type size = Const  of int
 type 'a t = Bool
           | Bits of 'a 
 type ty   = int t
+[@@deriving show]
+
 (*x: exported type definitions(types.nw) *)
 type tyscheme = (size t) list * (size t)
 type monotype = (int  t) list * (int  t)

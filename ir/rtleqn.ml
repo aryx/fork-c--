@@ -16,9 +16,13 @@ type term =
     | Const of Rtl.exp
     | Var   of string
     | Unit  
+[@@deriving show]
 
 type sum = (int * term) list
+[@@deriving show]
 type t   = sum                  (* equation, sum == 0 *)
+[@@deriving show]
+
 (*x: rtleqn.ml  *)
 module ToString = struct
     let term = function

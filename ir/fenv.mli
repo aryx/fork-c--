@@ -10,6 +10,7 @@ type variable =    { index:        int
                    ; loc:          Rtl.loc
                    ; variance:     Ast.variance
                    }
+[@@deriving show]
 (*x: exposed types shared by clean and dirty environments *)
 type symclass      = Proc          of Symbol.t
                    | Code          of Symbol.t    
@@ -36,6 +37,8 @@ and continuation = { base       : Block.t;   (* always empty; used only for addr
                    } (* might need a convention here *)
 and convention   = string
 and aligned      = int
+[@@deriving show]
+
 (*e: exposed types shared by clean and dirty environments *)
 (* pad: now put also those private types in mli *)
 (*s: private types shared by clean and dirty environments *)
@@ -52,6 +55,7 @@ type extern         = { imported:     Strutil.Set.t
 (*s: exported signature [[Env]] *)
 module type Env = sig
     type 'a info
+    [@@deriving show]
     type 'a partial
     val  bad: unit -> 'a info
 
@@ -68,6 +72,7 @@ module type Env = sig
                        ; globals         :    string  list(* global registers *)
                        ; stackdata       :    stackdata
                        }
+    [@@deriving show]
     (* type env = Proc.t env' *)
     and scope           = { mutable venv:   ventry Strutil.Map.t
                        ; tenv:   tentry Strutil.Map.t

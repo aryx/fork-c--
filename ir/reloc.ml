@@ -3,12 +3,20 @@
 open Nopoly
 
 type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
+[@@deriving show]
+
 let eqsym (s,_) (s',_) = s#mangled_text =$= s'#mangled_text
 
 type exp = Pos of symbol * Rtl.width | Neg of symbol * Rtl.width
+[@@deriving show]
+
+
 let neg = function Pos (s, w) -> Neg (s, w) | Neg (s, w) -> Pos (s, w)
 
 type t  = exp list * Bits.bits
+[@@deriving show]
+
+
 let of_const c    = ([], c)
 let of_sym s w    = ([Pos (s, w)], Bits.zero w)
 let add (xs, xc) (ys, yc) = (xs @ ys, Bits.Ops.add xc yc)

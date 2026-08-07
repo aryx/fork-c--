@@ -2,6 +2,8 @@
 (*s: srcmap.mli *)
 type pos            = int
 type rgn            = pos * pos
+[@@deriving show]
+
 (*x: srcmap.mli *)
 val null            : rgn
 (*x: srcmap.mli *)
@@ -10,6 +12,8 @@ type location       = string    (* file   *)
                     * int       (* column *)
 (*x: srcmap.mli *)
 type map
+[@@deriving show]
+
 val mk:             unit -> map (* empty map *)
 (*x: srcmap.mli *)
 val sync :          map -> pos -> location -> unit

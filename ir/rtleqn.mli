@@ -3,6 +3,8 @@
 exception Can'tSolve
 
 type t              (* equation *)
+[@@deriving show]
+
 type solution =
     { known:        (string * Rtl.exp) list  (* fully solved *)
     ; dependent:    (string * Rtl.exp) list  (* depend on other variables *)

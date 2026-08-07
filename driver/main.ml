@@ -141,9 +141,12 @@ let dump_nast file =
   let s = Nast.show nast in
   UCommon.pr2 s
 
+type res_or_error1 =
+  (unit Fenv.Dirty.env' * unit Nelab.compunit) Error.error
+[@@deriving show]
 
 (* filename -> ast -> nast -> nelab *)
-let test_nelab file =
+let dump_nelab file =
   let (srcmap, ast) = Driver.parse file in
   let nast = Nast.program ast in
 
@@ -158,8 +161,16 @@ let test_nelab file =
   let res_or_error = 
     Nelab.program ~swap validator srcmap assembler nast
   in
-  (* todo: write a vof_compunit and vof_fenv so can pretty print that *)
-  UCommon.pr2_gen res_or_error
+  let s = show_res_or_error1 res_or_error in
+  UCommon.pr2 s
+
+
+
+
+
+
+
+
 
 let test_x86 file =
   let (srcmap, ast) = Driver.parse file in
@@ -261,6 +272,8 @@ let extra_actions () = [
     Arg_.mk_action_1_arg pp_ast;
     "-dump_nast", "  <file>", 
     Arg_.mk_action_1_arg dump_nast;
+    "-dump_nelab", "  <file>", 
+    Arg_.mk_action_1_arg dump_nelab;
 
     "-driver_emit_asdl", "   <file>", 
     Arg_.mk_action_1_arg test_emit_asdl;
@@ -269,8 +282,6 @@ let extra_actions () = [
     "-driver_compile", "  <file>", 
     Arg_.mk_action_1_arg test_driver_compile;
 
-    "-test_nelab", "  <file>", 
-    Arg_.mk_action_1_arg test_nelab;
 
     "-test_x86", "  <file>", 
     Arg_.mk_action_1_arg test_x86;

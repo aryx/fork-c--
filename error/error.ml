@@ -2,6 +2,7 @@
 (*s: error.ml *)
 type 'a error       = Error                     (* bad result  *)
                     | Ok        of 'a           (* good result *)
+[@@deriving show]
 
 exception ErrorExn          of string
 (*x: error.ml *)

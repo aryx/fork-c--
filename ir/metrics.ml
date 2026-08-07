@@ -13,7 +13,9 @@ type t = {
   float       : string          ; (* name of float representation (def "ieee754") *)
   charset     : string          ; (* "latin1"  character encoding      *)
 }
+[@@deriving show]
 (*e: exposed types(metrics.nw) *)
+
 let default = {
   byteorder   = Rtl.Identity;
   wordsize    = 32;

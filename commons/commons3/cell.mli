@@ -1,6 +1,8 @@
 (*s: commons3/cell.mli *)
 (*s: cell.mli *)
 type t
+[@@deriving show]
+
 type count = C of int   (* a number of cells *)
 type width = int        (* a number of bits *)
 

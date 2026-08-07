@@ -38,6 +38,8 @@ type stmt =
   | Return     of convention * int * int * actual list
   | Limitcheck of convention * exp * limitfailure option
 and limitfailure = { failcont : exp; reccont : exp; recname : name; }
+[@@deriving show]
+
 (*e: exposed types(elabstmt.nw) *)
 val elab_stmts :
   (Rtl.rtl -> string option) -> Srcmap.map -> Ast.region -> 'a Fenv.Dirty.env' -> 

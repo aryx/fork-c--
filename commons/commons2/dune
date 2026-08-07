@@ -1,3 +1,5 @@
 (library
  (name cmm_commons2)
- (wrapped false))
+ (wrapped false)
+ (preprocess (pps ppx_deriving.show))
+)

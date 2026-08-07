@@ -35,6 +35,7 @@ type 'a compunit = {
   globals : (name * Fenv.variable) list;
   sections : 'a section list;
 }
+[@@deriving show]
 (*x: exposed types(nelab.nw) *)
 type validator = Rtl.rtl -> string option
 (*e: exposed types(nelab.nw) *)

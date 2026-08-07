@@ -5,9 +5,12 @@ type aggregation = Register.aggregation =
     | BigEndian
     | LittleEndian
     | Identity
+[@@deriving show]
 
 type space = char * aggregation * Cell.t   (* name, byte order, cell size *)
 type width = int
+[@@deriving show]
+
 (*x: definitions of exported, exposed types *)
 type count = Register.count = C of int
 (*e: definitions of exported, exposed types *)
@@ -68,8 +71,11 @@ end
  *)
 
 type exp       = Private.exp     
+[@@deriving show]
 type loc       = Private.loc   
+[@@deriving show]
 type rtl       = Private.rtl        
+[@@deriving show]
 type opr       = Private.opr        
 type assertion = Private.assertion  
 

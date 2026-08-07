@@ -1,6 +1,7 @@
 (*s: front_fenv/block.mli *)
 (*s: block.mli content *)
 type t
+[@@deriving show]
 
 val base:           t -> Rtl.exp
 val size:           t -> int

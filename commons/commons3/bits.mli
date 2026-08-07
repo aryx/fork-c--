@@ -6,9 +6,10 @@ type width = int
  * with ocamldebug
  *)
 type bits = Int64.t * int
-
+[@@deriving show]
 
 type t = bits 
+[@@deriving show]
 
 val width : t -> width         (* observer *)
 val zero  : width -> t         (* constructor *)

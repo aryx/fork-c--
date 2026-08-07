@@ -9,6 +9,7 @@ type t =
     ; alignment:    int
     ; constraints:  C.t list
     }
+[@@deriving show]
 
 let base t          = t.base
 let size t          = t.size

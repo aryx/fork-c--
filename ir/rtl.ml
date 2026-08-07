@@ -5,9 +5,14 @@ type aggregation = Register.aggregation =
     | BigEndian
     | LittleEndian
     | Identity
+[@@deriving show]
 
 type space = char * aggregation * Cell.t   (* name, byte order, cell size *)
+[@@deriving show]
+
 type width = int
+[@@deriving show]
+
 (*x: definitions of exported, exposed types *)
 type count = Register.count = C of int
 (*e: definitions of exported, exposed types *)
@@ -16,9 +21,12 @@ module Private = struct
     (*s: Private *)
     (*s: representation exposed in the private interface *)
     type aligned   = int     (* alignment guaranteed *)
+    [@@deriving show]
     type assertion = aligned (* may one day include alias info *)
+    [@@deriving show]
     (*x: representation exposed in the private interface *)
     type opr         = string * width list
+    [@@deriving show]
     (*x: representation exposed in the private interface *)
     type const      = Bool      of bool
                     | Bits      of Bits.bits            (* literal constant *)
@@ -26,6 +34,7 @@ module Private = struct
                     | Diff      of const  * const   (* difference of two constants *)
                     | Late      of string * width   (* late compile time constant *)
     and symkind = Code | Data | Imported (* three kinds of symbol, needed for PIC *)
+    [@@deriving show]
 
     type exp        = Const     of const               
                     | Fetch     of loc * width 
@@ -45,13 +54,18 @@ module Private = struct
                     | Slice     of width     (* number of bits in loc *)
                                 *  int       (* index of least-significant bit of slice *)
                                 *  loc  (* location from which slice is drawn *)
+    [@@deriving show]
+
     (*x: representation exposed in the private interface *)
     type effect     = Store     of loc * exp  * width
                     | Kill      of loc
+    [@@deriving show]
     (*x: representation exposed in the private interface *)
     type guarded    = exp  * effect
+    [@@deriving show]
     (*x: representation exposed in the private interface *)
     type rtl        = Rtl of guarded list
+    [@@deriving show]
     (*e: representation exposed in the private interface *)
     (*e: Private *)
 end
@@ -59,10 +73,15 @@ end
 (*s: definitions of types and functions exported at top level *)
 open Private    (* never do that *)
 type exp       = Private.exp     
+[@@deriving show]
 type loc       = Private.loc   
+[@@deriving show]
 type rtl       = Private.rtl        
+[@@deriving show]
 type opr       = Private.opr        
+[@@deriving show]
 type assertion = Private.assertion  
+
 (*x: definitions of types and functions exported at top level *)
 let aligned k = k
 let alignment k = k

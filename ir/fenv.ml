@@ -7,6 +7,7 @@ module Asm          = Asm
 module type Arg = sig
     type 'a partial
     type 'a info
+    [@@deriving show]
     
     val good    : 'a   -> 'a info
     val asgood  : 'a info -> 'a option
@@ -17,17 +18,21 @@ end
 type regkind       = RReg  of string   (* hardware reg *)
                    | RKind of string   (* calling convention kind *)
                    | RNone             (* none of above *)
+[@@deriving show]
 (*x: exposed types shared by clean and dirty environments *)
 type variable =    { index:        int
                    ; rkind:        regkind
                    ; loc:          Rtl.loc
                    ; variance:     Ast.variance
                    }
+[@@deriving show]
+
 (*x: exposed types shared by clean and dirty environments *)
 type symclass      = Proc          of Symbol.t
                    | Code          of Symbol.t    
                    | Data          of Symbol.t
                    | Stack         of Rtl.exp  (* address of slot *)
+[@@deriving show]
 
 type denotation    = Constant      of Bits.bits
                    | Label         of symclass
@@ -49,21 +54,26 @@ and continuation = { base       : Block.t;   (* always empty; used only for addr
                    } (* might need a convention here *)
 and convention   = string
 and aligned      = int
+[@@deriving show]
+
 (*e: exposed types shared by clean and dirty environments *)
 (*s: private types shared by clean and dirty environments *)
 type stackdata =      { soffset    :    int    (* current offset *)
                       ; smaxalign  :    int    (* max stackdata align constr*)
                       ; sname      :    string (* label for offset *)
                       }
+[@@deriving show]
 (*x: private types shared by clean and dirty environments *)
 type extern         = { imported:     Strutil.Set.t
                       ; exported:     Strutil.Set.t
                       ; nam2sym:      Symbol.t Strutil.Map.t
                       }
+[@@deriving show]
 (*e: private types shared by clean and dirty environments *)
 (*s: exported signature [[Env]] *)
 module type Env = sig
     type 'a info
+    [@@deriving show]
     type 'a partial
     val  bad: unit -> 'a info
 
@@ -90,7 +100,9 @@ module type Env = sig
     and  ventry        = Srcmap.rgn * (denotation * Types.ty) info
     (*x: types exposed in signature [[Env]] *)
     and  tentry         = Srcmap.rgn * Types.ty info
+    [@@deriving show]
     (*e: types exposed in signature [[Env]] *)
+
     val map : ('b -> 'a) -> 'a env' -> 'b env'
 
     val empty   : Srcmap.map -> Metrics.t -> 'proc Asm.assembler -> 'proc env'
@@ -130,11 +142,14 @@ module Env (Arg: Arg) = struct
  (*s: body of functor [[Env]] *)
  type 'a partial     = 'a Arg.partial
  type 'a info        = 'a Arg.info
+ [@@deriving show]
  let  bad            = Arg.bad
 
  (* pad: *)
  type  ventry        = Srcmap.rgn * (denotation * Types.ty) info
+ [@@deriving show]
  type  tentry         = Srcmap.rgn * Types.ty info
+ [@@deriving show]
 
  (*x: body of functor [[Env]] *)
  type 'proc env'    =  { scopes          :    scope list (* top = hd scopes *)
@@ -151,6 +166,7 @@ module Env (Arg: Arg) = struct
                        ; tenv:   tentry Strutil.Map.t
                        ; rindex: int   (* getIndex, nextIndex *)
                        }
+ [@@deriving show]
  (*x: body of functor [[Env]] *)
  let error r map msg = E.errorRegionPrt (map,r) msg 
  (*x: body of functor [[Env]] *)
@@ -367,6 +383,7 @@ end
 module Dirty = Env (struct
     type 'a partial = 'a option
     type 'a info    = 'a Error.error
+    [@@deriving show]
     
     let good    x   = Error.Ok(x)
     let bad     x   = Error.Error
@@ -378,6 +395,7 @@ end)
 module Clean = Env (struct
     type 'a partial             = 'a 
     type 'a info                = 'a
+    [@@deriving show]
 
     let good x                  = x
     let asgood x                = Some x

@@ -1,9 +1,13 @@
 (*s: commons3/cell.ml *)
 (*s: cell.ml *)
 type count = C of int   (* a number of cells *)
+[@@deriving show]
 type width = int        (* a number of bits *)
+[@@deriving show]
 
 type t = int * (count -> width) * (width -> count) * (width -> bool)
+[@@deriving show]
+
 let to_width (_, f, _, _) = f
 let to_count (_, _, f, _) = f
 let size     (w, _, _, _) = w

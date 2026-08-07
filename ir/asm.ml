@@ -44,6 +44,10 @@ class type ['proc] assembler = object
 end
 (*e: exported type definitions(asm.nw) *)
 
+let pp_assembler pp_proc fmt (a : 'proc assembler) =
+  Format.fprintf fmt "<assembler>"
+
+
 class ['proc] mapped_asm f (asm : 'a assembler) : ['proc] assembler =
 object
     (* declarations *)
