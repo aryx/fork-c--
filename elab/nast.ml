@@ -35,6 +35,7 @@ type procname = string
 [@@deriving show]
 type label    = string
 [@@deriving show]
+
 type stmt =
   | S      of stmt * Ast.region
   | If     of exp * stmt list * stmt list
@@ -51,7 +52,6 @@ type stmt =
   | Return of convention * (exp * exp) option * actual list
   | Limitcheck of convention * exp * (exp * name) option (* (cookie,(failk,recname)) *)
 [@@deriving show]
-
 (*x: exposed types(nast.nw) *)
 type typedefn  = ty * name list
 [@@deriving show]
@@ -85,6 +85,7 @@ and  datum =
 (*x: exposed types(nast.nw) *)
 type section = name * datum marked list
 [@@deriving show]
+
 type t = {
   target   : Ast.arch marked list;
   imports  : (Ast.region * Ast.ty option * Ast.import list) list;
@@ -104,7 +105,6 @@ let null = function [] -> true | _ :: _ -> false
 let rflatten xs =
   let add (r, xs) tail = List.fold_right (fun a t -> (r, a) :: t) xs tail in
   List.fold_right add xs []
-
 
 
 let cformal (r, kind, name, aligned) = (r, Auxfuns.Option.get "" kind, name, aligned)
