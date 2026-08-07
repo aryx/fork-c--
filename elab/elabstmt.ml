@@ -400,7 +400,7 @@ let elab_functions validate srcmap r env =
         | _ -> E.error "primitive operator produces exactly one result") in
     (*e: definitions of elaboration functions(elabstmt.nw) *)
     let rec stmt s = match s with
-    | N.StmtAt (s, r) -> E.catch (eprint r) (full_stmt r reachable) s
+    | N.S (s, r) -> E.catch (eprint r) (full_stmt r reachable) s
     | N.If (c, t, f) -> 
         let c = exp c in let t = stmts r true t in let f = stmts r true f in (*order*)
         E.ematch3 c t f (fun (c, cty) t f ->
@@ -435,7 +435,7 @@ let elab_functions validate srcmap r env =
     Error.Raise.list (stmts reachable ss)
   and jumps = function N.Goto _ | N.Jump _ | N.Cut _ | N.Return _  -> true
                      | N.Call (_, _, _, _, _, fl, _) -> List.exists never_returns fl
-                     | N.StmtAt (s, _) -> jumps s
+                     | N.S (s, _) -> jumps s
                      | N.Span (_, _, ss) -> jumpsss ss
                      | N.If (_, t, f) -> jumpsss t && jumpsss f
                      | N.Switch (_, _, arms) -> List.for_all jumpsarm arms

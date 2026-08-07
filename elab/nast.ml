@@ -36,7 +36,7 @@ type procname = string
 type label    = string
 [@@deriving show]
 type stmt =
-  | StmtAt of stmt * Ast.region
+  | S      of stmt * Ast.region
   | If     of exp * stmt list * stmt list
   | Switch of range option * exp * (range list * stmt list) list
   | Label  of label
@@ -159,7 +159,7 @@ let rec body r accums b k = match b with
 | A.StmtBody s  -> (
   (*s: match [[stmt]] [[s]] at [[r]] and continue with [[k]] *)
   let rec stmt r s k = 
-    let cons s ss = StmtAt (s, r) :: ss in
+    let cons s ss = S (s, r) :: ss in
     let atomic s = k (cons s) accums in
     match s with
     | A.S(s,r) -> stmt r s k

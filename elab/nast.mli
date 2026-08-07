@@ -35,7 +35,7 @@ type procname = string
 type label    = string
 [@@deriving show]
 type stmt =
-  | StmtAt of stmt * Ast.region
+  | S      of stmt * Ast.region
   | If     of exp * stmt list * stmt list
   | Switch of range option * exp * (range list * stmt list) list
   | Label  of label
