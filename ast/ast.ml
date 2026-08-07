@@ -20,6 +20,7 @@
   and in_alias = (StdPrims.std_string)
   and op = (StdPrims.std_string)
   and region = (StdPrims.std_int * StdPrims.std_int)
+  [@printer fun fmt _ -> Format.pp_print_string fmt "<>"]
   and ty =
         TyAt of (ty * region)
       | BitsTy of (size)
