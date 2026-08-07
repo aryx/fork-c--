@@ -152,6 +152,421 @@ License.
 %******************************************************************************
 
 %%% ------------------------------------------------------------------  
+\section{Source Code Locations}\label{srcmap}
+%%% ------------------------------------------------------------------  
+
+%%The scanner (section \ref{sec:scanner}) operates on a character
+%%stream.  An offset from the beginning of the stream marks a
+%%\textit{position} inside the stream; the first character in the stream
+%%has position 0.  The parser (section \ref{sec:parser}) takes positions
+%%reported by the scanner to mark nodes in the abstract syntax with
+%%regions.  A region is a pair of two positions and defines the span a
+%%node covers in the source code.
+
+%%Positions are easy to manipulate by a program but less useful for a
+%%programmer who likes to think in terms of line numbers and columns in
+%%a file.  A \textit{source map} translates source code
+%%\textit{positions} into source code \textit{locations} that are made
+%%up from
+
+%%\begin{itemize}
+%%\item a file name,
+%%\item a line number in that file (first line has number 1),
+%%\item and a column (first column is 1). There seems to be no
+%%      convention whether the first column in a line is considered 0 or
+%%      1. The Emacs editor adheres to the first, the Vi editor to the
+%%      latter perspective.
+%%\end{itemize}
+
+%%To establish the connection between simple positions and complex
+%%locations these two views must be \textit{synchronized}.  The result
+%%of all synchronizations is a source map.  The views must synchronize
+%%whenever advancing in the stream of characters is different from
+%%moving to the next column in the position's view.  This happens
+%%typically at the following points in a source file:
+
+%%\begin{itemize} 
+%%\item Start of a new source file.
+%%\item Beginning of a new line.
+%%\item A tab character that skips some columns.
+%%\item Some directive like [[#line]] from the C pre-processor
+%%      indicates a non-linearity in the source code. 
+%%\end{itemize}
+%%
+%%A synchronization establishes a connection between a source code
+%%position and a (filename, line, column) location.  The point of
+%%synchronization is called a synchronization point or sync point.  
+%%
+%%In principle, synchronization points can be placed in any order into a
+%%stream of characters.  The following restriction usually does not harm
+%%and helps to to build efficient source maps:  source code positions
+%%increase in the order synchronization points are established.  This
+%%means, that never a position to the left of an existing
+%%synchronization point is synchronized.
+%%
+%%Building and using a source map involves the following key operations:
+%%
+%%\begin{itemize}
+%%\item Create an initially empty source map.
+%%\item Enter synchronization points into the map.
+%%\item Return the location of a given position.
+%%\end{itemize}
+%%
+%%To make any position meaningful, position 0 should be a
+%%synchronization point. So whenever a source map is created a sync
+%%point for position 0 should be placed into it.
+
+%%% ------------------------------------------------------------------  
+\subsection{Interface}
+%%% ------------------------------------------------------------------  
+
+%%Position are non negative characters counts in the input stream.  They
+%%are represented by [[pos]].  A continuous region in the input
+%%stream consists of the first character in the span and the first one
+%%following it.
+
+<<srcmap.mli>>=
+type pos            = int
+type rgn            = pos * pos
+[@@deriving show]
+
+@
+
+%%The [[null]] region is sometimes used a special value when no real
+%%region information is available.
+
+<<srcmap.mli>>=
+val null            : rgn
+@
+
+%%Programmers think in terms of locations, describing a line and
+%%column in a file; they have type [[loc]].  I have chosen to use a
+%%tuple to represent a location instead of a record type.  There is some
+%%danger of confusing lines and columns because they share the same
+%%type.  Records avoid this but have other drawbacks:  labels must be
+%%unique which leads to long names and ugly pattern matching.
+
+<<srcmap.mli>>=
+type location       = string    (* file   *)
+                    * int       (* line   *)
+                    * int       (* column *)
+@
+
+%%A source map is a mutable data structure with an undisclosed
+%%representation.  A source map should never be empty but should contain
+%%a synchronization point for [[pos]] 0.  The [[mk]] function returns an
+%%empty source map for a file.
+
+<<srcmap.mli>>=
+type map
+[@@deriving show]
+
+val mk:             unit -> map (* empty map *)
+@
+
+%%A synchronization is announced with [[sync]].  It synchronizes a
+%%position [[pos]] with a [[location]].  A common case is the
+%%synchronization for a new line trough [[nl]].  A new line stays in the
+%%same file as the previous sync point and advances one line.  The
+%%[[pos]] passed to [[nl]] is that of the first character on the new
+%%line.  Another common case are tab characters which we currently
+%%ignore.
+
+<<srcmap.mli>>=
+val sync :          map -> pos -> location -> unit
+val nl :            map -> pos -> unit
+@
+
+%%[[last]] returns the location of the last sync point. It is useful
+%%to get the current file name and line number.
+
+<<srcmap.mli>>=
+val last :          map -> location
+@
+
+%%The corresponding location for a position can be obtained with
+%%[[location]].  For debugging a source map can be dumped to stdout
+%%using [[dump]]. 
+
+<<srcmap.mli>>=
+val location :      map -> pos -> location
+val dump:           map -> unit
+@
+
+%%To make positions meaningful they can be bundled with a source map
+%%that keeps track of their origins. 
+
+<<srcmap.mli>>=
+type point          = map * pos
+type region         = map * rgn
+@
+
+%%The [[Str]] module provides string representations for points and regions.
+
+<<srcmap.mli>>=
+module Str:
+sig
+    val point       : point  -> string
+    val region      : region -> string
+end
+@
+
+%%% ------------------------------------------------------------------  
+\subsection{Implementation}
+%%% ------------------------------------------------------------------  
+
+%%A single compilation unit can easily contain some thousand lines of
+%%code and at least as many synchronization points. An implementation
+%%should thus pay attention to memory requirements and run time
+%%performance. 
+
+<<srcmap.ml>>=
+type pos            = int
+[@@deriving show]
+type rgn            = pos * pos
+[@@deriving show]
+
+type location       = string    (* file   *)
+                    * int       (* line   *)
+                    * int       (* column *)
+@ 
+
+<<srcmap.ml>>=
+let null = (0,0)
+@
+
+%%A [[syncpoint]] associates a [[pos]] with a [[location]]. To
+%%lower memory requirements a bit this could be also defined as a
+%%quadruple. 
+
+<<srcmap.ml>>=
+type syncpoint      = pos * location
+@
+
+%%We have chosen to use an array to implement a source map.  Binary
+%%search can be used to implement the lookup operation and an array
+%%is compact in memory.  When an array fills up it is copied
+%%into a new one twice of the size of the old. 
+%%
+%%Using an array also requires the restriction mentioned above:  sync
+%%point positions must have an increasing order.  This could be dropped
+%%when the array is sorted before it is first used for the lookup
+%%operation.
+%%
+%%Storing the file name for every sync point requires lots of memory,
+%%especially when long path names are involved.  The number of different
+%%files referenced by all sync point is probably small.  Storing every
+%%name only once thus can help to save memory.  For this purpose a hash
+%%table is established.  A file name is never stored directly in the
+%%array but looked up first in the hash table.  The instance found there
+%%goes into the array.  Although it looks like the one from the location
+%%it is a different one that is shared among all sync points using this
+%%name.
+
+<<srcmap.ml>>=
+type map =          { mutable points:       syncpoint array 
+                    ; mutable top:          int
+                    ; files :               (string, string) Hashtbl.t
+                    }
+let pp_map fmt _map = 
+  Format.fprintf fmt "<srcmap>"
+let show_map _map = "<srcmap>"
+
+type point          = map * pos
+type region         = map * rgn
+@
+
+%%The [[top]] component maintains the index of the first free position
+%%in the [[points]] array.  In \ocaml~every array cell must be
+%%initialized upon creation.  We use [[undefined]] for this.  The
+%%initial size of the array is [[size]].
+
+<<srcmap.ml>>=
+let size        =  2    (* small to test alloc *)
+let undefined   =  (0, ("undefined", -1, -1))    
+@ 
+
+<<srcmap.ml>>=
+let mk () =
+    { points  = Array.create size undefined 
+    ; top     = 0
+    ; files   = Hashtbl.create 17
+    }    
+@
+
+%%To prevent that the array fills up [[alloc]] makes sure there is at
+%%least space for the next sync point.  In case the array is full it
+%%copies the existing array into a new one, twice of the size of the
+%%old. 
+
+<<srcmap.ml>>=
+
+let alloc srcmap =
+    let length = Array.length srcmap.points in
+        if   srcmap.top < length then 
+            ()
+        else 
+            let points' = Array.create length undefined in
+                srcmap.points <- Array.append srcmap.points points'
+@            
+
+%%Synchronizing means simply to enter the position and the
+%%corresponding location into the array.  The file name in the location
+%%is replaced by an instance that comes from the hash table and is
+%%shared by many sync points.  We check also for the increasing order of
+%%positions.
+
+<<srcmap.ml>>=
+let sync srcmap pos (file,line,col) =
+    let _     = alloc srcmap in
+    let file' = try  Hashtbl.find srcmap.files file
+                with Not_found -> ( Hashtbl.add srcmap.files file file
+                                  ; file
+                                  ) 
+    in
+    let location' = (file', line, col) in
+    let top   = srcmap.top   in
+        ( assert ((pos = 0) || (fst srcmap.points.(top-1) < pos))
+        ; srcmap.points.(top) <- (pos,location')
+        ; srcmap.top <- srcmap.top + 1
+        )
+@
+
+%%[[last]] returns the location of the last sync point. It is useful
+%%to get the current file name and line number.
+
+<<srcmap.ml>>=
+let last map =
+    ( assert (map.top > 0 && map.top <= Array.length map.points)
+    ; snd map.points.(map.top-1)
+    )
+@
+
+%%Entering a sync point for a new line is so common that it deserves
+%%its own function.  The sync point is actually at the position
+%%following the newline character because we know that this will be at the
+%%beginning of the next line; thus [[position]] must point to this first
+%%character of the new line.  The new line is in the same file as the
+%%last sync point.
+%%
+%%Since [[last]] already returns the shared instance of the file name, the
+%%hash table lookup in [[sync]] is superficial. Because [[nl]] is the most
+%%frequently called sync function it is worth implementing it as a
+%%specialed version of [[sync]] instead of calling [[sync]]:
+
+<<nl specification>>=
+let nl map pos = 
+    let (file, line, _) = last map in
+        sync map pos (file, line+1, 1)
+@
+
+<<srcmap.ml>>=
+let nl srcmap pos =
+    let _               = alloc srcmap  in
+    let (file, line, _) = last srcmap   in
+    let location' = (file, line+1,1) in
+    let top   = srcmap.top   in
+        ( assert ((pos = 0) || (fst srcmap.points.(top-1) < pos))
+        ; srcmap.points.(top) <- (pos,location')
+        ; srcmap.top <- srcmap.top + 1
+        )
+@
+
+%%Function [[cmp]] compares a [[pos]] with a [[(pos,location)]]
+%%pair; the [[pos]] is the one we like to find in the array.
+
+<<srcmap.ml>>=
+let cmp x (y,_) = compare x y
+@
+
+%%We want to find the element in the array with the position we are
+%%looking for, or, if it is not there, the element to the left of it.
+%%We expect that the array is not empty when it is used and secure this
+%%by an assertion.  Only the first [[length]] entries are searched in
+%%the array.
+
+<<srcmap.ml>>=
+let search x array length cmp =
+    let rec loop left right =
+        if left > right then
+            ( assert (0 <= right && right < Array.length array)
+            ; array.(right)
+            )
+        else
+            let pivot = (left + right)/2 in
+            let res   = cmp x array.(pivot) in
+            let _     = assert (0 <= pivot && pivot < Array.length array) in
+                
+                if res = 0 then 
+                    array.(pivot)
+                else if res < 0 then
+                    loop left (pivot-1)
+                else
+                    loop (pivot+1) right
+    in
+        ( assert (length > 0)
+        ; loop 0 (length-1)
+        )
+@
+
+%%To calculate the location of a position we have to find the sync
+%%point to its left.  We do a binary search for this point in the map
+%%which gives us a location.  The actual location is possibly to the
+%%right of this point:  we simply have to add the missing columns to go
+%%there.
+
+<<srcmap.ml>>=
+let location map pos =
+    let pos',(file,line,col) = search pos map.points map.top cmp in
+    (file,line,pos - pos' + col)
+@
+
+%%To aid debugging we provide a function [[dump]] to write the
+%%contents of a [[srcmap]] to stdout.
+
+<<srcmap.ml>>=
+let dump map =
+    let point (pos,(file,line,col)) = 
+        Printf.printf "%5d: %-32s %4d %3d\n" pos file line col
+    in
+        for i=0 to map.top-1 do
+            point map.points.(i)
+        done
+@
+
+%%For reporting locations to the user they must be available as
+%%strings. The [[Str]] module provides conversions.
+
+<<srcmap.ml>>=
+module Str = struct
+    let point  (map,pos) =
+      let (file,line,column) = location map pos in
+      Printf.sprintf "File \"%s\", line %d, character %d" file line column
+
+    
+    let region (map,rgn) =
+        match rgn with 
+        | (0,0)        -> Printf.sprintf "<unknown location>"
+        | (left,right) -> 
+        let (file1,l1,col1) = location map left   in
+        let (file2,l2,col2) = location map right  in
+        let (=$=) : string -> string -> bool = Pervasives.(=) in
+            if file1 =$= file2 && l1 = l2 then
+                Printf.sprintf 
+                "File \"%s\", line %d, characters %d-%d" file1 l1 col1 col2
+            else if file1 =$= file2 then
+                Printf.sprintf 
+                "File \"%s\", line %d, character %d - line %d, character %d"
+                file1 l1 col1 l2 col2
+            else
+                Printf.sprintf 
+                "File \"%s\", line %d, character %d - file %s, line %d, character %d"
+                file1 l1 col2 file2 l2 col2
+end
+@
+%$
+
+%%% ------------------------------------------------------------------  
 \section{Abstract Syntax Definition}\label{sec:ast}
 %%% ------------------------------------------------------------------  
 
@@ -517,9 +932,12 @@ type t = {
 val program : Ast.toplevel list -> t
 @ 
 
+
 \section{IR}
 
+
 \section{RTL}
+
 
 \section{Target}
 
@@ -740,7 +1158,6 @@ let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
     else
       Error.error "metrics of source code don't match the target"))
 @
-
 
 
 %******************************************************************************
@@ -2395,6 +2812,59 @@ let program ts =
 \chapter{Debugging}
 %******************************************************************************
 
+\section{Diagnostic output}
+
+%%Uses environment variable [[QCDEBUG]] to make noise.
+%%This variable contains a comma-separated list of words;
+%%if a word is on the list, output happens.
+
+<<debug.mli>>=
+val on : string -> bool   (* debugging on for this word *)
+val eprintf : string -> ('a, out_channel, unit) format -> 'a
+  (* if debugging on, print to stderr *)
+@
+
+%%You can ask for information about what's known, which is provided by
+%%[[register]].
+%%It's a checked error to register the same word more than once.
+
+<<debug.mli>>=
+val explain : unit -> unit   (* print known words to stderr *)
+val register : word:string -> meaning:string -> unit
+@ 
+
+<<debug.ml>>=
+let debugging =
+  try Str.split (Str.regexp ",") (Sys.getenv "QCDEBUG") with _ -> []
+let on s = List.mem s debugging
+
+let refs = ref ([] : (string * string) list)
+let register ~word ~meaning =
+  let (<) : string -> string -> bool = Pervasives.(<) in
+  let rec insert word meaning = function
+    | [] -> [(word, meaning)]
+    | ((w, m) as p) :: ps when word < w -> (word, meaning) :: p :: ps
+    | p :: ps -> p :: insert word meaning ps in
+  if List.mem_assoc word (!refs) then
+    Impossible.impossible ("Debug.register: multiple registrations of " ^ word)
+  else
+    refs := insert word meaning (!refs)
+
+let rec ign x = Obj.magic ign
+let print_and_flush s = (prerr_string s; flush stderr)
+let eprintf s = if on s then Printf.kprintf print_and_flush else ign
+(* for reasons known only to INRIA, eprintf and kprintf have different types,
+   so the above will not typecheck *)
+let eprintf s = if on s then Printf.eprintf else ign
+@ 
+
+<<debug.ml>>=
+let explain () =
+  Printf.eprintf "Words recognized in QCDEBUG:\n";
+  List.iter (fun (w, e) -> Printf.eprintf "  %-15s  %s\n" w e) (!refs)
+@ 
+
+
 
 %%% ------------------------------------------------------------------  
 \section{AST Pretty Printer}\label{sec:astpp}
@@ -3106,8 +3576,514 @@ let emit fd ~width tl =
 %******************************************************************************
 
 %******************************************************************************
-\chapter{Error Managment}
+\chapter{Error Management}
 %******************************************************************************
+
+%%% ------------------------------------------------------------------  
+\section{Error Handling}
+%%% ------------------------------------------------------------------ 
+
+%%The idea of error-handling in {\qcc} is not to stop in all cases after
+%%an error but to mark results as either good or bad.  Bad values can be
+%%used for further computation although the overall result will be bad. 
+%%The hope is, to detect even more errors that are \textit{not} caused
+%%by any previous error.  Details of this idea and the following
+%%implementation can be found in \textit{Eliminating Spurious Error
+%%Messages Using Exceptions, Polymorphism and Higher-Order Functions}
+%%\cite{ramsey:99:compj}.
+
+%%% ------------------------------------------------------------------  
+\subsection{Interface}
+%%% ------------------------------------------------------------------  
+
+%%Technically, results are wrapped in an [['a error]] type; good results
+%%are represented by the [[Ok]] constructor, bad results by [[Error]]. 
+%%A set of combinators helps to deal with this type of values. In
+%%addition, an exception can be raised to signal an error.
+
+%TODO: replace with result monad and let* syntax
+
+<<error.mli>>=
+type 'a error       = Error                     (* bad result  *)
+                    | Ok        of 'a           (* good result *)
+[@@deriving show]
+
+exception ErrorExn  of string
+val error :         string -> 'a (* ErrorExn *)
+val errorf : ('a, unit, string, 'b) format4 -> 'a
+@
+
+%%Now that a bad result can be either signaled by returning an [[Error]]
+%%value, or raising the [[ErrorExn]] exception, the following policy
+%%helps to decide which method to use:
+
+%%\begin{enumerate}
+%%\item Good values are returned wrapped by [[Ok]].
+%%\item Computations that use bad values provided from the outside
+%%      result in bad values that are returned wrapped in [[Error]].
+%%\item If a computation (over good or bad values) detects a new error
+%%      this is reported with an exception. It is the obligation of the
+%%      client to catch this exception, report it, and possibly return a
+%%      bad value to go on.
+%%\end{enumerate}
+
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Error functions}\label{sect:error-fun}
+%%% ------------------------------------------------------------------ 
+
+%%In the original paper \textit{Eliminating Spurious Error Messages
+%%Using Exceptions, Polymorphism and Higher-Order Functions}
+%%\cite{ramsey:99:compj} higher order functions usually expect functions
+%%as the first argument:  [[('a -> 'b) -> 'a error -> 'b error]] and
+%%arguments to them at higher positions.  Moving the function argument
+%%to the last position like in [['a error -> ('a -> 'b)]] provides more
+%%syntactical freedom because the function can be easier written inline,
+%%covering multiple lines of source code.  For this reason function
+%%arguments will come last.
+
+%%Combinators to deal with functions that do not naturally expect 
+%%values of type [[error]].
+
+<<error.mli>>=
+val combine : 'a error error -> 'a error
+val ematch  : 'a error -> ('a -> 'b) -> 'b error
+val ematch2 : 'a error -> 'b error -> ('a -> 'b -> 'c) -> 'c error
+val ematch3 : 'a error -> 'b error -> 'c error ->
+              ('a -> 'b -> 'c -> 'd) -> 'd error
+val ematch4 : 'a error -> 'b error -> 'c error -> 'd error -> 
+              ('a -> 'b -> 'c -> 'd -> 'e) -> 'e error
+val ematch5 : 'a error -> 'b error -> 'c error -> 'd error -> 'e error ->
+              ('a -> 'b -> 'c -> 'd -> 'e -> 'f) -> 'f error
+val ematch6 : 'a error -> 'b error -> 'c error -> 'd error -> 'e error -> 'f error ->
+              ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g) -> 'g error
+val ematchPair  : 'a error * 'b error -> ('a * 'b -> 'c) -> 'c error
+val ematchTriple: 'a error * 'b error * 'c error -> 
+                   ('a * 'b * 'c -> 'd) -> 'd error
+val ematchQuad  : 'a error * 'b error * 'c error * 'd error -> 
+                   ('a * 'b * 'c * 'd -> 'e) -> 'e error
+val seq         : 'a error -> ('a -> 'b error) -> 'b error
+val seq2        : 'a error -> 'b error -> ('a -> 'b -> 'c error) -> 'c error
+val seqPair     : 'a error * 'b error -> ('a * 'b -> 'c error) -> 'c error
+val seq'        : 'b -> 'a error -> ('a -> 'b) -> 'b 
+@
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Raising functions}
+%%% ------------------------------------------------------------------ 
+
+%%Raising combinators raise the constructors of an [[error]] value
+%%inside a complex value to the top-level.  A complex value is bad when
+%%one of its components is bad and good otherwise.  The raising
+%%combinators deal with the most important data types:  options, lists,
+%%and tuples.
+%%
+<<error.mli>>=
+module Raise :
+  sig
+    val option : 'a error option                -> 'a option error
+    val list   : 'a error list                  -> 'a list error
+    val pair   : 'a error * 'b error            -> ('a * 'b) error
+@
+
+%%The [[left]] and [[right]] functions consider only one component of
+%%a pair when raising the constructor.
+<<error.mli>>=
+    val left   : 'a error * 'b                  -> ('a * 'b) error
+    val right  : 'a * 'b error                  -> ('a * 'b) error
+    
+    val triple : 'a error * 'b error * 'c error -> ('a * 'b * 'c) error
+    val quad   : 'a error * 'b error * 'c error * 'd error 
+                  -> ('a * 'b * 'c * 'd) error
+  end
+@
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Lowering functions}
+%%% ------------------------------------------------------------------ 
+
+%%Lowering functions take a complex [[error]] value and push the
+%%constructor from the top-level to the values inside the [[error]]
+%%value. 
+
+<<error.mli>>=
+module Lower :
+  sig
+    val pair   : ('a * 'b)           error -> 'a error * 'b error
+    val triple : ('a * 'b * 'c)      error -> 'a error * 'b error * 'c error
+    val quad   : ('a * 'b * 'c * 'd) error -> 'a error 
+                                            * 'b error 
+                                            * 'c error 
+                                            * 'd error
+  end
+@
+
+%%The functions of the [[Implode]] module destroy informations by
+%%reducing complex [['a error]] values to [[unit error]]. They come in
+%%handy when are there are only good and bad results. Whenever an
+%%any argument of a function contains an [[Error]] value the outcome is
+%%[[Error]] and [[Ok()]] otherwise. 
+
+%%The [[list]] function is similar to [[Raise.list]] as is raises the
+%%[[error]] type to the top level.  The [[map]] function is greedy:  it
+%%does not stop when it encounters the first [[Error]] but traverses the
+%%whole list.  The motivation is to give detect possible bad values in
+%%the list such that the [[ErrorExn]] can be raised for them. 
+
+<<error.mli>>=
+module Implode :
+  sig
+    val singleton : 'a error                                  -> unit error
+    val pair :      'a error * 'b error                       -> unit error
+    val triple :    'a error * 'b error * 'c error            -> unit error
+    val quad :      'a error * 'b error * 'c error * 'd error -> unit error
+    val list :      'a error list                             -> unit error
+    val map :       ('a -> 'b error) -> 'a list               -> unit error
+  end
+@
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Catching and Printing Errors}
+%%% ------------------------------------------------------------------ 
+
+%%At the point where an error occurs the first time the [[ErrorExn]]
+%%is raised.  When the exception is caught is is turned into an
+%%[[Error]] value and from there on the [[Error]] value is propagated. 
+%%Catching the exception is done with [[catch]] in the special case, and
+%%[[catch']] in the general case.  [[catch']] permits to specify the
+%%value that is returned when an exception is caught whereas [[catch]]
+%%always uses [[Error]] for this.
+
+<<error.mli>>=
+val catch   :       (string -> unit) 
+                    -> ('a -> 'b error) -> 'a -> 'b error
+val catch'  : 'b -> (string -> unit) 
+                    -> ('a -> 'b      ) -> 'a -> 'b 
+@
+
+%%the first argument in [[catch printer f x]] is an error reporting
+%%function; [[f]] is applied to [[x]] and in case of an error [[Error]]
+%%is returned. The first argument to [[catch']] is the value to return
+%%in case of an error.
+
+%%The [[warningPrt]] and [[errorPrt]] functions can be passed to
+%%[[catch]] and [[catch']] as error printing functions. However, in most
+%%cases specialized functions for error reporting will be used to include
+%%some source code locations.
+
+<<error.mli>>=
+val warningPrt : string -> unit
+val errorPrt   : string -> unit
+@
+
+%%The following error reporting functions take a location as their first
+%%argument.  Typically the location is supplied to the function like in
+%%[[errorPointPrt point]] and the resulting closure is passed to
+%%[[catch]].  This works because the error locations are attached where
+%%exceptions are caught and not where they are raised.
+
+<<error.mli>>=
+val errorPointPrt  : Srcmap.point -> string -> unit
+val errorRegionPrt : Srcmap.region -> string -> unit
+val errorPosPrt    : Srcmap.pos -> string -> unit
+val errorRegPrt    : Srcmap.rgn -> string -> unit
+@
+
+%%% ------------------------------------------------------------------  
+\subsection{Implementation}
+%%% ------------------------------------------------------------------ 
+
+<<error.ml>>=
+type 'a error       = Error                     (* bad result  *)
+                    | Ok        of 'a           (* good result *)
+[@@deriving show]
+
+exception ErrorExn          of string
+@
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Raising functions}
+%%% ------------------------------------------------------------------ 
+
+%%Raising combinators raise the constructors of an [[error]] value inside
+%%a complex value to the top-level. A complex value is bad when one
+%%of its components is bad and good otherwise. The raising combinators
+%%deal with the most important data types: options, lists, and tuples.
+
+<<error.ml>>=
+module Raise = struct
+    <<raise module>>
+end
+@
+<<raise module>>=
+let option = function
+    | Some Error        -> Error
+    | Some (Ok x)       -> Ok (Some x)
+    | None              -> Ok (None)
+@
+
+<<raise module>>=
+let list xs =
+    let rec loop acc = function
+        | []            -> Ok (List.rev acc)
+        | (Ok x)::xs    -> loop (x::acc) xs
+        | Error::xs     -> Error 
+    in      
+        loop [] xs
+@
+
+<<raise module>>=
+let pair = function
+    | (Ok x, Ok y)          -> Ok (x,y)
+    | _                     -> Error
+@
+
+<<raise module>>=
+let left = function
+    | (Ok x, y)             -> Ok (x,y)
+    | _                     -> Error
+@
+
+<<raise module>>=
+let right = function
+    | (x, Ok y)             -> Ok (x,y)
+    | _                     -> Error
+@
+
+<<raise module>>=
+let triple = function
+    | (Ok x, Ok y, Ok z)    -> Ok (x,y,z)
+    | _                     -> Error 
+@
+
+<<raise module>>=
+let quad = function
+    | (Ok a,Ok b,Ok c,Ok d) -> Ok (a,b,c,d)
+    | _                     -> Error
+@
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Lowering functions}
+%%% ------------------------------------------------------------------ 
+
+%%Lowering functions take a complex [[error]] value and push the
+%%constructor from the top-level to the values inside the [[error]]
+%%value. 
+
+<<error.ml>>=
+module Lower = struct
+    <<lower module>>
+end
+@
+
+<<lower module>>=
+let pair = function
+    | Ok (x,y)              -> Ok x , Ok y
+    | Error                 -> Error, Error 
+@
+<<lower module>>=
+let triple = function
+    | Ok (x,y,z)            -> Ok x , Ok y , Ok z
+    | Error                 -> Error, Error, Error
+@
+<<lower module>>=
+let quad = function
+    | Ok (a,b,c,d)          -> Ok a , Ok b , Ok c , Ok d
+    | Error                 -> Error, Error, Error, Error
+@
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Reduction functions}
+%%% ------------------------------------------------------------------ 
+
+%%Sometimes it is sufficient to distinguish between good and bad
+%%values. Any complex value that has a bad value in it is itself bad.
+%%The [[Implode]] module reduces everything to [[unit Error]] values
+%%which means it (carefully) destroys informations.
+
+<<error.ml>>=
+module Implode = struct
+    <<implode module>>
+end
+@
+
+<<implode module>>=
+let singleton = function
+    | Ok _ -> Ok ()
+    | _    -> Error
+@
+
+<<implode module>>=
+let pair = function
+    | Ok _, Ok _ -> Ok ()
+    | _          -> Error
+@
+
+<<implode module>>=
+let triple = function
+    | Ok _, Ok _, Ok _ -> Ok ()
+    | _                -> Error
+@
+
+<<implode module>>=
+let quad = function
+    | Ok _, Ok _, Ok _, Ok _ -> Ok ()
+    | _                      -> Error
+@
+
+<<implode module>>=
+let rec list = function
+    | []            -> Ok ()
+    | (Ok _)::xs    -> list xs
+    | _             -> Error 
+@
+
+<<implode module>>=
+let map f l =
+    let ok = Ok () in
+    let rec loop res = function
+        | []    -> res
+        | x::xs -> ( match res, f x with
+                   | Error, _     -> loop Error xs 
+                   |    _ , Error -> loop Error xs
+                   | _            -> loop ok    xs
+                   )
+    in
+        loop ok l 
+@
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Error functions}
+%%% ------------------------------------------------------------------ 
+
+%%The following combinators bridge the gap between code that uses error
+%%propagation using the [[error]] type and code that doesn't.
+
+<<error.ml>>=
+let combine = function  
+    | Ok x      -> x
+    | Error     -> Error
+@
+
+<<error.ml>>=
+let ematch x f = match x with Ok x -> Ok (f x) | Error -> Error
+let ematch2 x y f =
+  match x with Ok x -> (match y with  Ok y -> Ok (f x y) | _ -> Error) | _ -> Error
+let ematch3 x y z f     = match x with Ok x -> ematch2 y z     (f x) | Error -> Error
+let ematch4 x y z w f   = match x with Ok x -> ematch3 y z w   (f x) | Error -> Error
+let ematch5 x y z w v f = match x with Ok x -> ematch4 y z w v (f x) | Error -> Error
+let ematch6 x y z w v u f =
+  match x with Ok x -> ematch5 y z w v u (f x) | Error -> Error
+let ematchPair    x2 = ematch (Raise.pair x2)
+let ematchTriple  x3 = ematch (Raise.triple x3)
+let ematchQuad    x4 = ematch (Raise.quad x4)
+@
+
+<<error.ml>>=
+let seq x f = match x with Ok x -> f x | Error -> Error
+let seq2 x y f =
+  match x with Ok x -> (match y with  Ok y -> f x y | _ -> Error) | _ -> Error
+let seq' default x f = match x with Ok x -> f x | Error -> default
+let seqPair x2   = seq (Raise.pair x2)
+@
+
+%%% ------------------------------------------------------------------ 
+%%\subsubsection{Error reporting}
+%%% ------------------------------------------------------------------ 
+
+%%We provide functions to raise the error ([[ErrorExn]]) exception and
+%%issue warnings.
+
+<<error.ml>>=
+let catch' default printer f arg =
+    try f arg with
+    | ErrorExn(msg) -> ( printer msg 
+                       ; default
+                       )
+@
+
+<<error.ml>>=
+let catch printer f arg = catch' Error printer f arg
+let error msg           = raise (ErrorExn msg)
+let errorf fmt = Printf.kprintf error fmt
+@
+
+%%The following functions print error and warning messages. They differ
+%%in the argument describing a source code position the error is
+%%attributed to.
+
+<<error.ml>>=
+let warningPrt msg = Printf.eprintf "Warning: %s\n" msg
+let errorPrt   msg = Printf.eprintf "Error: %s\n"   msg
+@
+<<error.ml>>=
+let errorPointPrt  p msg = 
+    ( Printf.eprintf "%s " (Srcmap.Str.point p)
+    ; errorPrt msg
+    )
+@
+<<error.ml>>=
+let errorRegionPrt r msg =
+    ( Printf.eprintf "%s " (Srcmap.Str.region r)
+    ; errorPrt msg
+    )
+@
+<<error.ml>>=
+let errorPosPrt    p msg =
+    ( Printf.eprintf "Character %d " p
+    ; errorPrt msg
+    )
+@
+<<error.ml>>=
+let errorRegPrt (l,r) msg = 
+    ( Printf.eprintf "Character %d-%d " l r
+    ; errorPrt msg
+    )
+@
+
+%%% ------------------------------------------------------------------ 
+\section{Impossible}
+%%% ------------------------------------------------------------------ 
+
+%%Implementations are imperfect: they reach code that they should. This
+%%module provides two function to signal these kind of internal errors:
+
+%%\begin{itemize}
+%%\item Code that should be unreachable due to the internal logic of the
+%%      program should call [[impossible]] with a descriptive message.
+%%
+%%\item Missing implementations call [[unimp]] with a descriptive message.
+%%\end{itemize}
+
+%%{\ocaml} does not provide [[__LINE]__]] and [[__FILE__]] like the C
+%%pre-processor.  It is therefore a good idea to include the source
+%%file name in the messages passed to [[impossible]] and the like.  A
+%%raised exception by itself does not include any hint where it was
+%%raised.  The {\ocaml} debugger is one way of finding where an
+%%excpetion was raised.
+
+%TODO: ocaml does support __FILE__ and even __FUNC__ now
+
+<<impossible.mli>>=
+val impossible: string -> 'a
+val unimp:      string -> 'a
+@
+
+%%% ------------------------------------------------------------------ 
+\subsection{Implementation}
+%%% ------------------------------------------------------------------ 
+
+<<impossible.ml>>=
+exception Impossible of string
+
+let impossible msg =
+  prerr_endline ("This can't happen: " ^ msg);
+  raise (Impossible msg)
+let unimp msg = 
+  prerr_endline ("Not implemented in qc--: " ^ msg);
+  raise (Impossible msg)
+@
+
 
 %******************************************************************************
 \chapter{Utilities}
