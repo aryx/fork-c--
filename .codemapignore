@@ -1,5 +1,7 @@
 
-/semgrep-pfff-libs
+# submodules:
+#/semgrep-pfff-libs
+#/caps
 
 # for codegraph_build
 #dir: h_camlburg/parsing
@@ -7,4 +9,3 @@
 
 # for codegraph_build
 #file: h_camlburg/main.cmt
-
