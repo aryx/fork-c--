@@ -13,7 +13,6 @@ module Common2 = Common
 (*****************************************************************************)
 (* Purpose *)
 (*****************************************************************************)
-
 (*
  * Pad's driver for the different c-- analysis. Here are the important
  * types and analysis. They are mostly in the same order than MAKESUBDIRS
@@ -91,18 +90,18 @@ module Common2 = Common
  *)
 
 (*****************************************************************************)
-(* Flags *)
+(* Types and constants *)
 (*****************************************************************************)
 
-let verbose = ref false
+type caps = < Cap.exit >
 
-(* action mode *)
-let action = ref ""
+let usage = 
+  "usage: c-- [options] [file or dir]"
 
 let version = "0.1"
 
 (*****************************************************************************)
-(* Helpers *)
+(* Flags *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -301,44 +300,41 @@ let all_actions () =
  extra_actions () @
  []
 
-let options () = 
-  [
-    "-verbose", Arg.Set verbose, 
-    " ";
-  ] @
-  Arg_.options_of_actions action (all_actions()) @
-(*
-  Common2.cmdline_flags_devel () @
-  Common2.cmdline_flags_verbose () @
-  Common2.cmdline_flags_other () @
-*)
-  [
-  "-version",   Arg.Unit (fun () -> 
-    UCommon.pr2 (spf "qc-- version: %s" version);
-    exit 0;
-  ), 
-    "  guess what";
-
-  (* this can not be factorized in Common *)
-  "-date",   Arg.Unit (fun () -> 
-    UCommon.pr2 "version: $Date: 2010/10/26 00:44:57 $";
-    raise (Common.UnixExit 0)
-    ), 
-  "   guess what";
-  ] @
-  []
-
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
 
-let main () = 
-  let usage_msg = 
-    "Usage: " ^ Filename.basename Sys.argv.(0) ^ 
-      " [options] <file or dir> " ^ "\n" ^ "Options are:"
+let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
+   Exit.t = 
+  let level = ref (Some Logs.Warning) in
+  let backtrace = ref false in
+  let action = ref "" in
+
+  let options = [
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
+    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+    " trace the main functions";
+    "-backtrace", Arg.Set backtrace,
+    " show backtraces for erros";
+  ] @
+  Arg_.options_of_actions action (all_actions()) @
+  [
+  "-version",   Arg.Unit (fun () -> 
+    UCommon.pr2 (spf "c-- version: %s" version);
+    exit 0;
+  ), 
+ "  guess what";
+  ]
   in
-  (* does side effect on many global flags *)
-  let args = Arg_.parse_options (options()) usage_msg Sys.argv in
+  (* This may raise ExitCode *)
+  let args = Arg_.parse_options options usage argv in
+  Logs_.setup ~level:!level ();
+  Logs.info (fun m -> m "ran from %s" (Sys.getcwd()));
 
   (* must be done after Arg.parse, because Common.profile is set by it *)
   Profiling.profile_code "Main total" (fun () -> 
@@ -349,25 +345,34 @@ let main () =
     (* actions, useful to debug subpart *)
     (* --------------------------------------------------------- *)
     | xs when List.mem !action (Arg_.action_list (all_actions())) -> 
-        Arg_.do_action !action xs (all_actions())
+        Arg_.do_action !action xs (all_actions());
+        Exit.OK
 
-    | [] when !action = "-yyy" -> 
-        UCommon.pr2 "yyy"
-
-    | _ when not (!action <> "") -> 
+    | _ when not (String_.empty !action) -> 
         failwith ("unrecognized action or wrong params: " ^ !action)
 
     (* --------------------------------------------------------- *)
     (* main entry *)
     (* --------------------------------------------------------- *)
     | x::xs -> 
-        main_action (x::xs)
-
+      (try
+        main_action (Fpath_.of_strings (x::xs))
+       with exn ->
+         if !backtrace
+         then raise exn
+         else
+           (match exn with
+           | Failure s | Sys_error s ->
+              Logs.err (fun m -> m "c--: %s" s);
+              Exit.Err s
+           | exn -> raise exn
+           )
+      )       
     (* --------------------------------------------------------- *)
     (* empty entry *)
     (* --------------------------------------------------------- *)
     | [] -> 
-        Arg_.usage usage_msg (options()); 
+        Arg_.usage usage options; 
         failwith "too few arguments"
     )
   )
@@ -376,6 +381,7 @@ let main () =
 
 (*****************************************************************************)
 let _ =
-  UCommon.main_boilerplate (fun () -> 
-      main ();
+  Cap.main (fun (caps: Cap.all_caps) ->
+    let argv = CapSys.argv caps in
+    Exit.exit caps (Exit.catch (fun () -> main caps argv))
   )
