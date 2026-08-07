@@ -39946,6 +39946,7 @@ let regname8 ~lsb ~base = match lsb with
 %******************************************************************************
 
 \section{[[driver.nw]]}
+%%% Example (at beginning of line): %%Grades: B Central Soon
 
 <<driver.ml>>=
 <<driver.ml content>>
@@ -39955,222 +39956,11 @@ let regname8 ~lsb ~base = match lsb with
 %<<driver.mli>>
 %@
 
-%%% vim: ts=8 sts=4 sw=4 et
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
-%%% ------------------------------------------------------------------ 
-\section{Driver}
-%%% ------------------------------------------------------------------ 
-%%
-%%This module presents the compiler as a compositional collection of
-%%abstract values and functions. These functions and values are exported
-%%as primitives to a Lua interpreter, giving the user a way to customize
-%%the compiler.
-%%
-%%In case of an error, all functions raise [[Error.ErrorExn]]. An error
-%%message is typically printed to [[stderr]] before the exception is
-%%raised.
-%%
-%%\begin{itemize}
-%%\item [[version]]: print a version information to [[stdout]]. This is
-%%      intentionally not a string such it is harder to abuse.
-%%\item [[scan]]: scans a file and prints all tokens together with their
-%%      source code position. Only useful to debug the scanner.
-%%\item [[parse]]: returns the abstract syntax of a {\PAL} file.
-%%\item [[emit_asdl]]: writes the {\AST} in {\small ASDL} syntax to
-%%      [[stdout]].
-%%%pad: where is check ??
-%%\item [[check]]: checks the static semantics of a file and returns 
-%%      an environment [[env]] value upon success. 
-%%\item [[compile]]: compiles an {\AST} to assembly code. The function
-%%      calls the Lua function [[optimize]] for every function and passed
-%%      the functions control-flow graph [[cfg]] and its [[stack]] to it.
-%%\item [[assemble]]: emits an assembler program.
-%%\item [[print]]: prints a [[doc]] value to [[stdout]], formatting the
-%%      output for a line width of [[width]] characters.       
-%%\item [[reinit]]: re-initializes any mutable state.
-%%\end{itemize}
-%%
-%%The compiler is controlled by a Lua interpreter that is build in the
-%%\module{main2} module. It takes several user-defined types to extend it.
-%%This module provides new Lua types like [[asm]] and [[ast]] for the
-%%interpreter, and a library that uses them. 
-<<driver.mli>>=
-
-(* the lexer *)
-val scan      : string -> unit
-
-(* the parser *)
-val parse     : string -> Srcmap.map * Ast.program
-
-(* sexp-based AST printer *)
-val emit_asdl : Srcmap.map * Ast.program -> unit
-
-(* basic pretty printer *)
-val pretty    : Srcmap.map * Ast.program -> Pp.doc
-val print     : Pp.doc -> int -> out_channel -> unit
+% now in Main.nw
 
 
-
-val elab : 
-  swap:bool -> 
-  (Rtl.rtl -> string option) -> 
-  Srcmap.map * Ast.program ->
- 'proc Asm.assembler ->
- ('proc Fenv.Dirty.env' * 'proc Nelab.compunit) Error.error
-
-val compile :
-  Ast2ir.tgt -> 
-  (Ast2ir.proc -> unit) -> 
-  exportglobals:bool -> 
-  src:(Srcmap.map * Ast.program) -> 
-  asm:Ast2ir.proc Asm.assembler -> 
-  validate:bool -> 
-  swap:bool -> 
-  unit
-   (* raises Error.ErrorExn *)
-
-val version   : unit -> unit
-
-
-val metrics_ok : Metrics.t -> ('a, 'b, 'c) Target.t -> bool
-
-
-@
-%%
-%%% ------------------------------------------------------------------ 
-\subsection{Caml Implementation}
-%%% ------------------------------------------------------------------ 
-%%
-<<driver.ml content>>=
-module E  = Error
-module M  = Metrics
-module PA = Preast2ir
-module T  = Target
-@ 
-%%
-<<driver.ml content>>=
-let version () =
-    ( This.name     stdout 
-    ; output_string stdout " "
-    ; This.version  stdout 
-    ; output_string stdout 
-        " (see also http://www.cminusminus.org)\n"
-    )
-@ 
-%%
-<<driver.ml content>>=
-let scan file =
-    let fd          = try open_in file
-                      with Sys_error(msg) -> E.error msg    in
-    let finally ()  = close_in fd                           in
-    let lexbuf      = Lexing.from_channel fd                in
-    let map         = Srcmap.mk ()                          in
-    let scanner     = Scan.scan map                         in
-    let location lb = Srcmap.location map (Lexing.lexeme_start lb) in
-    let rec loop lb =
-        match scanner lb with
-            | Parse.EOF -> ()
-            | tok       ->
-                let (file,line,col) = location lb           in
-                let tok             = Scan.tok2str tok      in
-                    ( Printf.printf "%-16s %3d %2d %s\n" file line col tok
-                    ; loop lb
-                    )
-    in
-        ( Srcmap.sync map 0 (file,1,1)
-        ; loop lexbuf
-        ; finally ()
-        )
-@ 
-%%
-<<driver.ml content>>=
-let parse (file:string) = 
-    let fd          = try open_in file
-                      with Sys_error(msg) -> E.error msg    in
-    let finally ()  = close_in fd                           in
-    let lexbuf      = Lexing.from_channel fd                in
-    let map         = Srcmap.mk ()                          in
-    let scanner     = Scan.scan map                         in
-        try
-            ( Srcmap.sync map 0 (file,1,1)
-            ; (map, Parse.program scanner lexbuf) 
-            )
-        with
-            | Parsing.Parse_error ->
-              ( finally()
-              ; E.errorPointPrt (map, Lexing.lexeme_start lexbuf) "parse error"
-              ; E.error "parse error - compilation aborted"
-              )
-            | E.ErrorExn msg ->
-              ( finally()
-              ; E.errorPointPrt (map, Lexing.lexeme_start lexbuf) msg
-              ; E.error "parse error - compilation aborted"
-              )
-            | e ->
-              ( finally()
-              ; raise e
-              )
-@ 
-%%
-<<driver.ml content>>=
-let emit_asdl (map,ast) =
-        AstUtil.sexp_wr_program ast stdout
-@
-<<driver.ml content>>=
-let pretty (map,ast) = Astpp.program ast
-let print doc width channel = Pp.ppToFile channel width doc
-@ 
-%%
-\subsection{Driver support for the new front end}
-%%
-%%Metrics check.  Perhaps the [[Target.t]] should have a [[Metrics.t]] inside.
-%%PERHAPS THIS CHECK SHOULD BE MOVED INTO ELAB, WHICH SHOULD ALSO CHECK FOR
-%%THINGS LIKE CORRECT CALLING CONVENTIONS AND HARDWARE REGISTERS.
-<<driver.ml content>>=
-let metrics_ok src tgt =
-  let int i = string_of_int i in
-  let string s = s in
-  let outcome = ref true in
-  let unequal property to_string source target = 
-    outcome := false;
-    Printf.eprintf "source code specifies %s %s, but target %s specifies %s %s\n"
-      property (to_string source) tgt.T.name property (to_string target) in
-  let (<>) = Pervasives.(<>) in
-  if src.M.byteorder <> tgt.T.byteorder then
-    unequal "byteorder" Rtlutil.ToUnreadableString.agg src.M.byteorder tgt.T.byteorder;
-  if src.M.wordsize <> tgt.T.wordsize then
-    unequal "wordsize" int src.M.wordsize tgt.T.wordsize;
-  if src.M.pointersize <> tgt.T.pointersize then
-    unequal "pointersize" int src.M.pointersize tgt.T.pointersize;
-  if src.M.memsize <> tgt.T.memsize then
-    unequal "memsize" int src.M.memsize tgt.T.memsize;
-  if src.M.float <> Float.name tgt.T.float then
-    unequal "float" string src.M.float (Float.name tgt.T.float);
-  if src.M.charset <> tgt.T.charset then
-    unequal "charset" string src.M.charset tgt.T.charset;
-  !outcome
-@ 
-<<driver.ml content>>=
-let elab ~swap validate (map,ast) asm =
-  Nelab.program ~swap validate map asm (Nast.program ast)
-
-let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
-  (* old: failwith "TODO: pad: Driver.compile and mvaludate" *)
-
-  let validate = if validate then Mvalidate.rtl target else (fun _ -> None) in
-  let abort () = Error.error "compilation aborted because of errors" in
-  let as_ok = function Error.Ok x -> x | Error.Error -> abort () in
-  as_ok (Error.ematch (elab swap validate src asm) (fun (env,compunit) ->
-    if metrics_ok (Fenv.Dirty.metrics env) target then
-      if Fenv.Dirty.errorFlag env then
-        abort ()
-      else
-        Ast2ir.translate (PA.T target) (Fenv.clean env) opt exportglobals compunit
-    else
-      Error.error "metrics of source code don't match the target"))
-@
 \section{[[main2.nw]]}
+%%% Example (at beginning of line): %%Grades: B Central Soon
 
 %<<./this.mli>>=
 %<<this.mli>>
@@ -40180,27 +39970,29 @@ let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
 %<<main.ml>>
 %@
 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%% $Id: main.nw,v 1.57 2006-03-14 02:01:36 nr Exp $
-%%
+% now in Main.nw
+
 %%% ------------------------------------------------------------------ 
 \section{Main}\label{sect:main}
 %%% ------------------------------------------------------------------ 
-%%
+
+%TODO: actually not the current main.ml that I wrote using Arg
+% and Arg_.actions and Logging
+
 %%This module contains the [[main]] function that is executed when the
 %%\C~compiler starts.  It basically just grabs the command line arguments
 %%and hands them to the Lua interpreter. 
-%%
+
 %%Nothing gets exported from here because this is the top-most module of
 %%the hierarchy.
-%%
+
 <<main.mli>>=
 @
-%%
+
 %%We export command-line arguments to the Lua values
 %%[[Sys.cmd]] and [[Sys.argv]]. The
 %%[[Sys]] table is created if it does not exist. 
-%%
+
 <<main.ml>>=
 module E = Error
 module I = Lualink.I
@@ -40212,6 +40004,7 @@ let export_argv g strings =
      "cmd",  V.string.V.embed          (List.hd strings);
     ] g
 @
+
 %%At start-up, we load the file [[qc--.lua]] into the interpreter. It
 %%defines commonly used functions. The file is searched along a search
 %%path. Typically, the [[qc--.lua]] file that is compiled into the table
@@ -40219,6 +40012,7 @@ let export_argv g strings =
 %%
 %%string into the compiler such that it is always available. During
 %%development it is easier to have an external file.
+
 <<main.ml>>=
 let main () =
     let argv        = Array.to_list Sys.argv in
@@ -40236,15 +40030,19 @@ let main () =
                 ; raise e
                 )
 @                
+
 %%In \ocaml~no [[main]] function like in C exists but simply all values
 %%in a module are evaluated.  However, we simulate this by evaluating
 %%[[main ()]]. 
+
 <<main.ml>>=
 let _ = main ()
 @
+
 %%During development bugs are easier to find with the debugger if we
 %%don't catch exceptions on the top-level. Shipping code, however,
 %%should use instead the following:
+
 <<main.ml unused>>=
 let _ = try main () with e -> 
         ( Printf.eprintf "%s\n" (Printexc.to_string e)
@@ -40253,11 +40051,11 @@ let _ = try main () with e ->
         ; exit 2
         )
 @
-%%      
+
 %%% ------------------------------------------------------------------  
 \section{This}
 %%% ------------------------------------------------------------------  
-%%
+
 %%To include some version information into the main binary we provide the
 %%[[This]] module.  Its source code [[this.ml]] is created during the
 %%build process from [[this.in]].  Currently only the version information
@@ -40269,7 +40067,7 @@ let _ = try main () with e ->
 %%At startup the compiler executes a file [[qc--.lua]] in the Lua
 %%interpreter. One version of this file is compiled into the binary as
 %%[[This.boot]].
-%%
+
 <<this.mli>>=
 val name        : out_channel -> unit
 val version     : out_channel -> unit 
@@ -40280,12 +40078,11 @@ val byteorder   : string (* "big" | "little" *)
 val arch_os     : string (* "x86-linux" *)
 val install_dir : string (* "/usr/local" *)
 *)
-
 @
-%%
+
 %%Here is the implementation. The golory details are also in the [[mk]]
 %%file in this directory.
-%%
+
 <<this.in>>=
 (* Do not edit - this file is created from this.in through mk(1) 
  * If this file does not compile, check the following files:
@@ -40295,10 +40092,10 @@ val install_dir : string (* "/usr/local" *)
 
 let system          = "@this@"
 @
-%%
+
 %%The functions [[name]] and [[version]] decompose the [[system]]
 %%string to get its name and version. 
-%%
+
 <<this.in>>=
 let name channel = 
     let s = try let minus = String.rindex system '-' in
@@ -40307,7 +40104,7 @@ let name channel =
     in
          output_string channel s
 @ 
-%%
+
 <<this.in>>=
 let version channel = 
     let s = try let minus = String.rindex system '-' in

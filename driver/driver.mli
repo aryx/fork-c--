@@ -35,8 +35,5 @@ val compile :
 
 val version   : unit -> unit
 
-
 val metrics_ok : Metrics.t -> ('a, 'b, 'c) Target.t -> bool
-
-
 (*e: driver.mli *)

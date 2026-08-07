@@ -96,7 +96,7 @@ let elab ~swap validate (map,ast) asm =
   Nelab.program ~swap validate map asm (Nast.program ast)
 
 let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
-  (* old: failwith "TODO: pad: Driver.compile and mvaludate" *)
+  (* old: failwith "TODO: pad: Driver.compile and mvalidate" *)
 
   let validate = if validate then Mvalidate.rtl target else (fun _ -> None) in
   let abort () = Error.error "compilation aborted because of errors" in

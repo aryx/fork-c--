@@ -8,5 +8,4 @@ val byteorder   : string (* "big" | "little" *)
 val arch_os     : string (* "x86-linux" *)
 val install_dir : string (* "/usr/local" *)
 *)
-
 (*e: this.mli *)
