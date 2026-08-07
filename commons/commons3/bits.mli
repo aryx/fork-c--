@@ -3,7 +3,7 @@
 type width = int
 
 (* pad: this was previously an abstract type, but it's less convenient
- * with ocamldebug
+ * with ocamldebug. update: less of a problem with deriving show?
  *)
 type bits = Int64.t * int
 [@@deriving show]

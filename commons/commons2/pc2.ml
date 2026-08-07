@@ -1,7 +1,6 @@
 (*s: commons2/pc2.ml *)
 (*s: pc2.ml *)
 (*  ------------------------------------------------------------------ 
-    $Id: pc2.nw,v 1.3 2002-06-05 19:32:14 lindig Exp $
 
     Copyright (c) 1999 Christian Lindig <lindig@ips.cs.tu-bs.de>. All
     rights reserved. See COPYING for details.

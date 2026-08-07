@@ -1,5 +1,5 @@
 
-% template in many .nw files before:
+% Template at the beginning of many .nw files before:
 %%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
 %%% Grades     ::=    "%%Grades:" Quality Importance Urgency
 %%% Quality    ::=    A|B|C|D|E
@@ -26,11 +26,11 @@
 %%% ------------------------------------------------------------------ 
 \section{Auxiliaries}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module provides functions we found too useful to hide them in a
 %%specific module. They are usually small and generic and one could
 %%argue that we found them missing in {\ocaml} standard library.
-%%
+
 <<auxfuns.mli>>=
 val round_up_to : multiple_of:int -> int -> int
   (* round_up_to n k rounds k up to the nearest multiple of n.
@@ -67,16 +67,18 @@ end
 
 type void = Void of void (* used as placeholder for polymorphic variable *)
 @
+
 %%Here is a substring extraction function inspired by Python's [[slice]].
 %%The parameters [[start]] and [[stop]] denote which part of [[str]]
 %%should be extracted; negative numbers can be used to reference the
 %%starting point from the end of the string rather than the beginning.  It
 %%is best to think about the [[start]] and [[stop]] indices as pointing
 %%between the characters; some examples makes this clear:
+
 <<auxfuns.mli>>=
 val substr: int -> int -> string -> string
 @
-%%
+
 %%\begin{quote}
 %%\begin{verbatim}
 %%          h  e  l  l  o  _  w  o  r  l  d
@@ -90,13 +92,11 @@ val substr: int -> int -> string -> string
 %%    substr (0) (3) "hello world"        ;; - : string = "hel"
 %%\end{verbatim}
 %%\end{quote}
-%%
-%%
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
+
 <<auxfuns.ml>>=
 type void = Void of void (* used as placeholder for polymorphic variable *)
 
@@ -167,6 +167,7 @@ module List = struct
   | x :: xs -> x :: take (n-1) xs
 end
 @ 
+
 \section{[[commons2/lc.nw]]}
 <<commons2/lc.ml>>=
 <<lc.ml>>
@@ -176,10 +177,10 @@ end
 <<lc.mli>>
 @
 
-%%
-\section{Lexer Combinators}
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%
+
+\section{Lexer Combinators}
+
 %%This module provides lexer combinators (LCs). They can be used for
 %%similar purposes as regular expressions: verifying that a string
 %%obeys a specified syntax and extracting parts from it.  LCs are
@@ -189,18 +190,18 @@ end
 %%The implementation aims to be reasonable efficient by using
 %%indices into the scanned string during the whole scan. However,
 %%scanning of long strings (> 1000 chars) should be avoided.       
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Interface}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<lc.mli>>=
 exception Error of string
 @
-%%
+
 %%[[Error]] reports the failure of a lexer with a message which is not
 %%too descriptive but may help finding unexpected failures. 
-%%
+
 <<lc.mli>>=
 type 'a lexer
 @
@@ -346,11 +347,11 @@ val scanFrom : int -> string -> 'a lexer -> (int * 'a list)
 %%[[scanFrom x str l]] scans string [[str]] using lexer [[l]] starting at
 %%character [[x]] of [[str]] (first character is 0) and returns the
 %%number of characters successfully scanned and the list of results. 
-%%   
+
 %%% ------------------------------------------------------------------ 
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<lc.ml>>=
 let (=<=) (x:char)   (y:char)   = (=) x y
 
@@ -363,12 +364,12 @@ let get                 = String.get        (* string -> int -> char *)
 
 type region             = int * int
 @
-%%
+
 %%A lexer takes: the string to scan, the current position in the
 %%string, and the list of saved regions. It returns: the number of
 %%characters successfully consumed and a new region list. All lexers
 %%except [save] pass the region list just trough 
-%%
+
 <<lc.ml>>=
 type 'a lexer           = string -> int -> 'a list -> (int * 'a list)
 
@@ -377,26 +378,26 @@ type 'a lexer           = string -> int -> 'a list -> (int * 'a list)
 
 let succeed str x r     = (0,r)
 @ 
-%%
+
 <<lc.ml>>=
 
 let fail msg            = error msg
 @ 
-%%
+
 <<lc.ml>>=
 let any                 = fun str x r -> 
                           if x < strlen str 
                           then (1,r)
                           else fail "unexpected eof"
 @ 
-%%
+
 <<lc.ml>>=
 let eof                 = fun str x r ->         
                           if x = strlen str
                           then (0,r)
                           else fail "eof expected"
 @ 
-%%
+
 <<lc.ml>>=
 let satisfy f           = fun str x r ->
                           if x < strlen str && f (get str x)
@@ -440,7 +441,7 @@ let alt l1 l2           = fun str x r ->
                              *)
 let (|||) = alt
 @ 
-%%
+
 <<lc.ml>>=
 let rec many l          = fun str x r ->
                           (l *** many l ||| succeed) str x r 
@@ -459,7 +460,7 @@ let save f l            = fun str x r ->
                           let (i,r') = l str x r   in
                               (i,f str x i :: r')
 @ 
-%%
+
 <<lc.ml>>=
 let saveStr l           = save String.sub l
                               
@@ -468,6 +469,8 @@ let saveStr l           = save String.sub l
 let scanFrom x str lexer    = lexer str x []    
 let scan str lexer          = lexer str 0 [] 
 @
+
+
 \section{[[commons2/pc.nw]]}
 <<commons2/pc.ml>>=
 <<pc.ml>>
@@ -477,9 +480,9 @@ let scan str lexer          = lexer str 0 []
 <<pc.mli>>
 @
 
-%%
+
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%
+
 %%% l2h substitution cfg CFG
 %%% l2h substitution dots ...
 %%% l2h substitution AST AST
@@ -495,11 +498,11 @@ let scan str lexer          = lexer str 0 []
 %%% l2h substitution ocaml OCaml
 %%% l2h substitution forall forall
 %%% l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
-%%
+
 %%% ------------------------------------------------------------------  
 \section{Parser Combinators}\label{sec:pc}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module provides parser combinators for light weight parsing tasks
 %%like parsing a unix command line.  Parser combinators are higher order
 %%functions that implement basic parsing tasks.  By combining simple
@@ -514,11 +517,11 @@ let scan str lexer          = lexer str 0 []
 %%efficiency the parses in this module are greedy:  there is at most one
 %%successful parse.  This requires to construct parsers a bit more
 %%carefully.
-%%
+
 %%% ------------------------------------------------------------------  
 \subsection{Interface}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%A parser takes a list of tokens [['t]] and returns a semantic value
 %%[['v]] together with the list of remaining tokens in the input. A
 %%successful parse typically means that a parser succeeds and
@@ -573,7 +576,7 @@ val literal: 't -> ('t,'t) par
 %%% ------------------------------------------------------------------  
 \subsection{Combinators}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%Parser combinators take parsers, combine them, and return a new
 %%parser. When these combinators are defined as infix operators the
 %%source code of complex parsers very much looks like a grammar. 
@@ -695,11 +698,11 @@ let error s = raise (Error s)
 
 type ('t,'v) par = 't list -> 'v * ('t list)
 @
-%%
+
 %%% ------------------------------------------------------------------  
 %%\subsubsection{Primitive Parsers}
 %%% ------------------------------------------------------------------  
-%%
+
 <<pc.ml>>=
 let succeed v ts = (v,ts)
 let fail msg     = error msg
@@ -720,11 +723,11 @@ let satisfy f = function
 
 let literal x = satisfy (Pervasives.(=) x)
 @
-%%
+
 %%% ------------------------------------------------------------------  
 %%\subsubsection{Parser combinators}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%Complex parsers are built by combining simpler ones using the parser
 %%combinators like this: [[let word = many any]]. We have to be careful
 %%about the strict evaluation of \ocaml~when defining combinators in
@@ -795,17 +798,15 @@ let some p =
 <<pc2.mli>>
 @
 
-%%
-%%% ------------------------------------------------------------------ 
 %%% Example (at beginning of line): %%Grades: B Central Soon
+
+%%% ------------------------------------------------------------------ 
 \section{Alternative Parser Combinators}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<pc2.mli>>=
 (*  ------------------------------------------------------------------ 
 
-    $Id: pc2.nw,v 1.3 2002-06-05 19:32:14 lindig Exp $
-  
     This module provides parser combinators.  Parsers are build from
     primitive parsers which can be combined to larger paresers by
     parser combinators.  Parser combinators are described in the
@@ -910,10 +911,9 @@ val opt: ('t,'v)  par -> 'v -> ('t,'v) par
 (* [opt p v] tries to apply [p] to the input and returns its sementic value on success
  * and [v] if [p] fails.  *)
 @
-%%
+
 <<pc2.ml>>=
 (*  ------------------------------------------------------------------ 
-    $Id: pc2.nw,v 1.3 2002-06-05 19:32:14 lindig Exp $
 
     Copyright (c) 1999 Christian Lindig <lindig@ips.cs.tu-bs.de>. All
     rights reserved. See COPYING for details.
@@ -1004,6 +1004,7 @@ let some p =
   % p *-* many p
 @
 %$
+
 \section{[[commons2/pp.nw]]}
 <<commons2/pp.ml>>=
 <<pp.ml>>
@@ -1013,16 +1014,16 @@ let some p =
 <<pp.mli>>
 @
 
+%%% Example (at beginning of line): %%Grades: B Central Soon
+
 %%
 %%\def\ocaml{\textsc{ocaml}}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 %%% l2h substitute ocaml OCaml
-%%
+
 %%% ------------------------------------------------------------------  
 \section{Pretty Printer}
 %%% ------------------------------------------------------------------ 
-%%
-%%
+
 %%Pretty printing is the problem of finding a good layout for structured
 %%text under some constraints.  John Huges has advanced the design of
 %%pretty printers considerably by taking an algebraic approach
@@ -1039,12 +1040,11 @@ let some p =
 %%of Haskell and can not be easily ported to a strict language without
 %%loss of efficiency.  This module implements the pretty printer as
 %%proposed by Wadler but adopted for the strict evaluation of \ocaml. 
-%%
-%%
+
 %%% ------------------------------------------------------------------  
 \subsection{Interface}
 %%% ------------------------------------------------------------------  
-%%
+
 %%The pretty printer provided by the [[Pp]] module is intended for
 %%tree-like structures.  Documents are represented by an abstract type
 %%[[doc]].  A document can be printed to a file or a string and during
@@ -1055,7 +1055,7 @@ let some p =
 %%A document of type [[doc]] can be very small entity like a single
 %%word.  Functions combine small documents to larger ones which then can
 %%be pretty printed.
-%%
+
 <<pp.mli>>=
 type doc
 
@@ -1239,11 +1239,11 @@ val (^/)      : doc -> doc -> doc
 <<pp.mli>>=
 val block     : ('a -> doc) -> 'a list -> doc
 @
-%%
+
 %%% ------------------------------------------------------------------  
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%Users buld document of type [[doc]].  The different kinds of documents
 %%are mapped to different constructors. 
 %%
@@ -1505,13 +1505,13 @@ let nl      = "\n"
 
 @
 \section{[[commons2/rc.nw]]}
-%%
-%%% ------------------------------------------------------------------ 
+
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%
+
+%%% ------------------------------------------------------------------ 
 \section{Generic Configuration Files}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module provides a parser for generic configuration files.  A
 %%configuration file binds names to values, where values can be
 %%integers, floats, booleans, strings and lists of the mentioned simple
@@ -1551,11 +1551,11 @@ let nl      = "\n"
 %%strings and id values are represented as [[RCstr]]; this means, that
 %%string values made up from digits and letters don't need to be
 %%included into double quotes.
-%%         
+
 %%% ------------------------------------------------------------------ 
 \subsection{Interface}
 %%% ------------------------------------------------------------------         
-%%
+
 <<rc.mli>>=
 type id         = Rc_ast.id
 type rc         = Rc_ast.rc
@@ -1580,7 +1580,7 @@ val read        : string -> rcdict
 %%% ------------------------------------------------------------------ 
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<rc.ml>>=
 type id         = Rc_ast.id
 type rc         = Rc_ast.rc
@@ -1620,11 +1620,11 @@ let read file =
         finally ();
         rc
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Abstract Syntax}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<rc_ast.mli>>=
 type id         = string
 
@@ -1701,12 +1701,11 @@ let asList dict =
     let insert id rc list = (id,rc)::list       in
         IdMap.fold insert dict []
 @
-%%       
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Parser}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<rc_parse.mly>>=
 %{
 open Rc_ast 
@@ -1747,12 +1746,11 @@ values          : value  COMMA value            { [$3  ; $1]    }
                 | values COMMA value            {  $3 :: $1     }
 @
 %$
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Scanner}
 %%% ------------------------------------------------------------------ 
-%%
-%%
+
 <<rc_scan.mll>>=
 {
     
@@ -1781,7 +1779,7 @@ values          : value  COMMA value            { [$3  ; $1]    }
         Buffer.clear strBuffer
 }
 @
-%%
+
 <<rc_scan.mll>>=
 let digit       = ['0'-'9']
 let letter      = ['a'-'z' 'A'-'Z' '_']
@@ -1792,7 +1790,7 @@ let ws          = [' ' '\r' '\011' '\012' ]
 let nl          = '\n'
 let tab         = '\t'
 @
-%%
+
 <<rc_scan.mll>>=
 rule scan = parse
     | eof               { EOF }
@@ -1830,7 +1828,7 @@ rule scan = parse
                         }    
 
 @
-%%
+
 <<rc_scan.mll>>=
 and string = parse
     | eof               { error "unterminated string" }
@@ -1844,8 +1842,9 @@ and string = parse
                         ; string lexbuf
                         }  
 @
-%%
+
 \section{[[commons2/rx.nw]]}
+
 <<commons2/rx.ml>>=
 <<rx.ml>>
 @
@@ -1854,12 +1853,12 @@ and string = parse
 <<rx.mli>>
 @
 
-%%
-%%% ------------------------------------------------------------------ 
 %%% Example (at beginning of line): %%Grades: B Central Soon
+
+%%% ------------------------------------------------------------------ 
 \section{Regular Expressions}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module provides regular expression matching.  Regular expressions
 %%don't need to be compiled before they can be matched against some
 %%input.  Instead the automaton is build while the input is consumed. 
@@ -1869,13 +1868,13 @@ and string = parse
 %%This algorithm used here is by Mark Hopkins who posted it once to
 %%[[comp.compiles]].  Search the [[comp.compilers]] archive for a
 %%detailed article and an implementation in C.
-%%     
+
 %%% ------------------------------------------------------------------ 
 \subsection{Interface}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%The type of a regular expression over symbols of type [['a]]:
-%% 
+
 <<rx.mli>>=
 type 'a rx 
 @
@@ -1908,11 +1907,11 @@ val matches : 'a rx -> 'a list -> bool
 <<rx.mli>>=
 val matchstr : char rx -> string -> bool
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<rx.ml>>=
 let (=*=) = (=)
 
@@ -1926,7 +1925,7 @@ type 'a rx      =
                 | RXseq         of ('a rx) * ('a rx)    (* e1 e2        *)
                 | RXalt         of ('a rx) * ('a rx)    (* e1 | e2      *)
 @ 
-%%
+
 <<rx.ml>>=
 let zero        = RXzero
 let unit        = RXunit
@@ -1954,7 +1953,7 @@ let alt x y     = match (x,y) with
                 | x     , RXzero-> x
                 | x     , y     -> RXalt(x,y)
 @ 
-%%
+
 <<rx.ml>>=
 let ( ||| ) = alt
 let ( *** ) = seq
@@ -2019,12 +2018,7 @@ let matchstr e str =
 let e1 = many (sym 'a') *** some (sym 'b')
 let e2 = sym 'a' *** opt (sym 'b') *** some (sym 'a')
 @
-%%
-%%
-%%
-%%
-%%                
-%%
+
 \section{[[commons2/strutil.nw]]}
 <<commons2/strutil.ml>>=
 <<strutil.ml>>
@@ -2034,13 +2028,12 @@ let e2 = sym 'a' *** opt (sym 'b') *** some (sym 'a')
 <<strutil.mli>>
 @
 
-%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{String Utilities}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%Sets and Maps over strings are commonly used in the compiler. Although
 %%it is possible to create these data structures with one line of source
 %%code this is not always the best way to do it, because different
@@ -2067,11 +2060,11 @@ end
 val assoc2map: (string * 'a) list -> 'a Map.t
 val from_list: string list -> Set.t
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{Implementation}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<strutil.ml>>=
 let compares (x:string) (y:string) = compare x y
 
@@ -2113,8 +2106,10 @@ let assoc2map pairs =
 
 let from_list xs = List.fold_left (fun set x -> Set.add x set) Set.empty xs
 @
-%%
+
 \section{[[commons2/verbose.nw]]}
+%TODO: replace by Logs. instead
+
 <<commons2/verbose.ml>>=
 <<verbose.ml>>
 @
@@ -2123,10 +2118,10 @@ let from_list xs = List.fold_left (fun set x -> Set.add x set) Set.empty xs
 <<verbose.mli>>
 @
 
-%%
 %%% Example (at beginning of line): %%Grades: B Central Soon
+
 \section{Diagnostic output}
-%%
+
 %%Uses environment level [[VERBOSITY]] to make noise.
 <<verbose.mli>>=
 val say : int -> string list -> unit
@@ -2157,13 +2152,12 @@ let eprintf k = if verbosity >= k then Printf.eprintf else ign
 <<alignment.mli>>
 @
 
-%%% vim: ts=8 sw=4 et:
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{Interface to manipulate alignment constraints}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<alignment.mli>>=
 type t
 
@@ -2176,10 +2170,10 @@ val alignment : t -> int
 
 val gcd : int -> int -> int
     (* will disappear when Alignment.t becomes RTL.assertion *)
-@
+@ 
 %%
 \section{Implementation of alignment manipulation}
-%%
+
 %%The first element of the alignment type [[t]] represents the number of
 %%bytes beyond the alignment we have written.  The second element of the
 %%alignment type is the last enforced alignment boundary.
@@ -2196,7 +2190,9 @@ let rec gcd n m =
   else gcd (m - n) n
 let alignment (n, k) = gcd n k
 @
+
 \section{[[commons3/bits.nw]]}
+
 <<commons3/bits.ml>>=
 <<bits.ml>>
 @
@@ -2205,15 +2201,14 @@ let alignment (n, k) = gcd n k
 <<bits.mli>>
 @
 
-%%% vim: ts=8 et sw=4:
 %%% Example (at beginning of line): %%Grades: B Central Soon
-%%
+
 %%% TODO: parsing a floating point number from a string to a bits value.
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{Bits -- Low-Level Representation of Values}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module provides an abstract bit vector type [[bits]]. It is used
 %%for holding {\PAL} values.
 %%
@@ -2231,11 +2226,11 @@ let alignment (n, k) = gcd n k
 %%
 %%The maximum width of a bit vector is implementation dependent; however,
 %%it is checked error to exceed it.
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Interface}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%A [[bits]] value has an observable fixed [[width]] that is the number of
 %%bits it can hold. The simplest [[bits]] value is [[zero]], a [[width]]
 %%long bit vector of zeros. 
@@ -2243,7 +2238,7 @@ let alignment (n, k) = gcd n k
 type width = int
 
 (* pad: this was previously an abstract type, but it's less convenient
- * with ocamldebug
+ * with ocamldebug. update: less of a problem with deriving show?
  *)
 type bits = Int64.t * int
 [@@deriving show]
@@ -2278,11 +2273,11 @@ module U: sig (* unsigned *)
     <<interface U>>
 end
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 %%%subsection{Debugging} 
 %%% ------------------------------------------------------------------ 
-%%
+
 %%Function [[to_string]] converts to a string for debugging.
 %%Function [[to_decimal_string]] converts to a decimal string, possibly
 %%with sign.
@@ -2294,11 +2289,11 @@ val to_string         : bits -> string
 val to_decimal_string : bits -> string
 val to_hex_or_decimal_string : declimit:int -> bits -> string
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Arithmetic}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%We prefer to use {\PAL} names, not OCaml names, so logical
 %%\textbf{and} and \textbf{or} are 
 %%[[and]] and [[or]], not [[logand]] and [[logor]].
@@ -2331,8 +2326,7 @@ module Ops : sig
   val gtu       : bits -> bits -> bool
 end
 @
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Signed Constructors}
 %%% ------------------------------------------------------------------ 
@@ -2353,12 +2347,11 @@ val of_string:  string      -> width -> t   (* raises Overflow *)
 %%
 %%For the format of the strings accepted by [[of_string]], see the section
 %%below.  I CANNOT FIND THE REFERENCE.  PLEASE TRY \ref OR \pageref!
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Signed Observers}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%A signed observer treats a bit vector $b$ of width $w$ as a number $v$
 %%in two's complement representation. The observer converts it to a
 %%(signed) {\ocaml} number. For the conversion to succeed, the number must
@@ -2376,11 +2369,11 @@ val to_int64:   t -> int64                      (* Overflow *)
 <<interface S>>=
 val fits : width -> t -> bool    (* fits w b == (b = sxlo w b) *)
 @ 
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Unsigned Constructors}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%An unsigned constructor takes a (signed) number $v$, and computes an
 %%unsigned number $v'$ from it. 
 %%
@@ -2401,11 +2394,11 @@ val of_int64:   int64       -> width -> t
 val of_int32:   int32       -> width -> t       
 val of_string:  string      -> width -> t   (* raises Overflow *)
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Unsigned Observers}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%An unsigned observer takes a bit vector $b$ of length $w$ and interprets
 %%it as an unsigned number $v$:
 %%%
@@ -2436,7 +2429,7 @@ val to_int64:   t -> int64                      (* Overflow *)
 <<interface U>>=
 val fits : width -> t -> bool    (* fits w b == (b = zxlo w b) *)
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 %%\subsubsection{Syntax for Strings}
 %%% ------------------------------------------------------------------ 
@@ -2507,8 +2500,7 @@ val fits : width -> t -> bool    (* fits w b == (b = zxlo w b) *)
 %%     numbers.}
 %%
 %%\end{enumerate}
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 %%\subsubsection{Residualizing Interface}
 %%% ------------------------------------------------------------------ 
@@ -2519,11 +2511,11 @@ val fits : width -> t -> bool    (* fits w b == (b = zxlo w b) *)
 %%    The interface to this module has changed completely. Now I don't
 %%    know what to do with the residualizing interface. -- CL
 %%\end{quote}
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<bits.ml>>=
 let (=*=) = (=)
 let (=<=) (x:char)   (y:char)   = (=) x y
@@ -2556,7 +2548,7 @@ let width (_,w) = w
 let check w = if w <= 0 || w > 64 then impossf "unsupported bitwidth %d" w
 let zero w  = check w; (I.zero, w)
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Sign and zero extension}
 %%% ------------------------------------------------------------------ 
@@ -2597,7 +2589,7 @@ let to_hex_or_decimal_string ~declimit (i,w) =
 %%% ------------------------------------------------------------------ 
 \subsection{Arithmetic}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<bits.ml>>=
 module Ops = struct
   <<bitwise operators>>

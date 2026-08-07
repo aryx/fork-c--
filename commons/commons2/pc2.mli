@@ -2,8 +2,6 @@
 (*s: pc2.mli *)
 (*  ------------------------------------------------------------------ 
 
-    $Id: pc2.nw,v 1.3 2002-06-05 19:32:14 lindig Exp $
-  
     This module provides parser combinators.  Parsers are build from
     primitive parsers which can be combined to larger paresers by
     parser combinators.  Parser combinators are described in the
