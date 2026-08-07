@@ -10,10 +10,14 @@ end
 (* does not work: [@@deriving show] *)
 (* manual *)
 let pp fmt (x : t) =
-  Format.fprintf fmt
+  if x#mangled_text <> x#original_text
+  then
+    Format.fprintf fmt
     "{ mangled_text = %S; original_text = %S }"
     x#mangled_text
     x#original_text
+   else
+    Format.fprintf fmt "%S" x#original_text
 
 class unmangled (n:string) : t = 
 object(this)

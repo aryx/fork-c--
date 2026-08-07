@@ -932,11 +932,12 @@ type t = {
 val program : Ast.toplevel list -> t
 @ 
 
-
-\section{IR}
-
+%\section{IR}
+%\section{Fenv}
 
 \section{RTL}
+
+\section{Nelab}
 
 
 \section{Target}
@@ -3796,7 +3797,7 @@ val errorRegPrt    : Srcmap.rgn -> string -> unit
 <<error.ml>>=
 type 'a error       = Error                     (* bad result  *)
                     | Ok        of 'a           (* good result *)
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 exception ErrorExn          of string
 @

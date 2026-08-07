@@ -24,16 +24,15 @@ module Map = struct
   include Map.Make(Compare)
 
   let pp pp_value fmt m =
-    let pp_binding fmt (k, v) =
-      Format.fprintf fmt "%S -> %a" k pp_value v
-    in
-    Format.fprintf fmt "{%a}"
-      (Format.pp_print_list
-         ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
-         pp_binding)
-      (bindings m)
+    Format.fprintf fmt "@[<v 2>{";
+    List.iter
+      (fun (k, v) ->
+        Format.fprintf fmt "@,";
+        Format.fprintf fmt "@[<hov 0>%S -> %a@]" k pp_value v;
+        Format.fprintf fmt ";")
+      (bindings m);
+    Format.fprintf fmt "@]@,}"
 end
-
 let assoc2map pairs =
     let f map (key,value) = Map.add key value map in
         List.fold_left f Map.empty pairs
