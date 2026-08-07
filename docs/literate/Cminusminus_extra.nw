@@ -15962,7 +15962,7 @@ let elab_functions validate srcmap r env =
     <<elaboration utilities>>
     <<definitions of elaboration functions(elabstmt.nw)>>
     let rec stmt s = match s with
-    | N.StmtAt (s, r) -> E.catch (eprint r) (full_stmt r reachable) s
+    | N.S (s, r) -> E.catch (eprint r) (full_stmt r reachable) s
     | N.If (c, t, f) -> 
         let c = exp c in let t = stmts r true t in let f = stmts r true f in (*order*)
         E.ematch3 c t f (fun (c, cty) t f ->
@@ -15997,7 +15997,7 @@ let elab_functions validate srcmap r env =
     Error.Raise.list (stmts reachable ss)
   and jumps = function N.Goto _ | N.Jump _ | N.Cut _ | N.Return _  -> true
                      | N.Call (_, _, _, _, _, fl, _) -> List.exists never_returns fl
-                     | N.StmtAt (s, _) -> jumps s
+                     | N.S (s, _) -> jumps s
                      | N.Span (_, _, ss) -> jumpsss ss
                      | N.If (_, t, f) -> jumpsss t && jumpsss f
                      | N.Switch (_, _, arms) -> List.for_all jumpsarm arms
@@ -16612,7 +16612,7 @@ type procname = string
 type label    = string
 [@@deriving show]
 type stmt =
-  | StmtAt of stmt * Ast.region
+  | S      of stmt * Ast.region
   | If     of exp * stmt list * stmt list
   | Switch of range option * exp * (range list * stmt list) list
   | Label  of label
@@ -16807,7 +16807,7 @@ and bodies r = kmap body (fun add ss -> add ss) r
 %%understand [[If]], you understand it all.
 <<match [[stmt]] [[s]] at [[r]] and continue with [[k]]>>=
 let rec stmt r s k = 
-  let cons s ss = StmtAt (s, r) :: ss in
+  let cons s ss = S (s, r) :: ss in
   let atomic s = k (cons s) accums in
   match s with
   | A.S(s,r) -> stmt r s k
