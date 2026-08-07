@@ -2,24 +2,40 @@
 (*s: elabstmt.mli  *)
 (*s: exposed types(elabstmt.nw) *)
 type exp = Rtl.exp
+[@@deriving show]
 type loc = Rtl.loc * Rtl.width
+[@@deriving show]
 type rtl = Rtl.rtl
+[@@deriving show]
 
 type name = string
+[@@deriving show]
 type kind = string
+[@@deriving show]
 type convention = string
+[@@deriving show]
 type aligned    = int
+[@@deriving show]
 (*x: exposed types(elabstmt.nw) *)
 type actual = kind * exp * Rtl.width * aligned
+[@@deriving show]
 type 'a kinded = kind * 'a * aligned
+[@@deriving show]
 type 'a flow  = { cuts : 'a list; unwinds : 'a list; areturns : 'a list;
                   returns : bool; aborts : bool }
+[@@deriving show]
 type 'a cflow = { ccuts : 'a list; caborts : bool }
+[@@deriving show]
 type 'a alias = { reads : 'a; writes : 'a }
+[@@deriving show]
 type range = Bits.bits * Bits.bits   (* lo `leu` x `leu` hi, as in manual *)
+[@@deriving show]
 type procname = string
+[@@deriving show]
 type label    = string
+[@@deriving show]
 type linktime = Reloc.t
+[@@deriving show]
 
 type stmt =
   | If         of exp * stmt list * stmt list
@@ -39,7 +55,6 @@ type stmt =
   | Limitcheck of convention * exp * limitfailure option
 and limitfailure = { failcont : exp; reccont : exp; recname : name; }
 [@@deriving show]
-
 (*e: exposed types(elabstmt.nw) *)
 val elab_stmts :
   (Rtl.rtl -> string option) -> Srcmap.map -> Ast.region -> 'a Fenv.Dirty.env' -> 

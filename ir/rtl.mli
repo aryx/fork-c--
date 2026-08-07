@@ -8,6 +8,8 @@ type aggregation = Register.aggregation =
 [@@deriving show]
 
 type space = char * aggregation * Cell.t   (* name, byte order, cell size *)
+[@@deriving show]
+
 type width = int
 [@@deriving show]
 
@@ -18,9 +20,12 @@ type count = Register.count = C of int
 module Private: sig
     (*s: representation exposed in the private interface *)
     type aligned   = int     (* alignment guaranteed *)
+    [@@deriving show]
     type assertion = aligned (* may one day include alias info *)
+    [@@deriving show]
     (*x: representation exposed in the private interface *)
     type opr         = string * width list
+    [@@deriving show]
     (*x: representation exposed in the private interface *)
     type const      = Bool      of bool
                     | Bits      of Bits.bits            (* literal constant *)
@@ -28,6 +33,7 @@ module Private: sig
                     | Diff      of const  * const   (* difference of two constants *)
                     | Late      of string * width   (* late compile time constant *)
     and symkind = Code | Data | Imported (* three kinds of symbol, needed for PIC *)
+    [@@deriving show]
 
     type exp        = Const     of const               
                     | Fetch     of loc * width 
@@ -47,13 +53,18 @@ module Private: sig
                     | Slice     of width     (* number of bits in loc *)
                                 *  int       (* index of least-significant bit of slice *)
                                 *  loc  (* location from which slice is drawn *)
+    [@@deriving show]
+
     (*x: representation exposed in the private interface *)
     type effect     = Store     of loc * exp  * width
                     | Kill      of loc
+    [@@deriving show]
     (*x: representation exposed in the private interface *)
     type guarded    = exp  * effect
+    [@@deriving show]
     (*x: representation exposed in the private interface *)
     type rtl        = Rtl of guarded list
+    [@@deriving show]
     (*e: representation exposed in the private interface *)
 end
 

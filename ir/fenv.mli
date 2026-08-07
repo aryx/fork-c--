@@ -4,6 +4,7 @@
 type regkind       = RReg  of string   (* hardware reg *)
                    | RKind of string   (* calling convention kind *)
                    | RNone             (* none of above *)
+[@@deriving show]
 (*x: exposed types shared by clean and dirty environments *)
 type variable =    { index:        int
                    ; rkind:        regkind
@@ -11,11 +12,13 @@ type variable =    { index:        int
                    ; variance:     Ast.variance
                    }
 [@@deriving show]
+
 (*x: exposed types shared by clean and dirty environments *)
 type symclass      = Proc          of Symbol.t
                    | Code          of Symbol.t    
                    | Data          of Symbol.t
                    | Stack         of Rtl.exp  (* address of slot *)
+[@@deriving show]
 
 type denotation    = Constant      of Bits.bits
                    | Label         of symclass
@@ -46,11 +49,13 @@ type stackdata =      { soffset    :    int    (* current offset *)
                       ; smaxalign  :    int    (* max stackdata align constr*)
                       ; sname      :    string (* label for offset *)
                       }
+[@@deriving show]
 (*x: private types shared by clean and dirty environments *)
 type extern         = { imported:     Strutil.Set.t
                       ; exported:     Strutil.Set.t
                       ; nam2sym:      Symbol.t Strutil.Map.t
                       }
+[@@deriving show]
 (*e: private types shared by clean and dirty environments *)
 (*s: exported signature [[Env]] *)
 module type Env = sig
@@ -72,7 +77,6 @@ module type Env = sig
                        ; globals         :    string  list(* global registers *)
                        ; stackdata       :    stackdata
                        }
-    [@@deriving show]
     (* type env = Proc.t env' *)
     and scope           = { mutable venv:   ventry Strutil.Map.t
                        ; tenv:   tentry Strutil.Map.t
@@ -83,7 +87,9 @@ module type Env = sig
     and  ventry        = Srcmap.rgn * (denotation * Types.ty) info
     (*x: types exposed in signature [[Env]] *)
     and  tentry         = Srcmap.rgn * Types.ty info
+    [@@deriving show]
     (*e: types exposed in signature [[Env]] *)
+
     val map : ('b -> 'a) -> 'a env' -> 'b env'
 
     val empty   : Srcmap.map -> Metrics.t -> 'proc Asm.assembler -> 'proc env'

@@ -2050,8 +2050,19 @@ let e2 = sym 'a' *** opt (sym 'b') *** some (sym 'a')
 %%surprises.
 %%
 <<strutil.mli>>=
+(* old:
 module Set: Set.S with type elt = string
 module Map: Map.S with type key = string
+*)
+
+module Set : sig
+  include Set.S with type elt = string
+  val pp : Format.formatter -> t -> unit
+end
+module Map : sig
+  include Map.S with type key = string
+  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+end
 
 val assoc2map: (string * 'a) list -> 'a Map.t
 val from_list: string list -> Set.t
@@ -2065,8 +2076,36 @@ val from_list: string list -> Set.t
 let compares (x:string) (y:string) = compare x y
 
 module Compare = struct type t = string let compare=compares end
+
+(* old:
 module Set = Set.Make(Compare)
 module Map = Map.Make(Compare)
+*)
+
+module Set = struct
+  include Set.Make(Compare)
+
+  let pp fmt s =
+    Format.fprintf fmt "{%a}"
+      (Format.pp_print_list
+         ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
+         (fun fmt s -> Format.fprintf fmt "%S" s))
+      (elements s)
+end
+
+module Map = struct
+  include Map.Make(Compare)
+
+  let pp pp_value fmt m =
+    let pp_binding fmt (k, v) =
+      Format.fprintf fmt "%S -> %a" k pp_value v
+    in
+    Format.fprintf fmt "{%a}"
+      (Format.pp_print_list
+         ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
+         pp_binding)
+      (bindings m)
+end
 
 let assoc2map pairs =
     let f map (key,value) = Map.add key value map in
@@ -2207,9 +2246,10 @@ type width = int
  * with ocamldebug
  *)
 type bits = Int64.t * int
-
+[@@deriving show]
 
 type t = bits 
+[@@deriving show]
 
 val width : t -> width         (* observer *)
 val zero  : width -> t         (* constructor *)
@@ -2504,9 +2544,13 @@ let (>)  = Pervasives.(>)
 %%following invariant: the $64-k$ most significant bits equal the sign
 %%bit $k-1$ of $b$.
 <<bits.ml>>=
+
 type width      = int
+[@@deriving show]
 type bits       = int64 * width
+[@@deriving show]
 type t          = bits 
+[@@deriving show]
 
 let width (_,w) = w
 let check w = if w <= 0 || w > 64 then impossf "unsupported bitwidth %d" w
@@ -3312,6 +3356,8 @@ let subset s s' = B.eq (inter s s') s
 %%general multiply and divide instructions.
 <<cell.mli>>=
 type t
+[@@deriving show]
+
 type count = C of int   (* a number of cells *)
 type width = int        (* a number of bits *)
 
@@ -3327,9 +3373,13 @@ val of_size : int -> t
 %%to put in the shifts ourselves.
 <<cell.ml>>=
 type count = C of int   (* a number of cells *)
+[@@deriving show]
 type width = int        (* a number of bits *)
+[@@deriving show]
 
 type t = int * (count -> width) * (width -> count) * (width -> bool)
+[@@deriving show]
+
 let to_width (_, f, _, _) = f
 let to_count (_, _, f, _) = f
 let size     (w, _, _, _) = w
@@ -4110,6 +4160,7 @@ let explain () =
 <<error.mli>>=
 type 'a error       = Error                     (* bad result  *)
                     | Ok        of 'a           (* good result *)
+[@@deriving show]
 
 exception ErrorExn  of string
 val error :         string -> 'a (* ErrorExn *)
@@ -4295,6 +4346,7 @@ val errorRegPrt    : Srcmap.rgn -> string -> unit
 <<error.ml>>=
 type 'a error       = Error                     (* bad result  *)
                     | Ok        of 'a           (* good result *)
+[@@deriving show]
 
 exception ErrorExn          of string
 @
@@ -4702,6 +4754,8 @@ let unimp msg =
 <<srcmap.mli>>=
 type pos            = int
 type rgn            = pos * pos
+[@@deriving show]
+
 @
 %%The [[null]] region is sometimes used a special value when no real
 %%region information is available.
@@ -4729,6 +4783,8 @@ type location       = string    (* file   *)
 %%
 <<srcmap.mli>>=
 type map
+[@@deriving show]
+
 val mk:             unit -> map (* empty map *)
 @
 %%
@@ -4786,7 +4842,10 @@ end
 %%
 <<srcmap.ml>>=
 type pos            = int
+[@@deriving show]
 type rgn            = pos * pos
+[@@deriving show]
+
 type location       = string    (* file   *)
                     * int       (* line   *)
                     * int       (* column *)
@@ -4829,6 +4888,10 @@ type map =          { mutable points:       syncpoint array
                     ; mutable top:          int
                     ; files :               (string, string) Hashtbl.t
                     }
+let pp_map fmt _map = 
+  Format.fprintf fmt "<srcmap>"
+let show_map _map = "<srcmap>"
+
 type point          = map * pos
 type region         = map * rgn
 @
@@ -7547,11 +7610,17 @@ type aggregation =
     | BigEndian
     | LittleEndian
     | Identity
+[@@deriving show]
 type space = char * aggregation * Cell.t   (* name, byte order, cell size *)
+[@@deriving show]
 type count = Cell.count = C of int
+[@@deriving show]
 type width = int
+[@@deriving show]
 type reg = space * int * count (* Rtl.space, index, number of cells *)
+[@@deriving show]
 type t = reg
+[@@deriving show]
 type x = Reg   of t
        | Slice of width * int * t
 @
@@ -7850,6 +7919,7 @@ type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
 
 type exp = Pos of symbol * Rtl.width | Neg of symbol * Rtl.width
 type t  = exp list * Bits.bits
+[@@deriving show]
 (* pad: was previously an abstract type
  *   'type t'
  * but it forbids to see the data from the debugger
@@ -7880,12 +7950,20 @@ val as_simple : t -> Symbol.t option * Bits.bits
 open Nopoly
 
 type symbol = Symbol.t * (Symbol.t -> Rtl.width -> Rtl.exp)
+[@@deriving show]
+
 let eqsym (s,_) (s',_) = s#mangled_text =$= s'#mangled_text
 
 type exp = Pos of symbol * Rtl.width | Neg of symbol * Rtl.width
+[@@deriving show]
+
+
 let neg = function Pos (s, w) -> Neg (s, w) | Neg (s, w) -> Pos (s, w)
 
 type t  = exp list * Bits.bits
+[@@deriving show]
+
+
 let of_const c    = ([], c)
 let of_sym s w    = ([Pos (s, w)], Bits.zero w)
 let add (xs, xc) (ys, yc) = (xs @ ys, Bits.Ops.add xc yc)
@@ -7988,9 +8066,14 @@ type aggregation = Register.aggregation =
     | BigEndian
     | LittleEndian
     | Identity
+[@@deriving show]
 
 type space = char * aggregation * Cell.t   (* name, byte order, cell size *)
+[@@deriving show]
+
 type width = int
+[@@deriving show]
+
 @
 %%
 %%% ------------------------------------------------------------------ 
@@ -8023,8 +8106,11 @@ type width = int
  *)
 
 type exp       = Private.exp     
+[@@deriving show]
 type loc       = Private.loc   
+[@@deriving show]
 type rtl       = Private.rtl        
+[@@deriving show]
 type opr       = Private.opr        
 type assertion = Private.assertion  
 
@@ -8164,7 +8250,9 @@ val const  :    Private.const     -> exp
 %%with [[Rtl.none]]. 
 <<representation exposed in the private interface>>=
 type aligned   = int     (* alignment guaranteed *)
+[@@deriving show]
 type assertion = aligned (* may one day include alias info *)
+[@@deriving show]
 @
 %%An operator for values at run-time is represented by its name and a
 %%list of [[width]]s.  Each [[width]] corresponds to a $\forall$-bound
@@ -8173,6 +8261,7 @@ type assertion = aligned (* may one day include alias info *)
 %%be deduced.
 <<representation exposed in the private interface>>=
 type opr         = string * width list
+[@@deriving show]
 @
 %%Expressions provide values to be stored in [[loc]]s as well as
 %%addresses local to a [[space]].  An expression can access constant
@@ -8192,6 +8281,7 @@ type const      = Bool      of bool
                 | Diff      of const  * const   (* difference of two constants *)
                 | Late      of string * width   (* late compile time constant *)
 and symkind = Code | Data | Imported (* three kinds of symbol, needed for PIC *)
+[@@deriving show]
 
 type exp        = Const     of const               
                 | Fetch     of loc * width 
@@ -8221,6 +8311,8 @@ and  loc       = Mem        of space
                 | Slice     of width     (* number of bits in loc *)
                             *  int       (* index of least-significant bit of slice *)
                             *  loc  (* location from which slice is drawn *)
+[@@deriving show]
+
 @
 %%Bits are numbered with the least-significant bit as bit~0.
 %%
@@ -8230,11 +8322,13 @@ and  loc       = Mem        of space
 <<representation exposed in the private interface>>=
 type effect     = Store     of loc * exp  * width
                 | Kill      of loc
+[@@deriving show]
 @
 %%A guarded effect is pair of an expression and an effect. The effect takes
 %%place, if and only if the expression evaluates to [[true]].      
 <<representation exposed in the private interface>>=
 type guarded    = exp  * effect
+[@@deriving show]
 @
 %%And finally, a \emph{register-transfer list} is a list of guarded
 %%effects. When a {\rtl} is evaluated, first all guarding expressions
@@ -8242,6 +8336,7 @@ type guarded    = exp  * effect
 %%true become effective simultaneously.
 <<representation exposed in the private interface>>=
 type rtl        = Rtl of guarded list
+[@@deriving show]
 @
 %%
 %%% ------------------------------------------------------------------ 
@@ -8295,10 +8390,15 @@ module Revert  = Up (* deprecated, for backward compatibility *)
 <<definitions of types and functions exported at top level>>=
 open Private    (* never do that *)
 type exp       = Private.exp     
+[@@deriving show]
 type loc       = Private.loc   
+[@@deriving show]
 type rtl       = Private.rtl        
+[@@deriving show]
 type opr       = Private.opr        
+[@@deriving show]
 type assertion = Private.assertion  
+
 @
 %%If we switch to [[Alignment.t]], [[shift]] and [[shift_multiple]] will
 %%no longer be the same.
@@ -10460,11 +10560,21 @@ end
 %%
 <<symbol.mli content>>=
 <<class type t>>
+val pp: Format.formatter -> t -> unit
 val unmangled    : string -> t
 val with_mangler : (string -> string) -> string -> t
 @
 <<symbol.ml content>>=
 <<class type t>>
+
+(* does not work: [@@deriving show] *)
+(* manual *)
+let pp fmt (x : t) =
+  Format.fprintf fmt
+    "{ mangled_text = %S; original_text = %S }"
+    x#mangled_text
+    x#original_text
+
 class unmangled (n:string) : t = 
 object(this)
     method original_text = n
@@ -10564,7 +10674,9 @@ let with_mangler m n = new mangled m n
 <<definition of type [[size]]>>
 type 'a t = Bool
           | Bits of 'a 
+[@@deriving show]
 type ty   = int t
+[@@deriving show]
 @
 %%The type of a function is a pair of a list of operand types and a result
 %%type. A [[tyscheme]] describes a type scheme, a [[monotype]] the
@@ -10906,6 +11018,12 @@ let scheme_string (args, result) =
 <<asm.mli content>>=
 <<exported type definitions(asm.nw)>>
 
+val pp_assembler :
+  (Format.formatter -> 'proc -> unit) ->
+  Format.formatter ->
+  'proc assembler ->
+  unit
+
 val map : ('a -> 'b) -> 'b assembler -> 'a assembler
 val reloc_string : (Bits.bits -> string) -> Reloc.t -> string
      (* make string form of relocatable address using mangled text of symbols *)
@@ -11032,6 +11150,10 @@ method emit: unit                       (* finalize *)
 <<asm.ml content>>=
 <<exported type definitions(asm.nw)>>
 
+let pp_assembler pp_proc fmt (a : 'proc assembler) =
+  Format.fprintf fmt "<assembler>"
+
+
 class ['proc] mapped_asm f (asm : 'a assembler) : ['proc] assembler =
 object
     (* declarations *)
@@ -11114,6 +11236,7 @@ let reloc_string const =
 %%
 <<block.mli content>>=
 type t
+[@@deriving show]
 
 val base:           t -> Rtl.exp
 val size:           t -> int
@@ -11229,6 +11352,7 @@ type t =
     ; alignment:    int
     ; constraints:  C.t list
     }
+[@@deriving show]
 
 let base t          = t.base
 let size t          = t.size
@@ -11979,6 +12103,7 @@ let _ = assert
 <<exported signature [[Env]]>>=
 module type Env = sig
     type 'a info
+    [@@deriving show]
     type 'a partial
     val  bad: unit -> 'a info
 
@@ -12070,6 +12195,7 @@ and scope           = { mutable venv:   ventry Strutil.Map.t
                    }
 
 <<types exposed in signature [[Env]]>>
+
 val map : ('b -> 'a) -> 'a env' -> 'b env'
 
 val empty   : Srcmap.map -> Metrics.t -> 'proc Asm.assembler -> 'proc env'
@@ -12197,6 +12323,7 @@ val foldv:      (string -> ventry -> 'a -> 'a) -> scope -> 'a -> 'a
 type regkind       = RReg  of string   (* hardware reg *)
                    | RKind of string   (* calling convention kind *)
                    | RNone             (* none of above *)
+[@@deriving show]
 @
 %%{\PAL} A register has an [[index]] that identifies it \emph{within its
 %%scope}.  Consequently, global registers are numbered consecutively, and
@@ -12209,6 +12336,8 @@ type variable =    { index:        int
                    ; loc:          Rtl.loc
                    ; variance:     Ast.variance
                    }
+[@@deriving show]
+
 @
 %%The [[int]] value in the procedure denotation is the number of local
 %%variables, plus the number of parameters. We need this value for the
@@ -12218,6 +12347,7 @@ type symclass      = Proc          of Symbol.t
                    | Code          of Symbol.t    
                    | Data          of Symbol.t
                    | Stack         of Rtl.exp  (* address of slot *)
+[@@deriving show]
 
 type denotation    = Constant      of Bits.bits
                    | Label         of symclass
@@ -12239,6 +12369,8 @@ and continuation = { base       : Block.t;   (* always empty; used only for addr
                    } (* might need a convention here *)
 and convention   = string
 and aligned      = int
+[@@deriving show]
+
 @
 %%The complete entry [[ventry]] for a value includes not only its
 %%denotation, but also its type [[Types.ty]], and its source code
@@ -12256,6 +12388,7 @@ val denotation's_category : denotation -> string
 %%type it denotes:
 <<types exposed in signature [[Env]]>>=
 and  tentry         = Srcmap.rgn * Types.ty info
+[@@deriving show]
 @
 %%% ------------------------------------------------------------------ 
 \subsection{Binding and Finding Names and Values}
@@ -12541,6 +12674,7 @@ module Asm          = Asm
 module type Arg = sig
     type 'a partial
     type 'a info
+    [@@deriving show]
     
     val good    : 'a   -> 'a info
     val asgood  : 'a info -> 'a option
@@ -12589,6 +12723,7 @@ end
 module Dirty = Env (struct
     type 'a partial = 'a option
     type 'a info    = 'a Error.error
+    [@@deriving show]
     
     let good    x   = Error.Ok(x)
     let bad     x   = Error.Error
@@ -12602,6 +12737,7 @@ end)
 module Clean = Env (struct
     type 'a partial             = 'a 
     type 'a info                = 'a
+    [@@deriving show]
 
     let good x                  = x
     let asgood x                = Some x
@@ -12620,11 +12756,14 @@ end)
 <<body of functor [[Env]]>>=
 type 'a partial     = 'a Arg.partial
 type 'a info        = 'a Arg.info
+[@@deriving show]
 let  bad            = Arg.bad
 
 (* pad: *)
 type  ventry        = Srcmap.rgn * (denotation * Types.ty) info
+[@@deriving show]
 type  tentry         = Srcmap.rgn * Types.ty info
+[@@deriving show]
 
 @
 %%
@@ -12650,6 +12789,7 @@ type stackdata =      { soffset    :    int    (* current offset *)
                       ; smaxalign  :    int    (* max stackdata align constr*)
                       ; sname      :    string (* label for offset *)
                       }
+[@@deriving show]
 @
 %%Imports and exports are recorded (see module \module{mangle}) to build
 %%a map from {\PAL} names to assembly symbols.  The [[extern]] type holds
@@ -12660,6 +12800,7 @@ type extern         = { imported:     Strutil.Set.t
                       ; exported:     Strutil.Set.t
                       ; nam2sym:      Symbol.t Strutil.Map.t
                       }
+[@@deriving show]
 @
 %%
 %%A [[scope]] is record of two maps for values and types respectively:
@@ -12669,6 +12810,7 @@ and scope           = { mutable venv:   ventry Strutil.Map.t
                       ; tenv:   tentry Strutil.Map.t
                       ; rindex: int   (* getIndex, nextIndex *)
                       }
+[@@deriving show]
 @
 %%
 %%An entire environment [[env]] contains the stack of scopes and members
@@ -13075,6 +13217,7 @@ type t = {
   float       : string          ; (* name of float representation (def "ieee754") *)
   charset     : string          ; (* "latin1"  character encoding      *)
 }
+[@@deriving show]
 @
 \section{Implementation}
 <<metrics.ml content>>=
@@ -13083,6 +13226,7 @@ let (=*=) = (=)
 
 module A = Ast
 <<exposed types(metrics.nw)>>
+
 let default = {
   byteorder   = Rtl.Identity;
   wordsize    = 32;
@@ -13175,6 +13319,8 @@ let of_ast ~swap map =
 exception Can'tSolve
 
 type t              (* equation *)
+[@@deriving show]
+
 type solution =
     { known:        (string * Rtl.exp) list  (* fully solved *)
     ; dependent:    (string * Rtl.exp) list  (* depend on other variables *)
@@ -13237,9 +13383,13 @@ type term =
     | Const of Rtl.exp
     | Var   of string
     | Unit  
+[@@deriving show]
 
 type sum = (int * term) list
+[@@deriving show]
 type t   = sum                  (* equation, sum == 0 *)
+[@@deriving show]
+
 @
 %%To aid debugging, we have a printable representation of terms. 
 <<rtleqn.ml >>=
@@ -16629,26 +16779,42 @@ and typed_expr exp =
 %%We begin with the same sort of abbreviations used in [[Nast]].
 <<exposed types(elabstmt.nw)>>=
 type exp = Rtl.exp
+[@@deriving show]
 type loc = Rtl.loc * Rtl.width
+[@@deriving show]
 type rtl = Rtl.rtl
+[@@deriving show]
 
 type name = string
+[@@deriving show]
 type kind = string
+[@@deriving show]
 type convention = string
+[@@deriving show]
 type aligned    = int
+[@@deriving show]
 @ 
 %%
 <<exposed types(elabstmt.nw)>>=
 type actual = kind * exp * Rtl.width * aligned
+[@@deriving show]
 type 'a kinded = kind * 'a * aligned
+[@@deriving show]
 type 'a flow  = { cuts : 'a list; unwinds : 'a list; areturns : 'a list;
                   returns : bool; aborts : bool }
+[@@deriving show]
 type 'a cflow = { ccuts : 'a list; caborts : bool }
+[@@deriving show]
 type 'a alias = { reads : 'a; writes : 'a }
+[@@deriving show]
 type range = Bits.bits * Bits.bits   (* lo `leu` x `leu` hi, as in manual *)
+[@@deriving show]
 type procname = string
+[@@deriving show]
 type label    = string
+[@@deriving show]
 type linktime = Reloc.t
+[@@deriving show]
 
 type stmt =
   | If         of exp * stmt list * stmt list
@@ -16667,6 +16833,7 @@ type stmt =
   | Return     of convention * int * int * actual list
   | Limitcheck of convention * exp * limitfailure option
 and limitfailure = { failcont : exp; reccont : exp; recname : name; }
+[@@deriving show]
 @
 <<elabstmt.mli >>=
 <<exposed types(elabstmt.nw)>>
@@ -16698,6 +16865,8 @@ val codelabels : stmt list -> label list
 %%
 <<elabstmt.ml >>=
 <<exposed types(elabstmt.nw)>>
+
+
 module A  = Ast
 module E  = Error
 module F  = Fenv.Dirty
@@ -17346,25 +17515,40 @@ let num_allocated t = t.num_allocated
 %%We begin with common abbreviations.
 <<exposed types(nast.nw)>>=
 type ty  = Ast.ty
+[@@deriving show]
 type exp = Ast.expr
+[@@deriving show]
 type loc = Ast.name_or_mem
+[@@deriving show]
 
 type 'a marked = Ast.region * 'a
+[@@deriving show]
 
 type name = string
+[@@deriving show]
 type kind = string
+[@@deriving show]
 type convention = string
+[@@deriving show]
 type aligned    = int
+[@@deriving show]
 @
 %%Statements.  
 <<exposed types(nast.nw)>>=
 type cformal  = Ast.region * kind * name * aligned option
+[@@deriving show]
 type actual   = kind * exp * aligned option
+[@@deriving show]
 type flow     = Ast.flow list
+[@@deriving show]
 type alias    = Ast.mem  list
+[@@deriving show]
 type range    = Ast.range
+[@@deriving show]
 type procname = string
+[@@deriving show]
 type label    = string
+[@@deriving show]
 type stmt =
   | StmtAt of stmt * Ast.region
   | If     of exp * stmt list * stmt list
@@ -17380,6 +17564,8 @@ type stmt =
   | Cut    of convention * exp * actual list * flow 
   | Return of convention * (exp * exp) option * actual list
   | Limitcheck of convention * exp * (exp * name) option (* (cookie,(failk,recname)) *)
+[@@deriving show]
+
 @ 
 %%Both compilation units and procedures can contain type and constant definitions.
 %%Because these are scoped, we accumulate these definitions in each
@@ -17387,11 +17573,14 @@ type stmt =
 %%Therefore they have their own type.
 <<exposed types(nast.nw)>>=
 type typedefn  = ty * name list
+[@@deriving show]
 type constdefn = ty option * name * exp
+[@@deriving show]
 type compile_time_defns = {
   types     : typedefn  marked list;
   constants : constdefn marked list;
 }
+[@@deriving show]
 @ 
 %%Here is a normalized form of procedures and of (possibly initialized) data.
 %%Initialized data, as well as data in the form of [[SSpan]] and
@@ -17415,10 +17604,12 @@ and  datum =
   | ReserveMem of ty * Ast.memsize * Ast.init option (*init always none on stackdata*)
   | Procedure  of proc                               (* never on stackdata *)
   | SSpan      of exp * exp * datum marked list      (* never on stackdata *)
+[@@deriving show]
 @ 
 %%And last, the normal form of a compilation unit.
 <<exposed types(nast.nw)>>=
 type section = name * datum marked list
+[@@deriving show]
 type t = {
   target   : Ast.arch marked list;
   imports  : (Ast.region * Ast.ty option * Ast.import list) list;
@@ -17428,6 +17619,7 @@ type t = {
   udecls   : compile_time_defns;
   sections : section list
 }
+[@@deriving show]
 @ 
 <<nast.mli >>=
 <<exposed types(nast.nw)>>
@@ -17705,14 +17897,19 @@ let program ts =
 %%This is more my idea of an elaborated representation.
 <<exposed types(nelab.nw)>>=
 type name    = string
+[@@deriving show]
 type kind    = string
+[@@deriving show]
 type aligned = int
+[@@deriving show]
 @ 
 %%Procedures and sections in nice normal form.
 %%It's depressing that formals and locals don't have the same type.
 <<exposed types(nelab.nw)>>=
 type index = int
+[@@deriving show]
 type linktime = Reloc.t
+[@@deriving show]
 type 'a proc =
   { env     : 'a Fenv.Dirty.env';
     sym     : Symbol.t;  (* assembly-language symbol for this procedure *)
@@ -17727,6 +17924,7 @@ type 'a proc =
     code          : Elabstmt.stmt list;
     basic_block   : bool;  (* procedure represents a basic block from source *)
   } 
+[@@deriving show]
 
 type 'a datum =
   | Datalabel         of Symbol.t (* must be asm level not source level *)
@@ -17734,8 +17932,10 @@ type 'a datum =
   | InitializedData   of (linktime * Rtl.width) list
   | UninitializedData of int  (* counts the number of mems *)
   | Procedure         of 'a proc
+[@@deriving show]
 
 type 'a section = name * 'a datum list
+[@@deriving show]
 @ 
 %%And last, a compilation unit.
 <<exposed types(nelab.nw)>>=
@@ -17743,6 +17943,7 @@ type 'a compunit = {
   globals : (name * Fenv.variable) list;
   sections : 'a section list;
 }
+[@@deriving show]
 @ 
 <<nelab.mli >>=
 <<exposed types(nelab.nw)>>
@@ -17751,6 +17952,7 @@ val program : swap:bool -> validator -> Srcmap.map -> 'a Asm.assembler -> Nast.t
 @ 
 <<exposed types(nelab.nw)>>=
 type validator = Rtl.rtl -> string option
+[@@deriving show]
 @ 
 %%To make it possible to rewrite abstract syntax without paying an
 %%incredible burden in terms of tying recursive knots in types, we

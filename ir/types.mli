@@ -10,9 +10,9 @@ type size = Const  of int
 (*e: definition of type [[size]] *)
 type 'a t = Bool
           | Bits of 'a 
+[@@deriving show]
 type ty   = int t
 [@@deriving show]
-
 (*x: exported type definitions(types.nw) *)
 type tyscheme = (size t) list * (size t)
 type monotype = (int  t) list * (int  t)

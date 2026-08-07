@@ -5,6 +5,8 @@ class type t = object
     method mangled_text:    string
     method original_text:   string
 end 
+(*e: class type t *)
+
 (* does not work: [@@deriving show] *)
 (* manual *)
 let pp fmt (x : t) =
@@ -13,8 +15,6 @@ let pp fmt (x : t) =
     x#mangled_text
     x#original_text
 
-
-(*e: class type t *)
 class unmangled (n:string) : t = 
 object(this)
     method original_text = n

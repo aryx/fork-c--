@@ -7,14 +7,17 @@ type aggregation =
     | BigEndian
     | LittleEndian
     | Identity
+[@@deriving show]
 type space = char * aggregation * Cell.t   (* name, byte order, cell size *)
+[@@deriving show]
 type count = Cell.count = C of int
 [@@deriving show]
 type width = int
+[@@deriving show]
 type reg = space * int * count (* Rtl.space, index, number of cells *)
+[@@deriving show]
 type t = reg
 [@@deriving show]
-
 type x = Reg   of t
        | Slice of width * int * t
 (*x: exported types(register.nw) *)
