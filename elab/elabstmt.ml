@@ -23,11 +23,11 @@ type 'a kinded = kind * 'a * aligned
 [@@deriving show]
 type 'a flow  = { cuts : 'a list; unwinds : 'a list; areturns : 'a list;
                   returns : bool; aborts : bool }
-[@@deriving show]
+[@@deriving show { with_path = false }]
 type 'a cflow = { ccuts : 'a list; caborts : bool }
-[@@deriving show]
+[@@deriving show { with_path = false }]
 type 'a alias = { reads : 'a; writes : 'a }
-[@@deriving show]
+[@@deriving show { with_path = false }]
 type range = Bits.bits * Bits.bits   (* lo `leu` x `leu` hi, as in manual *)
 [@@deriving show]
 type procname = string
@@ -54,7 +54,7 @@ type stmt =
   | Return     of convention * int * int * actual list
   | Limitcheck of convention * exp * limitfailure option
 and limitfailure = { failcont : exp; reccont : exp; recname : name; }
-[@@deriving show]
+[@@deriving show { with_path = false }]
 (*e: exposed types(elabstmt.nw) *)
 
 

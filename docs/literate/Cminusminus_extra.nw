@@ -13444,11 +13444,11 @@ type 'a kinded = kind * 'a * aligned
 [@@deriving show]
 type 'a flow  = { cuts : 'a list; unwinds : 'a list; areturns : 'a list;
                   returns : bool; aborts : bool }
-[@@deriving show]
+[@@deriving show { with_path = false }]
 type 'a cflow = { ccuts : 'a list; caborts : bool }
-[@@deriving show]
+[@@deriving show { with_path = false }]
 type 'a alias = { reads : 'a; writes : 'a }
-[@@deriving show]
+[@@deriving show { with_path = false }]
 type range = Bits.bits * Bits.bits   (* lo `leu` x `leu` hi, as in manual *)
 [@@deriving show]
 type procname = string
@@ -13475,7 +13475,7 @@ type stmt =
   | Return     of convention * int * int * actual list
   | Limitcheck of convention * exp * limitfailure option
 and limitfailure = { failcont : exp; reccont : exp; recname : name; }
-[@@deriving show]
+[@@deriving show { with_path = false }]
 @
 <<elabstmt.mli >>=
 <<exposed types(elabstmt.nw)>>
@@ -14192,7 +14192,7 @@ type 'a proc =
     code          : Elabstmt.stmt list;
     basic_block   : bool;  (* procedure represents a basic block from source *)
   } 
-[@@deriving show]
+[@@deriving show { with_path = false} ]
 
 type 'a datum =
   | Datalabel         of Symbol.t (* must be asm level not source level *)
@@ -14200,7 +14200,7 @@ type 'a datum =
   | InitializedData   of (linktime * Rtl.width) list
   | UninitializedData of int  (* counts the number of mems *)
   | Procedure         of 'a proc
-[@@deriving show]
+[@@deriving show  { with_path = false} ]
 
 type 'a section = name * 'a datum list
 [@@deriving show]
@@ -14211,7 +14211,7 @@ type 'a compunit = {
   globals : (name * Fenv.variable) list;
   sections : 'a section list;
 }
-[@@deriving show]
+[@@deriving show  { with_path = false} ]
 @ 
 <<nelab.mli >>=
 <<exposed types(nelab.nw)>>

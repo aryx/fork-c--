@@ -26,7 +26,7 @@ type 'a proc =
     code          : Elabstmt.stmt list;
     basic_block   : bool;  (* procedure represents a basic block from source *)
   } 
-[@@deriving show]
+[@@deriving show { with_path = false} ]
 
 type 'a datum =
   | Datalabel         of Symbol.t (* must be asm level not source level *)
@@ -34,7 +34,7 @@ type 'a datum =
   | InitializedData   of (linktime * Rtl.width) list
   | UninitializedData of int  (* counts the number of mems *)
   | Procedure         of 'a proc
-[@@deriving show]
+[@@deriving show  { with_path = false} ]
 
 type 'a section = name * 'a datum list
 [@@deriving show]
@@ -43,7 +43,7 @@ type 'a compunit = {
   globals : (name * Fenv.variable) list;
   sections : 'a section list;
 }
-[@@deriving show]
+[@@deriving show  { with_path = false} ]
 (*x: exposed types(nelab.nw) *)
 type validator = Rtl.rtl -> string option
 [@@deriving show]
