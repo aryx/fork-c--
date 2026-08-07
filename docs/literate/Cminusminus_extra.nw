@@ -15599,8 +15599,8 @@ let is2power x = x > 0 && x land (x - 1) = 0
 <<elabexp.ml >>=
 module M = Metrics
 <<utilities(elabexp.nw)>>
-let loc_region r l = match l with A.NameOrMemAt(_, r) -> r | _ -> r
-let exp_region r l = match l with A.ExprAt     (_, r) -> r | _ -> r
+let loc_region r l = match l with A.NM(_, r) -> r | _ -> r
+let exp_region r l = match l with A.E     (_, r) -> r | _ -> r
 
 let aligned metrics =
   let wordsize = metrics.M.wordsize in
@@ -15675,7 +15675,7 @@ let emap f x = E.ematch x f
 let elab_full_ty env =
   let catch r = E.catch (E.errorRegionPrt (F.srcmap env, r)) in
   let rec elab = function
-    | A.TyAt (x,r)    -> catch r elab x
+    | A.T (x,r)    -> catch r elab x
     | A.BitsTy size   -> E.Ok (Types.Bits size)
     | A.TypeSynonym n -> snd (F.findt n env) in
   catch Srcmap.null elab
@@ -15728,12 +15728,12 @@ let rvalue_name x =
 %%\deeperbox{14pt}
 <<mutually recursive nest of [[typed_expr]] and [[lvalue]]>>=
 let rec kinded_name lhs = match lhs with
-  | A.NameOrMemAt(lhs,r) -> catch r kinded_name lhs
+  | A.NM(lhs,r) -> catch r kinded_name lhs
   | A.Name(kind,x,a)     -> E.ematch (lvalue_name x) (fun (loc, w) ->
                                (Auxfuns.Option.get "" kind, (loc, w), aligned w a))
   | A.Mem _              -> E.error "only a name may appear to left of a call" in
 let rec lvalue lhs = match lhs with
-  | A.NameOrMemAt(lhs,r)    -> catch r lvalue lhs
+  | A.NM(lhs,r)    -> catch r lvalue lhs
   | A.Name(k,x,a) -> no_kind_or_alignment k a lvalue_name x
   | A.Mem(t,addr,aligned,aliasing) ->
       let w = astwidth "value in memory" env t in
@@ -15745,7 +15745,7 @@ let rec lvalue lhs = match lhs with
         else
           Rtl.mem (assertion aligned) mspace (Cell.to_count mcell w) addre, w)
 and rvalue_name_or_mem nm = match nm with
-  | A.NameOrMemAt(v, r) -> catch r rvalue_name_or_mem v
+  | A.NM(v, r) -> catch r rvalue_name_or_mem v
   | A.Name(k, x, a)     -> no_kind_or_alignment k a rvalue_name x
   | A.Mem(_, _, _, _)   ->
       E.ematch (lvalue nm) (fun (loc, w) -> Rtl.fetch loc w, Types.Bits w)
@@ -15803,7 +15803,7 @@ and typed_expr exp =
     | Some ty -> astwidth "literal constant" env ty
     | None    -> E.Ok default_width in
   match exp with
-  | A.ExprAt(x,r)     -> catch r typed_expr x
+  | A.E(x,r)     -> catch r typed_expr x
   | A.Sint(str,t)     -> literal signed        str (const metrics.M.wordsize t) 
   | A.Uint(str,t)     -> literal unsigned      str (const metrics.M.wordsize t) 
   | A.Float(str,t)    -> literal float         str (const metrics.M.wordsize t) 
@@ -16003,7 +16003,7 @@ let elab_functions validate srcmap r env =
                      | N.Switch (_, _, arms) -> List.for_all jumpsarm arms
                      | _ -> false
   and never_returns = function
-    | Ast.FlowAt (f, _) -> never_returns f
+    | Ast.Fl (f, _) -> never_returns f
     | Ast.NeverReturns -> true
     | _ -> false
   and jumpsss = function
@@ -16026,8 +16026,8 @@ let elab_cformals     r env = snd (elab_functions nullv nullmap r env)
 %%We sometimes do extra checking if an expression is just a name.
 <<elaboration utilities>>=
 let rec exp_as_name = function
-  | A.ExprAt(x,_) -> exp_as_name x
-  | A.Fetch(A.NameOrMemAt(x,_)) -> exp_as_name (A.Fetch x)
+  | A.E(x,_) -> exp_as_name x
+  | A.Fetch(A.NM(x,_)) -> exp_as_name (A.Fetch x)
   | A.Fetch(A.Name(_,x,_)) -> Some x
   | _ -> None in
 @ 
@@ -16330,7 +16330,7 @@ let elab_alias r alias =
   let none = function None -> true | Some _ -> false in
   let rec elab r reads writes = function
     | [] -> E.Ok { reads = reads; writes = writes }
-    | A.AliasAt(a,r) :: a's -> E.catch (eprint r) (elab r reads writes) (a :: a's)
+    | A.Al(a,r) :: a's -> E.catch (eprint r) (elab r reads writes) (a :: a's)
     | A.Reads  ns :: a's when none reads  -> elab r (Some ns) writes a's
     | A.Writes ns :: a's when none writes -> elab r reads (Some ns) a's
     | A.Reads  _ :: _ -> errorf r "multiple 'reads' annotations on one call"
@@ -16358,7 +16358,7 @@ let flow r conv default_aborts default_returns =
     | n :: ns -> ks r as_what (continuation n :: prev') ns in
   let rec flow r c' u' r' aborts returns = function
     | [] -> finish_flow c' u' r' aborts returns
-    | A.FlowAt(f,r)  :: fs -> flow r c' u' r' aborts returns (f :: fs)
+    | A.Fl(f,r)  :: fs -> flow r c' u' r' aborts returns (f :: fs)
     | A.CutsTo    ns :: fs -> flow r (ks r as_cut_to c' ns) u' r' aborts returns fs
     | A.UnwindsTo ns :: fs -> flow r c' (ks r as_unwinds u' ns) r' aborts returns fs
     | A.ReturnsTo ns :: fs -> flow r c' u' (ks r as_returns r' ns) aborts returns fs
@@ -16716,7 +16716,7 @@ let convention = Auxfuns.Option.get "C--"
 %%The name [[fdata]] is short for ``fold data.''
 <<nast.ml >>=
 let rec add_datum r d ds = match d with
-  | A.DatumAt (d, r) -> add_datum r d ds
+  | A.Da (d, r) -> add_datum r d ds
   | A.Label l -> (r, Datalabel l) :: ds
   | A.Align n -> (r, Align n) :: ds
   | A.MemDecl (t, s, init) -> (r, ReserveMem (t, s, init)) :: ds
@@ -16757,7 +16757,7 @@ type ('a) accumulation_disaster =
   }
 
 let rec decl r accums d k = match d with
-  | A.DeclAt(x,r)   -> decl r accums x k
+  | A.D(x,r)   -> decl r accums x k
   | A.Typedef d     -> k {accums with tys = ((r,d) :: accums.tys)}
   | A.Import (t,ii) -> k {accums with imps = ((r,t,ii)::accums.imps)}
   | A.Export (t,ee) -> k {accums with exps = ((r,t,ee)::accums.exps)}
@@ -16788,7 +16788,7 @@ let kmap_none f r accums xs k =
 %%If there can be no statement, [[k]]'s first argument is~[[id]].
 <<nast.ml >>=
 let rec body r accums b k = match b with
-| A.BodyAt(b,r) -> body r accums b k
+| A.B(b,r) -> body r accums b k
 | A.DeclBody d  -> decl r accums d (k id)
 | A.StmtBody s  -> (
   <<match [[stmt]] [[s]] at [[r]] and continue with [[k]]>>
@@ -16810,7 +16810,7 @@ let rec stmt r s k =
   let cons s ss = StmtAt (s, r) :: ss in
   let atomic s = k (cons s) accums in
   match s with
-  | A.StmtAt(s,r) -> stmt r s k
+  | A.S(s,r) -> stmt r s k
   | A.IfStmt (c,b1,b2)   ->
     bodies r accums b2
       (fun ss2 accums ->
@@ -16878,7 +16878,7 @@ and arms r = kmap arm (fun x y -> x::y) r
 %%[[stmt]]. 
 <<nast.ml >>=
 let rec section r accums s k = match s with
-| A.SectionAt (s,r) ->
+| A.Sec (s,r) ->
     section r accums s k
 | A.Decl d ->
     decl r accums d k
@@ -16914,7 +16914,7 @@ and sections r = kmap_none section r
 let rec toplevel r accums t k =
   let cons s ss = (s, r) :: ss in
   match t with
-  | A.ToplevelAt(t,r) ->
+  | A.Top(t,r) ->
       toplevel r accums t k
   | A.Section(name, ss) ->
       sections r {accums with data = []} ss
@@ -17249,7 +17249,7 @@ module Type = struct
       let rec u = function 
         | A.BitsTy _    -> []
         | A.TypeSynonym x   -> [x]
-        | A.TyAt (t, _) -> u t in
+        | A.T (t, _) -> u t in
       u t
   end
   let what = "type"
@@ -17312,7 +17312,7 @@ module ConstSortBind = SortAndBind(Const)
 %%expression. A constant expression depends on all of them.
 <<utility functions for constants>>=
 let rec freeExprVars e tail = match e with
-| A.ExprAt(x,_)     -> freeExprVars x tail
+| A.E(x,_)     -> freeExprVars x tail
 | A.Fetch(lvalue)   -> freeLValueVars lvalue tail
 | A.BinOp(e1,_,e2)  -> freeExprVars e1 (freeExprVars e2 tail)
 | A.UnOp(_,e)       -> freeExprVars e tail
@@ -17324,7 +17324,7 @@ let rec freeExprVars e tail = match e with
 @ 
 <<utility functions for constants>>=
 and freeLValueVars l tail = match l with
-| A.NameOrMemAt(x,r) -> freeLValueVars x tail
+| A.NM(x,r) -> freeLValueVars x tail
 | A.Mem(_,e,_, _)    -> freeExprVars e tail
 | A.Name(_,name,_)   -> if List.mem name tail then tail else name :: tail
 @
@@ -17753,7 +17753,7 @@ and init_size r = function
 <<definitions of elaboration functions for data>>=
 and init r ty i = 
   match i with
-  | A.InitAt (x,r) -> E.catch (error r env) (init r ty) x
+  | A.I (x,r) -> E.catch (error r env) (init r ty) x
   | A.InitExprs(es)  ->
       E.seq (E.Raise.list (List.map (Elabexp.elab_link env) es)) (fun tes ->
         if List.for_all (fun (e, w) -> Types.Bits w =*= ty) tes then
