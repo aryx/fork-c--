@@ -19,15 +19,11 @@ module Common2 = Common
  * types and analysis. They are mostly in the same order than MAKESUBDIRS
  * in the Makefile:
  * 
- * - DONE Common.filename
- * 
  * - DONE Ast.program (in parsing/, and its basic printer Astpp.emit)
  *   functions: Parse_cmm.tokens, Parse_cmm.parse, Driver.parse
  * 
  * - DONE Nast.t (in front_nelab/)
  *   functions: Nast.program
- * 
- *   todo: a vof_nast that pretty prints cleanly
  * 
  * - DONE 'a Nelab.compunit * 'a Fenv.Dirty.env' (in front_nelab/)
  *   functions: Nelab.program taking lots of parameters
@@ -169,9 +165,6 @@ let dump_nelab file =
 
 
 
-
-
-
 let test_x86 file =
   let (srcmap, ast) = Driver.parse file in
 
@@ -209,11 +202,9 @@ let test_rtl file =
 let test_driver_version () =
   Driver.version ()
 
-
 let test_emit_asdl file =
   let (srcmap, ast) = Driver.parse file in
   Driver.emit_asdl (srcmap, ast)
-
 
 let test_driver_elab file =
   let (srcmap, ast) = Driver.parse file in
@@ -296,7 +287,6 @@ let extra_actions () = [
 (*****************************************************************************)
 (* Main action *)
 (*****************************************************************************)
-
 
 let main_action xs = 
   raise Todo
