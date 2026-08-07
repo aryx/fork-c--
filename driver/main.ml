@@ -105,6 +105,18 @@ let version = "0.1"
 (*****************************************************************************)
 
 (*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let pp f x =
+  (* otherwise the dumpers use too many lines *)
+  Format.set_margin 120;
+  (* Format.set_max_indent 200; *)
+  f Format.std_formatter x;
+  Format.pp_print_newline Format.std_formatter ();
+  ()
+
+(*****************************************************************************)
 (* Subsystems actions *)
 (*****************************************************************************)
 
@@ -113,10 +125,15 @@ let dump_tokens file =
   Driver.scan file
 
 (* filename -> ast *)
-let dump_ast caps file =
+let dump_ast _caps file =
   let (_srcmap, ast) = Driver.parse file in
+(* alt: but does not honor Format.set_margin because
+   creates its own formatter with 80 columns
+
   let s = Ast.show_program ast in
   Console.print caps s;
+*)
+  pp Ast.pp_program ast;
   ()
 
 (* pretty printer *)
@@ -132,8 +149,12 @@ let pp_ast caps file =
 let dump_nast caps file =
   let (srcmap, ast) = Driver.parse file in
   let nast = Nast.program ast in
+  (*
   let s = Nast.show nast in
   Console.print caps s
+  *)
+  pp Nast.pp nast;
+  ()
 
 type res_or_error1 =
   (unit Fenv.Dirty.env' * unit Nelab.compunit) Error.error
@@ -155,8 +176,12 @@ let dump_nelab caps file =
   let res_or_error = 
     Nelab.program ~swap validator srcmap assembler nast
   in
+  (*
   let s = show_res_or_error1 res_or_error in
   Console.print caps s
+  *)
+  pp pp_res_or_error1 res_or_error;
+  ()
 
 
 
