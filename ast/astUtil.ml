@@ -161,7 +161,7 @@
           (match (t) with 
               "ast_TyAt" -> let ty1 = (sexp_rd_ty s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.TyAt(ty1, region1)
+              Ast.T(ty1, region1)
             | "ast_BitsTy" -> let size1 = (sexp_rd_size s_) in
               Ast.BitsTy(size1)
             | "ast_TypeSynonym" -> let name1 = (sexp_rd_name s_) in
@@ -181,7 +181,7 @@
           (match (t) with 
               "ast_NameOrMemAt" -> let name_or_mem1 = (sexp_rd_name_or_mem s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.NameOrMemAt(name_or_mem1, region1)
+              Ast.NM(name_or_mem1, region1)
             | "ast_Name" -> let hint_opt1 = (SexpPkl.rd_option sexp_rd_hint s_) in
               let name1 = (sexp_rd_name s_) in
               let aligned_opt1 = (SexpPkl.rd_option sexp_rd_aligned s_) in
@@ -220,7 +220,7 @@
           (match (t) with 
               "ast_ExprAt" -> let expr1 = (sexp_rd_expr s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.ExprAt(expr1, region1)
+              Ast.E(expr1, region1)
             | "ast_Sint" -> let string1 = (StdPrimsUtil.sexp_rd_std_string s_) in
               let ty_opt1 = (SexpPkl.rd_option sexp_rd_ty s_) in
               Ast.Sint(string1, ty_opt1)
@@ -345,7 +345,7 @@
           (match (t) with 
               "ast_DeclAt" -> let decl1 = (sexp_rd_decl s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.DeclAt(decl1, region1)
+              Ast.D(decl1, region1)
             | "ast_Import" -> let ty_opt1 = (SexpPkl.rd_option sexp_rd_ty s_) in
               let import_list1 = (SexpPkl.rd_list sexp_rd_import s_) in
               Ast.Import(ty_opt1, import_list1)
@@ -425,7 +425,7 @@
           (match (t) with 
               "ast_InitAt" -> let init1 = (sexp_rd_init s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.InitAt(init1, region1)
+              Ast.I(init1, region1)
             | "ast_InitExprs" -> let expr_list1 = (SexpPkl.rd_list sexp_rd_expr s_) in
               Ast.InitExprs(expr_list1)
             | "ast_InitStr" -> let string1 = (StdPrimsUtil.sexp_rd_std_string s_) in
@@ -447,7 +447,7 @@
           (match (t) with 
               "ast_DatumAt" -> let datum1 = (sexp_rd_datum s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.DatumAt(datum1, region1)
+              Ast.Da(datum1, region1)
             | "ast_Label" -> let name1 = (sexp_rd_name s_) in
               Ast.Label(name1)
             | "ast_Align" -> let align1 = (sexp_rd_align s_) in
@@ -486,7 +486,7 @@
           (match (t) with 
               "ast_FlowAt" -> let flow1 = (sexp_rd_flow s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.FlowAt(flow1, region1)
+              Ast.Fl(flow1, region1)
             | "ast_CutsTo" -> let name_list1 = (SexpPkl.rd_list sexp_rd_name s_) in
               Ast.CutsTo(name_list1)
             | "ast_UnwindsTo" -> let name_list1 = (SexpPkl.rd_list sexp_rd_name s_) in
@@ -510,7 +510,7 @@
           (match (t) with 
               "ast_AliasAt" -> let mem1 = (sexp_rd_mem s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.AliasAt(mem1, region1)
+              Ast.Al(mem1, region1)
             | "ast_Reads" -> let name_list1 = (SexpPkl.rd_list sexp_rd_name s_) in
               Ast.Reads(name_list1)
             | "ast_Writes" -> let name_list1 = (SexpPkl.rd_list sexp_rd_name s_) in
@@ -610,7 +610,7 @@
           (match (t) with 
               "ast_StmtAt" -> let stmt1 = (sexp_rd_stmt s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.StmtAt(stmt1, region1)
+              Ast.S(stmt1, region1)
             | "ast_IfStmt" -> let expr1 = (sexp_rd_expr s_) in
               let body_list1 = (SexpPkl.rd_list sexp_rd_body s_) in
               let body_list2 = (SexpPkl.rd_list sexp_rd_body s_) in
@@ -681,7 +681,7 @@
           (match (t) with 
               "ast_BodyAt" -> let body1 = (sexp_rd_body s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.BodyAt(body1, region1)
+              Ast.B(body1, region1)
             | "ast_DeclBody" -> let decl1 = (sexp_rd_decl s_) in
               Ast.DeclBody(decl1)
             | "ast_StmtBody" -> let stmt1 = (sexp_rd_stmt s_) in
@@ -719,7 +719,7 @@
           (match (t) with 
               "ast_SectionAt" -> let section1 = (sexp_rd_section s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.SectionAt(section1, region1)
+              Ast.Sec(section1, region1)
             | "ast_Decl" -> let decl1 = (sexp_rd_decl s_) in
               Ast.Decl(decl1)
             | "ast_Procedure" -> let proc1 = (sexp_rd_proc s_) in
@@ -745,7 +745,7 @@
           (match (t) with 
               "ast_ToplevelAt" -> let toplevel1 = (sexp_rd_toplevel s_) in
               let region1 = (sexp_rd_region s_) in
-              Ast.ToplevelAt(toplevel1, region1)
+              Ast.Top(toplevel1, region1)
             | "ast_Section" -> let name1 = (sexp_rd_name s_) in
               let section_list1 = (SexpPkl.rd_list sexp_rd_section s_) in
               Ast.Section(name1, section_list1)
@@ -988,7 +988,7 @@
   
   and sexp_wr_ty x_ s_ = 
       (match (x_) with 
-          (Ast.TyAt(ty1, region1)) -> begin
+          (Ast.T(ty1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_TyAt" s_);
             (sexp_wr_ty ty1 s_);
@@ -1011,7 +1011,7 @@
   
   and sexp_wr_name_or_mem x_ s_ = 
       (match (x_) with 
-          (Ast.NameOrMemAt(name_or_mem1, region1)) -> begin
+          (Ast.NM(name_or_mem1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_NameOrMemAt" s_);
             (sexp_wr_name_or_mem name_or_mem1 s_);
@@ -1051,7 +1051,7 @@
   
   and sexp_wr_expr x_ s_ = 
       (match (x_) with 
-          (Ast.ExprAt(expr1, region1)) -> begin
+          (Ast.E(expr1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_ExprAt" s_);
             (sexp_wr_expr expr1 s_);
@@ -1221,7 +1221,7 @@
   
   and sexp_wr_decl x_ s_ = 
       (match (x_) with 
-          (Ast.DeclAt(decl1, region1)) -> begin
+          (Ast.D(decl1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_DeclAt" s_);
             (sexp_wr_decl decl1 s_);
@@ -1327,7 +1327,7 @@
   
   and sexp_wr_init x_ s_ = 
       (match (x_) with 
-          (Ast.InitAt(init1, region1)) -> begin
+          (Ast.I(init1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_InitAt" s_);
             (sexp_wr_init init1 s_);
@@ -1356,7 +1356,7 @@
   
   and sexp_wr_datum x_ s_ = 
       (match (x_) with 
-          (Ast.DatumAt(datum1, region1)) -> begin
+          (Ast.Da(datum1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_DatumAt" s_);
             (sexp_wr_datum datum1 s_);
@@ -1403,7 +1403,7 @@
   
   and sexp_wr_flow x_ s_ = 
       (match (x_) with 
-          (Ast.FlowAt(flow1, region1)) -> begin
+          (Ast.Fl(flow1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_FlowAt" s_);
             (sexp_wr_flow flow1 s_);
@@ -1442,7 +1442,7 @@
   
   and sexp_wr_mem x_ s_ = 
       (match (x_) with 
-          (Ast.AliasAt(mem1, region1)) -> begin
+          (Ast.Al(mem1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_AliasAt" s_);
             (sexp_wr_mem mem1 s_);
@@ -1538,7 +1538,7 @@
   
   and sexp_wr_stmt x_ s_ = 
       (match (x_) with 
-          (Ast.StmtAt(stmt1, region1)) -> begin
+          (Ast.S(stmt1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_StmtAt" s_);
             (sexp_wr_stmt stmt1 s_);
@@ -1676,7 +1676,7 @@
   
   and sexp_wr_body x_ s_ = 
       (match (x_) with 
-          (Ast.BodyAt(body1, region1)) -> begin
+          (Ast.B(body1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_BodyAt" s_);
             (sexp_wr_body body1 s_);
@@ -1723,7 +1723,7 @@
   
   and sexp_wr_section x_ s_ = 
       (match (x_) with 
-          (Ast.SectionAt(section1, region1)) -> begin
+          (Ast.Sec(section1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_SectionAt" s_);
             (sexp_wr_section section1 s_);
@@ -1760,7 +1760,7 @@
   
   and sexp_wr_toplevel x_ s_ = 
       (match (x_) with 
-          (Ast.ToplevelAt(toplevel1, region1)) -> begin
+          (Ast.Top(toplevel1, region1)) -> begin
             (SexpPkl.wr_lp s_);
             (SexpPkl.wr_sym "ast_ToplevelAt" s_);
             (sexp_wr_toplevel toplevel1 s_);

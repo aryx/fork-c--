@@ -26,7 +26,7 @@ let emap f x = E.ematch x f
 let elab_full_ty env =
   let catch r = E.catch (E.errorRegionPrt (F.srcmap env, r)) in
   let rec elab = function
-    | A.TyAt (x,r)    -> catch r elab x
+    | A.T (x,r)    -> catch r elab x
     | A.BitsTy size   -> E.Ok (Types.Bits size)
     | A.TypeSynonym n -> snd (F.findt n env) in
   catch Srcmap.null elab
@@ -48,8 +48,8 @@ let assertion = function
   | None -> Rtl.none
   | Some n -> Rtl.aligned (alignment n)
 (*e: utilities(elabexp.nw) *)
-let loc_region r l = match l with A.NameOrMemAt(_, r) -> r | _ -> r
-let exp_region r l = match l with A.ExprAt     (_, r) -> r | _ -> r
+let loc_region r l = match l with A.NM(_, r) -> r | _ -> r
+let exp_region r l = match l with A.E     (_, r) -> r | _ -> r
 
 let aligned metrics =
   let wordsize = metrics.M.wordsize in
@@ -94,12 +94,12 @@ let exprfuns env =
   (*e: definition of [[rvalue_name]] *)
   (*s: mutually recursive nest of [[typed_expr]] and [[lvalue]] *)
   let rec kinded_name lhs = match lhs with
-    | A.NameOrMemAt(lhs,r) -> catch r kinded_name lhs
+    | A.NM(lhs,r) -> catch r kinded_name lhs
     | A.Name(kind,x,a)     -> E.ematch (lvalue_name x) (fun (loc, w) ->
                                  (Auxfuns.Option.get "" kind, (loc, w), aligned w a))
     | A.Mem _              -> E.error "only a name may appear to left of a call" in
   let rec lvalue lhs = match lhs with
-    | A.NameOrMemAt(lhs,r)    -> catch r lvalue lhs
+    | A.NM(lhs,r)    -> catch r lvalue lhs
     | A.Name(k,x,a) -> no_kind_or_alignment k a lvalue_name x
     | A.Mem(t,addr,aligned,aliasing) ->
         let w = astwidth "value in memory" env t in
@@ -111,7 +111,7 @@ let exprfuns env =
           else
             Rtl.mem (assertion aligned) mspace (Cell.to_count mcell w) addre, w)
   and rvalue_name_or_mem nm = match nm with
-    | A.NameOrMemAt(v, r) -> catch r rvalue_name_or_mem v
+    | A.NM(v, r) -> catch r rvalue_name_or_mem v
     | A.Name(k, x, a)     -> no_kind_or_alignment k a rvalue_name x
     | A.Mem(_, _, _, _)   ->
         E.ematch (lvalue nm) (fun (loc, w) -> Rtl.fetch loc w, Types.Bits w)
@@ -145,7 +145,7 @@ let exprfuns env =
       | Some ty -> astwidth "literal constant" env ty
       | None    -> E.Ok default_width in
     match exp with
-    | A.ExprAt(x,r)     -> catch r typed_expr x
+    | A.E(x,r)     -> catch r typed_expr x
     | A.Sint(str,t)     -> literal signed        str (const metrics.M.wordsize t) 
     | A.Uint(str,t)     -> literal unsigned      str (const metrics.M.wordsize t) 
     | A.Float(str,t)    -> literal float         str (const metrics.M.wordsize t) 

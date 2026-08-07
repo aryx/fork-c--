@@ -48,7 +48,7 @@ let str s       = P.text ("\"" ^ String.escaped s ^ "\"")
 let char i      = P.text ("'"  ^ Char.escaped(Char.chr i) ^ "'")
 (*x: astpp.ml  *)
 let rec ty = function
-    | A.TyAt(x,_)       -> ty x
+    | A.T(x,_)       -> ty x
     | A.BitsTy(n)       -> P.text "bits"  ^^ int n
     | A.TypeSynonym(name)   -> P.text name
 (*x: astpp.ml  *)
@@ -57,7 +57,7 @@ let aligned = function
   | None   -> P.empty
 
 let rec lvalue = function
-    | A.NameOrMemAt(x,_)  -> lvalue x
+    | A.NM(x,_)  -> lvalue x
     | A.Name(None,x,a) -> P.agrp (id x ^^ aligned a)
     | A.Name(Some h,x,a) -> P.agrp (str h ^/ id x ^^ aligned a)
     | A.Mem(t,e,a,aliasing) -> 
@@ -86,7 +86,7 @@ and actuals xs = P.agrp (P.text "(" ^^ P.commalist actual xs ^^ P.text ")")
 and expr e = 
     let with_ty t p = match t with None -> p | Some t -> p ^^ P.text "::" ^^ ty t in
     match e with
-    | A.ExprAt(x,_)       -> expr x
+    | A.E(x,_)       -> expr x
     | A.Sint( i, t)       -> with_ty t (P.text i)
     | A.Uint( i, t)       ->
         with_ty t (if String.get i 0 =<= '0' then P.text i else P.text (i^"U"))
@@ -112,7 +112,7 @@ let memsize = function
     | A.FixSize(e)    -> P.text "[" ^^ expr e ^^ P.text "]"
 
 let rec init = function
-    | A.InitAt(x,_) -> init x
+    | A.I(x,_) -> init x
     | A.InitExprs(es) -> 
             P.fgrp begin
             ~~ P.text "{"
@@ -133,7 +133,7 @@ let rec init = function
             end
 
 let rec datum = function
-    | A.DatumAt(x,_)        -> datum x
+    | A.Da(x,_)        -> datum x
     | A.Label(n)            -> id n ^^ P.text ":"
     | A.Align(a)            -> P.agrp (P.text "align" ^/ int a ^^ semi)
     | A.MemDecl(t,m,Some i) -> P.agrp (ty t ^^ memsize m ^/ init i ^^ semi)
@@ -187,7 +187,7 @@ let rec flow f =
     let also s ns = P.agrp (P.text "also" ^/ P.text s ^/ P.text "to" 
                          ^/ nest (P.commalist id ns)) in
     match f with
-    | A.FlowAt(x,_)     -> flow x
+    | A.Fl(x,_)     -> flow x
     | A.CutsTo(ns)    when nonempty ns -> also "cuts"    ns
     | A.UnwindsTo(ns) when nonempty ns -> also "unwinds" ns
     | A.ReturnsTo(ns) when nonempty ns -> also "returns" ns
@@ -197,7 +197,7 @@ let rec flow f =
 let rec alias f =
   let ann s ns = P.agrp (P.text s ^/ nest (P.commalist id ns)) in
   match f with
-  | A.AliasAt(x,_)     -> alias x
+  | A.Al(x,_)     -> alias x
   | A.Reads  ns -> ann "reads"  ns
   | A.Writes ns -> ann "writes" ns
 
@@ -252,7 +252,7 @@ let range = function
     | A.Range(e1,e2)    -> P.agrp(expr e1 ^/ P.text ".." ^/ expr e2)
 (*x: astpp.ml  *)
 let rec stmt = function
-    | A.StmtAt(x,_)   -> stmt x
+    | A.S(x,_)   -> stmt x
     
     | A.IfStmt ( e, ss1, ss2)    ->
         P.agrp begin
@@ -443,7 +443,7 @@ let rec stmt = function
         end
         
 and body is_global = function
-    | A.BodyAt(x, _)    -> body is_global x
+    | A.B(x, _)    -> body is_global x
     | A.DeclBody(d)     -> decl is_global d
     | A.StmtBody(s)     -> stmt s
     | A.DataBody(dd)    -> 
@@ -471,7 +471,7 @@ and proc (cc,n,fs,ss,_) =
     end
 (*x: astpp.ml  *)
 and decl is_global = function
-    | A.DeclAt(x,_) -> decl is_global x
+    | A.D(x,_) -> decl is_global x
     | A.Import( t, ns) -> 
         let import' = function
         | (Some x, y) -> P.agrp (str x ^/ P.text "as" ^/ P.text y)
@@ -527,7 +527,7 @@ and arm = function
         end 
 
 and section  = function (* inside a section *)
-    | A.SectionAt(x,_)  -> section x
+    | A.Sec(x,_)  -> section x
     | A.Decl(d)         -> decl true d
     | A.Datum( d)       -> datum d
     | A.Procedure(p)    -> proc p
@@ -538,7 +538,7 @@ and section  = function (* inside a section *)
         end
 (*x: astpp.ml  *)
 let rec toplevel = function
-    | A.ToplevelAt(x, _)  -> toplevel x
+    | A.Top(x, _)  -> toplevel x
     | A.Section(name, ss) -> 
             P.agrp begin 
             ~~ P.agrp (P.text "section" ^/ str name)

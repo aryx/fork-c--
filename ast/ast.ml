@@ -22,18 +22,18 @@
   and region = (StdPrims.std_int * StdPrims.std_int)
   [@printer fun fmt _ -> Format.pp_print_string fmt "<>"]
   and ty =
-        TyAt of (ty * region)
+        T of (ty * region)
       | BitsTy of (size)
       | TypeSynonym of (name)
   
   and name_or_mem =
-        NameOrMemAt of (name_or_mem * region)
+        NM of (name_or_mem * region)
       | Name of (hint option * name * aligned option)
       | Mem of (ty * expr * aligned option * in_alias list)
   
   and actual = (hint option * expr * aligned option)
   and expr =
-        ExprAt of (expr * region)
+        E of (expr * region)
       | Sint of (StdPrims.std_string * ty option)
       | Uint of (StdPrims.std_string * ty option)
       | Float of (StdPrims.std_string * ty option)
@@ -61,7 +61,7 @@
       | PointerSize of (StdPrims.std_int)
   
   and decl =
-        DeclAt of (decl * region)
+        D of (decl * region)
       | Import of (ty option * import list)
       | Export of (ty option * export list)
       | Const of (ty option * name * expr)
@@ -78,20 +78,20 @@
       | FixSize of (expr)
   
   and init =
-        InitAt of (init * region)
+        I of (init * region)
       | InitExprs of (expr list)
       | InitStr of (StdPrims.std_string)
       | InitUStr of (StdPrims.std_string)
   
   and datum =
-        DatumAt of (datum * region)
+        Da of (datum * region)
       | Label of (name)
       | Align of (align)
       | MemDecl of (ty * memsize * init option)
   
   and cformal = (region * hint option * name * aligned option)
   and flow =
-        FlowAt of (flow * region)
+        Fl of (flow * region)
       | CutsTo of (name list)
       | UnwindsTo of (name list)
       | ReturnsTo of (name list)
@@ -99,7 +99,7 @@
       | Aborts
   
   and mem =
-        AliasAt of (mem * region)
+        Al of (mem * region)
       | Reads of (name list)
       | Writes of (name list)
   
@@ -118,7 +118,7 @@
       | Case of (range list * body list)
   
   and stmt =
-        StmtAt of (stmt * region)
+        S of (stmt * region)
       | IfStmt of (expr * body list * body list)
       | SwitchStmt of (range option * expr * arm list)
       | LabelStmt of (name)
@@ -145,21 +145,21 @@
       | LimitcheckStmt of (expr * expr option)
   
   and body =
-        BodyAt of (body * region)
+        B of (body * region)
       | DeclBody of (decl)
       | StmtBody of (stmt)
       | DataBody of (datum list)
   
   and proc = (conv option * name * formal list * body list * region)
   and section =
-        SectionAt of (section * region)
+        Sec of (section * region)
       | Decl of (decl)
       | Procedure of (proc)
       | Datum of (datum)
       | SSpan of (expr * expr * section list)
   
   and toplevel =
-        ToplevelAt of (toplevel * region)
+        Top of (toplevel * region)
       | Section of (name * section list)
       | TopDecl of (decl)
       | TopProcedure of (proc)

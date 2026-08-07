@@ -95,8 +95,8 @@ let elab_functions validate srcmap r env =
   let rec full_stmt r reachable s =
     (*s: elaboration utilities *)
     let rec exp_as_name = function
-      | A.ExprAt(x,_) -> exp_as_name x
-      | A.Fetch(A.NameOrMemAt(x,_)) -> exp_as_name (A.Fetch x)
+      | A.E(x,_) -> exp_as_name x
+      | A.Fetch(A.NM(x,_)) -> exp_as_name (A.Fetch x)
       | A.Fetch(A.Name(_,x,_)) -> Some x
       | _ -> None in
     (*x: elaboration utilities *)
@@ -203,7 +203,7 @@ let elab_functions validate srcmap r env =
       let none = function None -> true | Some _ -> false in
       let rec elab r reads writes = function
         | [] -> E.Ok { reads = reads; writes = writes }
-        | A.AliasAt(a,r) :: a's -> E.catch (eprint r) (elab r reads writes) (a :: a's)
+        | A.Al(a,r) :: a's -> E.catch (eprint r) (elab r reads writes) (a :: a's)
         | A.Reads  ns :: a's when none reads  -> elab r (Some ns) writes a's
         | A.Writes ns :: a's when none writes -> elab r reads (Some ns) a's
         | A.Reads  _ :: _ -> errorf r "multiple 'reads' annotations on one call"
@@ -225,7 +225,7 @@ let elab_functions validate srcmap r env =
         | n :: ns -> ks r as_what (continuation n :: prev') ns in
       let rec flow r c' u' r' aborts returns = function
         | [] -> finish_flow c' u' r' aborts returns
-        | A.FlowAt(f,r)  :: fs -> flow r c' u' r' aborts returns (f :: fs)
+        | A.Fl(f,r)  :: fs -> flow r c' u' r' aborts returns (f :: fs)
         | A.CutsTo    ns :: fs -> flow r (ks r as_cut_to c' ns) u' r' aborts returns fs
         | A.UnwindsTo ns :: fs -> flow r c' (ks r as_unwinds u' ns) r' aborts returns fs
         | A.ReturnsTo ns :: fs -> flow r c' u' (ks r as_returns r' ns) aborts returns fs
@@ -441,7 +441,7 @@ let elab_functions validate srcmap r env =
                      | N.Switch (_, _, arms) -> List.for_all jumpsarm arms
                      | _ -> false
   and never_returns = function
-    | Ast.FlowAt (f, _) -> never_returns f
+    | Ast.Fl (f, _) -> never_returns f
     | Ast.NeverReturns -> true
     | _ -> false
   and jumpsss = function

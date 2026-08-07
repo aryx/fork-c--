@@ -114,7 +114,7 @@ let actual (kind, name, aligned) = (Auxfuns.Option.get "" kind, name, aligned)
 let convention = Auxfuns.Option.get "C--"
 (*x: nast.ml  *)
 let rec add_datum r d ds = match d with
-  | A.DatumAt (d, r) -> add_datum r d ds
+  | A.Da (d, r) -> add_datum r d ds
   | A.Label l -> (r, Datalabel l) :: ds
   | A.Align n -> (r, Align n) :: ds
   | A.MemDecl (t, s, init) -> (r, ReserveMem (t, s, init)) :: ds
@@ -134,7 +134,7 @@ type ('a) accumulation_disaster =
   }
 
 let rec decl r accums d k = match d with
-  | A.DeclAt(x,r)   -> decl r accums x k
+  | A.D(x,r)   -> decl r accums x k
   | A.Typedef d     -> k {accums with tys = ((r,d) :: accums.tys)}
   | A.Import (t,ii) -> k {accums with imps = ((r,t,ii)::accums.imps)}
   | A.Export (t,ee) -> k {accums with exps = ((r,t,ee)::accums.exps)}
@@ -154,7 +154,7 @@ let kmap_none f r accums xs k =
   kmap (xk f) (fun _ _ -> []) r accums xs (fun _ -> k)
 (*x: nast.ml  *)
 let rec body r accums b k = match b with
-| A.BodyAt(b,r) -> body r accums b k
+| A.B(b,r) -> body r accums b k
 | A.DeclBody d  -> decl r accums d (k id)
 | A.StmtBody s  -> (
   (*s: match [[stmt]] [[s]] at [[r]] and continue with [[k]] *)
@@ -162,7 +162,7 @@ let rec body r accums b k = match b with
     let cons s ss = StmtAt (s, r) :: ss in
     let atomic s = k (cons s) accums in
     match s with
-    | A.StmtAt(s,r) -> stmt r s k
+    | A.S(s,r) -> stmt r s k
     | A.IfStmt (c,b1,b2)   ->
       bodies r accums b2
         (fun ss2 accums ->
@@ -224,7 +224,7 @@ and arm r accums a k = match a with
 and arms r = kmap arm (fun x y -> x::y) r
 (*x: nast.ml  *)
 let rec section r accums s k = match s with
-| A.SectionAt (s,r) ->
+| A.Sec (s,r) ->
     section r accums s k
 | A.Decl d ->
     decl r accums d k
@@ -256,7 +256,7 @@ and sections r = kmap_none section r
 let rec toplevel r accums t k =
   let cons s ss = (s, r) :: ss in
   match t with
-  | A.ToplevelAt(t,r) ->
+  | A.Top(t,r) ->
       toplevel r accums t k
   | A.Section(name, ss) ->
       sections r {accums with data = []} ss

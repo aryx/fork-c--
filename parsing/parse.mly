@@ -37,7 +37,7 @@ let ast_mem ty exp (align, alias) = A.Mem(ty, exp, align, alias)
 
 let uminus e =
   let rec strip = function
-    | A.ExprAt(e, _) -> strip e
+    | A.E(e, _) -> strip e
     | A.Sint(s, w) -> A.Sint("-" ^ s, w)
     | _ -> A.UnOp("-", e) in
   strip e
@@ -110,7 +110,7 @@ program     :   toplevels                      { rev $1}
 toplevels   :   toplevels toplevelAt           { $2::$1 }
             |   /**/                           { []     }
 /*(*x: parse.mly *)*/
-toplevelAt  :   toplevel                       { A.ToplevelAt($1,p())       }
+toplevelAt  :   toplevel                       { A.Top($1,p())       }
 toplevel    :   SECTION STR LBRACE sections RBRACE  { A.Section($2, rev $4) }
             |   procedure                      { A.TopProcedure($1)         }
             |   declAt                         { A.TopDecl($1)              }
@@ -118,14 +118,14 @@ toplevel    :   SECTION STR LBRACE sections RBRACE  { A.Section($2, rev $4) }
 sections    :   sections sectionAt             { $2 :: $1 }
             |   /**/                           { []       }
 
-sectionAt   :   section                        { A.SectionAt($1,p()) }
+sectionAt   :   section                        { A.Sec($1,p()) }
 section     :   procedure                      { A.Procedure($1)     }
             |   datum                          { A.Datum($1)         }
             |   span                           { A.SSpan($1)         }
             |   declAt                         { A.Decl($1)          }
 
 /*(*x: parse.mly *)*/
-declAt      :   decl                           { A.DeclAt($1,p()) }   
+declAt      :   decl                           { A.D($1,p()) }   
 decl        :   INVARIANT /*----*/ registers SEMI
                     { A.Registers(mkRegs A.Invariant $2) }
             |   /*-----*/ /*----*/ registers SEMI
@@ -162,14 +162,14 @@ span        :   SPAN sexprAt exprAt
                 LBRACE sections RBRACE         { $2, $3, rev $5 }
 
 /*(*x: parse.mly *)*/
-datumAt     :   datum                          { A.DatumAt($1,p()) }
+datumAt     :   datum                          { A.Da($1,p()) }
 datum       :   ID COLON                       { A.Label $1 }
             |   ALIGN uint SEMI                { A.Align $2 }
             |   tyAt size opt_initAt SEMI      { A.MemDecl($1,$2,$3)}
 
 opt_initAt : initAt { Some $1 } | { None }
 /*(*x: parse.mly *)*/
-initAt      :   init                           { A.InitAt($1,p()) }
+initAt      :   init                           { A.I($1,p()) }
 init        :   LBRACE   exprs RBRACE          { A.InitExprs($2)  }
             |   LBRACE         RBRACE          { A.InitExprs([])  }
             |   STR                            { A.InitStr($1)    }
@@ -198,7 +198,7 @@ body        :   LBRACE body0 RBRACE            { rev $2 }
 body0       :   body0 bodyAt                   { $2 :: $1 }
             |   /**/                           { []       }
 
-bodyAt      :   body1                          { A.BodyAt($1,p()) }
+bodyAt      :   body1                          { A.B($1,p()) }
 body1       :   declAt                         { A.DeclBody $1    }
             |   stackdecl                      { A.DataBody $1    }
             |   stmtAt                         { A.StmtBody $1    }
@@ -242,7 +242,7 @@ conv        :   FOREIGN STR                    { Some $2 }
 
 aligned     :   ALIGNED uint                   { $2 }
 
-flowAt      :   flow                           { A.FlowAt($1,p()) }
+flowAt      :   flow                           { A.Fl($1,p()) }
 flow        :   ALSO CUTS     TO names         { A.CutsTo($4)     }
             |   ALSO UNWINDS  TO names         { A.UnwindsTo($4)  }
             |   ALSO RETURNS  TO names         { A.ReturnsTo($4)  }
@@ -255,7 +255,7 @@ flows       :   flows flowAt                   { $2 :: $1 }
 targets     :   TARGETS names                  { $2 }
             |   /**/                           { [] }
 
-aliasAt     :   alias                          { A.AliasAt($1,p()) }
+aliasAt     :   alias                          { A.Al($1,p()) }
 alias       :   READS  opt_names               { A.Reads ($2)       }
             |   WRITES opt_names               { A.Writes($2)       }
 
@@ -263,12 +263,12 @@ procanns    :   procanns flowAt                { A.Flow  $2 :: $1 }
             |   procanns aliasAt               { A.Alias $2 :: $1 }
             |   /**/                           { []       }
 /*(*x: parse.mly *)*/
-nameOrMemAt :   nameOrMem                      { A.NameOrMemAt($1,p()) } 
+nameOrMemAt :   nameOrMem                      { A.NM($1,p()) } 
 nameOrMem   :   nameOrMem0                     { $1 } 
             |   ID aligned                     { A.Name(None, $1, Some $2) }
             |   STR ID opt_aligned             { A.Name(Some $1,$2,$3) } 
 /*(*x: parse.mly *)*/
-nameOrMemAt0:   nameOrMem0                    { A.NameOrMemAt($1,p()) }
+nameOrMemAt0:   nameOrMem0                    { A.NM($1,p()) }
 nameOrMem0  :   ID                            { A.Name(None, $1, None)}
             |   mem_type LBRACKET exprAt mem_properties RBRACKET { ast_mem $1 $3 $4 }
 
@@ -289,7 +289,7 @@ nameOrMems  :   nameOrMems_ opt_comma          { rev $1   }
 nameOrMems_ :   nameOrMems_ COMMA nameOrMemAt  { $3 :: $1 }
             |   nameOrMemAt                    { [$1]     }
 
-tyAt        :   ty                             { A.TyAt($1,p()) }
+tyAt        :   ty                             { A.T($1,p()) }
 ty          :   sty                            { $1             }
             |   ID                             { A.TypeSynonym($1)  }
 
@@ -298,7 +298,7 @@ sty         :   BITSn                          { A.BitsTy($1)     }
 returnto    :   LT sexprAt SLASH sexprAt GT    { Some($2,$4) }
             |   /**/                           { None        }
 /*(*x: parse.mly *)*/
-stmtAt      :   stmt                           { A.StmtAt($1,p())     }
+stmtAt      :   stmt                           { A.S($1,p())     }
 stmt        :   SEMI                           { A.EmptyStmt          }
             |   ID COLON                       { A.LabelStmt $1       }
             |   SPAN sexprAt sexprAt body      { A.SpanStmt($2,$3,$4) }
@@ -369,7 +369,7 @@ arms        :   arms armAt                     { $2 :: $1  }
 armAt       :   arm                            { A.ArmAt($1,p()) }
 arm         :   CASE ranges COLON body         { A.Case($2,$4)   } 
 /*(*x: parse.mly *)*/
-sexprAt     :   sexpr                          { A.ExprAt($1, p()) }
+sexprAt     :   sexpr                          { A.E($1, p()) }
 sexpr       :   SINT opt_colon_ty              { A.Sint ($1, $2)   }
             |   UINT opt_colon_ty              { A.Uint ($1, $2)   }
             |   FLT  opt_colon_ty              { A.Float($1, $2)   }
@@ -380,7 +380,7 @@ sexpr       :   SINT opt_colon_ty              { A.Sint ($1, $2)   }
             |   LPAREN exprAt RPAREN           { $2                }
 opt_colon_ty : CCOLON tyAt { Some $2 } | { None }
 /*(*x: parse.mly *)*/
-exprAt      :   expr                           { A.ExprAt($1, p())    }
+exprAt      :   expr                           { A.E($1, p())    }
 expr:       |   sexpr                          { $1                   }
             |   PRIMOP actls                   { A.PrimOp($1,$2)      }
 

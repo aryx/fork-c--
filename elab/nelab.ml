@@ -122,7 +122,7 @@ module Type = struct
       let rec u = function 
         | A.BitsTy _    -> []
         | A.TypeSynonym x   -> [x]
-        | A.TyAt (t, _) -> u t in
+        | A.T (t, _) -> u t in
       u t
   end
   let what = "type"
@@ -136,7 +136,7 @@ module Const = struct
   type d = N.constdefn
   (*s: utility functions for constants *)
   let rec freeExprVars e tail = match e with
-  | A.ExprAt(x,_)     -> freeExprVars x tail
+  | A.E(x,_)     -> freeExprVars x tail
   | A.Fetch(lvalue)   -> freeLValueVars lvalue tail
   | A.BinOp(e1,_,e2)  -> freeExprVars e1 (freeExprVars e2 tail)
   | A.UnOp(_,e)       -> freeExprVars e tail
@@ -147,7 +147,7 @@ module Const = struct
   | A.Char _          -> tail
   (*x: utility functions for constants *)
   and freeLValueVars l tail = match l with
-  | A.NameOrMemAt(x,r) -> freeLValueVars x tail
+  | A.NM(x,r) -> freeLValueVars x tail
   | A.Mem(_,e,_, _)    -> freeExprVars e tail
   | A.Name(_,name,_)   -> if List.mem name tail then tail else name :: tail
   (*e: utility functions for constants *)
@@ -445,7 +445,7 @@ let program ~swap validate srcmap asm ast =
       (*x: definitions of elaboration functions for data *)
       and init r ty i = 
         match i with
-        | A.InitAt (x,r) -> E.catch (error r env) (init r ty) x
+        | A.I (x,r) -> E.catch (error r env) (init r ty) x
         | A.InitExprs(es)  ->
             E.seq (E.Raise.list (List.map (Elabexp.elab_link env) es)) (fun tes ->
               if List.for_all (fun (e, w) -> Types.Bits w =*= ty) tes then
