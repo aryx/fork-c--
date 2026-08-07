@@ -113,35 +113,34 @@ let dump_tokens file =
   Driver.scan file
 
 (* filename -> ast *)
-let dump_ast file =
+let dump_ast caps file =
   let (_srcmap, ast) = Driver.parse file in
-
   let s = Ast.show_program ast in
-  UCommon.pr2 s;
+  Console.print caps s;
   ()
 
 (* pretty printer *)
-let pp_ast file =
+let pp_ast caps file =
   let (srcmap, ast) = Driver.parse file in
   let pp = Astpp.program ast in
   let s = Pp.ppToString 0 pp in
-  UCommon.pr2 s;
+  Console.print caps s;
   ()
 
 
 (* filename -> ast -> nast *)
-let dump_nast file =
+let dump_nast caps file =
   let (srcmap, ast) = Driver.parse file in
   let nast = Nast.program ast in
   let s = Nast.show nast in
-  UCommon.pr2 s
+  Console.print caps s
 
 type res_or_error1 =
   (unit Fenv.Dirty.env' * unit Nelab.compunit) Error.error
 [@@deriving show]
 
 (* filename -> ast -> nast -> nelab *)
-let dump_nelab file =
+let dump_nelab caps file =
   let (srcmap, ast) = Driver.parse file in
   let nast = Nast.program ast in
 
@@ -157,20 +156,22 @@ let dump_nelab file =
     Nelab.program ~swap validator srcmap assembler nast
   in
   let s = show_res_or_error1 res_or_error in
-  UCommon.pr2 s
+  Console.print caps s
 
 
 
 
 
 
-let test_x86 file =
+let test_x86 (caps : < Cap.stdout; ..>) file =
   let (srcmap, ast) = Driver.parse file in
 
   let tgt = X86.target in
 
+  let dest = "/tmp/cmm.asm" in
+  Logs.info (fun m -> m "writing in %s" dest);
   let asm = 
-    let chan = open_out "/tmp/cmm.asm" in
+    let chan = open_out dest in
     X86asm.make Cfgutil.emit chan
   in
   (* pad: ugly *)
@@ -187,6 +188,7 @@ let test_x86 file =
     ~asm
     ~validate:true (* ?? *)
     ~swap:false (* ?? give weird error mesage when set to true *);
+  Console.print caps "Done";
   ()
   
 
@@ -253,17 +255,17 @@ let test_driver_compile file =
 (* The command line actions *)
 (*---------------------------------------------------------------------------*)
 
-let extra_actions () = [
+let extra_actions (caps : < Cap.stdout; ..>) = [
     "-dump_tokens", "   <file>", 
     Arg_.mk_action_1_arg dump_tokens;
     "-dump_ast", "   <file>", 
-    Arg_.mk_action_1_arg dump_ast;
+    Arg_.mk_action_1_arg (dump_ast caps);
     "-pp_ast", "   <file>", 
-    Arg_.mk_action_1_arg pp_ast;
+    Arg_.mk_action_1_arg (pp_ast caps);
     "-dump_nast", "  <file>", 
-    Arg_.mk_action_1_arg dump_nast;
+    Arg_.mk_action_1_arg (dump_nast caps);
     "-dump_nelab", "  <file>", 
-    Arg_.mk_action_1_arg dump_nelab;
+    Arg_.mk_action_1_arg (dump_nelab caps);
 
     "-driver_emit_asdl", "   <file>", 
     Arg_.mk_action_1_arg test_emit_asdl;
@@ -274,7 +276,7 @@ let extra_actions () = [
 
 
     "-test_x86", "  <file>", 
-    Arg_.mk_action_1_arg test_x86;
+    Arg_.mk_action_1_arg (test_x86 caps);
 
     "-test_rtl", "  <file>", 
     Arg_.mk_action_1_arg test_rtl;
@@ -295,9 +297,9 @@ let main_action xs =
 (* The options *)
 (*****************************************************************************)
 
-let all_actions () =
+let all_actions caps =
  Test_parsing_cmm.actions () @
- extra_actions () @
+ extra_actions caps @
  []
 
 (*****************************************************************************)
@@ -322,7 +324,7 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     "-backtrace", Arg.Set backtrace,
     " show backtraces for erros";
   ] @
-  Arg_.options_of_actions action (all_actions()) @
+  Arg_.options_of_actions action (all_actions caps) @
   [
   "-version",   Arg.Unit (fun () -> 
     UCommon.pr2 (spf "c-- version: %s" version);
@@ -344,8 +346,8 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)
     (* --------------------------------------------------------- *)
-    | xs when List.mem !action (Arg_.action_list (all_actions())) -> 
-        Arg_.do_action !action xs (all_actions());
+    | xs when List.mem !action (Arg_.action_list (all_actions caps)) -> 
+        Arg_.do_action !action xs (all_actions caps);
         Exit.OK
 
     | _ when not (String_.empty !action) -> 
