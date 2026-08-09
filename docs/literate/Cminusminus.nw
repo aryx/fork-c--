@@ -4315,6 +4315,7 @@ RTL Register Transfer Language
 IR Intermediate Representation
 FENV Fat Environment
 ELAB Elaboration
+PAL Portable Assembly Language
 \end{verbatim}
 
 \chapter*{Indexes}

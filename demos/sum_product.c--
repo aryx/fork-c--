@@ -1,0 +1,18 @@
+// from https://en.wikipedia.org/wiki/C--
+
+// mandatory
+target byteorder little;
+
+/* Tail recursion */
+export sp;
+sp(bits32 n) {
+    jump sp_help(n, 1, 1);
+}
+
+sp_help(bits32 n, bits32 s, bits32 p) {
+    if n == 1 {
+        return(s, p);
+    } else {
+        jump sp_help(n - 1, s + n, p * n);
+    }
+}
