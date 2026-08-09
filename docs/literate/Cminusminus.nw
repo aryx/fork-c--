@@ -324,7 +324,12 @@ end
 type pos            = int
 [@@deriving show]
 type rgn            = pos * pos
-[@@deriving show]
+
+(* coupling: Ast.region printer *)
+let pp_rgn fmt _rgn = 
+  Format.fprintf fmt "<>"
+let show_rgn _map = "<>"
+
 
 type location       = string    (* file   *)
                     * int       (* line   *)
