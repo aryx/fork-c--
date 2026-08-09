@@ -60,6 +60,7 @@ Principia Softwarica: The C-- Compiler Backend [[qc]]
 }\\
 {version 0.1}
 }
+%alt: portable assembly language
 
 \author{
 Yoann Padioleau\\
@@ -263,6 +264,7 @@ type map
 
 val mk:             unit -> map (* empty map *)
 @
+%alt: use 'type t' so Srcmap.t is more readable
 
 %%A synchronization is announced with [[sync]].  It synchronizes a
 %%position [[pos]] with a [[location]].  A common case is the
@@ -652,8 +654,10 @@ section     = SectionAt     (section, region)
 
 <<ast declaration>>=
 decl        = DeclAt        (decl, region)
+
             | Import        (ty?,import*)
             | Export        (ty?,export*)
+
             | Const         (ty?,name,expr)
             | Typedef       (ty,name*)
             | Registers     (register*)
@@ -796,10 +800,12 @@ stmt        = StmtAt        (stmt, region)
 
 <<ast declaration>>=
 expr        = ExprAt        (expr, region)
+
             | Sint          (string,ty?)
             | Uint          (string,ty?)
             | Float         (string,ty?)
             | Char          (int,ty?)
+
             | Fetch         (name_or_mem)
             | BinOp         (expr, op, expr)
             | UnOp          (op, expr)
@@ -938,7 +944,8 @@ val program : Ast.toplevel list -> t
 @ 
 
 %\section{IR}
-%\section{Fenv}
+
+\section{Fenv}
 
 \section{RTL}
 
