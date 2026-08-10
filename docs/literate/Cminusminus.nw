@@ -5233,6 +5233,7 @@ the [[pcmap_data]] section. Both of these are collected up
 and placed in the a data section by the system linker. Below is an
 example linker script for x86 Linux that makes the PC~map available to
 the run-time system.
+
 <<pcmap.ld>>=
 SECTIONS {
  .rodata : {
@@ -5243,10 +5244,11 @@ SECTIONS {
    *(.pcmap_data)
  }
 }
-@ If the compiler is careful to sort PC-map entries within each
+@
+
+If the compiler is careful to sort PC-map entries within each
 compilation unit, this linker script will ensure they are sorted
 overall.
-@
 
 
 % was gcc-linux.nw

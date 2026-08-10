@@ -256,6 +256,7 @@ sync_runtime:V:
 	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/runtime/yield.c--
 	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/runtime/gcc-linux.c
 	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/runtime/x86cont.s
+	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/runtime/pcmap.ld
 
 
 ##docs tests tools todo/... todo/h_lua/ todo/interpreter todo/runtime
