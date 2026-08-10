@@ -1,4 +1,11 @@
 (*s: stack.ml *)
+(* claude: moved here from TODO/lua/ so that the 'freeze' phase (stack
+ * layout) is in the build. NOTE: this module shadows the OCaml stdlib's
+ * Stack for every library depending on cmm_front_last, since all our
+ * libraries are (wrapped false). Nothing in the build uses stdlib Stack
+ * today; spell it Stdlib.Stack if that changes. The name is upstream's -
+ * TODO/lua/lualink.ml still refers to Stack.freeze.
+ *)
 module PA = Preast2ir
 module T  = Target
 module RP = Rtl.Private
@@ -72,6 +79,13 @@ let freeze =
   freeze' apply_to_proc
   (* unsafe simplifier is not needed until vfp is replaced *)
 (*x: stack.ml *)
+(* claude: replace_slot_temporaries is commented out for now: it needs the
+ * Dominator module, which is still only TODO/dominator.nw, and it is used
+ * by spill-slot placement rather than by freeze - so nothing on the road
+ * to a running tiger hello world needs it. Uncomment once dominator.nw is
+ * extracted. Nothing here was moved or deleted, only wrapped.
+ *)
+(*
 (*s: module alias and buildings *)
 module RU = Rtlutil
 module RS = Register.Set
@@ -216,6 +230,7 @@ module AllocMap = Map.Make(OrderSlotTemp)
   and confined_block = ("confined", MA.freeze bc) in
   
   let blocklist = [unconfined_block ; confined_block] in
-  ((cfg, proc), blocklist) 
+  ((cfg, proc), blocklist)
 (*e: the final result *)
+*)
 (*e: stack.ml *)

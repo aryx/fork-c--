@@ -104,6 +104,21 @@ let version = "0.1"
 (* Flags *)
 (*****************************************************************************)
 
+(* -o. Empty means "derive it from the input file name". *)
+let output_file = ref ""
+
+(* -interp. There is no -x86 flag because x86 is the default, as in
+ * qc--(1); see the backend type below.
+ *)
+let use_interp = ref false
+
+(* -globals. Upstream gated the export of the global-variable area behind
+ * this flag, and $TIGDIR/readme.txt's link line passes it. We default it
+ * to true because that is what the -test_xxx actions have always passed
+ * to Driver.compile, and turning it off has never been exercised here.
+ *)
+let exportglobals = ref true
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -188,34 +203,105 @@ let dump_nelab caps file =
 
 
 
-let test_x86 (caps : < Cap.stdout; ..>) file =
-  let (srcmap, ast) = Driver.parse file in
+(*---------------------------------------------------------------------------*)
+(* Compiling a whole file *)
+(*---------------------------------------------------------------------------*)
 
-  let tgt = X86.target in
+(* Which back end to run. Upstream let Lua pick this from a table of
+ * Backend.xxx values (TODO/lua/luacompile.nw); we just enumerate the two
+ * that are wired up in OCaml.
+ *)
+type backend =
+  | X86
+  (* The bytecode interpreter: no expansion, no liveness, no register
+   * allocation, so it is the shorter route to a running program.
+   * See docs/claude_notes/plan_tiger_hello.md.
+   *)
+  | Interp
 
-  let dest = "/tmp/cmm.asm" in
-  Logs.info (fun m -> m "writing in %s" dest);
-  let asm = 
-    let chan = open_out dest in
-    X86asm.make Cfgutil.emit chan
-  in
-  (* pad: ugly *)
+(* pad: ugly *)
+let set_empty_vfp_hook () =
   Block._empty_vfp_hook := (fun ptrwidth ->
-    Block.relative (Vfp.mk ptrwidth) "empty block" 
+    Block.relative (Vfp.mk ptrwidth) "empty block"
       Block.at ~size:0 ~alignment:1;
-  );
+  )
+
+(* qc--(1) says the default output name is the input with its extension
+ * replaced, so hello.c-- gives hello.s (or hello.qs for the interpreter,
+ * which is the suffix $TIGDIR/readme.txt uses).
+ *)
+let default_output_file backend file =
+  Filename.remove_extension file ^
+  (match backend with
+   | X86 -> ".s"
+   | Interp -> ".qs")
+
+let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
+  let (srcmap, ast) = Driver.parse file in
+  Logs.info (fun m -> m "writing in %s" dest);
+  let chan = open_out dest in
+  set_empty_vfp_hook ();
+
+  let tgt, asm, optimizer, validate =
+    match backend with
+    | X86 ->
+        let asm = X86asm.make Cfgutil.emit chan in
+        X86.target, asm, X86backend.optimizer asm, true
+    | Interp ->
+        (* the same parameters upstream's Asm.interp32l was bound with,
+         * see TODO/lua/lualink.ml:234 *)
+        let asm =
+          Interpasm.asm' ~byteorder:Rtl.LittleEndian ~memsize:8 ~ptrsize:32
+            chan
+        in
+        (* validate is false here, unlike for x86. Mvalidate is applied by
+         * Nelab during elaboration, i.e. before any backend phase, and its
+         * rule for C-- global register variables (layout/mvalidate.ml:61)
+         * hardcodes space 'r' with an "imposs" if the target has no such
+         * space. The interpreter target has spaces m, c and A only
+         * (interp.ml:235), so any program declaring a global - e.g.
+         * tiger's "bits32 alloc_ptr;" - dies with "Space 'r' must be
+         * available".
+         *
+         * That is an upstream oversight rather than something this fork
+         * broke: src/mvalidate.nw and src/interp.nw in the qc-- checkout
+         * are identical on both points. And it is harmless here, because
+         * the interpreter's placevars phase is precisely
+         * Placevar.replace_globals, which rewrites every global
+         * fetch/store into a memory access through the proc's global_map -
+         * the interpreter never wanted an 'r' space in the first place.
+         *)
+        Interp.target', asm, Interpbackend.optimizer asm, false
+  in
 
   Driver.compile
     tgt
-    (X86backend.optimizer asm)
-    ~exportglobals:true (* ?? *)
+    optimizer
+    ~exportglobals:!exportglobals
     ~src:(srcmap, ast)
     ~asm
-    ~validate:true (* ?? *)
+    ~validate
     ~swap:false (* ?? give weird error mesage when set to true *);
-  Console.print caps "Done";
+  (* Lua's Backend.make defaulted 'emit' to Driver.assemble, which is just
+   * asm#emit (TODO/lua/lualink.ml:411), and Compile.file called it after
+   * Driver.compile. It is what actually flushes the assembly unit out.
+   *)
+  asm#emit;
+  close_out chan;
+  Console.print caps (spf "wrote %s" dest);
   ()
-  
+
+(* The -test_xxx variants keep their old fixed destinations so that the
+ * debugging workflow in CLAUDE.md ("qc -test_x86 foo.c--" then look at
+ * /tmp/cmm.asm) still works, but -o now overrides them.
+ *)
+let test_backend caps backend fixed_dest file =
+  let dest = match !output_file with "" -> fixed_dest | f -> f in
+  compile_file caps backend ~dest file
+
+let test_x86 caps file = test_backend caps X86 "/tmp/cmm.asm" file
+let test_interp caps file = test_backend caps Interp "/tmp/cmm.qs" file
+
 
 let test_rtl file =
   (* use Rtldebug ? *)
@@ -300,8 +386,10 @@ let extra_actions (caps : < Cap.stdout; ..>) = [
     Arg_.mk_action_1_arg test_driver_compile;
 
 
-    "-test_x86", "  <file>", 
+    "-test_x86", "  <file>",
     Arg_.mk_action_1_arg (test_x86 caps);
+    "-test_interp", "  <file>",
+    Arg_.mk_action_1_arg (test_interp caps);
 
     "-test_rtl", "  <file>", 
     Arg_.mk_action_1_arg test_rtl;
@@ -314,8 +402,40 @@ let extra_actions (caps : < Cap.stdout; ..>) = [
 (* Main action *)
 (*****************************************************************************)
 
-let main_action xs = 
-  raise Todo
+(* Upstream's main action was Compile.file in Lua
+ * (TODO/lua/luacompile.nw:687), driven by the Backend.xxx table selected
+ * on the command line. This is the OCaml equivalent, minus everything to
+ * do with assembling and linking: qc-- has no assembler or linker of its
+ * own, it drives the system ones (docs/man/qc--.1), and that part is not
+ * revived yet. So for now this compiles exactly one C-- file to one
+ * output file. See docs/claude_notes/plan_tiger_hello.md.
+ *)
+let main_action (caps : < Cap.stdout; ..>) (xs : Fpath.t list) =
+  let backend = if !use_interp then Interp else X86 in
+  let files = List_.map Fpath.to_string xs in
+  (* tiger's Makefiles invoke us as "qc -globals -o hello runtime.o
+   * stdlib.a hello.c--", so being explicit about what we cannot do yet
+   * beats a confusing parse error further down.
+   *)
+  let objs = List.filter (fun f ->
+    let e = Filename.extension f in
+    String.equal e ".o" || String.equal e ".a") files
+  in
+  if not (List_.null objs) then
+    failwith (spf
+      "linking is not supported yet (%s); qc can only compile one .c-- file"
+      (String.concat ", " objs));
+  match files with
+  | [] -> failwith "no input file"
+  | _ :: _ :: _ ->
+      failwith (spf "expected a single input file, got %d" (List.length files))
+  | [ file ] ->
+      let dest = match !output_file with
+        | "" -> default_output_file backend file
+        | f -> f
+      in
+      compile_file caps backend ~dest file;
+      Exit.OK
 
 
 (*****************************************************************************)
@@ -348,6 +468,12 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     " trace the main functions";
     "-backtrace", Arg.Set backtrace,
     " show backtraces for erros";
+    "-o", Arg.Set_string output_file,
+    " <file> write the output to <file>";
+    "-interp", Arg.Set use_interp,
+    " generate bytecode for the C-- interpreter instead of x86 assembly";
+    "-globals", Arg.Set exportglobals,
+    " export the global-variable area";
   ] @
   Arg_.options_of_actions action (all_actions caps) @
   [
@@ -383,7 +509,7 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     (* --------------------------------------------------------- *)
     | x::xs -> 
       (try
-        main_action (Fpath_.of_strings (x::xs))
+        main_action caps (Fpath_.of_strings (x::xs))
        with exn ->
          if !backtrace
          then raise exn
