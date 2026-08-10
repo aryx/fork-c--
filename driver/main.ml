@@ -547,7 +547,16 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
         let dest =
           match named_output () with
           | Some f when stop =*= Assembly -> f
-          | _ -> default_output_file backend file
+          (* When the assembly is only an intermediate, put it beside the
+           * -o target rather than beside the source. Deriving it from the
+           * source means "qc -stop .o -o build/x.o src/y.c--" drops a
+           * src/y.s into the source tree, which is both surprising and
+           * how the tiger test runner started littering tests/tiger/.
+           * cc does not do that either: "cc -c foo.c -o bar.o" leaves no
+           * foo.s behind.
+           *)
+          | Some f -> Filename.remove_extension f ^ ".s"
+          | None -> default_output_file backend file
         in
         compile_file caps backend ~dest file;
         Some dest

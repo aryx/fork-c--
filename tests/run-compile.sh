@@ -27,6 +27,14 @@
 
 set -e
 
+# sort(1) collates by locale, so the baseline's line order would otherwise
+# depend on the machine: names like float-001.c-- and tail2.c-- come out in a
+# different order under en_US.UTF-8 than under the C locale a container uses,
+# and the comparison then reports a difference even though every outcome is
+# identical. Force one collation everywhere.
+LC_ALL=C
+export LC_ALL
+
 here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}

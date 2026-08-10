@@ -1,0 +1,41 @@
+# Keep the Docker build context small. Without this, "COPY . ." ships ~530MB,
+# of which _build alone is ~463MB and .git another ~34MB - none of it useful,
+# since the Dockerfile builds from source anyway. It also means every local
+# dune build invalidates the COPY layer and re-runs the whole image build.
+#
+# CAUTION: this file does NOT use .gitignore syntax. Patterns are matched with
+# Go's filepath.Match against the path relative to the context root, so:
+#   - a bare pattern matches only at the TOP level; in .gitignore the same
+#     pattern would match at any depth. Hence the "**/" prefixes below - the
+#     214 .md5sum_* files live in asm/, ir/ and friends, not at the root, so
+#     a bare ".md5sum_*" would match none of them.
+#   - "*" does not cross "/".
+#   - there is no "!" un-ignore ordering subtlety worth relying on here, so
+#     the list is kept purely additive.
+#
+# NB: bin/ is deliberately NOT excluded. It is a checked-in symlink to
+# _build/install/default/bin, so it arrives dangling and is resolved by the
+# "dune build @install" step - exactly as in a fresh clone.
+#
+# NB: tests/tiger/*.o and *.a are deliberately NOT excluded either. Those
+# prebuilt i386 artifacts are checked in and are what the behavioural test
+# suite links against.
+
+# dune output
+**/_build
+
+# version control
+.git
+
+# build directories of the demos, the run-time system and the test runners
+demos/build
+runtime/build
+tests/build
+
+# syncweb bookkeeping
+**/.md5sum_*
+**/*.nwcache
+
+# editor and OS cruft
+**/*~
+**/.DS_Store

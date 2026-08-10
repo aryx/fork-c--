@@ -33,3 +33,13 @@
 ; Nothing in there is part of this build anyway, so keep dune out of it.
 ; Same workaround as in ~/github/xix's root dune.
 (dirs :standard \ principia)
+
+; semgrep-pfff-libs is a git submodule and we use only a small part of it
+; (commons and profiling, pulled in by driver/dune). Marking it vendored
+; tells dune to build a target in there only when something in this project
+; actually depends on it, instead of building the whole submodule for
+; "dune build @install". That matters for the Docker/CI build: without it,
+; dune tries to build e.g. commons/testutils, which needs ppx_inline_test,
+; and pulls the submodule's entire dependency surface - lwt, cohttp,
+; opentelemetry, js_of_ocaml - none of which this compiler uses.
+(vendored_dirs semgrep-pfff-libs)

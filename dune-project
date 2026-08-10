@@ -12,7 +12,14 @@
  (authors "Yoann Padioleau <yoann.padioleau@gmail.com>")
  (maintainers "Yoann Padioleau <yoann.padioleau@gmail.com>")
  (depends
-  (ocaml (>= 4.14.0))))
+  (ocaml (>= 4.14.0))
+  ; used directly by our own code: -dump_ast and friends in driver/main.ml,
+  ; and the [@@deriving show] annotations in ast.ml / nast.ml.
+  ppx_deriving
+  ; the commons/profiling libraries come from the semgrep-pfff-libs
+  ; submodule rather than opam, so their own dependencies are installed
+  ; separately in the Dockerfile from the .opam files they ship.
+  num))
 
 ; Regenerate cmm.opam from the metadata above whenever it's out of date
 ; (e.g. after `dune build`), instead of hand-maintaining an .opam file.
