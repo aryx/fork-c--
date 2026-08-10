@@ -112,6 +112,38 @@ let output_file = ref ""
  *)
 let use_interp = ref false
 
+(* -stop .<ext>. Empty means "go all the way to an executable". *)
+let stop_after = ref ""
+
+(* -L and -l, passed straight through to the linker *)
+let libdirs = ref []
+let libs = ref []
+
+(* -as and -ld.
+ *
+ * Upstream picked these from a per-system table in Lua (SysConfig,
+ * LUA/lua-cmm-driver/luadriver.nw:30), where x86-linux used As = "as" and
+ * Ld = "cc". We take them from the command line or the environment
+ * instead, because the interesting case for this fork is a host that is
+ * not x86: this back end only emits 32-bit x86, and on an aarch64 box
+ * nothing called "as" or "cc" can assemble it.
+ *
+ * Hence the default is clang rather than as/cc. clang's integrated
+ * assembler is a cross assembler, so "-target i386-unknown-linux-gnu"
+ * produces i386 objects on any host, including an x86 one - it is the
+ * only choice that is right everywhere. Override with -as/-ld or the
+ * QC_AS/QC_LD environment variables.
+ *)
+let default_i386_cc = "clang -target i386-unknown-linux-gnu"
+
+let getenv_or name default =
+  match Sys.getenv_opt name with
+  | Some s -> s
+  | None -> default
+
+let as_cmd = ref (getenv_or "QC_AS" default_i386_cc)
+let ld_cmd = ref (getenv_or "QC_LD" default_i386_cc)
+
 (* -globals. Upstream gated the export of the global-variable area behind
  * this flag, and $TIGDIR/readme.txt's link line passes it. We default it
  * to true because that is what the -test_xxx actions have always passed
@@ -402,6 +434,78 @@ let extra_actions (caps : < Cap.stdout; ..>) = [
 (* Main action *)
 (*****************************************************************************)
 
+(*---------------------------------------------------------------------------*)
+(* Driving the assembler and the linker *)
+(*---------------------------------------------------------------------------*)
+
+(* qc-- has no assembler or linker of its own, it drives the system ones
+ * (docs/man/qc--.1: "compiles, assembles, and links"). These are the two
+ * external calls.
+ *)
+
+(* The command strings are user-supplied and may carry options ("clang
+ * -target i386-..."), so split on spaces to get Cmd.t's program and args.
+ *)
+let run_external (caps : < Cap.exec; .. >) cmd_string args =
+  let cmd =
+    match String.split_on_char ' ' (String.trim cmd_string) with
+    | [] | [ "" ] -> failwith "empty command"
+    | prog :: opts -> (Cmd.Name prog, opts @ args)
+  in
+  (* -v raises the log level, so this is the man page's "print commands as
+   * they are executed" *)
+  Logs.info (fun m -> m "running: %s" (Cmd.to_string cmd));
+  match CapExec.status_of_run caps#exec cmd with
+  | Ok (`Exited 0) -> ()
+  | Ok (`Exited n) ->
+      failwith (spf "%s failed with exit code %d" (Cmd.to_string cmd) n)
+  | Ok (`Signaled n) ->
+      failwith (spf "%s died with signal %d" (Cmd.to_string cmd) n)
+  | Error (`Msg s) -> failwith (spf "could not run %s: %s" (Cmd.to_string cmd) s)
+
+let assemble caps ~src ~dest =
+  run_external caps !as_cmd [ "-c"; src; "-o"; dest ]
+
+let link caps ~objs ~dest =
+  let dashl = List_.map (fun l -> "-l" ^ l) (List.rev !libs) in
+  let dashL = List_.map (fun d -> "-L" ^ d) (List.rev !libdirs) in
+  run_external caps !ld_cmd (objs @ dashL @ dashl @ [ "-o"; dest ])
+
+(* Where the driver is told to stop. The man page spells these as
+ * "-stop .s" and "-stop .o", the equivalents of cc's -S and -c.
+ *)
+type stop_at = Assembly | Object | Executable
+
+let stop_at_of_flag backend =
+  match !stop_after, backend with
+  (* A .qs is bytecode, not assembly: there is nothing to hand to as(1),
+   * and this fork has no .qs linker (upstream linked them in Lua, via
+   * CMD.qslist). So -interp always stops at the .qs, whether or not
+   * -stop was given. qc--(1): "the only intermediate files produced have
+   * the form file.qs".
+   *)
+  | _, Interp when String.equal !stop_after "" -> Assembly
+  | "", _ -> Executable
+  | (".s" | "s"), X86 -> Assembly
+  | (".qs" | "qs"), Interp -> Assembly
+  | (".o" | "o"), X86 -> Object
+  | ext, Interp ->
+      failwith (spf
+        "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
+  | ext, X86 -> failwith (spf "-stop %s: expected .s or .o" ext)
+
+(* "The treatment of a file depends on its suffix" (qc--(1)). An
+ * unrecognized suffix is passed to the linker, which is also how .o, .a
+ * and .so are handled.
+ *)
+type input = Cmm_source | Asm_source | For_linker
+
+let classify file =
+  match Filename.extension file with
+  | ".c--" | ".cmm" -> Cmm_source
+  | ".s" -> Asm_source
+  | _ -> For_linker
+
 (* Upstream's main action was Compile.file in Lua
  * (TODO/lua/luacompile.nw:687), driven by the Backend.xxx table selected
  * on the command line. This is the OCaml equivalent, minus everything to
@@ -410,32 +514,70 @@ let extra_actions (caps : < Cap.stdout; ..>) = [
  * revived yet. So for now this compiles exactly one C-- file to one
  * output file. See docs/claude_notes/plan_tiger_hello.md.
  *)
-let main_action (caps : < Cap.stdout; ..>) (xs : Fpath.t list) =
+let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
   let backend = if !use_interp then Interp else X86 in
+  let stop = stop_at_of_flag backend in
   let files = List_.map Fpath.to_string xs in
-  (* tiger's Makefiles invoke us as "qc -globals -o hello runtime.o
-   * stdlib.a hello.c--", so being explicit about what we cannot do yet
-   * beats a confusing parse error further down.
+  if List_.null files then failwith "no input file";
+
+  (* -o names whatever the driver stops at, so it can only name one thing.
+   * Tiger's Makefiles rely on the single-input form, e.g.
+   *   qc -stop .o -o alloc.o alloc.c--
    *)
-  let objs = List.filter (fun f ->
-    let e = Filename.extension f in
-    String.equal e ".o" || String.equal e ".a") files
+  let single_output = List.length files =|= 1 in
+  let named_output () =
+    match !output_file with
+    | "" -> None
+    | f when single_output || stop =*= Executable -> Some f
+    | f ->
+        failwith (spf
+          "-o %s: cannot name the output of %d inputs unless linking"
+          f (List.length files))
   in
-  if not (List_.null objs) then
-    failwith (spf
-      "linking is not supported yet (%s); qc can only compile one .c-- file"
-      (String.concat ", " objs));
-  match files with
-  | [] -> failwith "no input file"
-  | _ :: _ :: _ ->
-      failwith (spf "expected a single input file, got %d" (List.length files))
-  | [ file ] ->
-      let dest = match !output_file with
-        | "" -> default_output_file backend file
-        | f -> f
-      in
-      compile_file caps backend ~dest file;
+
+  (* .c-- -> .s, the only phase that is actually this compiler *)
+  let assembly_of file =
+    match classify file with
+    | Cmm_source ->
+        let dest =
+          match named_output () with
+          | Some f when stop =*= Assembly -> f
+          | _ -> default_output_file backend file
+        in
+        compile_file caps backend ~dest file;
+        Some dest
+    | Asm_source -> Some file
+    | For_linker -> None
+  in
+  let derived = List_.map (fun f -> (f, assembly_of f)) files in
+
+  if stop =*= Assembly then Exit.OK
+  else begin
+    (* .s -> .o, by the external assembler *)
+    let object_of (file, asm) =
+      match asm with
+      | None -> file (* .o, .a, or unrecognized: straight to the linker *)
+      | Some s ->
+          let dest =
+            match named_output () with
+            | Some f when stop =*= Object -> f
+            | _ -> Filename.remove_extension file ^ ".o"
+          in
+          assemble caps ~src:s ~dest;
+          dest
+    in
+    let objs = List_.map object_of derived in
+
+    if stop =*= Object then Exit.OK
+    else begin
+      (* everything -> an executable. "If -o is not used, the name of a
+       * final executable defaults to a.out" (qc--(1)). *)
+      let dest = match !output_file with "" -> "a.out" | f -> f in
+      link caps ~objs ~dest;
+      Console.print caps (spf "wrote %s" dest);
       Exit.OK
+    end
+  end
 
 
 (*****************************************************************************)
@@ -451,7 +593,7 @@ let all_actions caps =
 (* Main entry point *)
 (*****************************************************************************)
 
-let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
+let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string array) :
    Exit.t = 
   let level = ref (Some Logs.Warning) in
   let backtrace = ref false in
@@ -474,6 +616,16 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     " generate bytecode for the C-- interpreter instead of x86 assembly";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
+    "-stop", Arg.Set_string stop_after,
+    " .<ext> stop after producing .s or .o (cc's -S and -c)";
+    "-L", Arg.String (fun d -> libdirs := d :: !libdirs),
+    " <dir> add <dir> to the linker's library search path";
+    "-l", Arg.String (fun l -> libs := l :: !libs),
+    " <name> link against library <name>";
+    "-as", Arg.Set_string as_cmd,
+    " <cmd> the assembler to drive (default: " ^ default_i386_cc ^ ")";
+    "-ld", Arg.Set_string ld_cmd,
+    " <cmd> the linker to drive (default: " ^ default_i386_cc ^ ")";
   ] @
   Arg_.options_of_actions action (all_actions caps) @
   [

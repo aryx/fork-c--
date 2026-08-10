@@ -20,7 +20,8 @@ this one is newer.
 | A3 run it | **abandoned** - needs the C interpreter, which needs Lua 4.0, and pad has ruled out adding Lua |
 | B `freeze` + `rmvfp` for x86 | **[D]** done 2026-08-10 |
 | B `liveness` + `ralloc` | **[D]** done 2026-08-10; x86 output is now fully concrete |
-| B assemble + link | next, and `as` is solved - only linking is blocked |
+| B assemble + link | **[D]** driver drives both; assembling works, linking blocked on the host |
+| running it | blocked on an i386 environment and `TODO/runtime/` |
 
 `qc -interp -o hello.qs hello_tiger.c--` now emits complete bytecode:
 `CMM.procedure ('tiger_main',4,8,{ 0, })`, a resolved 8-byte frame, resolved
@@ -315,28 +316,67 @@ Every symbolic marker is gone from the tiger hello output:
 `tests/src` holds at 65/128 for `-test_x86`, with no regressions and no new
 passes. **[V]**
 
-### What is left
+### Driver: assemble and link - **DONE** **[V]**
 
-- **assembling works today** **[V]** - and it does *not* need `gcc-multilib`.
-  clang's integrated assembler targets i386 without cross-binutils:
+`qc` now does the whole `docs/man/qc--.1` pipeline: compile, assemble, link,
+dispatching on each input's suffix (`.c--`/`.cmm` compile, `.s` assemble,
+`.o`/`.a`/anything else straight to the linker).
 
-  ```bash
-  clang -target i386-unknown-linux-gnu -c hello_tiger.s -o hello_tiger.o
-  # ELF 32-bit LSB relocatable, Intel 80386
-  ```
+New flags: `-stop .s` / `-stop .o` (cc's `-S` and `-c`), `-L`, `-l`,
+and `-as` / `-ld` to choose the external commands (also `QC_AS` / `QC_LD`).
+`-v` prints them as they run, as the man page says it should.
 
-  All six tiger-relevant inputs assemble clean (the three demos plus
-  tiger's `runtime.c--`, `alloc.c--`, `stdlibcmm.c--`).
-- **linking is the remaining external blocker** **[V]** - `/usr/bin/ld` here
-  has no `elf_i386` emulation, only aarch64/arm ("unrecognised emulation
-  mode: elf_i386"). Producing an executable, and compiling tiger's C runtime
-  for i386, still needs an x86 container or i386 binutils+libc.
-- **driver logic** for `-stop .o` and shelling out to the assembler and
-  linker (`docs/man/qc--.1`: qc-- drives the system tools, it has no
-  assembler or linker of its own).
+**The default assembler is `clang -target i386-unknown-linux-gnu`, not
+`as`.** Upstream took these from a per-system Lua table where x86-linux used
+`as`/`cc`. That is wrong for this fork: the back end only emits 32-bit x86,
+so on a non-x86 host nothing called `as` can assemble its output, while
+clang's integrated assembler cross-assembles from any host - including an
+x86 one. It is the only default that is right everywhere.
+
+What works today, which is exactly what tiger's Makefiles invoke: **[V]**
+
+```bash
+qc -globals -stop .o -o runtime.o runtime.c--     # ELF 32-bit i386
+qc -globals -stop .o -o alloc.o    alloc.c--
+qc -globals -stop .o -o stdlibcmm.o stdlibcmm.c--
+```
+
+`-interp` always stops at the `.qs` regardless of `-stop`: bytecode is not
+assembly, there is nothing to hand to `as`, and this fork has no `.qs`
+linker (upstream linked them in Lua via `CMD.qslist`).
+
+### What is left, to actually run a tiger program
+
+Neither of these is compiler work:
+
+1. **`TODO/runtime/` is not extracted.** tiger's `stdlib/stdlib.c` opens with
+   `#include <qc--runtime.h>`, which is the `<<qc--runtime.h>>=` chunk of
+   `TODO/runtime/runtime.nw:11`; the qc-- runtime library itself comes from
+   `runtime.nw` + `gcc-linux.nw` + `pcmap.nw` + `x86cont.nw` via
+   `TODO/runtime/mkfile`. **Needs the `.nw` extracted (C this time).**
+2. **No i386 environment on this box.** Assembling is fine, but linking is
+   not: `ld` has no `elf_i386` emulation, there is no `lld`, and Debian does
+   not package an i386 cross-libc for aarch64 hosts. tiger's C runtime
+   (`stdlib.c`, `gc.c`) needs a 32-bit libc to compile against as well.
+
+   A `linux/386` Debian image pulls and has a native gcc, but will not
+   execute: binfmt registers `qemu-i386` with flags `PO` and no `F`, so the
+   interpreter is looked up inside the container where it does not exist,
+   and `qemu-user-static` is not installed (the host `qemu-i386` is
+   dynamically linked, so bind-mounting it does not help). The usual fix is
+   one privileged command that re-registers the handlers with `F`:
+
+   ```bash
+   docker run --privileged --rm tonistiigi/binfmt --install 386
+   ```
+
+   That changes host-wide binfmt registrations, so it is pad's call.
+   Afterwards a `linux/386` container gives gcc, libc and ld, and the
+   resulting binary should also run directly on the host, since `qemu-i386`
+   is already registered.
+
 - **`remove_nops` / `simplify_exps`** (`TODO/optimizers/optimize.nw`, needs
-  `.nw` extraction) - the output is correct but littered with
-  `movl %eax,%eax`. A quality win, not a correctness one.
+  `.nw` extraction) remains an output-quality item, not correctness.
 
 ### Architecture caveat **[V]** - corrected twice
 
