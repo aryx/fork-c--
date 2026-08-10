@@ -1,6 +1,6 @@
 /* hello world */ 
 let
-  var a:= "Hello, world.\n"
+  var a:= "Hello, Tiger world.\n"
 in 
   print(a)
 end
