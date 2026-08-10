@@ -21,8 +21,6 @@
 <<auxfuns.mli>>
 @
 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-
 %%% ------------------------------------------------------------------ 
 \section{Auxiliaries}
 %%% ------------------------------------------------------------------ 
@@ -176,8 +174,6 @@ end
 <<commons2/lc.mli>>=
 <<lc.mli>>
 @
-
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 \section{Lexer Combinators}
 
@@ -480,8 +476,6 @@ let scan str lexer          = lexer str 0 []
 <<pc.mli>>
 @
 
-
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 %%% l2h substitution cfg CFG
 %%% l2h substitution dots ...
@@ -798,8 +792,6 @@ let some p =
 <<pc2.mli>>
 @
 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-
 %%% ------------------------------------------------------------------ 
 \section{Alternative Parser Combinators}
 %%% ------------------------------------------------------------------ 
@@ -1013,8 +1005,6 @@ let some p =
 <<commons2/pp.mli>>=
 <<pp.mli>>
 @
-
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 %%
 %%\def\ocaml{\textsc{ocaml}}
@@ -1506,8 +1496,6 @@ let nl      = "\n"
 @
 \section{[[commons2/rc.nw]]}
 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-
 %%% ------------------------------------------------------------------ 
 \section{Generic Configuration Files}
 %%% ------------------------------------------------------------------ 
@@ -1853,8 +1841,6 @@ and string = parse
 <<rx.mli>>
 @
 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-
 %%% ------------------------------------------------------------------ 
 \section{Regular Expressions}
 %%% ------------------------------------------------------------------ 
@@ -2028,8 +2014,6 @@ let e2 = sym 'a' *** opt (sym 'b') *** some (sym 'a')
 <<strutil.mli>>
 @
 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-
 %%% ------------------------------------------------------------------ 
 \section{String Utilities}
 %%% ------------------------------------------------------------------ 
@@ -2117,8 +2101,6 @@ let from_list xs = List.fold_left (fun set x -> Set.add x set) Set.empty xs
 <<verbose.mli>>
 @
 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-
 \section{Diagnostic output}
 
 %%Uses environment level [[VERBOSITY]] to make noise.
@@ -2150,8 +2132,6 @@ let eprintf k = if verbosity >= k then Printf.eprintf else ign
 <<commons3/alignment.mli>>=
 <<alignment.mli>>
 @
-
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 %%% ------------------------------------------------------------------ 
 \section{Interface to manipulate alignment constraints}
@@ -2199,8 +2179,6 @@ let alignment (n, k) = gcd n k
 <<commons3/bits.mli>>=
 <<bits.mli>>
 @
-
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 %%% TODO: parsing a floating point number from a string to a bits value.
 
@@ -3254,11 +3232,6 @@ let zero w =
 <<bitset64.mli>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
-%%
-%%
 \section{Small sets of bits}
 %%
 %%We track the liveness of each individual bit in a register.
@@ -3336,9 +3309,6 @@ let subset s s' = B.eq (inter s s') s
 <<cell.mli>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 \section{Cells}
 %%
 %%We describe a cell size and provide conversions between widths in bits
@@ -3399,13 +3369,8 @@ let of_size n = match n with
 <<ctypes.mli>>
 @
 
-%%% vim: ts=8 sw=4 et sts=4
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
-%%%%Grades: 
-%%
 %%% inc: \usepackage{alltt}
-%%
+
 %%The [[also unwinds to]] convention supports a limited set of C types.
 %%These types are lifted from Fraser and Hanson's [[lcc]] compiler.
 %%To help the run-time system, we can print out an enumeration type for
@@ -3768,7 +3733,6 @@ let last _ = ts.last
 
 %%% l2h substitution C C--
 %%% l2h substitution PAL C--
-%%% Example (at beginning of line): %%Grades: B Central Soon
 %%% l2h substitution asdl ASDL
 %%% l2h substitution ocaml OCaml
 %%% l2h substitution forall forall
@@ -4058,7 +4022,6 @@ value uint64_of_string(value s)          /* ML */
 %******************************************************************************
 
 \section{[[error/debug.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 %TODO: replace with Logs.debug or Log.debug and per-subsystem logs
 
@@ -4073,7 +4036,6 @@ value uint64_of_string(value s)          /* ML */
 % Now in Main.nw
 
 \section{[[error/error.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 <<error/error.ml>>=
 <<error.ml>>
@@ -4087,7 +4049,6 @@ value uint64_of_string(value s)          /* ML */
 
 
 \section{[[error/impossible.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 <<error/impossible.ml>>=
 <<impossible.ml>>
@@ -4119,7 +4080,6 @@ value uint64_of_string(value s)          /* ML */
 %%\input{../config/macros.tex}
 
 \section{[[error/srcmap.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 <<error/srcmap.ml>>=
 <<srcmap.ml>>
@@ -4154,12 +4114,10 @@ value uint64_of_string(value s)          /* ML */
 %******************************************************************************
 
 \section{[[parsing/ast.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 % Now in Main.nw
 
 \section{[[parsing/astpp.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 <<parsing/astpp.ml>>=
 <<astpp.ml >>
@@ -4172,7 +4130,6 @@ value uint64_of_string(value s)          /* ML */
 
 
 \section{[[parsing/parser.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 %%% Todo: parse %foo as abbreviation for $foo(). The change is already
 %%% marked in the code below. It causes a shift/reduce conflict that is
@@ -4196,9 +4153,6 @@ value uint64_of_string(value s)          /* ML */
 <<register.mli content>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Register}
 %%% ------------------------------------------------------------------ 
@@ -4537,7 +4491,6 @@ let contains ~outer ~inner = match outer, inner with
 
 %%
 %%% ------------------------------------------------------------------ 
-%%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Relocatable Addresses}
 %%% ------------------------------------------------------------------ 
 %%
@@ -4640,10 +4593,6 @@ let as_simple a =
 <<rtl.mli content>>
 @
 
-%%% vim: ts=8 et sw=4: 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Register-transfer Lists (\rtl)}
 %%% ------------------------------------------------------------------ 
@@ -5198,10 +5147,6 @@ let const c     = Const c
 <<rtldebug.mli content>>
 @
 
-%%% vim: ts=8 sw=4 et: Vi gets the first post!
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Functions for Debugging RTLs}
 %%% ------------------------------------------------------------------ 
@@ -5281,12 +5226,10 @@ let typecheck (r:Rtl.rtl) =
 <<rtlop.mli content>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
 %%% ------------------------------------------------------------------ 
 \section{Support for RTL operators}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module provides miscellaneous support for RTL operators.
 %%The primary goals are
 %%\begin{itemize}
@@ -5652,10 +5595,6 @@ end
 <<rtlutil.mli content>>
 @
 
-%%
-%%% vim: ts=8 sw=4 et:
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{RTL Utilities}
 %%% ------------------------------------------------------------------ 
@@ -7174,12 +7113,10 @@ let reloc addr w =
 <<symbol.mli content>>
 @
 
-%%
 %%% ------------------------------------------------------------------ 
-%%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Symbol}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%A symbol is a linker-specific representation of a value that is not
 %%known before link time. To allow assemblers to define their
 %%representation locally, we just define a class type.
@@ -7239,8 +7176,6 @@ let with_mangler m n = new mangled m n
 <<types.mli content>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
 %%% l2h substitution C C--
 %%% l2h substitution asdl ASDL
 %%% l2h substitution ocaml OCaml
@@ -7644,12 +7579,10 @@ let scheme_string (args, result) =
 <<asm.mli content>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
 %%% ------------------------------------------------------------------ 
 \section{Abstract Assembler Interface}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%The code generators use this interface to access text-based and binary
 %%assemblers. Assembler aspects like symbols and relocatable addresses
 %%(from module \module{symbol}) escape the assembler and become part of
@@ -8141,10 +8074,6 @@ end
 <<eqn.mli content>>
 @
 
-%%% vim:ts=8 sw=4 et:
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Linear Equations over Integers}
 %%% ------------------------------------------------------------------ 
@@ -8689,9 +8618,6 @@ let _ = assert
 <<fenv.mli content>>
 @
 
-%%% vim: ts=8 et sts=4 sw=4
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%\iffalse
 %%Clients:
 %%
@@ -9828,10 +9754,6 @@ let clean env =
 <<metrics.mli content>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
-%%
 %%% ------------------------------------------------------------------ 
 \section{Target Platform Metrics}
 %%% ------------------------------------------------------------------ 
@@ -9941,9 +9863,6 @@ let of_ast ~swap map =
 <<rtleqn.mli >>
 @
 
-%%% vim: ts=8 sw=4 et:
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% The module name const is odd. I'm sticking to it because of the
 %%% original module, but would like to find something better. rtleqn? 
 %%
@@ -10178,11 +10097,6 @@ let solve ~width sums =
 <<cfg.mli>>
 @
 
-%%% vim: ts=2 sw=2 et: 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%% 
-%%% $Id: cfg.nw,v 1.80 2006-04-10 21:28:53 nr Exp $
-%%
 %%% ------------------------------------------------------------------ 
 \section{Control-Flow Graph Revisions}
 %%% ------------------------------------------------------------------ 
@@ -12409,11 +12323,6 @@ module M = Cfg.Make(X)
 <<dag.mli>>
 @
 
-%%% vim: ts=2 sw=2 et: 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%% 
-%%% $Id: dag.nw,v 1.1 2006-08-24 21:19:42 dias Exp $
-%%
 %%% ------------------------------------------------------------------ 
 \section{Directed Acyclic Graph}
 %%% ------------------------------------------------------------------ 
@@ -13008,12 +12917,8 @@ let machine ~sp =
 <<spans.mli>>
 @
 
-%%% vim: ts=8 sw=4 et sts=4
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% inc: \usepackage{alltt}
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{Representing spans, including internal spans}
 %%% ------------------------------------------------------------------ 
@@ -13092,9 +12997,6 @@ let fold_live_locs f spans z =
 <<elabexp.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Elaborating Expressions}
 %%% ------------------------------------------------------------------ 
@@ -13407,9 +13309,6 @@ and typed_expr exp =
 <<elabstmt.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Elaborating Statements}
 %%% ------------------------------------------------------------------ 
@@ -14049,7 +13948,7 @@ let codelabels ss =
 
 @ 
 \section{[[front_nelab/memalloc.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
+
 <<front_nelab/memalloc.ml>>=
 <<memalloc.ml >>
 @
@@ -14139,7 +14038,6 @@ let num_allocated t = t.num_allocated
 @
 
 \section{[[front_nelab/nast.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 <<front_nelab/nast.ml>>=
 <<nast.ml >>
@@ -14991,10 +14889,6 @@ let rewrite = Obj.magic
 <<simplify.mli >>
 @
 
-%%% Come for the emacs, stay for the vim: ts=8 sw=4 et: 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{RTL Constant Folding}
 %%% ------------------------------------------------------------------ 
@@ -15921,13 +15815,8 @@ let cycle1 =
 <<automaton.mli >>
 @
 
-%%% vim: ts=8 sw=4 et:
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%% $Id: automaton.nw,v 1.82 2006-08-24 21:19:41 dias Exp $
-%%
 %%%%Grades: A Central Later
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{Automaton-Based Slot Allocation}
 %%% ------------------------------------------------------------------ 
@@ -16787,9 +16676,6 @@ module GuardExp = Combine (Guard) (Exp)
 <<float.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 \section{Support for floating-point numbers}
 %%
 %%Different targets may have different support for floating-point
@@ -17177,10 +17063,6 @@ module Standard64 = Standard(struct let width = 64 end)
 <<target.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
-%%
 %%% ------------------------------------------------------------------ 
 \section{Target Platform Description}
 %%% ------------------------------------------------------------------ 
@@ -17886,9 +17768,6 @@ end
 <<avail.mli>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 \section{Available expressions}
 %%
 %%The purpose of this module is to help compute a set of ``available
@@ -18076,10 +17955,6 @@ let to_string = function
 <<property.mli>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
-%%
 <<property.mli>>=
 <<exposed representation>>
 <<exported module types>>
@@ -18378,11 +18253,6 @@ end
 <<unique.mli>>
 @
 
-%%% vim: ts=2 sw=2 et: 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%% 
-%%% $Id: unique.nw,v 1.3 2005-06-03 02:02:19 nr Exp $
-%%
 %%% ------------------------------------------------------------------ 
 \section{Unique identifiers, maps, and sets}
 %%% ------------------------------------------------------------------ 
@@ -18514,12 +18384,6 @@ end
 <<varmap.mli>>
 @
 
-%%%cg. -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%%
-%%% inc: \usepackage{alltt}
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %-------------------------------------------------------------------
 \subsection{Variable Maps}
 %-------------------------------------------------------------------
@@ -18895,16 +18759,10 @@ type def_dist = HW of hwdef
 <<zipcfg.mli>>
 @
 
-%%% vim: ts=2 sw=2 et: 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%% 
-%%% $Id: zipcfg.nw,v 1.11 2006-08-24 21:19:43 dias Exp $
-%%
 %%% ------------------------------------------------------------------ 
 \section{Applicative Control-Flow Graph, Based on Huet's Zipper}
 %%% ------------------------------------------------------------------ 
-%%
-%%
+
 %%\citet{huet:zipper} describes a generalization of a tree that enables
 %%a program to focus on a single node while enabling the context (e.g.,
 %%parents) to be represented by an explicit, reified value (as opposed
@@ -19976,14 +19834,8 @@ and cbranch2cfg m c ~ifso ~ifnot s =
 <<ast2ir.mli >>
 @
 
-%%% vim: ts=8 sw=4 et sts=4
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%%%Grades: C Central Immediate
-%%
-%%% inc: \usepackage{alltt}
-%%
-%%
+
 %%WORK STILL TO BE DONE:
 %%\begin{itemize}
 %%\item
@@ -21649,9 +21501,6 @@ let summary ~what ~mk dirs =
 <<call.mli >>
 @
 
-%%% vim: ts=8 sw=4 et sts=4
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%%%Grades: C Peripheral Soon
 %%
 %%\emph{On the Alpha, caller and callee do not seem to agree where the
@@ -22418,12 +22267,10 @@ let functions ops =
 <<contn.mli >>
 @
 
-%%
 %%% ------------------------------------------------------------------ 
-%%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Continuations}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%A continuation is a pointer-sized {\PAL} \emph{value}. As such, it can
 %%be passed around and stored in registers. However, not all data
 %%necessary to represent a continuation fit into a pointer and therefore
@@ -22549,10 +22396,6 @@ let get_contn (newpc, newsp) = newpc
 <<postexpander.mli >>
 @
 
-%%% vim: ts=8 et sw=4:
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%%%Grades: A Subsystem Later
 %%
 \section{A generic, parameterized code expander}
@@ -25224,11 +25067,8 @@ and guard state succ fail e =
 <<opshape.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%%%Grades: B Peripheral Soon
-%%
+
 \section{Operator-shape analysis}
 %%
 %%In order to know how to do code expansion, we haev to analyze what
@@ -25627,11 +25467,9 @@ let capply to_temp to_warg opr = cappfun to_temp to_warg (of_opr opr)
 <<preast2ir.mli >>
 @
 
-%%% vim: ts=8 sw=4 et sts=4
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
+
 \section{Target and proc definitions}
-%%
+
 %%This code is in a separate module to make it easier to avoid circular dependencies.
 <<type defs>>=
 type tgt  = T of (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
@@ -25657,9 +25495,6 @@ let tgt {Proc.target = T t} = t
 <<proc.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Procedure Intermediate Representation}
 %%% ------------------------------------------------------------------ 
@@ -25769,9 +25604,6 @@ type ('automaton, 'cfg, 'cc, 'tgt) t =
 <<rewrite.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 \section{Rewriting RTL operators (and related utilities)}
 %%
 %%This module has rewrite rules that help postexpanders implement
@@ -26401,12 +26233,6 @@ main() {
 <<runtimedata.mli >>
 @
 
-%%% vim: ts=8 sw=4 et sts=4
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
-%%% inc: \usepackage{alltt}
-%%
-%%
 %%% ------------------------------------------------------------------ 
 \section{Collecting and emitting data for the run-time system}
 %%% ------------------------------------------------------------------ 
@@ -26924,8 +26750,7 @@ let emit_global_properties target (asm:'c Asm.assembler) =
 <<talloc.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
+
 %%\begin{quote}\it
 %%    Observations and ideas: the [[Single]] module currently has no
 %%    clients. Does the implementation of [[Multiple]] be that
@@ -27131,8 +26956,6 @@ let proc (cfg, p) = Zipcfg.iter_rtls rtl cfg
 <<astasm.mli >>
 @
 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{{\PAL} Assembler}
 %%% ------------------------------------------------------------------ 
@@ -27453,13 +27276,10 @@ let asm fd = new asm fd
 <<cfgutil.mli >>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Control-Flow Graph Utilities}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%The \module{zipcfg} module provides the essential functionality for
 %%control-flow graphs ({\cfg}s). In order to separate essential
 %%functionality from nice-to-have functionality this module provides
@@ -27711,12 +27531,10 @@ let cfg2ast instr g ~name =
 <<dotasm.mli >>
 @
 
-%%
 %%% ------------------------------------------------------------------ 
-%%% Example (at beginning of line): %%Grades: B Central Soon
 \section{Assembler Interface to DOT}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module implements an assembler that emits every procedure as a
 %%graph in \textsc{dot} format. The assember constructor receives the
 %%output channel for the assembler.
@@ -27832,12 +27650,10 @@ end
 <<dummyasm.mli >>
 @
 
-%%
 %%% ------------------------------------------------------------------ 
-%%% Example (at beginning of line): %%Grades: E Peripheral Label
 \section{Dummy Assembler}
 %%% ------------------------------------------------------------------ 
-%%
+
 <<dummyasm.mli >>=
 val asm : unit Asm.assembler
 @                      
@@ -27942,10 +27758,6 @@ end
 <<mangle.mli >>
 @
 
-%%
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% l2h substitution dots ...
 %%% l2h substitution ast AST
 %%% l2h substitution rtl RTL
@@ -30753,9 +30565,7 @@ let cmm = conv "C--" false
             { AN.call = simple ; AN.results = simple ; AN.cutto = simple }
 @
 \section{[[arch/dummy/dummyexpander.nw]]}
-%%% vim: ts=8 sw=4 et: 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
+
 %%% ------------------------------------------------------------------ 
 \section{Code-Expander for the Dummy Target}
 %%% ------------------------------------------------------------------ 
@@ -34395,13 +34205,10 @@ let placevars =
 <<ppcasm.mli>>
 @
 
-%%% vim: ts=8 et sw=4 
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{PPC Assembler}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This is an assembler that emits ``AT\&T'' style assembly language for
 %%the PPC platform.
 %%It implements the
@@ -36418,9 +36225,6 @@ end
 <<x86asm.mli>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{X86 Assembler}
 %%% ------------------------------------------------------------------ 
@@ -37427,9 +37231,6 @@ end
 <<x86rec.mli>>
 @
 
-%%
-%%% Example (at beginning of line): %%Grades: B Central Soon
-%%
 %%% ------------------------------------------------------------------ 
 \section{Intel $x$86 Recognizer} \label{x86rec.sec}
 %%% ------------------------------------------------------------------ 
@@ -38819,7 +38620,6 @@ let regname8 ~lsb ~base = match lsb with
 %******************************************************************************
 
 \section{[[driver.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 <<driver.ml>>=
 <<driver.ml content>>
@@ -38833,7 +38633,6 @@ let regname8 ~lsb ~base = match lsb with
 
 
 \section{[[main2.nw]]}
-%%% Example (at beginning of line): %%Grades: B Central Soon
 
 %<<./this.mli>>=
 %<<this.mli>>
