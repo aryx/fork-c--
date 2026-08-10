@@ -1,6 +1,8 @@
 
+/LUA
+
 # submodules:
-#/semgrep-pfff-libs
+/semgrep-pfff-libs
 #/caps
 
 # for codegraph_build
