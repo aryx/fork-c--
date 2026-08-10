@@ -248,6 +248,7 @@ index:V:
 SYNCFLAGS2=-md5sum_in_auxfile -less_marks -lang C
 sync_runtime:V:
 	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/runtime/qc--runtime.h
+	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/runtime/runtime.c
 
 
 ##docs tests tools todo/... todo/h_lua/ todo/interpreter todo/runtime

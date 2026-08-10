@@ -4008,6 +4008,10 @@ First, the machine-dependent register information.
 <<machine-dependent macro definitions for the public interface ((x86-linux))>>
 @
 
+<<machine-dependent macro definitions for the implementation>>=
+<<machine-dependent macro definitions for the implementation ((x86-linux))>>
+@
+
 
 <<machine-dependent macro definitions for the public interface ((x86-cygwin))>>=
 #define NUM_REGS 12
