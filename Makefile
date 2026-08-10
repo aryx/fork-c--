@@ -12,8 +12,28 @@ clean::
 	dune clean
 install::
 	dune install
+# Two tiers, because they have very different requirements.
+#
+# "test" is the cheap one: does qc still translate every C-- file we have?
+# It needs nothing but qc, runs in seconds, and is the one to run while
+# working on the compiler.
+#
+# "test-tiger" is the one that validates code generation rather than just
+# absence of crashes: it builds Tiger programs, runs them, and checks their
+# output and exit code. It needs the i386 cross toolchain and qemu binfmt
+# (see demos/Makefile for the requirements), so it is kept separate.
+#
+# Both compare against a recorded baseline rather than demanding that
+# everything pass, since a third of tests/src consists of negative tests
+# and twelve of the tiger tests currently fail on one known bug. Re-record
+# with the scripts' --update flag, and review the diff when you do.
 test::
-	echo TODO
+	tests/run-compile.sh
+
+test-tiger::
+	tests/run-tiger.sh
+
+test-all:: test test-tiger
 build-docker:
 	docker build -t "cmm" .
 

@@ -76,3 +76,8 @@ external/stdlib/
 /docs/literate/Cminusminus-1.pdf
 /docs/literate/Cminusminus.tex
 /docs/literate/lineage.dot
+
+# build directories of the demos, the run-time system and the test runners
+/demos/build/
+/runtime/build/
+/tests/build/

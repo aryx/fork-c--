@@ -1,0 +1,31 @@
+# Behavioural tests: Tiger programs, compiled by us, run, and checked
+# against their expected stdout and exit code.
+#
+# Translated from tiger.x86.tst, which was Lua. The Lua driver is gone but
+# the data is worth keeping: these expectations are upstream's, and they
+# have already earned their keep - "hello rc=14" is how we confirmed our
+# own exit code was correct rather than a bug.
+#
+# Dropped from the original: the .s/.s1/.s2 assembly comparisons, which
+# cannot pass here. We use a different register allocator from upstream
+# (flowra, not dls or color) and run no optimizer, so our generated code
+# legitimately differs from the checked-in tiger/x86/*.s everywhere.
+#
+# Columns:  name  source  expected-rc  stdin ("-" for none)
+# Expected stdout is always tiger/output/<name>.1
+
+arrays      arrays.c--        1    -
+colmajor    colmajor.c--      0    colmajor.0
+exceptions  exceptions.c--    18   -
+forloop     forloop.c--       1    -
+funcall     funcall.c--       1    -
+hello       hello.c--         14   -
+merge       merge.c--         1    merge.0
+qsort       qsort.c--         0    -
+queens      queens.c--        0    -
+rc4         rc4.c--           215  rc4.0
+rb          rb.c--            0    wf.0
+rbshort     rb.c--            0    rbshort.0
+sieve       sieve.c--         0    -
+wf          wf.c--            0    wf.0
+wff         wff.c--           0    wf.0
