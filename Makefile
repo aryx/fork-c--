@@ -10,6 +10,8 @@ all::
 	dune build
 clean::
 	dune clean
+install::
+	dune install
 test::
 	echo TODO
 build-docker:
