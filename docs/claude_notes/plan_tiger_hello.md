@@ -10,6 +10,102 @@ This is the *narrow* plan: the minimum to get `hello.tig` executing. The broader
 roadmap is [plan_end_to_end.md](plan_end_to_end.md); where the two disagree,
 this one is newer.
 
+## IT RUNS (2026-08-10) **[V]**
+
+```
+$ ./hello
+Hello, world.
+```
+
+`hello.tig` -> `tigerc` -> `hello.c--` -> `qc` -> i386 assembly -> a statically
+linked 32-bit x86 executable, running on this aarch64 machine under qemu's
+binfmt handler. The milestone this whole plan was written for is met.
+
+The exit status is 14, which is **not** a bug in this compiler. `tig_print` is
+declared `void` and implemented as `printf("%s", ...)`; `printf` returns 14,
+the length of `"Hello, world.\n"`. `hello.tig` is `let ... in print(a) end`, so
+tiger's front end takes `print(a)` as the value of the program, assigns
+`tig_print`'s nonexistent result to a temp and returns it from `tiger_main`,
+and `main` passes it to `exit`. qc-- faithfully returned what it was told to.
+
+### The toolchain, which was the last real obstacle
+
+Not `gcc-multilib` - that does not exist for arm64, because multilib means
+secondary ABIs *of the host's own architecture family* and x86 is not one of
+aarch64's. A GCC binary targets one architecture; retargeting means a
+different compiler. The answer is the packaged cross compiler:
+
+```bash
+sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross
+```
+
+which brings cross gcc, cross binutils (the `i686-linux-gnu-ld` that solves
+the `elf_i386` problem) and an i386 libc. Running the result needs nothing
+extra: link `-static` and binfmt's `qemu-i386` picks it up, or for dynamic
+binaries use `qemu-i386 -L /usr/i686-linux-gnu ./prog`.
+
+(An earlier draft of this section proposed extracting a sysroot from a
+`linux/386` container or re-registering binfmt with `--privileged`. Both were
+unnecessary; the claim that Debian ships no i386 cross-libc for aarch64 hosts
+was simply wrong.)
+
+### The build recipe
+
+Five things had to be got right, none of them obvious:
+
+1. **`-globals` exactly once.** The global-variable area is one object per
+   program, so `qc -globals` belongs only on the unit compiled at link time,
+   never on the per-file `-stop .o` runs. Otherwise:
+   `multiple definition of 'Cmm.global_area'`.
+2. **The global signature is a hash of the declared globals.** Every C-- unit
+   touching the global area references `Cmm.globalsig.<hash>`, so the qc--
+   runtime's own `cut.c--`/`thread.c--`/`yield.c--` must be compiled with the
+   *client's* globals - here `bits32 alloc_ptr;`. A runtime built without them
+   references a different hash and will not link against a program that has
+   them. **This means `libqc--.a` cannot be a program-independent prebuilt
+   archive for clients that declare globals**, which is worth settling before
+   writing a Makefile.
+3. **`-fcommon` for `runtime.c` and `pcmap.c`.** GCC 10+ defaults to
+   `-fno-common`, so the tentative definitions of `Cmm_empty_pcmap_entry` and
+   friends become real definitions in every translation unit.
+4. **`pcmap.ld` on the link line** as a plain file argument (upstream passed it
+   in `Ld.rtend`). It defines `Cmm_pc_map`/`Cmm_pc_map_limit` as boundary
+   symbols around `.pcmap`. `ld` warns "contains output sections; did you
+   forget -T?" but resolves them correctly.
+5. **Include paths must not put tiger's `stdlib/` on `-I`**, or tiger's own
+   `stdlib.h` shadows the system one and recurses. Compile from inside each
+   directory, as tiger's Makefiles do.
+
+Working sequence, all from `$TIGDIR` sources:
+
+```bash
+CC=i686-linux-gnu-gcc; R=$QCDIR/runtime
+# tiger's C, compiled from inside its own directories
+(cd $TIGDIR/stdlib  && $CC -w -I $R -I $TIGDIR/runtime -c stdlib.c -o $B/stdlib.o)
+(cd $TIGDIR/runtime && $CC -w -I $R -c gc.c -o $B/gc.o)
+# the qc-- runtime
+$CC -w -fcommon -I $R -c $R/runtime.c -o qcrt.o
+$CC -w -fcommon -I $R -c $R/pcmap.c   -o pcmap.o
+$CC -w          -I $R -c $R/gcc-linux.c -o gcclinux.o
+$CC                   -c $R/x86cont.s   -o x86cont.o
+# C-- compiled by us; the runtime ones need the client's globals prepended
+qc -stop .o -o stdlibcmm.o stdlibcmm.c--   # and alloc.o, runtime.o
+qc -stop .o -o cut_g.o cut_g.c--           # and thread_g.o, yield_g.o
+qc -globals -stop .o -o hello.o hello.c--  # -globals, once
+$CC -static runtime.o stdlib.o stdlibcmm.o gc.o alloc.o hello.o \
+    qcrt.o pcmap.o cut_g.o thread_g.o yield_g.o gcclinux.o x86cont.o \
+    pcmap.ld -o hello
+```
+
+### What this exercised that nothing had before
+
+`cut.c--` and `thread.c--` are the only code compiled so far that uses `cut to`,
+`foreign "C-- thread"`, `also aborts` and bare code labels in a text section.
+`foreign "C-- thread"` selects `layout_cmm_thread`, a frame layout ported blind
+from Lua that nothing had touched until now. They compile, and the linked
+program runs - though hello never calls into the cut/thread paths, so those
+remain unproven at runtime.
+
 ## Status as of 2026-08-10
 
 | step | state |
@@ -21,7 +117,7 @@ this one is newer.
 | B `freeze` + `rmvfp` for x86 | **[D]** done 2026-08-10 |
 | B `liveness` + `ralloc` | **[D]** done 2026-08-10; x86 output is now fully concrete |
 | B assemble + link | **[D]** driver drives both; assembling works, linking blocked on the host |
-| running it | blocked on an i386 environment and `TODO/runtime/` |
+| running it | **[D]** `Hello, world.` on 2026-08-10 |
 
 `qc -interp -o hello.qs hello_tiger.c--` now emits complete bytecode:
 `CMM.procedure ('tiger_main',4,8,{ 0, })`, a resolved 8-byte frame, resolved
