@@ -4323,7 +4323,7 @@ let popcnt ~notok ~ok =
 \begin{verbatim}
 AST Abstract Syntax Tree
 NAST Normalized Abstract Syntax Tree
-RTL Register Transfer Language
+RTL Register Transfer List
 IR Intermediate Representation
 FENV Fat Environment
 ELAB Elaboration
