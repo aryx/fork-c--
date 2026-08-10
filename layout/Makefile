@@ -6,7 +6,7 @@ TOP=..
 TARGET=lib
 
 # used by Driver.compile
-SRC= dataflow.ml vfp.ml mvalidate.ml stack.ml
+SRC= dataflow.ml vfp.ml mvalidate.ml stack.ml framelayout.ml
 
 # used by arch/ppc/
 SRC+=automatonutil.ml placevar.ml

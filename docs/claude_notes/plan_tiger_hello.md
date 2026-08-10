@@ -17,8 +17,10 @@ this one is newer.
 | A0 verify the interpreter route | **[D]** `-test_interp` exists; route confirmed real |
 | A1 `freeze` (stack layout) | **[D]** `layout/stack.ml` in the build, `Interp.layout` ported |
 | A2 driver / `main_action` | **[D]** `qc -interp -o hello.qs hello.c--` works |
-| A3 run it | **blocked** - needs the C interpreter, which needs Lua 4.0. See below. |
-| Route B | not started, and see the architecture note below |
+| A3 run it | **abandoned** - needs the C interpreter, which needs Lua 4.0, and pad has ruled out adding Lua |
+| B `freeze` + `rmvfp` for x86 | **[D]** done 2026-08-10 |
+| B `liveness`, `ralloc` | next, and both need `.nw` extraction first |
+| B assemble + link | after those |
 
 `qc -interp -o hello.qs hello_tiger.c--` now emits complete bytecode:
 `CMM.procedure ('tiger_main',4,8,{ 0, })`, a resolved 8-byte frame, resolved
@@ -46,9 +48,9 @@ error-detection tests, where a diagnostic *is* the pass). **[V]**
    incompatible with the 4.0 one `lualink.nw` is written against. **[V]**
 
    So "this fork drops Lua" holds for the *compiler*, but Route A's runtime
-   still needs a C Lua. Deciding what to do about that is a design call:
-   vendor Lua 4.0, port `lualink.nw` to Lua 5.4, or write a small non-Lua
-   `.qs` reader.
+   still needs a C Lua. **Decided 2026-08-10: no Lua.** A3 is therefore
+   abandoned and Route B is the route. `-interp` stays useful as a readable
+   dump of the fully-lowered program, and it is what proved `freeze` worked.
 
 ## The one-paragraph version
 
@@ -252,28 +254,53 @@ Changing `$TIGDIR/Makefile.config` (`QC=qc--` -> this fork's `qc`,
 `QCINCLUDE=/usr/local/bin/../include/qc--`) is still pending, but pointless
 until there is something to link against.
 
-## Route B — native x86 (the real goal, afterwards)
+## Route B - native x86 (the real goal)
 
-Everything in Route A, plus:
+Since Lua is not going to be added for A3, this is now *the* route.
 
-- **`rmvfp`** — cheap once `freeze` exists: `Backplane.of_dataflow` is three
-  lines (`TODO/lua-related/backplane.nw:899`), so the phase is
-  `let g, changed = proc.Proc.cc.Call.replace_vfp g in (g, proc), changed`, and
-  `layout/vfp.ml` is already in the build. **Must run after freeze** — it
-  rewrites `vfp` into `sp` plus a frame offset, and those offsets do not exist
-  until the frame is frozen. **[V]**
-- **`liveness`** — `TODO/dataflow/live.nw` + `liveset.nw` (~344 lines `.nw`).
-  Needed only as input to ralloc.
-- **`ralloc`** — pick one of `TODO/backend/registers/flowra.nw` (926 lines,
-  `val ralloc : 'a -> Ast2ir.proc -> Ast2ir.proc * bool`, dataflow-based, and
-  `cfg/dataflow/dataflow.ml` is already in the build) or `dls.nw` (1195, DFS
-  linear scan) or `ocolorgraph.nw` (1831, graph colouring). **flowra looks like
-  the cheapest** — smallest, single-function interface, built on machinery we
-  already have. **[V]** on the sizes and interface, **[I]** on it being easiest.
-- **assemble and link.** qc-- has no assembler or linker of its own; it *drives*
-  the system ones. Per `docs/man/qc--.1` it "compiles, assembles, and links" by
-  invoking external programs, with `-stop .o` to halt after `as`. So the work is
-  driver logic that shells out, not writing an assembler.
+**`freeze` and `rmvfp` are done for x86 (2026-08-10).** **[V]**
+`arch/x86/x86backend.ml` now runs `placevars -> expand -> layout -> rmvfp ->
+assemble`, and the symbolic markers from the baseline table are gone:
+
+| marker | before | now |
+| --- | --- | --- |
+| `adjust %esp` | 8 | **0** |
+| `%vfp` | 6 | **0** |
+| `$stackdata:o1` | 3 | **0** |
+| `temporary register N` | 82 | 82 - needs `ralloc` |
+
+`tiger_main` now opens with a real frame: `leal 4294967284(%esp), %esp`
+(that is `-12`), and every memory reference is sp-relative. The 65/128
+`tests/src` pass set is unchanged, and all of tiger's demos, runtime and
+stdlib C-- compile with no leftover late constants. **[V]**
+
+- **x86 stack layout** - ported from the "stack-frame layout functions"
+  chunks, `docs/literate/Cminusminus_extra.nw:37232-37423`. Unlike the
+  interpreter there is one layout per calling convention, dispatched on
+  `Stack.ccname(proc)` (= `proc.Proc.cc.Call.name`): `"C"`/`"notail"`,
+  `"C--"` and `"C-- thread"`. All three are implemented. Tiger needs the
+  `"C--"` one, since `tiger_main` is not `foreign "C"`.
+- **`rmvfp`** - three lines, as predicted. `arch/x86/x86call.ml:142`
+  already set `C.replace_vfp = Vfp.replace_with ~sp`.
+- **`layout/framelayout.ml`** (new) holds the two computed entries of
+  `Stack.blocks` (`vfp_block`, `spills`) plus the `overlap_*` wrappers, so
+  the x86 and interpreter layouts agree on them. The interpreter layout was
+  refactored onto it with byte-identical output. **[V]**
+
+### What is left
+
+- **`liveness`** - `TODO/dataflow/live.nw` + `liveset.nw`. **Needs the `.nw`
+  extracted to `.ml` first.** Needed only as input to ralloc.
+- **`ralloc`** - `TODO/backend/registers/flowra.nw` (926 lines, dataflow-based,
+  and `cfg/dataflow/dataflow.ml` is already in the build), or `dls.nw` (1195,
+  DFS linear scan) or `ocolorgraph.nw` (1831, graph colouring). Upstream's
+  own x86 backend used `Ralloc.dls`. **flowra looks like the cheapest**;
+  **also needs the `.nw` extracted first.**
+- **assemble and link** - qc-- has no assembler or linker of its own, it
+  *drives* the system ones (`docs/man/qc--.1`), with `-stop .o` to halt after
+  `as`. So this is driver logic that shells out, not writing an assembler.
+  Note the x86 emitter prints negative displacements unsigned
+  (`4294967284(%esp)`); worth checking `as` accepts that before trusting it.
 
 ### Architecture caveat **[V]** - corrected 2026-08-10
 
@@ -325,20 +352,18 @@ compile through our front end. **[V]**
 ## Ordering
 
 1. ~~**A0** confirm the interpreter route~~ **done**
-2. ~~**A1** `freeze`~~ **done** - and it is the piece both routes needed.
+2. ~~**A1** `freeze`~~ **done**
 3. ~~**A2** driver~~ **done**
-4. **A3** the C interpreter runtime, and a running `Hello, world.` - blocked
-   on the Lua 4.0 question above, which needs a decision before any code.
-5. Then Route B: `rmvfp`, `liveness`, `ralloc`, assemble/link, and an x86
-   machine or container.
+4. ~~**A3** run the `.qs`~~ **abandoned**, no Lua
+5. ~~**B** x86 `freeze` + `rmvfp`~~ **done** - only `temporary register N` left
+6. **B `liveness`** - extract `TODO/dataflow/live.nw` + `liveset.nw`
+7. **B `ralloc`** - extract `TODO/backend/registers/flowra.nw`
+8. **B assemble + link** - driver logic shelling out to `as`/`ld`
 
-Nothing in steps 1-3 is wasted on the way to Route B: `freeze` is shared, and
-`rmvfp` must run after it.
+Steps 6 and 7 start with syncweb extraction, which pad does.
 
-If the Lua 4.0 answer turns out to be unappealing, the alternative is to skip
-A3 and go straight at Route B under Docker - `freeze` and the driver are done
-either way, and what remains there (`rmvfp`, `liveness`, `ralloc`) is OCaml
-work in this repo rather than a dependency hunt.
+Nothing in A0-A2 was wasted: `freeze` and the driver are shared, and `rmvfp`
+had to run after `freeze` either way.
 
 ## Explicitly not needed for tiger hello
 

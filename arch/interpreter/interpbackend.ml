@@ -21,9 +21,9 @@
  * Same shape as arch/x86/x86backend.ml (read its header first), but much
  * shorter, and that is the whole point of routing tiger's hello world
  * through the interpreter first: upstream's interpreter backend leaves
- * 'expand', 'liveness' and 'ralloc' unset, and TODO/lua/luacompile.nw's
+ * 'expand', 'liveness' and 'ralloc' unset, and LUA/lua-cmm-driver/luacompile.nw's
  * Opt.standard skips a phase whose backend field is nil. From
- * TODO/lua/luacompile.nw:781:
+ * LUA/lua-cmm-driver/luacompile.nw:781:
  *
  *   Backend.interp = Backend.make { target    = Targets.interp
  *                                 , placevars = Placevar.replace_globals
@@ -52,6 +52,8 @@
 (* Helpers *)
 (*****************************************************************************)
 
+module F = Framelayout
+
 (* Same "Lua stage" calling convention as in x86backend.ml: an unused
  * environment argument in, a rewritten procedure plus a "did I change
  * anything" flag out. The flag drove Backplane's fixpointing; we ignore it.
@@ -62,7 +64,7 @@ let run stage (proc : Ast2ir.proc) : Ast2ir.proc = fst (stage () proc)
 (* Stack layout (the 'freeze' phase) *)
 (*****************************************************************************)
 
-(* Port of Interp.layout, TODO/lua/luacompile.nw:517:
+(* Port of Interp.layout, LUA/lua-cmm-driver/luacompile.nw:517:
  *
  *   function Interp.layout(_, proc)
  *       local blocks = Stack.blocks(proc)
@@ -95,37 +97,18 @@ let run stage (proc : Ast2ir.proc) : Ast2ir.proc = fst (stage () proc)
  * Its body (layout/stack.ml) is exactly the projection below.
  *)
 let layout () ((_, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
-  let Preast2ir.T tgt = p.Proc.target in
   let w = 32 in
-  (* "vfp" in Stack.blocks: an empty block anchored at the virtual frame
-   * pointer, aligned like sp. It contributes no space, only the anchor. *)
-  let vfp_block =
-    Block.at ~base:tgt.Target.vfp ~size:0
-      ~alignment:(Block.alignment p.Proc.sp)
-  in
-  (* "spills" in Stack.blocks. Proc.priv is still an open automaton at
-   * this point; freezing it yields the block of spill slots. Nothing has
-   * spilled anything on this route (no register allocator runs), so this
-   * is normally empty - but it still has to take part in the layout. *)
-  let spills = (Automaton.freeze p.Proc.priv).Automaton.overflow in
-  (* Lua's Block.overlap_high turned this exception into a diagnostic
-   * rather than letting it escape (TODO/lua/lualink.ml:357). *)
-  let overlap_high bs =
-    try Block.overlap_list w Block.High bs
-    with Block.OverlapHigh ->
-      Error.error "can't overlap blocks at high end"
-  in
   let block =
     Block.cathl_list w
       [ p.Proc.conts
       ; p.Proc.stackd
-      ; vfp_block
+      ; F.vfp_block proc
       ; p.Proc.sp
-      ; spills
-      ; Block.overlap_list w Block.Low  p.Proc.oldblocks.Call.caller
-      ; Block.overlap_list w Block.Low  p.Proc.oldblocks.Call.callee
-      ; overlap_high p.Proc.youngblocks.Call.caller
-      ; overlap_high p.Proc.youngblocks.Call.callee
+      ; F.spills proc
+      ; F.overlap_low  w p.Proc.oldblocks.Call.caller
+      ; F.overlap_low  w p.Proc.oldblocks.Call.callee
+      ; F.overlap_high w p.Proc.youngblocks.Call.caller
+      ; F.overlap_high w p.Proc.youngblocks.Call.callee
       ]
   in
   (Stack.freeze proc block, true)
