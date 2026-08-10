@@ -1,18 +1,18 @@
 (*s: commons3/uint64.ml *)
 (*s: uint64.ml *)
 module I = Int64
-(*s: external functions *)
+(*s: [[Uint64]] external functions *)
 (* external of_int:     int   -> int64                  = "uint64_i2i" *)
-(*x: external functions *)
+(*x: [[Uint64]] external functions *)
 external cmp:        int64 -> int64 -> int           = "uint64_compare"
 external add:        int64 -> int64 -> int64         = "uint64_add"
 external sub:        int64 -> int64 -> int64         = "uint64_sub"
 external mul:        int64 -> int64 -> int64         = "uint64_mul"
 external div:        int64 -> int64 -> int64         = "uint64_div"
 external modu:       int64 -> int64 -> int64         = "uint64_mod"
-(*x: external functions *)
+(*x: [[Uint64]] external functions *)
 external of_string:  string -> int64                 = "uint64_of_string"
-(*e: external functions *)
+(*e: [[Uint64]] external functions *)
 module Cast = struct
  external float64 :   float -> int64 = "uint64_float64"
  external float32 :   float -> int64 = "uint64_float32"

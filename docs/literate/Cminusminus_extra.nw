@@ -3759,7 +3759,7 @@ let last _ = ts.last
 %%Primitive functions, called \textit{external}, are implemented in C,
 %%\textit{internal} functions use them and are implemented in {\ocaml}. 
 <<uint64.mli>>=
-<<external functions>>
+<<[[Uint64]] external functions>>
 <<internal functions>>
 @
 %%The [[Cast]] module provides two different packagings of the identity
@@ -3777,13 +3777,13 @@ end
 @
 %%The function [[of_int]] copies an [[int]] bitwise into an [[int64]]
 %%value; unlike [[Int64.of_int]] no sign-extension is performed.
-<<external functions>>=
+<<[[Uint64]] external functions>>=
 (* external of_int:     int   -> int64                  = "uint64_i2i" *)
 @
 %%The following arithmetical operations consider their arguments and
 %%return values as unsigned integers. Otherwise they implement the
 %%behavior of the corresponding functions in the [[Int64]] module.
-<<external functions>>=
+<<[[Uint64]] external functions>>=
 external cmp:        int64 -> int64 -> int           = "uint64_compare"
 external add:        int64 -> int64 -> int64         = "uint64_add"
 external sub:        int64 -> int64 -> int64         = "uint64_sub"
@@ -3809,7 +3809,7 @@ external modu:       int64 -> int64 -> int64         = "uint64_mod"
 %%    \end{tabular}
 %%\end{quote}
 %%This function raises [[Failure]] with either [["overflow"]] or [["syntax"]].
-<<external functions>>=
+<<[[Uint64]] external functions>>=
 external of_string:  string -> int64                 = "uint64_of_string"
 @
 %%Unsigned comparison of [[int64]] values.
@@ -3835,7 +3835,7 @@ val shr:             int -> int64 -> int64      (* shift right *)
 %%style as the [[Int64]] implementation. 
 <<uint64.ml>>=
 module I = Int64
-<<external functions>>
+<<[[Uint64]] external functions>>
 module Cast = struct
  external float64 :   float -> int64 = "uint64_float64"
  external float32 :   float -> int64 = "uint64_float32"
@@ -38614,6 +38614,12 @@ let regname8 ~lsb ~base = match lsb with
 | _ -> Impossible.impossible "bad lsb in slice denoting 8-bit register"
 
 @ 
+
+%******************************************************************************
+\chapter{[[runtime/]]}
+%******************************************************************************
+
+
 
 %******************************************************************************
 \chapter{[[.]]}
