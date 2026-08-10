@@ -144,12 +144,17 @@ let getenv_or name default =
 let as_cmd = ref (getenv_or "QC_AS" default_i386_cc)
 let ld_cmd = ref (getenv_or "QC_LD" default_i386_cc)
 
-(* -globals. Upstream gated the export of the global-variable area behind
- * this flag, and $TIGDIR/readme.txt's link line passes it. We default it
- * to true because that is what the -test_xxx actions have always passed
- * to Driver.compile, and turning it off has never been exercised here.
+(* -globals: emit the global-variable area and its signature.
+ *
+ * This MUST default to false. The area is one shared object per program,
+ * so emitting it from every compilation makes the link fail with
+ * "multiple definition of `Cmm.global_area'". That is why tiger's
+ * Makefiles pass -globals only on the final link line
+ * ($TIGDIR/readme.txt:45) and never on the per-file "-stop .o" runs, and
+ * why qc--(1) describes repeating the flag as the way to get the
+ * signature into *every* file - the exception, not the default.
  *)
-let exportglobals = ref true
+let exportglobals = ref false
 
 (*****************************************************************************)
 (* Helpers *)
