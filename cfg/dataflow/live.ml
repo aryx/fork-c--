@@ -55,8 +55,6 @@ let live_in_last last =
 
 let live_in_first out first =
   G.add_live_spansf first out
-@ N.B. we could operate more efficiently if, instead of using [[irwk]]
-to build sets, we simply folded over the proper functions directly.
 (*x: live.ml  *)
 let live_in =
  { D.fact_name = "live vars";
