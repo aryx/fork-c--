@@ -1,0 +1,19 @@
+/*s: thread.c-- */
+target byteorder little;
+export Cmm_start_thread_helper, Cmm_thread_helper_fence;
+import write, abort;
+section "text" {
+  span 0 0xeffaced {
+    foreign "C-- thread" Cmm_start_thread_helper(bits32 f, bits32 x) {  
+      f(x) also aborts;
+      foreign "C" write(2, "address" msg, msg_end - msg);
+      foreign "C" abort() never returns;
+    }
+  }
+  Cmm_thread_helper_fence:
+}
+section "data" {
+  msg: bits8[] "fatal C-- error: function passed to Cmm_CreateStack returned!\n";
+  msg_end:
+}
+/*e: thread.c-- */

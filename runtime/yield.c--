@@ -1,0 +1,10 @@
+/*s: yield.c-- */
+target byteorder little;
+export Cmm_Yield;
+foreign "C" Cmm_Yield(bits32 k,bits32 kold) {
+  bits32[kold] = bits32[knew];
+  bits32[kold+4] = bits32[knew+4];
+  cut to k() also cuts to knew also aborts;
+  continuation knew(): foreign "C" return ;
+}
+/*e: yield.c-- */

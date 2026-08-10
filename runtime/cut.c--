@@ -1,0 +1,7 @@
+/*s: cut.c-- */
+target byteorder little;
+export Cmm_CutTo;
+foreign "C" Cmm_CutTo(bits32 k) {
+  cut to k();
+}
+/*e: cut.c-- */
