@@ -193,6 +193,9 @@ SRC_VIEWS= \
  $TOP/cfg/dataflow/live.mli\
  $TOP/cfg/dataflow/live.ml\
  \
+ $TOP/regalloc/flowra.mli\
+ $TOP/regalloc/flowra.ml\
+ \
  $TOP/layout/mvalidate.mli\
  $TOP/layout/mvalidate.ml\
  $TOP/layout/placevar.mli\
