@@ -190,6 +190,8 @@ SRC_VIEWS= \
  $TOP/TODO/arch/callspec.ml\
  $TOP/cfg/dataflow/dataflow.mli\
  $TOP/cfg/dataflow/dataflow.ml\
+ $TOP/cfg/dataflow/live.mli\
+ $TOP/cfg/dataflow/live.ml\
  \
  $TOP/layout/mvalidate.mli\
  $TOP/layout/mvalidate.ml\
