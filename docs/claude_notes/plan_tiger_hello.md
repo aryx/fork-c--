@@ -19,8 +19,8 @@ this one is newer.
 | A2 driver / `main_action` | **[D]** `qc -interp -o hello.qs hello.c--` works |
 | A3 run it | **abandoned** - needs the C interpreter, which needs Lua 4.0, and pad has ruled out adding Lua |
 | B `freeze` + `rmvfp` for x86 | **[D]** done 2026-08-10 |
-| B `liveness`, `ralloc` | next, and both need `.nw` extraction first |
-| B assemble + link | after those |
+| B `liveness` + `ralloc` | **[D]** done 2026-08-10; x86 output is now fully concrete |
+| B assemble + link | next, and `as` is solved - only linking is blocked |
 
 `qc -interp -o hello.qs hello_tiger.c--` now emits complete bytecode:
 `CMM.procedure ('tiger_main',4,8,{ 0, })`, a resolved 8-byte frame, resolved
@@ -287,29 +287,72 @@ stdlib C-- compile with no leftover late constants. **[V]**
   the x86 and interpreter layouts agree on them. The interpreter layout was
   refactored onto it with byte-identical output. **[V]**
 
+### Register allocation - **DONE** **[V]**
+
+`arch/x86/x86backend.ml` now runs the full upstream phase order:
+`placevars -> expand -> liveness -> ralloc -> freeze -> rmvfp -> assemble`.
+Every symbolic marker is gone from the tiger hello output:
+
+| marker | baseline | now |
+| --- | --- | --- |
+| `temporary register N` | 82 | **0** |
+| `adjust %esp` | 8 | **0** |
+| `%vfp` | 6 | **0** |
+| `$stackdata:o1` | 3 | **0** |
+
+- **`liveness`** - `cfg/dataflow/live.ml` (extracted from `live.nw`). The
+  phase is `Dataflow.B.rewrite (Dataflow.B.anal Live.live_in)`, exactly
+  Lua's Liveness.liveness (`LUA/lua-cmm-driver/lualink.ml:484`). It exists
+  only to feed ralloc. `liveset.nw` turned out to be unnecessary: `live.nw`
+  never references it, its liveset is `Register.SetX.t`. **[V]**
+- **`ralloc`** - `regalloc/flowra.ml`. Note upstream's `Backend.x86` used
+  `Ralloc.dls` (`TODO/backend/registers/dls.nw`); flowra satisfies the same
+  one-function interface, so swapping is a one-line change.
+- **Ordering**: ralloc runs *before* freeze. It decides how many spill slots
+  the frame needs; freeze turns those into offsets. Visible in the output -
+  tiger_main's frame grew from 12 to 20 bytes once real spills appeared.
+
+`tests/src` holds at 65/128 for `-test_x86`, with no regressions and no new
+passes. **[V]**
+
 ### What is left
 
-- **`liveness`** - `TODO/dataflow/live.nw` + `liveset.nw`. **Needs the `.nw`
-  extracted to `.ml` first.** Needed only as input to ralloc.
-- **`ralloc`** - `TODO/backend/registers/flowra.nw` (926 lines, dataflow-based,
-  and `cfg/dataflow/dataflow.ml` is already in the build), or `dls.nw` (1195,
-  DFS linear scan) or `ocolorgraph.nw` (1831, graph colouring). Upstream's
-  own x86 backend used `Ralloc.dls`. **flowra looks like the cheapest**;
-  **also needs the `.nw` extracted first.**
-- **assemble and link** - qc-- has no assembler or linker of its own, it
-  *drives* the system ones (`docs/man/qc--.1`), with `-stop .o` to halt after
-  `as`. So this is driver logic that shells out, not writing an assembler.
-  Note the x86 emitter prints negative displacements unsigned
-  (`4294967284(%esp)`); worth checking `as` accepts that before trusting it.
+- **assembling works today** **[V]** - and it does *not* need `gcc-multilib`.
+  clang's integrated assembler targets i386 without cross-binutils:
 
-### Architecture caveat **[V]** - corrected 2026-08-10
+  ```bash
+  clang -target i386-unknown-linux-gnu -c hello_tiger.s -o hello_tiger.o
+  # ELF 32-bit LSB relocatable, Intel 80386
+  ```
 
-The earlier draft said Route B needs `gcc-multilib` because `gcc -m32` fails.
-That diagnosis was wrong. This machine is **aarch64** (`uname -m` -> `aarch64`,
-`gcc -dumpmachine` -> `aarch64-linux-gnu`); `-m32` is rejected because there is
-no x86 compiler here at all, not because 32-bit support is missing from one.
-`gcc-multilib` will not help. Route B needs an x86 machine, the x86 Docker
-image, or qemu.
+  All six tiger-relevant inputs assemble clean (the three demos plus
+  tiger's `runtime.c--`, `alloc.c--`, `stdlibcmm.c--`).
+- **linking is the remaining external blocker** **[V]** - `/usr/bin/ld` here
+  has no `elf_i386` emulation, only aarch64/arm ("unrecognised emulation
+  mode: elf_i386"). Producing an executable, and compiling tiger's C runtime
+  for i386, still needs an x86 container or i386 binutils+libc.
+- **driver logic** for `-stop .o` and shelling out to the assembler and
+  linker (`docs/man/qc--.1`: qc-- drives the system tools, it has no
+  assembler or linker of its own).
+- **`remove_nops` / `simplify_exps`** (`TODO/optimizers/optimize.nw`, needs
+  `.nw` extraction) - the output is correct but littered with
+  `movl %eax,%eax`. A quality win, not a correctness one.
+
+### Architecture caveat **[V]** - corrected twice
+
+The original draft said Route B needs `gcc-multilib` because `gcc -m32` fails.
+That was wrong: this machine is **aarch64** (`gcc -dumpmachine` ->
+`aarch64-linux-gnu`), so `-m32` is rejected because there is no x86 compiler
+here at all. `gcc-multilib` would not help.
+
+But the conclusion drawn from that - "Route B needs an x86 machine" - was too
+strong, and only half of it survived contact:
+
+- **assembling**: fine here, via clang's integrated assembler (see above).
+- **linking**: still blocked, `ld` has no `elf_i386` emulation.
+
+`qemu-i386` is registered in binfmt_misc and docker is installed, so once an
+i386 link is possible the resulting binary should run on this box.
 
 Route A does not sidestep this as cleanly as the draft claimed either - it
 sidesteps the *toolchain*, but see A3 for what it needs instead.
@@ -355,15 +398,12 @@ compile through our front end. **[V]**
 2. ~~**A1** `freeze`~~ **done**
 3. ~~**A2** driver~~ **done**
 4. ~~**A3** run the `.qs`~~ **abandoned**, no Lua
-5. ~~**B** x86 `freeze` + `rmvfp`~~ **done** - only `temporary register N` left
-6. **B `liveness`** - extract `TODO/dataflow/live.nw` + `liveset.nw`
-7. **B `ralloc`** - extract `TODO/backend/registers/flowra.nw`
-8. **B assemble + link** - driver logic shelling out to `as`/`ld`
-
-Steps 6 and 7 start with syncweb extraction, which pad does.
-
-Nothing in A0-A2 was wasted: `freeze` and the driver are shared, and `rmvfp`
-had to run after `freeze` either way.
+5. ~~**B** x86 `freeze` + `rmvfp`~~ **done**
+6. ~~**B** `liveness` + `ralloc`~~ **done** - x86 output is fully concrete
+   and assembles to i386 objects
+7. **B assemble + link** - driver logic; `as` is solved via clang, linking
+   needs an x86 environment
+8. optional: `remove_nops` for output quality
 
 ## Explicitly not needed for tiger hello
 
