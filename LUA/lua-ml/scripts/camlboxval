@@ -1,7 +1,0 @@
-#!/bin/sh
-
-if false && [ -x $BIN/camlboxval ]; then
-  exec $BIN/camlboxval
-else
-  exec cat
-fi
