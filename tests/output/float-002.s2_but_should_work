@@ -1,0 +1,2 @@
+This can't happen: operator %pinf reached postexpander
+Fatal error: exception Impossible.Impossible("operator %pinf reached postexpander")

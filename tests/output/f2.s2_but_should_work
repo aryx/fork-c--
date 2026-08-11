@@ -1,0 +1,2 @@
+This can't happen: trying to put %round_nearest() into a weird temporary
+Fatal error: exception Impossible.Impossible("trying to put %round_nearest() into a weird temporary")

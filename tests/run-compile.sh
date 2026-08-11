@@ -18,6 +18,44 @@
 # result for those, and a baseline captures that without anyone having to
 # classify 143 files by hand.
 #
+# For files that FAIL, this also checks *why*: stderr is compared against a
+# recorded golden file, so a compile that starts failing for a different
+# reason (a regression, or a symptom silently changing) is caught even
+# though the outcome (FAIL) does not change. This is upstream's own
+# mechanism (testdrv.nw's asmerr/.s2 comparison, what norun.x86.tst relied
+# on) rather than something new, but the checked text is OUR freshly
+# recorded baseline, not upstream's ~20-year-old text - that text turned
+# out to differ on every single file, purely from OCaml's uncaught-
+# exception printer changing format ("Caml exception: ..." to "Fatal
+# error: exception ...") and this build printing a backtrace upstream's
+# didn't. The backtrace lines ("Raised at "/"Called from ") are stripped
+# before recording/comparing for the same reason: they churn on unrelated
+# main.ml line-number changes and carry no diagnostic signal.
+#
+# Two golden-file kinds, not one:
+#   output/<name>.s2                  upstream's own naming. Only ever
+#                                      updated for a name that already has
+#                                      one - those are files upstream
+#                                      itself curated as INTENTIONAL
+#                                      negative tests (test-0NN, err-0NN,
+#                                      badlit8, const, ...), where this
+#                                      diagnostic is the permanently
+#                                      correct result.
+#   output/<name>.s2_but_should_work  everything else that currently
+#                                      FAILs. As of this fork these are
+#                                      almost always POSITIVE tests broken
+#                                      by a known, still-being-worked-on
+#                                      gap (simplify_exps, the remaining
+#                                      widen cases, ...) - freezing that
+#                                      text as a plain .s2 would
+#                                      canonicalize the bug as correct
+#                                      behaviour instead of tracking it.
+#                                      Once the underlying gap is fixed the
+#                                      file starts passing and --update
+#                                      prunes its .s2_but_should_work
+#                                      automatically - nothing to remember
+#                                      to clean up by hand.
+#
 # Usage:
 #   ./run-compile.sh              check against the baseline
 #   ./run-compile.sh --update     re-record the baseline (review the diff!)
@@ -53,20 +91,66 @@ trap 'rm -rf "$tmp"' EXIT
 # is stable across machines.
 corpus=$(ls src/*.c-- ../demos/*.c-- 2>/dev/null | sort)
 
+update=no
+if [ "$1" = "--update" ]; then update=yes; fi
+
 : > "$tmp/actual.txt"
+msg_changed=""
 for f in $corpus; do
-  name=$(basename "$f")
-  if "$QC" -stop .s -o "$tmp/out.s" "$f" >/dev/null 2>&1; then
-    echo "$name OK" >> "$tmp/actual.txt"
-  else
-    echo "$name FAIL" >> "$tmp/actual.txt"
+  name=$(basename "$f" .c--)
+  if "$QC" -stop .s -o "$tmp/out.s" "$f" >/dev/null 2>"$tmp/err.txt"; then
+    echo "$name.c-- OK" >> "$tmp/actual.txt"
+    continue
   fi
+  echo "$name.c-- FAIL" >> "$tmp/actual.txt"
+
+  # Message-checking only applies to tests/src/: output/*.s2 is upstream's
+  # own naming, always scoped to Test.source = "src" in the old .tst files.
+  # demos/ is this fork's own addition and is not namespaced the same way -
+  # demos/bool.c-- and src/bool.c-- would otherwise collide on the same
+  # output/bool.s2 (currently harmless, since the two files are
+  # byte-identical, but fragile).
+  case "$f" in
+    src/*)
+      s2="output/$name.s2"
+      todo="output/$name.s2_but_should_work"
+      if [ -f "$s2" ]; then target=$s2; kind="error message"
+      else                  target=$todo; kind="known-gap message"
+      fi
+
+      # Strip the OCaml backtrace, keep the diagnostic(s) and the exception
+      # summary line - see the header comment for why.
+      grep -v '^Raised at \|^Called from ' "$tmp/err.txt" > "$tmp/msg.txt"
+
+      if [ "$update" = yes ]; then
+        cp "$tmp/msg.txt" "$target"
+      elif [ -f "$target" ]; then
+        if ! diff "$target" "$tmp/msg.txt" > "$tmp/msgdiff.$name" 2>&1; then
+          msg_changed="$msg_changed $name"
+          echo "$kind" > "$tmp/msgkind.$name"
+        fi
+      fi
+      ;;
+  esac
 done
+
+# Prune golden files for src/ corpus files that no longer fail - see the
+# header comment on why a stale one is worse than a missing one (doubly so
+# for .s2_but_should_work: a fixed gap should not still look unfixed).
+# Files outside the corpus (tests/src/big/) are left alone: their golden
+# file is inactive, not stale.
+if [ "$update" = yes ]; then
+  for f in src/*.c--; do
+    name=$(basename "$f" .c--)
+    grep -q "^$name\\.c-- FAIL\$" "$tmp/actual.txt" && continue
+    rm -f "output/$name.s2" "output/$name.s2_but_should_work"
+  done
+fi
 
 total=$(grep -c "" "$tmp/actual.txt")
 ok=$(grep -c " OK$" "$tmp/actual.txt" || true)
 
-if [ "$1" = "--update" ]; then
+if [ "$update" = yes ]; then
   cp "$tmp/actual.txt" "$baseline"
   echo "recorded baseline: $ok/$total compile ($baseline)"
   exit 0
@@ -77,15 +161,31 @@ if [ ! -f "$baseline" ]; then
   exit 2
 fi
 
-if diff "$baseline" "$tmp/actual.txt" > "$tmp/diff.txt" 2>&1; then
-  echo "compile smoke: $ok/$total compile, matching the baseline"
-  exit 0
+failed=no
+if ! diff "$baseline" "$tmp/actual.txt" > "$tmp/diff.txt" 2>&1; then
+  echo "compile smoke: FAILED, the outcome changed for these files:"
+  echo
+  # "<" is the baseline, ">" is what we just got.
+  grep '^[<>]' "$tmp/diff.txt"
+  echo
+  failed=yes
 fi
 
-echo "compile smoke: FAILED, the outcome changed for these files:"
-echo
-# "<" is the baseline, ">" is what we just got.
-grep '^[<>]' "$tmp/diff.txt"
-echo
-echo "If the change is intended, re-record with: $0 --update"
-exit 1
+if [ -n "$msg_changed" ]; then
+  echo "compile smoke: FAILED, the compile-failure message changed for these files:"
+  echo
+  for name in $msg_changed; do
+    echo "--- $name ($(cat "$tmp/msgkind.$name")) ---"
+    cat "$tmp/msgdiff.$name"
+  done
+  echo
+  failed=yes
+fi
+
+if [ "$failed" = yes ]; then
+  echo "If the change is intended, re-record with: $0 --update"
+  exit 1
+fi
+
+echo "compile smoke: $ok/$total compile, matching the baseline (incl. error messages)"
+exit 0
