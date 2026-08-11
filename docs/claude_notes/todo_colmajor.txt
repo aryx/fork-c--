@@ -1,0 +1,165 @@
+colmajor: the last failing tiger test
+=====================================
+
+Written 2026-08-11. tests/run-tiger.sh is 14 of 15; colmajor is the one.
+This is the state of the diagnosis, what is settled, and what to do next.
+
+Short version: the bug is in tiger's generated code, not in qc--. Whether it
+*shows* depends on stack residue, which depends on frame sizes, which is why
+upstream never saw it and we do. So there is a real fix (in fork-tiger) and
+a defensible decision to leave it alone (recorded in the baseline).
+
+
+The symptom
+-----------
+  make -C .. test-tiger        # or ./run-tiger.sh colmajor
+  colmajor: malloc.c:2599 sysmalloc: assertion failed ...
+
+With a larger heap it segfaults in memcpy instead. Both are the same event:
+the collector copies an "object" of about the heap's size, running off the
+end of the malloc'd heap and destroying malloc's metadata.
+
+
+What is established
+-------------------
+1. The collector is handed a root that is not an object.
+
+     DEBUG bad STACKVAR j=11 val=0x80f9f50 flag=1 from_space=0x80f9f50
+
+   The root is stack slot 11 of tiger_main, flagged as a pointer, holding
+   exactly from_space - the first byte of the heap, where a real object
+   pointer would be from_space+4. gc_forward then reads the word *before*
+   it, which is malloc's chunk header (0x4011 = 16401), as the object's
+   size.
+
+2. It is wrong at the very first collection.
+
+     DEBUG gc#1 tfp=0x407ff73c slot11=0x80f9f50 from_space=0x80f9f50
+
+3. The slot is not written until long after that. In tiger/colmajor.c--,
+   inside tiger_main:
+
+     41:   call_gc() also aborts ;          <- first collection
+     57:   bits32[%add(fp, 44)] = Lgbl_70;  <- slot 11 first written
+
+   Slot 11 is fp+44, and gc_data marks it a pointer - tiger_main_gc_data is
+   { 18, 1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0 }, and gc.c reads the flag for
+   slot i at gc_data[i+1].
+
+4. Our frame data for that procedure is right. tfp = vfp-72 and the block is
+   18 slots = 72 bytes, so it covers vfp-72..vfp exactly; tfp[0] is 0, which
+   is correct for tiger_main, whose pfp is 0. The return address is in
+   register 7 (%ebx), saved at vfp-88, i.e. below the block. The callee-save
+   slots are at vfp-88, -84, -80, also below it. Nothing of ours overlaps
+   the stackdata block.
+
+5. C-- says stackdata is uninitialised. From docs/spec/, the 2.0 language
+   definition: "labels and declarations appear in stackdata { ... }. No
+   initial value can be provided." So qc-- is right not to touch it, and a
+   root map that claims an uninitialised slot holds a pointer is unsound.
+
+6. The value is deterministic, not random junk. Padding the environment,
+   which shifts the initial stack, changes nothing:
+
+     for pad in "" "X=1" "X=<200 chars>" "X=<1000 chars>"; do
+       env $pad qemu-i386 build/tiger/colmajor < tiger/colmajor.0
+     done      # identical failure every time
+
+   That is because the residue in tiger_main's frame is left by the
+   program's *own* earlier calls, not by the environment: main (from
+   runtime.c--) calls gc_init, which calls malloc and bzero, and those C
+   frames sit exactly where tiger_main's frame is later built. from_space is
+   gc_init's own result. Same call sequence every run, same residue.
+
+
+Why it passed in 2005
+---------------------
+This was the open question, and the answer is in tests/tiger/x86/, which
+ships upstream's own generated assembly for these very tests.
+
+    python3 -c "import gzip;open('/tmp/up.s','wb').write(
+                gzip.open('tests/tiger/x86/colmajor.s.gz','rb').read())"
+
+Upstream's tiger_main opens with
+
+    leal -240(%esp), %esp
+
+against our
+
+    leal -100(%esp), %esp
+
+Both place the stackdata block at vfp-72, but the frames are 240 and 100
+bytes. So slot 11 sits at a different absolute stack address in the two
+compilers, and lands on different residue from gc_init/malloc/bzero.
+Upstream's landed on something that did not look like a heap pointer; ours
+lands on from_space itself.
+
+So it is luck - but deterministic luck, which is why it reproduces exactly
+every run and is not perturbed by the environment. The unsoundness was
+always there; only the frame layout decides whether it bites.
+
+Worth noting our frame is much *smaller* than upstream's, which is a
+separate observation and probably a good one: we leave 28 bytes below the
+stackdata block for continuations, spills and outgoing arguments where
+upstream left 168.
+
+
+What to do
+----------
+Option A - fix tiger (the real fix, in fork-tiger)
+
+  Make tigerc initialise the frame slots it will declare as pointers, at
+  procedure entry, before any call_gc can run. Zeroing them is enough:
+  gc.c's is_pointer rejects 0, so a zeroed slot is skipped until it holds a
+  real object.
+
+  Roughly: in the procedure prologue tigerc already emits
+  "bits32[fp+0] = pfp;"; emit "bits32[fp+4k] = 0;" for every k whose
+  gc_data flag is 1. It costs one store per pointer slot per call.
+
+  Then regenerate the affected test inputs:
+    cd ~/github/fork-tiger && dune build
+    ./bin/tigerc demos/colmajor.tig > .../colmajor.c--
+  and note that this diverges tests/tiger/*.c-- from the corpus qc-- shipped.
+  Regenerating all fifteen for consistency is the tidier choice.
+
+  The alternative within tiger - emitting per-program-point spans instead of
+  one span per procedure - is the principled fix and much more work.
+
+Option B - leave it, which is what is committed today
+
+  tests/expected/tiger.txt records colmajor as FAIL, so the suite still
+  reports *changes*; it simply starts from 14 rather than 15. The bug is
+  documented here and in notes_debugging_techniques.txt entry 17.
+
+Option C - do NOT zero stackdata in qc--
+
+  Tempting, and it would turn the suite green in one line, but it
+  contradicts the language definition, costs every procedure a memset it did
+  not ask for, and leaves the defect in place for the next front end. Noted
+  here so nobody rediscovers it as a good idea.
+
+
+How to reproduce the diagnosis
+------------------------------
+The instrumentation used above lives in fork-tiger's runtime/gc.c, and the
+key point is that it only takes effect if the archive is rebuilt, because
+tests link tiger's collector from tests/tiger/stdlib-x86.a:
+
+  # edit ~/github/fork-tiger/runtime/gc.c, then
+  make -C tests/tiger regenerate
+  cd tests && rm -rf build/tiger && ./run-tiger.sh colmajor
+  head build/tiger/colmajor.err
+
+Useful prints: in tig_gc's loop, the value and flag of each stack slot
+before gc_forward is called on it; and gc_forward itself when
+size(p)-4 > heap_size.
+
+Remember to restore gc.c and re-run "make -C tests/tiger regenerate"
+afterwards, or the checked-in archive keeps the instrumentation.
+
+For the debugger, see notes_debugging_techniques.txt entry 10. Note that
+qemu's gdb stub has no hardware watchpoints, and software watchpoints
+single-step, so watching a stack address from main is too slow to finish -
+that is why the writer of slot 11 was identified by reasoning about the call
+sequence rather than by watching the address.
