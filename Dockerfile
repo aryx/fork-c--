@@ -5,12 +5,13 @@ FROM ubuntu:22.04
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
-# diffutils for the test runners, libpcre3-dev and libpcre2-dev for commons
-# We install those libraries explicitly rather than letting opam call apt
-# itself: opam's depext handling wants to prompt, and
-# a non-interactive build answers "n" and then fails with exit code 10.
-RUN apt-get install -y build-essential autoconf automake pkgconf \
-      diffutils libpcre3-dev libpcre2-dev
+RUN apt-get install -y build-essential autoconf automake pkgconf
+
+# Setup more deps
+# diffutils for the test runners, libpcre[23]-dev for commons.
+# We install those libraries explicitly rather than using opam depext
+# which usually wants to prompt and fails
+RUN apt-get install -y diffutils libpcre3-dev libpcre2-dev
 
 # The 32-bit x86 toolchain, for the behavioural test tier. qc only emits i386,
 # so the host compiler cannot assemble or link its output whatever the host
@@ -21,7 +22,7 @@ RUN apt-get install -y build-essential autoconf automake pkgconf \
 # arm64 one, and does not exist for arm64 at all. A cross compiler works
 # everywhere.
 #
-# qemu-user, not qemu-user-binfmt: the test runner names qemu-i386 explicitly
+# NOT qemu-user-binfmt: the test runner names qemu-i386 explicitly
 # rather than relying on binfmt_misc. binfmt is a host-wide kernel
 # registration whose interpreter path is resolved inside the container's mount
 # namespace, so an image that runs on one machine silently fails on another -
@@ -36,20 +37,13 @@ RUN opam switch create 4.14.0 -v
 
 WORKDIR /src
 
-# Install dependencies.
+# Install OCaml dependencies.
 #
 # Not just cmm.opam: the commons and profiling libraries that qc links come
 # from the semgrep-pfff-libs submodule and are built from source here rather
 # than installed from opam, so opam still has to be told about *their*
 # dependencies. Each package ships its own .opam, which is the authoritative
 # list.
-#
-# Those .opam files used to be both incomplete and unconstrained, so this step
-# was followed by a long "opam install" of ~33 pinned versions. They have
-# since been fixed at the source in semgrep-pfff-libs/dune-project: the
-# libraries its dune files always required are now declared, and cmdliner is
-# bounded below 2.0 because 2.x changed the API Cmdliner_.ml uses. Nothing
-# extra is needed here any more.
 #
 # process_limits is deliberately absent: profiling no longer depends on it,
 # and installing its dependencies would pull the tracing/opentelemetry chain
