@@ -1,0 +1,32 @@
+# Behavioural tests: continuation/thread/unwind runtime support.
+#
+# Ported from rt.x86.tst, which was Lua. These are the qc-- runtime's own
+# regression tests for `cut to`, `foreign "C-- thread"`, and stack unwinding
+# via the .pcmap data - exactly the paths docs/claude_notes/plan_tiger_hello.md
+# flagged as "compiled but never proven at runtime", since hello.tig never
+# calls into them.
+#
+# Unlike tiger.tests, none of these declare C-- globals, so they link
+# against a runtime built with an EMPTY globals declaration (see run-rt.sh),
+# not tests/build/tiger's - that one is baked for tiger's `bits32 alloc_ptr;`
+# and its Cmm.globalsig hash would not match.
+#
+# Columns:  name  cmm-source  other-source  expected-rc  stdin ("-" for none)
+# Expected stdout is always tests/output/<name>.1
+
+deadcontvar  deadcontvar.c--  deadcontvar-unwind.c  0  -
+fact         fact.c--         factmain.c            0  -
+fork         fork.c--         forkmain.c            0  -
+nest         nest.c--         nestmain.c            0  -
+trace        trace.c--        tracemain.c           0  -
+unwind       unwind.c--       unwindt.c             0  -
+
+# trace currently FAILS: the stack walk it prints stops after 2
+# "Undescribed frame" entries instead of continuing through ~30 more before
+# reaching the next Descriptor. No crash, empty stderr - the walk just
+# terminates early. Plausibly related to plan_tiger_hello.md's observation
+# that our frames run much smaller than upstream's (28 bytes below
+# stackdata for continuations/spills/outgoing args, vs upstream's 168):
+# fewer/different C frames between the qc---generated calls could mean the
+# walker runs out of recognizable frames sooner. Not diagnosed further; see
+# expected/rt.txt, which records it as a known failure like tiger/colmajor.

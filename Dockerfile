@@ -87,3 +87,9 @@ RUN make test
 # while twelve of the fifteen still fail on the known PC-map bug, and reports
 # any *change*.
 RUN make test-tiger
+
+# The runtime's own behavioural tier: `cut to`, `foreign "C-- thread"`, and
+# stack unwinding via .pcmap - paths hello.tig never exercises, so
+# test-tiger proves nothing about them. Also baseline-compared; one of the
+# six (trace) currently fails, see tests/rt.tests.
+RUN make test-rt

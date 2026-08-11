@@ -1,0 +1,6 @@
+deadcontvar PASS
+fact PASS
+fork PASS
+nest PASS
+trace FAIL
+unwind PASS

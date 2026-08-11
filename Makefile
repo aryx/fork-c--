@@ -28,22 +28,28 @@ uninstall::
 # It needs nothing but qc, runs in seconds, and is the one to run while
 # working on the compiler.
 #
-# "test-tiger" is the one that validates code generation rather than just
-# absence of crashes: it builds Tiger programs, runs them, and checks their
-# output and exit code. It needs the i386 cross toolchain and qemu binfmt
-# (see demos/Makefile for the requirements), so it is kept separate.
+# "test-tiger" and "test-rt" validate code generation rather than just the
+# absence of crashes: they build and run real programs and check their
+# output and exit code. Both need the i386 cross toolchain and qemu binfmt
+# (see demos/Makefile for the requirements), so they are kept separate.
+# test-rt covers what test-tiger cannot: `cut to`, `foreign "C-- thread"`
+# and stack unwinding, which hello.tig never exercises.
 #
-# Both compare against a recorded baseline rather than demanding that
+# All three compare against a recorded baseline rather than demanding that
 # everything pass, since a third of tests/src consists of negative tests
-# and twelve of the tiger tests currently fail on one known bug. Re-record
-# with the scripts' --update flag, and review the diff when you do.
+# and there are known failures in the other two (see tests/rt.tests and
+# tests/tiger.tests). Re-record with the scripts' --update flag, and review
+# the diff when you do.
 test::
 	tests/run-compile.sh
 
 test-tiger::
 	tests/run-tiger.sh
 
-test-all:: test test-tiger
+test-rt::
+	tests/run-rt.sh
+
+test-all:: test test-tiger test-rt
 build-docker:
 	docker build -t "cmm" .
 
