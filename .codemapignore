@@ -4,6 +4,7 @@
 # big
 Cminusminus_extra.nw
 /tests/cmm/exp-003.c--
+/TODO/tdpe/sparcRtl*.ml
 
 # submodules:
 /semgrep-pfff-libs
