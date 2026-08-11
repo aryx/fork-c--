@@ -30,7 +30,7 @@ exp-000.c-- OK
 exp-001.c-- OK
 f2.c-- FAIL
 fact.c-- OK
-fadd.c-- FAIL
+fadd.c-- OK
 failedcase.c-- OK
 fargres.c-- OK
 float-000.c-- OK
@@ -61,7 +61,7 @@ ovrflow.c-- OK
 r64.c-- FAIL
 ralloc-000.c-- OK
 ratail.c-- OK
-rnd2.c-- FAIL
+rnd2.c-- OK
 round.c-- FAIL
 round2.c-- FAIL
 sparcerr.c-- OK
@@ -127,7 +127,7 @@ test-051.c-- FAIL
 tf.c-- FAIL
 trace.c-- OK
 unwind.c-- OK
-wtizzy.c-- FAIL
+wtizzy.c-- OK
 x86-000.c-- OK
 x86-001.c-- OK
 zerou.c-- OK
