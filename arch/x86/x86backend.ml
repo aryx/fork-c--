@@ -203,13 +203,69 @@ let layout () (proc : Ast2ir.proc) : Ast2ir.proc * bool =
   (Stack.freeze proc frame, true)
 
 (*****************************************************************************)
+(* Widening (the 'intwiden' and 'floatwiden' phases) *)
+(*****************************************************************************)
+
+(* codegen/widen.ml is Widen, ported from TODO/widen.nw. This is
+ * legalization, not optimization: the x86 FPU only computes at 80-bit
+ * extended precision, and x86 has few byte-addressable registers, so
+ * without these phases tests/src/{fadd,f2,float-002,float-003,r64,rnd2,
+ * round,round2,tf}.c-- fail with "does not support 32-bit value on the
+ * machine stack" and tests/src/{nums,wtizzy}.c-- fail with
+ * Impossible("...unsupported width 8"). See docs/claude_notes/plan_end_to_end.md.
+ *
+ * Stage bodies below are ported from the "Widen" module bindings at
+ * LUA/lua-cmm-driver/lualink.nw:750-812, dropping the Lua/Backplane
+ * plumbing per this file's header comment. Upstream's Backend.x86 phase
+ * list runs them as:
+ *
+ *   intwiden   = seq { update_gamma_counts, create_gamma, widenlocs, dpwiden }
+ *   floatwiden = seq { x86_floats (= floats [80]), store_const(32) }
+ *)
+
+let update_gamma_counts () ((g, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
+  let tgt = Preast2ir.tgt p in
+  Widen.init_gamma_counts ();
+  Zipcfg.iter_rtls (Widen.update_gamma_counts tgt) g;
+  proc, false
+
+let create_gamma () (proc : Ast2ir.proc) : Ast2ir.proc * bool =
+  Widen.create_gamma ();
+  proc, true
+
+let widenlocs () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
+  let tgt = Preast2ir.tgt p in
+  let upd r = if Widen.needs_widening tgt r then Widen.widenlocs tgt r else r in
+  (Zipcfg.map_rtls upd g, p), true
+
+let dpwiden () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
+  let tgt = Preast2ir.tgt p in
+  let upd r = if Widen.needs_widening tgt r then Widen.dpwiden (g, p) r else r in
+  (Zipcfg.map_rtls upd g, p), true
+
+(* x86_floats: upstream's Widen.x86_floats = floats [80], the extended
+ * precision the x87 FPU actually computes at. *)
+let x86_floats () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
+  let tgt = Preast2ir.tgt p in
+  let rm = Rtlutil.fetch tgt.Target.rounding_mode in
+  (Zipcfg.map_rtls (Widen.float ~rm [80]) g, p), true
+
+let store_const32 () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
+  (Zipcfg.map_rtls (Widen.store_const 32) g, p), true
+
+(*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
 (* Pass this to Ast2ir.translate (via Driver.compile) as the optimizer. *)
 let optimizer (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
-  (* NOT YET: intwiden, floatwiden (TODO/widen.nw) *)
+  let proc = run update_gamma_counts proc in
+  let proc = run create_gamma proc in
+  let proc = run widenlocs proc in
+  let proc = run dpwiden proc in
   let proc = run (Placevar.context X86.placevars) proc in
+  let proc = run x86_floats proc in
+  let proc = run store_const32 proc in
   (* NOT YET: simplify_exps, preopt (TODO/optimizers/optimize.nw) *)
   let proc = run X86.X.cfg proc in
   (* NOT YET: improve (TODO/optimizers/) *)
