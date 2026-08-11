@@ -112,6 +112,9 @@ let output_file = ref ""
  *)
 let use_interp = ref false
 
+(* -ppc *)
+let use_ppc = ref false
+
 (* -stop .<ext>. Empty means "go all the way to an executable". *)
 let stop_after = ref ""
 
@@ -250,6 +253,9 @@ let dump_nelab caps file =
  *)
 type backend =
   | X86
+  (* 32-bit big-endian PowerPC, which is what gcc-powerpc-linux-gnu and
+   * qemu-ppc target. *)
+  | Ppc
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
    * See docs/claude_notes/plan_tiger_hello.md.
@@ -270,7 +276,7 @@ let set_empty_vfp_hook () =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 -> ".s"
+   | X86 | Ppc -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -284,6 +290,9 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     | X86 ->
         let asm = X86asm.make Cfgutil.emit chan in
         X86.target, asm, X86backend.optimizer asm, true
+    | Ppc ->
+        let asm = Ppcasm.make Cfgutil.emit chan in
+        Ppc.target, asm, Ppcbackend.optimizer asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
          * see TODO/lua/lualink.ml:234 *)
@@ -491,13 +500,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), X86 -> Assembly
+  | (".s" | "s"), (X86 | Ppc) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), X86 -> Object
+  | (".o" | "o"), (X86 | Ppc) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, X86 -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -520,7 +529,9 @@ let classify file =
  * output file. See docs/claude_notes/plan_tiger_hello.md.
  *)
 let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
-  let backend = if !use_interp then Interp else X86 in
+  let backend =
+    if !use_interp then Interp else if !use_ppc then Ppc else X86
+  in
   let stop = stop_at_of_flag backend in
   let files = List_.map Fpath.to_string xs in
   if List_.null files then failwith "no input file";
@@ -628,6 +639,8 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " <file> write the output to <file>";
     "-interp", Arg.Set use_interp,
     " generate bytecode for the C-- interpreter instead of x86 assembly";
+    "-ppc", Arg.Set use_ppc,
+    " generate 32-bit big-endian PowerPC assembly instead of x86";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
     "-stop", Arg.Set_string stop_after,

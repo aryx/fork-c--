@@ -72,27 +72,6 @@ let spf = Printf.sprintf
 let run stage (proc : Ast2ir.proc) : Ast2ir.proc = fst (stage () proc)
 
 (*****************************************************************************)
-(* Liveness *)
-(*****************************************************************************)
-
-(* Lua's Liveness.liveness, from LUA/lua-cmm-driver/lualink.ml:484:
- *
- *   let live = Dataflow.B.anal Live.live_in in
- *   [ "livenessfn", dataflow_stage (Dataflow.B.rewrite live) ]
- *
- * where dataflow_stage (lualink.ml:216) is the same lift from a graph
- * rewrite to a procedure rewrite that rmvfp uses below.
- *
- * This exists purely to feed ralloc: it annotates the graph with the
- * live-register sets that the allocator reads. Running it without a
- * following ralloc accomplishes nothing.
- *)
-let liveness () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
-  let live = Dataflow.B.anal Live.live_in in
-  let g, changed = Dataflow.B.rewrite live g in
-  (g, p), changed
-
-(*****************************************************************************)
 (* Stack layout (the 'freeze' phase) *)
 (*****************************************************************************)
 
@@ -224,31 +203,6 @@ let layout () (proc : Ast2ir.proc) : Ast2ir.proc * bool =
   (Stack.freeze proc frame, true)
 
 (*****************************************************************************)
-(* Virtual frame pointer removal *)
-(*****************************************************************************)
-
-(* Lua's rmvfp for x86 was
- *
- *   rmvfp = Backplane.seq { Stages.replace_vfp, Optimize.remove_nops }
- *
- * and Stages.replace_vfp was (LUA/lua-cmm-driver/lualink.ml:560)
- *
- *   fun v (g,proc) -> Backplane.of_dataflow proc.Proc.cc.Call.replace_vfp v (g,proc)
- *
- * with of_dataflow (backplane.nw:899) just lifting a graph rewrite to a
- * procedure rewrite. The calling convention supplies the rewrite itself:
- * arch/x86/x86call.ml:142 sets replace_vfp = Vfp.replace_with ~sp.
- *
- * This MUST run after freeze. It rewrites vfp into sp plus a frame offset,
- * and those offsets do not exist until the frame is frozen.
- *
- * remove_nops is not run (TODO/optimizers/); it is an optimization.
- *)
-let rmvfp () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
-  let g, changed = p.Proc.cc.Call.replace_vfp g in
-  (g, p), changed
-
-(*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
@@ -259,7 +213,7 @@ let optimizer (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
   (* NOT YET: simplify_exps, preopt (TODO/optimizers/optimize.nw) *)
   let proc = run X86.X.cfg proc in
   (* NOT YET: improve (TODO/optimizers/) *)
-  let proc = run liveness proc in
+  let proc = run Phases.liveness proc in
   (* Upstream's Backend.x86 used Ralloc.dls (TODO/backend/registers/dls.nw,
    * a DFS linear scan). Flowra is the dataflow-based allocator and is the
    * one that is in the build; both satisfy the same one-function
@@ -269,5 +223,5 @@ let optimizer (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
   (* ralloc runs before freeze: it is what decides how many spill slots
    * the frame needs, and freeze is what turns that into offsets. *)
   let proc = run layout proc in
-  let proc = run rmvfp proc in
+  let proc = run Phases.rmvfp proc in
   asm#cfg_instr proc

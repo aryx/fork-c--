@@ -564,7 +564,7 @@ let target =
    
        (* control flow is solid, except [[cutto]] is a lie *)
        ; T.machine = X.machine
-       ; T.cc_specs         = []      (* added by lua code *)
+       ; T.cc_specs         = Ppccc.cc_specs
        ; T.cc_spec_to_auto  = cconv
    
        ; T.is_instruction = Ppcrec.M.is_instruction
