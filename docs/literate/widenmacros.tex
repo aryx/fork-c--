@@ -1,3 +1,7 @@
+% claude: \inferrule/\TirName below (for the widening inference rules) come
+% from mathpartir, which is not loaded elsewhere in this book.
+\usepackage{mathpartir}
+
 \renewcommand\gets{\mathrel{:=}}
 \newcommand\bwtype[3][\menv]{#1 \derives #2 : \bits{#3}}
 \newcommand\bwoptype[3][\menv]{#2 : \bits{#3} \in #1}
@@ -73,7 +77,7 @@
 \newcommand{\h}[1]{\fty[\htname]{#1}}
 \newcommand{\rul}[1]{\ensuremath{\mbox{\textsc{#1}}}}
 
-\newcommand{\f}{\ensuremath{\mathrm{f}}}
+\renewcommand{\f}{\ensuremath{\mathrm{f}}}
 \newcommand{\ff}[2]{\oname{f2f}_{{#1} \leftarrow {#2}}}
 
 \newcommand{\semeq}{\ensuremath{\cong}}

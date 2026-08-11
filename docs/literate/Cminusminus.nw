@@ -6079,13 +6079,13 @@ let insert_i2f m soln =
 \inferrule [Widen-hw-$\sigma$ \sidecond{n\leq n'\leq w, x_{n'} \text{ is hardware reg}}]
 {w \in itempwidth \\
  \tenv,\menv \derives e \trans{c}              x_{n'} :: \fty[\sigma]{n} :\bits{n'}}
-{\tenv,\menv \derives e \trans{c+1} \xx{w}{n'}\x_{n'} :: \fty[\sigma]{n} :\bits{w}}
+{\tenv,\menv \derives e \trans{c+1} \xx{w}{n'}x_{n'} :: \fty[\sigma]{n} :\bits{w}}
 \]
 \[
 \inferrule [Widen-hw-$\gtname$ \sidecond{n\leq n'\leq w, x_{n'} \text{ is hardware reg}}]
 {w \in itempwidth \\
  \tenv,\menv \derives e \trans{c}              x_{n'} :: \fty[\gtname]{n} :\bits{n'}}
-{\tenv,\menv \derives e \trans{c+1} \xx{w}{n'}\x_{n'} :: \fty[\gtname]{n} :\bits{w}}
+{\tenv,\menv \derives e \trans{c+1} \xx{w}{n'}x_{n'} :: \fty[\gtname]{n} :\bits{w}}
 \]
 <<applying rules>>=
 let widen_hw m soln =
@@ -6950,7 +6950,6 @@ let dpwiden (g,proc) r =
     | RP.Mem(sp,w,e,a) -> RP.Mem(sp,w,find_best_soln e Z ptrwidth, a)
     | RP.Slice(w,i,l)  -> RP.Slice(w,i, widen_loc l)
     | l                -> l in
-@ 
 
 (*
   let find_best_soln_index r tau n w =
@@ -6980,6 +6979,7 @@ let dpwiden (g,proc) r =
     if print_debug then Printf.eprintf "cost: %i\n" soln.cost;
     soln.e' in
 *)
+@ 
 
 \[
 \inferrule [Assign \sidecond{n\leq w\leq w', x_w \text{ is a hardware reg}}]
