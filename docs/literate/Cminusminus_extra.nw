@@ -36378,7 +36378,21 @@ static void asm_function (name) char *name; {
 <<assembly methods(x86asm.nw)>>=
 method section name =
   _section <- name;
-  fprintf _fd ".section .%s\n" name
+  (* claude: the pcmap sections must carry the ALLOC flag, or the data
+   * ends up in the file but not in any PT_LOAD segment, so the run-time
+   * system reads zeroes and every Cmm_lookup_entry fails. GNU as gives
+   * default flags only to the standard section names; for others,
+   * ".section .pcmap" alone yields a non-allocated section. Upstream's
+   * own objects have the same problem - the 2004-era linker merged
+   * pcmap.ld's ".rodata { *(.pcmap) }" into the real .rodata output
+   * section, whereas a modern one creates a second, non-allocated
+   * .rodata.
+   *)
+  match name with
+  | "pcmap" | "pcmap_data" ->
+      fprintf _fd ".section .%s,\"a\",@progbits\n" name
+  | _ ->
+      fprintf _fd ".section .%s\n" name
 method current = _section
 @ 
 <<private assembly state(x86asm.nw)>>=
