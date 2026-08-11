@@ -99,3 +99,9 @@ RUN make test-rt
 # mostly known widen/simplify_exps gaps plus two real parser gaps (carry,
 # tadd) - see tests/native.tests.
 RUN make test-native
+
+# LCC's own regression suite, translated to C--. Also baseline-compared;
+# 7 of 14 currently fail on one shared, well-localized gap - the x86
+# target's `extract` capability is stubbed with `impossf "extract on x86"`
+# (arch/x86/x86.ml:165) - see tests/lcc.tests.
+RUN make test-lcc

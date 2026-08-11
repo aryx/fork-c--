@@ -1,0 +1,14 @@
+8q PASS
+array PASS
+cf PASS
+cvt FAIL
+fields FAIL
+front PASS
+incr PASS
+init FAIL
+limits PASS
+sort FAIL
+spill PASS
+struct FAIL
+switch FAIL
+wf1 FAIL

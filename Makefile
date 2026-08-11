@@ -28,19 +28,21 @@ uninstall::
 # It needs nothing but qc, runs in seconds, and is the one to run while
 # working on the compiler.
 #
-# "test-tiger", "test-rt" and "test-native" validate code generation rather
-# than just the absence of crashes: they build and run real programs and
-# check their output and exit code. All three need the i386 cross toolchain
-# and qemu binfmt (see demos/Makefile for the requirements), so they are
-# kept separate. test-rt covers what test-tiger cannot (`cut to`,
-# `foreign "C-- thread"`, stack unwinding); test-native is the general
-# regression suite (tests/native.tests, ported from arch/all.x86.tst).
+# "test-tiger", "test-rt", "test-native" and "test-lcc" validate code
+# generation rather than just the absence of crashes: they build and run
+# real programs and check their output and exit code. All four need the
+# i386 cross toolchain and qemu binfmt (see demos/Makefile for the
+# requirements), so they are kept separate. test-rt covers what test-tiger
+# cannot (`cut to`, `foreign "C-- thread"`, stack unwinding); test-native is
+# the general regression suite (tests/native.tests, ported from
+# arch/all.x86.tst); test-lcc is LCC's own regression suite translated to
+# C-- (tests/lcc.tests, ported from lcc.x86.tst).
 #
-# All four compare against a recorded baseline rather than demanding that
+# All five compare against a recorded baseline rather than demanding that
 # everything pass, since a third of tests/src consists of negative tests
-# and there are known failures in the other three (see tests/rt.tests,
-# tests/native.tests and tests/tiger.tests). Re-record with the scripts'
-# --update flag, and review the diff when you do.
+# and there are known failures in the other four (see tests/rt.tests,
+# tests/native.tests, tests/lcc.tests and tests/tiger.tests). Re-record
+# with the scripts' --update flag, and review the diff when you do.
 test::
 	tests/run-compile.sh
 
@@ -53,7 +55,10 @@ test-rt::
 test-native::
 	tests/run-native.sh
 
-test-all:: test test-tiger test-rt test-native
+test-lcc::
+	tests/run-lcc.sh
+
+test-all:: test test-tiger test-rt test-native test-lcc
 build-docker:
 	docker build -t "cmm" .
 

@@ -1,0 +1,36 @@
+# Behavioural tests: LCC's own regression suite, translated to C--.
+#
+# Ported from lcc.x86.tst. Unlike lcc.x86.tst's siblings (all.x86.tst had
+# all.ppc.tst/all.sparc.tst reusing the same file list), there is no
+# lcc.ppc.tst/lcc.sparc.tst upstream, so run-lcc.sh is x86-only.
+#
+# Excluded, same as upstream: cq.c--, paranoia.c-- and yacc.c-- (moved to
+# lcc/big/ upstream - large/slow), stdarg.c-- (uses varargs, unsupported),
+# and wf2 (upstream's own comment: "force=1 --- buffer overrun").
+#
+# Like native.tests, Ld.rtend = "" upstream: no run-time system needed, so
+# run-lcc.sh links directly with the cross compiler, no libqcmm.a/pcmap.ld.
+# Same column schema as native.tests, though none of these use "other" or
+# argv - kept for consistency/future extension rather than a narrower format.
+#
+# Columns:  name  cmm-sources(+-joined)  other-c-source(or -)  rc  stdin(or -)  [argv...]
+# Sources and stdin are relative to tests/lcc/, not tests/src/.
+# Expected stdout is tests/lcc/output/<name>.1 when it exists; three
+# entries (front, incr, spill) have none upstream and print only on
+# internal failure - run-lcc.sh treats a missing .1 as "expect empty
+# stdout", same as native.tests.
+
+8q        8q.c--       -  0  -
+array     array.c--    -  0  -
+cf        cf.c--       -  0  juliet.txt
+cvt       cvt.c--      -  0  -
+fields    fields.c--   -  0  -
+front     front.c--    -  0  -
+incr      incr.c--     -  0  -
+init      init.c--     -  0  -
+limits    limits.c--   -  0  -
+sort      sort.c--     -  0  -
+spill     spill.c--    -  0  -
+struct    struct.c--   -  0  -
+switch    switch.c--   -  0  -
+wf1       wf1.c--      -  0  juliet.txt
