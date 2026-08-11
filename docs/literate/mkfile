@@ -171,6 +171,9 @@ SRC_VIEWS= \
  $TOP/codegen/runtimedata.mli\
  $TOP/codegen/runtimedata.ml\
  \
+ $TOP/codegen/widen.mli\
+ $TOP/codegen/widen.ml\
+ \
  $TOP/ir/talloc.mli\
  $TOP/ir/talloc.ml\
  \
