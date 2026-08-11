@@ -1,0 +1,197 @@
+Debugging techniques, written up as they get used
+=================================================
+
+Notes on *how* bugs in this compiler were found, as opposed to what they
+were. Each entry names the technique, the bug it found, and - where it
+applies - the mistake that made it take longer than it should have.
+
+Started 2026-08-11 while chasing "Cmm_YoungestActivation: Assertion `entry'
+failed", which broke 12 of the 15 tiger tests.
+
+
+1. Read the assertion, then read the code around it
+---------------------------------------------------
+The message named a file and a line: runtime.c:144. Two minutes of reading
+gave the whole shape of the problem:
+
+    pc_map_entry* entry = Cmm_lookup_entry(k->pc);
+    assert(entry);
+
+so: something looks up a program counter in a table, and does not find it.
+That immediately splits into three candidates - the table is empty, the
+table is wrong, or the pc is wrong - and the rest of the session was
+deciding which.
+
+Worth doing before any tooling. It converts "the tests fail" into three
+falsifiable statements.
+
+
+2. Look for the program's own instrumentation before writing your own
+----------------------------------------------------------------------
+pcmap.c already had
+
+    char *debug = getenv("QCDEBUG");
+    if (debug && strstr(debug, "pcmap")) ...
+
+Old C code is often full of this. It costs nothing to check and it is
+written by someone who understood the data structure. Here it also told us
+something by *not* firing: the "PCMAP array is unsorted!" warning never
+appeared, which ruled out a whole class of explanation (binary search on
+unsorted data) without an experiment.
+
+
+3. Follow the data, and separate "in the file" from "in memory"
+----------------------------------------------------------------
+This is the one that actually cracked it.
+
+The table lives in a section the compiler emits. So:
+
+    # what does the compiler emit?
+    grep -c pcmap build/hello.s
+
+    # did it survive into the object?
+    i686-linux-gnu-readelf -S build/tiger/sieve.o | grep pcmap
+
+    # and into the executable?
+    i686-linux-gnu-nm sieve | grep Cmm_pc_map
+    i686-linux-gnu-objdump -s -j .rodata \
+        --start-address=0x080f4f28 --stop-address=0x080f5048 sieve
+
+The first answer was "zero" - the compiler emitted no pcmap at all, because
+the *emit_data phase had never been ported from the Lua. Fixing that gave a
+table that looked perfect in the executable: ascending return addresses,
+each paired with a descriptor.
+
+And yet at run time every entry read as zero.
+
+That gap - correct in the file, zero in memory - has a small number of
+causes, and the tool that distinguishes them is readelf:
+
+    i686-linux-gnu-readelf -S sieve | grep rodata
+      [ 8] .rodata  PROGBITS  080ba000  01cbdc  A     <- allocated
+      [21] .rodata  PROGBITS  080f4f28  000c64        <- NO 'A' flag
+
+    i686-linux-gnu-readelf -l sieve | grep LOAD       <- no segment covers it
+
+An ELF section without the ALLOC flag exists in the file and is never mapped
+into memory. Reads of it return whatever happens to be at that address,
+which was zero.
+
+Generalisation: when data is provably correct on disk but wrong at run time,
+stop looking at the producer and check whether the thing is *loaded* -
+section flags, program headers, and whether the address falls inside a
+PT_LOAD range.
+
+
+4. Believe the toolchain's warnings
+------------------------------------
+Every link had been printing
+
+    ld: warning: pcmap.ld contains output sections; did you forget -T?
+
+and it had been filtered out of the test output as noise for most of a day.
+It is precisely the diagnosis: a linker script containing SECTIONS, passed
+as an ordinary input file rather than with -T, gets appended to the default
+script instead of merged into it - which is how a second, non-allocated
+.rodata came to exist.
+
+A warning that appears on every single link is easy to stop seeing. Grep
+your own filters occasionally for what you have taught yourself to ignore.
+
+
+5. Compare against a known-good artefact to date the bug
+---------------------------------------------------------
+Before changing the emitter it was worth knowing whether we had broken
+something or inherited it. tests/tiger/ ships objects built by upstream
+qc-- twenty years ago, so:
+
+    readelf -S build/tiger/sieve.o     | grep pcmap   # ours
+    readelf -S tiger/tigermain-x86.o   | grep pcmap   # upstream's
+
+Both lacked the ALLOC flag. So this was never a regression: the 2004 linker
+merged such a script into the real .rodata, and a modern one does not. That
+changed the fix from "restore what we broke" to "emit what a modern linker
+needs", and it is a different patch.
+
+Having a known-good artefact of any kind - an old binary, a release
+tarball, another implementation - is worth a lot. Look for one before
+concluding that you caused a bug.
+
+
+6. Print the value *and* its context
+-------------------------------------
+When static inspection ran out, a temporary fprintf went into
+Cmm_lookup_entry. The useful part was not the failing pc alone but the pc
+together with the table it was searched in:
+
+    DEBUG lookup FAILED for pc=0x804b334; map has 36 entries [0x80f4f28..0x80f5048)
+      ra[0] = (nil)
+      ra[1] = (nil)
+
+"Not found" alone would have suggested the pc was wrong. Printing the table
+too showed the table was wrong, which is a different bug. One line of
+context turned a wrong hypothesis into the right one.
+
+Remember to remove the instrumentation before measuring the final state -
+and rebuild everything that embeds it. A stale runtime/build/libqcmm.a
+briefly made a real fix look like no change at all.
+
+
+7. Attribute an address to a symbol
+------------------------------------
+Once the table was correct the lookup still failed, now for pc=0x804d98b.
+Whose code is that?
+
+    i686-linux-gnu-nm -n sieve | awk '$1<="0804d98b"' | tail -3
+    ...
+    0804d920 t __libc_start_call_main
+
+nm -n sorts by address, so the last symbol at or below the target is the
+one containing it. The answer - libc - reframed the question completely:
+the stack walk was running past the outermost C-- frame, which is a
+different bug from anything to do with the table.
+
+addr2line is the nicer tool when the binary has debug info; nm -n works
+without it.
+
+
+8. Watch the failure *mode*, not just pass/fail
+------------------------------------------------
+After the ALLOC fix the eleven still-failing tests stopped asserting and
+started segfaulting. That looks like no progress on a pass/fail chart and is
+in fact good news: the assertion is gone, so the lookup now succeeds and
+execution proceeds further before dying. A changed failure mode is evidence,
+and a test suite that only records PASS/FAIL will hide it. Read the stderr.
+
+
+9. Change one thing, then re-measure against a baseline
+--------------------------------------------------------
+tests/run-tiger.sh compares against a recorded baseline rather than
+demanding that everything pass, so a single-test improvement shows up as a
+diff:
+
+    CHANGED against the baseline ('<' expected, '>' got):
+    < exceptions FAIL
+    > exceptions PASS
+
+That is how "the ALLOC fix bought us exception unwinding but not garbage
+collection" became visible immediately, and it also names which subsystem
+each remaining failure belongs to.
+
+
+Tooling traps in this particular working copy
+----------------------------------------------
+- goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
+  "diff -q" and "sed -i" both fail with confusing messages. Scripts here
+  stick to plain "diff a b >/dev/null" and avoid sed -i.
+
+- sort(1) collates by locale, so a recorded baseline's line order differs
+  between a developer shell and a container. Force LC_ALL=C.
+
+- pgrep -f "docker build ..." matches its own command line, so a wait-loop
+  built on it never exits. Twice I reported a build as "still running" when
+  it had already failed. Prefer waiting on the process you actually started.
+
+- Wrapping a command as "cmd; echo EXIT=$?" makes the wrapper's exit status
+  0, so an automated check sees success. Let the command be the last thing
+  that runs.
