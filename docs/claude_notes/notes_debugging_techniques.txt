@@ -118,24 +118,31 @@ tarball, another implementation - is worth a lot. Look for one before
 concluding that you caused a bug.
 
 
-6. Print the value *and* its context
--------------------------------------
-When static inspection ran out, a temporary fprintf went into
-Cmm_lookup_entry. The useful part was not the failing pc alone but the pc
-together with the table it was searched in:
+6. Get the value *and* its context, by print or by debugger
+------------------------------------------------------------
+Static inspection eventually runs out and you have to look at the running
+program. Two ways, and the choice matters less than the habit of capturing
+context alongside the value.
+
+A temporary fprintf is fine when the code is yours. What made it useful here
+was printing the failing pc *together with* the table it was searched in:
 
     DEBUG lookup FAILED for pc=0x804b334; map has 36 entries [0x80f4f28..0x80f5048)
       ra[0] = (nil)
       ra[1] = (nil)
 
-"Not found" alone would have suggested the pc was wrong. Printing the table
-too showed the table was wrong, which is a different bug. One line of
-context turned a wrong hypothesis into the right one.
+"Not found" alone suggests the pc is wrong. The table alongside it showed the
+table was wrong, which is a different bug. One line of context turned a wrong
+hypothesis into the right one.
 
-Remember to remove the instrumentation before measuring the final state -
-and rebuild everything that embeds it. A stale runtime/build/libqcmm.a
-briefly made a real fix look like no change at all.
+Prefer a debugger when the code is not yours - here gc.c belongs to
+fork-tiger and runtime/*.c is generated from a .nw, so editing either to add
+a printf is friction you do not need. See entry 10 for the cross-architecture
+mechanics.
 
+Whichever you use: remove the instrumentation before measuring the final
+state, and rebuild everything that embeds it. A stale
+runtime/build/libqcmm.a briefly made a real fix look like no change at all.
 
 7. Attribute an address to a symbol
 ------------------------------------
@@ -178,6 +185,49 @@ That is how "the ALLOC fix bought us exception unwinding but not garbage
 collection" became visible immediately, and it also names which subsystem
 each remaining failure belongs to.
 
+
+10. Debugging a foreign-architecture binary: qemu + gdb-multiarch
+------------------------------------------------------------------
+We compile 32-bit x86 on an aarch64 machine, so the binaries cannot be run
+natively and gdb cannot debug them directly. qemu-user has a built-in gdb
+stub, which makes this no harder than an ordinary session:
+
+    # terminal 1 (or backgrounded): start the program, stopped, listening
+    qemu-i386 -g 1234 ./build/tiger/sieve
+
+    # terminal 2: attach
+    gdb-multiarch -q ./build/tiger/sieve
+      (gdb) set architecture i386
+      (gdb) target remote :1234
+      (gdb) continue
+
+Scriptable in one line, which is what to do from an agent or a Makefile:
+
+    (qemu-i386 -g 1234 ./sieve &) ; sleep 2
+    gdb-multiarch -q -batch \
+      -ex "set architecture i386" -ex "target remote :1234" \
+      -ex continue -ex "bt 12" -ex "info registers eax ecx esp" \
+      -ex "x/1i \$eip" ./sieve
+
+"set architecture i386" before connecting matters: gdb otherwise guesses from
+the host and the backtrace is nonsense.
+
+What this bought here, in one run: the faulting frame
+(Cmm_c_change_activation), the call chain that reached it (Cmm_ChangeActivation
+<- tig_gc <- tig_call_gc, i.e. the garbage collector's stack walk), the
+faulting instruction ("mov (%eax),%eax") and the bad value (eax = 0x1). That
+is the whole diagnosis - a frame pointer of 1 being dereferenced - from
+material no amount of static inspection would have produced.
+
+Notes:
+ - the binaries here are linked -static, so there are no shared-library
+   symbol problems; expect "BFD: warning: system-supplied DSO ... corrupt
+   string table index" and ignore it.
+ - "Backtrace stopped: previous frame inner to this frame" at the boundary
+   is expected: the frames below are C-- ones, which do not follow the C
+   frame-pointer convention gdb assumes.
+ - no debug info in these objects, so you get symbol names and registers but
+   not source lines or locals. Enough, usually.
 
 Tooling traps in this particular working copy
 ----------------------------------------------
