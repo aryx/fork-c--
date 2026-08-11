@@ -35,6 +35,22 @@ int Cmm_c_change_activation(Cmm_Activation *a) {
    }
   #endif
   /*e: possibly shout about our departure, showing arguments */
+  /* claude: a->vfp here is a %ebp value recovered from a C frame, and the
+   * whole C walk assumes %ebp forms a frame-pointer chain ending in 0. That
+   * held when this was written, but modern glibc and crt are built with
+   * -fomit-frame-pointer and use %ebp as an ordinary register, so the value
+   * handed to main is junk - 0x1 on this machine. Dereferencing it crashes.
+   *
+   * There is no way to walk a C stack that has no frame pointers, so treat an
+   * implausible one as the end of the walk instead. A real frame pointer is a
+   * word-aligned stack address; 0 already ends the walk below.
+   *
+   * For a C-- program called from main this loses nothing: the frames above
+   * the outermost C-- one belong to crt and libc and hold no C-- data.
+   */
+  if (((Cmm_Word)a->vfp & (sizeof(Cmm_Word) - 1)) != 0)
+    return 0;
+
   callerebp = *(Cmm_Word *)a->vfp;
   /*s: possibly announce caller's ebp */
   #if 0

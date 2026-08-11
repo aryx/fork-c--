@@ -266,6 +266,50 @@ callee-saved registers where upstream saved one, and one of them is %ebp,
 which the C-frame walker wants to be a frame pointer rather than an ordinary
 saved register.
 
+12. When the code is "correct", question the environment's assumptions
+------------------------------------------------------------------------
+The garbage-collector crash ended up not being a bug in this compiler at
+all, and the thing that had kept it hidden was an assumption nobody had
+written down.
+
+The chain, once it was visible, was short. Cmm_change_activation looks the
+return address up in the pcmap; if it is absent the caller must be C, so it
+switches to the C walker (runtime.c:65). That is *correct* when the walk
+reaches the outermost C-- frame, whose caller is libc. The C walker then
+follows the %ebp frame-pointer chain - and that is the assumption:
+
+    callerebp = *(Cmm_Word *)a->vfp;    /* a->vfp is a saved %ebp */
+
+Modern glibc and crt are built with -fomit-frame-pointer and use %ebp as an
+ordinary register. One gdb command settled it:
+
+    (gdb) break main
+    (gdb) info registers ebp
+    ebp   0x1
+
+libc hands main an %ebp of 1. Our C-- main dutifully saves that 1 as its
+callee-saved %ebp, the walk recovers it at the boundary, dereferences it,
+and dies. In 2004, when this runtime was written, glibc kept frame pointers
+and the chain terminated at 0.
+
+The fix was three lines in the C walker - treat a misaligned %ebp as the end
+of the walk rather than a pointer - and took the tiger suite from 3 passing
+to 14.
+
+Two generalisations worth carrying:
+
+ - When every artefact you produce looks right and the thing still breaks,
+   start listing what the *surrounding system* is assumed to provide. Frame
+   pointers, section flags, symbol visibility, alignment, a sorted array, a
+   locale. Twenty-year-old code is a rich source of assumptions that were
+   free when it was written and are not free now.
+
+ - "Correct but for a different era" is a distinct category from "wrong",
+   and it changes the fix. Here nothing in the compiler needed changing;
+   the runtime needed to stop trusting a convention the platform no longer
+   honours. Entry 5's known-good artefact is the sibling technique: it tells
+   you whether *you* broke it. This one tells you whether anyone did.
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
