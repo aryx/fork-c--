@@ -5,8 +5,7 @@ FROM ubuntu:22.04
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
-# diffutils for the test runners
-# libpcre3-dev and libpcre2-dev for commons
+# diffutils for the test runners, libpcre3-dev and libpcre2-dev for commons
 # We install those libraries explicitly rather than letting opam call apt
 # itself: opam's depext handling wants to prompt, and
 # a non-interactive build answers "n" and then fails with exit code 10.
@@ -26,65 +25,34 @@ WORKDIR /src
 # Not just cmm.opam: the commons and profiling libraries that qc links come
 # from the semgrep-pfff-libs submodule and are built from source here rather
 # than installed from opam, so opam still has to be told about *their*
-# dependencies. Each ships its own .opam, which is the authoritative list -
-# more reliable than us re-deriving it from dune files.
+# dependencies. Each package ships its own .opam, which is the authoritative
+# list.
 #
-# These are copied before the rest of the source so that editing the
-# compiler does not invalidate this layer.
+# Those .opam files used to be both incomplete and unconstrained, so this step
+# was followed by a long "opam install" of ~33 pinned versions. They have
+# since been fixed at the source in semgrep-pfff-libs/dune-project: the
+# libraries its dune files always required are now declared, and cmdliner is
+# bounded below 2.0 because 2.x changed the API Cmdliner_.ml uses. Nothing
+# extra is needed here any more.
+#
+# process_limits is deliberately absent: profiling no longer depends on it,
+# and installing its dependencies would pull the tracing/opentelemetry chain
+# (and system libcurl) back in.
+#
+# Copied before the rest of the source so that editing the compiler does not
+# invalidate this layer. That relies on the .opam files being committed rather
+# than generated on demand, which is why semgrep-pfff-libs stopped ignoring
+# them.
 COPY cmm.opam ./
 COPY caps/caps.opam caps/
 COPY semgrep-pfff-libs/commons.opam \
      semgrep-pfff-libs/profiling.opam \
-     semgrep-pfff-libs/process_limits.opam \
      semgrep-pfff-libs/
 RUN opam install --deps-only -y \
       ./cmm.opam \
       ./caps/caps.opam \
       ./semgrep-pfff-libs/commons.opam \
-      ./semgrep-pfff-libs/profiling.opam \
-      ./semgrep-pfff-libs/process_limits.opam
-
-# The .opam files above are unfortunately not complete: commons.opam omits
-# several libraries its own dune files require. Worse, the ones it does list
-# are unconstrained, and the submodule does not build against current
-# versions of them - a fresh switch resolves to bos 0.3.0, cmdliner 2.x and
-# so on, and the build then fails with "Unbound module Rresult", type errors
-# in Cmdliner_.ml, and more.
-#
-# So these are pinned to the exact versions of pad's working switch, which is
-# the environment this code demonstrably builds in (OCaml 4.14.2 there, 4.14.0
-# here). Without the pins the build is only reproducible by accident.
-#
-# Notable ones:
-#   bos.0.2.1     - 0.3.0 dropped its rresult dependency, and
-#                   commons/unsafe/UCmd.mli uses Rresult while its dune lists
-#                   only bos, so the module was visible purely transitively.
-#   cmdliner.1.3.0 - 2.x changed the API that commons/Cmdliner_.ml uses.
-#
-# The proper fix for the first one belongs upstream in semgrep-pfff-libs,
-# whose dune should list rresult explicitly.
-#
-# ppx_inline_test is needed to build commons/base at all, not just its tests:
-# that library declares (inline_tests).
-#
-# There is deliberately no trace/opentelemetry group here. It used to be
-# required because profiling declared a dependency on process_limits, which
-# depends on the "tracing" virtual library, whose default implementation
-# tracing.unix pulls opentelemetry, opentelemetry-client-ocurl,
-# ambient-context-lwt and system libcurl. That dependency was vestigial -
-# Profiling.ml never referred to process_limits - and has been removed in the
-# semgrep-pfff-libs submodule.
-RUN opam install -y \
-      sexplib.v0.16.0 ppx_sexp_conv.v0.16.0 ppx_inline_test.v0.16.1 \
-      ppx_deriving.6.0.3 ppx_deriving_yojson.3.9.1 ppx_hash.v0.16.0 \
-      ppxlib.0.32.0 \
-      bos.0.2.1 rresult.0.7.0 fpath.0.7.3 astring.0.8.5 fmt.0.11.0 \
-      cmdliner.1.3.0 logs.0.9.0 re.1.13.2 yojson.2.2.2 uri.4.4.0 \
-      uuidm.0.9.10 digestif.1.3.0 pcre.8.0.5 pcre2.8.0.4 \
-      ANSITerminal.0.8.5 ocolor.1.3.1 semver.0.2.1 timedesc.3.1.0 \
-      memtrace.0.2.3 atdgen-runtime.2.16.0 \
-      alcotest.1.9.0 alcotest-lwt.1.9.0 testo.0.1.0 \
-      lwt.5.9.2 lwt_ppx.5.9.1
+      ./semgrep-pfff-libs/profiling.opam
 
 # Now let's build from source
 COPY . .
