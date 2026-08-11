@@ -1,0 +1,128 @@
+# -*- org -*-
+
+* 0.1 (Q3 2026) (resume qc--, Tiger hello world, x86/PPC back ends)
+
+qc-- is a revived fork of the Quick C-- compiler.  The original source was
+imported in 2010; this release resumes the work on a current OCaml/Linux
+environment and makes the compiler useful again as fork-tiger's native
+back end.
+
+** toolchain
+- x86 native compilation works end to end: freeze stack frames, remove the
+  virtual frame pointer, allocate registers, assemble, and link from =qc=
+- extract and install the C/C-- runtime, with pc-map linker support and x86
+  continuations; emit allocatable =.pcmap= data and stop trusting a host C
+  frame pointer which modern libc does not preserve
+- port the calling-convention automata and native pipeline for PPC; add
+  symmetric =-x86= and =-ppc= entry points
+- remove Lua, including lua-ml, from the active compiler configuration and
+  driver path; the compiler is now wholly driven from OCaml.  Retain the
+  fully-lowered interpreter output as an inspection route
+
+** build infra
+- compile again with OCaml 4.14, adapting old string/bytes code and importing
+  the needed semgrep-pfff-libs support libraries
+- add Dune alongside the historical Makefiles and make it the default build;
+  retain =omk sync= for extracting the literate sources
+- add =bin/qc=, Docker, and GitHub Actions; the container builds the project
+  and runs its behavioural tests
+- remove the obsolete mk/Lua driver path and unused miscellaneous
+  build/coverage helpers
+
+** test infra
+- run fork-tiger's =hello.tig= end to end: =tigerc= produces C--, =qc=
+  produces i386 code, and the static executable runs under QEMU on aarch64
+- add an end-to-end demo Makefile, build Tiger support code from source, and
+  regenerate the artefacts so the suite no longer needs a fork-tiger checkout
+- document the remaining Tiger failure and the cross-toolchain/debugging
+  recipe
+
+** code organization
+- reorganize by subject: IR, CFG, elaboration, target, code generation,
+  layout, register allocation, assembler, runtime, and tools
+- move the literate sources under =docs/literate/= and resume the syncweb
+  workflow; generated =.ml= and =.mli= files remove friction by remaining
+  easy to inspect and edit
+- rename =tools/camlburg/= to =tools/ocamlburg/=
+
+** documentation
+- add the C-- 2.0 specification and historical papers
+- add end-to-end, debugging, and reorganization notes; retain the project's
+  C--/ASDL machine-description approach and its LLVM, VPO, and MLRISC lineage
+
+** status
+- x86 is the working native target and is exercised through Tiger.
+- PPC is wired up; the remaining historical targets are experimental or
+  incomplete.
+
+* Beta (Q1 2015) (syncweb consolidation, pfff update, TODO staging)
+
+** toolchain
+- update the parser and common-library integration to the then-current pfff
+  commons
+- keep the historical Lua interpreter and its clients available, but move
+  them out of the active tree under =TODO/=
+
+** build infra
+- restore a Make-based =sync= target for the literate sources and add a graph
+  target; clean up generated parser artefacts and build annotations
+
+** test infra
+- retain dummy-assembler debugging support while the native back ends remain
+  incomplete
+
+** code organization
+- regenerate and merge the many literate fragments into
+  =Cminusminus_extra.nw=, with =Cminusminus.nw= as the book skeleton
+- move inactive architectures, runtime experiments, and large examples into
+  =TODO/=, making the active compiler path more visible
+
+** documentation
+- refresh the build and literate-programming notes, and retain the imported
+  PDF documentation
+
+** status
+- this was a short maintenance pass after the initial fork work; the compiler
+  remained primarily a reorganized research prototype.
+
+* Alpha (Q4 2010) (fork Quick C--, syncweb/Makefile, x86/PPC compile)
+
+The repository starts with an import of Quick C-- from the upstream 2009
+distribution.  Quick C-- was already an OCaml compiler, with noweb as its
+literate-programming/documentation system and Lua in parts of its
+configuration and driver environment.  The fork starts reducing that
+surrounding friction with syncweb-generated sources and Makefiles.
+
+** toolchain
+- bring the common libraries, ASDL support, C-- parser, pretty-printer, and
+  OCaml compiler driver into the fork; add parse, token, dump, and driver
+  actions
+- get the assembler, interpreter backend, Camlburg engine, x86, and PPC trees
+  compiling; x86 can emit an initial C-- hello assembly trace
+- import/syncwebize the arm, mips, alpha, sparc, ia64, and dummy targets, but
+  leave those non-working targets clearly experimental
+
+** build infra
+- establish Makefiles for the split OCaml libraries and compiler stages
+- begin replacing mkfiles and noweb extraction with Makefiles and syncweb,
+  while retaining generated source files for direct reading and editing
+
+** test infra
+- add small C-- demos, including =hello.c--= and =bool.c--=, and use the
+  dummy assembler and debugger views to trace the compilation pipeline
+
+** code organization
+- split the initially imported tree into common libraries, parsing, error,
+  RTL/assembly/frame/target/CFG/IR front-end stages, architecture directories,
+  and documentation
+- stage unfinished back ends, optimizers, and runtime work under =TODO/=;
+  this establishes the source-vs-experiment boundary retained by later work
+
+** documentation
+- reorganize the imported documentation and add the project notes collected
+  in =pad.txt=; record the compiler's LLVM, VPO, and MLRISC affinities
+
+** status
+- the fork can parse and lower C-- and has compiling x86/PPC backend trees,
+  but it does not yet have the end-to-end native executable path achieved in
+  2026.
