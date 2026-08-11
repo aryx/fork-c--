@@ -35,13 +35,12 @@ let add exp i = RU.addk (RU.Width.exp exp) exp i
 let offset base name ptrwidth =
     RU.add ptrwidth base (Rtl.late (Idgen.offset name) ptrwidth)
 
-let _empty_vfp_hook = ref (fun ptrwidth -> failwith "_empty_vfp_hook not set")
-let empty ptrwidth = 
-  !_empty_vfp_hook ptrwidth
-(* pad: was 
-    relative (Vfp.mk ptrwidth) "empty block" at ~size:0 ~alignment:1
-  but it was bringing too many dependencies
-*)
+(* claude: this was a _empty_vfp_hook ref, filled in by the caller, because
+ * Vfp then lived in layout/ and could not be reached from here. Its core is
+ * in ir/vfp.ml now, so the original one-liner works again.
+ *)
+let empty ptrwidth =
+  relative (Vfp.mk ptrwidth) "empty block" at ~size:0 ~alignment:1
 (*x: block.ml content *)
 let cathl hi lo =
     let size' = align (size lo) (alignment hi) in

@@ -16,8 +16,6 @@ val relative  : Rtl.exp -> string -> (base:Rtl.exp  -> 'a) -> 'a
 val srelative : Rtl.exp -> string -> (start:Rtl.exp -> 'a) -> 'a
   (* construct address at unknown offset and call function *)
 
-(* pad: ugly *)
-val _empty_vfp_hook: (Rtl.width -> t) ref
 (*x: block.mli content *)
 exception OverlapHigh
 type placement      = High | Low

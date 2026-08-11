@@ -12,10 +12,12 @@ module Up = Rtl.Up
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 
-let mk w = Rtl.fetch (Rtl.reg (('V', Rtl.Identity, Cell.of_size w), 0, Rtl.C 1)) w
-let is_vfp = function
-  | RP.Reg (('V', _, _), 0, _) -> true
-  | _ -> false
+(* claude: mk, is_vfp and mk_space moved to ir/vfp.ml, which needs only
+ * Rtl/Cell/Space and is therefore visible to the modules that could not
+ * reach this one - see the header there. What is left is the rewrite, which
+ * genuinely needs Zipcfg and Dataflow.
+ *)
+let is_vfp = Vfp.is_vfp
 (*x: vfp.ml  *)
 let unknown = max_int
 let matcher = { P.embed = (fun a -> P.Vfp a);
@@ -155,13 +157,5 @@ let replace_with ~sp =
 (*x: vfp.ml  *)
 let () = Debug.register "vfp" "stack adjustments for virtual frame pointer"
 (*x: vfp.ml  *)
-let mk_space w = 
-    { Space.space = ('V', Rtl.Identity, Cell.of_size w)
-    ; Space.doc = "holds the virtual frame pointer"
-    ; Space.indexwidth = w
-    ; Space.indexlimit = None
-    ; Space.widths = [w]
-    ; Space.classification = Space.Fixed
-    }
 (*e: vfp.ml  *)
 (*e: front_last/vfp.ml *)

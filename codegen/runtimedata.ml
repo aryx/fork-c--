@@ -71,24 +71,15 @@ let emit_as_asm (PA.T target) asm ~procsym cfg =
         | RP.App (_,exps) -> List.fold_left (fun v e -> v || exp e) false exps
         | RP.Const _      -> false
       and loc l =
-        (* claude: this is layout/vfp.ml's Vfp.is_vfp, inlined. Calling it
-         * would be a dependency cycle: Vfp lives in layout/
-         * (cmm_front_last), which depends on codegen/ (cmm_front_ir), where
-         * this file lives. ir/block.ml has the same problem and solves it
-         * with the _empty_vfp_hook ref. Keep in sync with vfp.ml - the
-         * virtual frame pointer is register 0 of space 'V'.
-         *
-         * This test used to be stubbed out as "if false", which silently
-         * disabled the flatten branch below that turns a vfp-relative
-         * address into a plain frame offset. Span locations then reached
-         * emit_loc still shaped like bits32L[$V[0] + 4] and were rejected
-         * with "unexpected location for span data".
+        (* claude: this used to be stubbed out as "if false", because Vfp
+         * then lived in layout/ (cmm_front_last), which depends on this
+         * library - so it could not be called. That silently disabled the
+         * flatten branch below which turns a vfp-relative address into a
+         * plain frame offset, and span locations reached emit_loc still
+         * shaped like bits32L[$V[0] + 4], which it rejects. The predicate
+         * now lives in ir/vfp.ml and is reachable.
          *)
-        let is_vfp = function
-          | RP.Reg (('V', _, _), 0, _) -> true
-          | _ -> false
-        in
-        if is_vfp l
+        if Vfp.is_vfp l
        then true 
        else match l with
         | RP.Mem   (_,_,e,_) -> exp e

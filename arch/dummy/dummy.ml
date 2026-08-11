@@ -210,7 +210,7 @@ module Make(A: ARCH) = struct
  
           ; C.stack_growth     = Memalloc.Down
           ; C.stable_sp_loc    = std_sp_location
-          ; C.replace_vfp      = Vfp.replace_with ~sp
+          ; C.replace_vfp      = Vfprewrite.replace_with ~sp
           ; C.jump_tgt_reg     = R.reg (reg 7)
           ; C.sp_align         = sp_align    (* alignment of stack pointer at call/cut *)
           ; C.pre_nvregs       = nvolregs    (* registers preserved across calls *)

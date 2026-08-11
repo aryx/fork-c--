@@ -175,9 +175,6 @@ end
 module ConstSortBind = SortAndBind(Const)
 (*x: nelab.ml  *)
 type scope = Local | Global
-(* pad: copy paste of Vfp.mk but brought too many dependencies *)
-let vfp_mk w =
-  Rtl.fetch (Rtl.reg (('V', Rtl.Identity, Cell.of_size w), 0, Rtl.C 1)) w
 
 let program ~swap validate srcmap asm ast =
   E.seq (Metrics.of_ast ~swap srcmap ast.N.target) (fun metrics ->
@@ -186,10 +183,9 @@ let program ~swap validate srcmap asm ast =
     let errorf r    = Printf.kprintf (fun s -> eprint r s; E.Error) in
     let findve r n  = E.catch (eprint r) (fun env -> snd (F.findv n env)) in
     let pointerty   = Types.Bits metrics.Metrics.pointersize in
-    let vfp         = 
-      (* pad: was Vfp.mk but brought too many dependencies *)
-      vfp_mk metrics.Metrics.wordsize
-   in
+    (* claude: was a local copy of Vfp.mk, which used to be unreachable from
+     * here; its core is in ir/vfp.ml now. *)
+    let vfp         = Vfp.mk metrics.Metrics.wordsize in
     let memsize     = metrics.Metrics.memsize in
     let aligned     = Elabexp.aligned metrics in
     let aligned r w = E.catch (eprint r) (fun a -> E.Ok (aligned w a)) in

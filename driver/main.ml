@@ -262,13 +262,6 @@ type backend =
    *)
   | Interp
 
-(* pad: ugly *)
-let set_empty_vfp_hook () =
-  Block._empty_vfp_hook := (fun ptrwidth ->
-    Block.relative (Vfp.mk ptrwidth) "empty block"
-      Block.at ~size:0 ~alignment:1;
-  )
-
 (* qc--(1) says the default output name is the input with its extension
  * replaced, so hello.c-- gives hello.s (or hello.qs for the interpreter,
  * which is the suffix $TIGDIR/readme.txt uses).
@@ -283,7 +276,6 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
   let (srcmap, ast) = Driver.parse file in
   Logs.info (fun m -> m "writing in %s" dest);
   let chan = open_out dest in
-  set_empty_vfp_hook ();
 
   let tgt, asm, optimizer, validate =
     match backend with
@@ -391,12 +383,6 @@ let test_driver_compile file =
       let chan = open_out "/tmp/cmm.dot" in
       Dotasm.asm ~compress:false ~live:true chan
   in
-  (* pad: ugly *)
-  Block._empty_vfp_hook := (fun ptrwidth ->
-    Block.relative (Vfp.mk ptrwidth) "empty block" 
-      Block.at ~size:0 ~alignment:1;
-  );
-
   Driver.compile
     tgt
     (fun proc -> ()) (* ?? optimizer ? *)
