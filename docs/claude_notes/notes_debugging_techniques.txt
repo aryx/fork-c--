@@ -229,6 +229,43 @@ Notes:
  - no debug info in these objects, so you get symbol names and registers but
    not source lines or locals. Enough, usually.
 
+11. Eliminate hypotheses cheaply, and write down what you eliminated
+---------------------------------------------------------------------
+A hard bug is mostly a list of plausible causes being shortened. The
+discipline that pays is picking, each time, the cheapest experiment that can
+*falsify* something - and recording the negative results, because otherwise
+they get re-tested a day later.
+
+From the garbage-collector walk, in the order they were killed:
+
+  "the 20-year-old prebuilt objects are incompatible"
+      relinked the failing test against objects built entirely from source.
+      Still segfaulted. One command, hypothesis dead.
+
+  "qemu is lying to us"
+      the bad value is produced by the runtime reading a location our own
+      compiler recorded; qemu does not participate. And the exceptions test
+      passes through the same emulator and the same machinery. Reasoned
+      rather than tested - but note the free experiment banked for later:
+      CI runs this suite on native amd64, so its result settles it.
+
+  "we do not emit pcmap entries for every call site"
+      counted call sites in the .s against entries in .pcmap. Equal.
+
+  "our register numbering disagrees with the runtime's"
+      decoded our descriptor (%ebp saved at vfp-16, index 9) and grepped the
+      runtime (#define EBP 9). Agreed.
+
+  "our descriptors are malformed"
+      dumped upstream's prebuilt descriptor beside ours. Same field layout,
+      same shape of values, including the negative ra offset that had looked
+      wrong to me.
+
+What survived is worth more for having a graveyard behind it: we save four
+callee-saved registers where upstream saved one, and one of them is %ebp,
+which the C-frame walker wants to be a frame pointer rather than an ordinary
+saved register.
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
