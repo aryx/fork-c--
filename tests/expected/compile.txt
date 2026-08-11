@@ -17,7 +17,7 @@ bool.c-- FAIL
 call3.c-- OK
 carry.c-- FAIL
 conj.c-- OK
-const.c-- FAIL
+const.c-- OK
 cut.c-- OK
 deadcontvar.c-- OK
 deadcut.c-- OK
@@ -71,7 +71,7 @@ sparcerr.c-- OK
 spdemo.c-- OK
 sub.c-- OK
 switch.c-- OK
-tadd.c-- FAIL
+tadd.c-- OK
 tail.c-- OK
 tail2.c-- OK
 tail_from_c.c-- OK

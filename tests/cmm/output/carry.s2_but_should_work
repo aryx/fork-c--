@@ -1,2 +1,2 @@
-File "cmm/carry.c--", line 9, character 22 Error: parse error
-Fatal error: exception Error.ErrorExn("parse error - compilation aborted")
+This can't happen: Asked for temporary in space `general-purpose temporaries' with unsupported width 64
+Fatal error: exception Impossible.Impossible("Asked for temporary in space `general-purpose temporaries' with unsupported width 64")

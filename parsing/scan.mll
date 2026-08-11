@@ -168,8 +168,8 @@ rule token = parse
   | "*"         { fun map -> P.STAR(get lexbuf)      }
   | "/"         { fun map -> P.SLASH(get lexbuf)     }
   | "%"         { fun map -> P.PERCENT(get lexbuf)   }
-  | "@>>"        { fun map -> P.GGREATER(get lexbuf)  }
-  | "@<<"        { fun map -> P.LLESS(get lexbuf)     }
+  | ">>"        { fun map -> P.GGREATER(get lexbuf)  }
+  | "<<"        { fun map -> P.LLESS(get lexbuf)     }
   | "&"         { fun map -> P.AMPERSAND(get lexbuf) }
   | "|"         { fun map -> P.BAR(get lexbuf)       }
   | "^"         { fun map -> P.CARET(get lexbuf)     }

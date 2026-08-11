@@ -47,11 +47,11 @@ sparcerr PASS
 spdemo PASS
 sub PASS
 switch PASS
-tadd FAIL
-tadd22 FAIL
-tadd100- FAIL
-tadd11 FAIL
-taddov FAIL
+tadd PASS
+tadd22 PASS
+tadd100- PASS
+tadd11 PASS
+taddov PASS
 tail PASS
 tail_from_c PASS
 tailbug PASS
