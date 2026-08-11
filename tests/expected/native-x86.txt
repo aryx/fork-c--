@@ -26,7 +26,7 @@ float-001-hero PASS
 float-001-coward PASS
 float-002 FAIL
 float-003 FAIL
-f2 FAIL
+f2 PASS
 global PASS
 hello PASS
 hex PASS
@@ -41,8 +41,8 @@ ralloc-000 PASS
 ratail PASS
 r64 FAIL
 rnd2 PASS
-round FAIL
-round2 FAIL
+round PASS
+round2 PASS
 sparcerr PASS
 spdemo PASS
 sub PASS

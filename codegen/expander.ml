@@ -363,6 +363,13 @@ module IntFloatAddr (Post : Postexpander.S) = struct
     and to_warg room context e = match e with
     | RP.Const (RP.Bits b) ->
         PX.WBits b, DG.Nop
+    (* claude: same constants as Simplify.round_* in elab/simplify.ml (the
+       x87/IEEE-754 rounding-mode control-word encoding), applied here as a
+       fallback for %round_*() args that reach the expander unsimplified *)
+    | RP.App (("round_nearest", []), []) -> PX.WBits (Bits.U.of_int 0 2), DG.Nop
+    | RP.App (("round_down",    []), []) -> PX.WBits (Bits.U.of_int 1 2), DG.Nop
+    | RP.App (("round_up",      []), []) -> PX.WBits (Bits.U.of_int 2 2), DG.Nop
+    | RP.App (("round_zero",    []), []) -> PX.WBits (Bits.U.of_int 3 2), DG.Nop
     | RP.App (("lobits", [w; n]), [e]) ->
         let t, is = to_temp room context e in
         (PX.WTemp (Rg.Reg t)), is

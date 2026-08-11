@@ -31,7 +31,7 @@ exp-000.c-- OK
 exp-001.c-- OK
 exp-002.c-- FAIL
 exp-003.c-- FAIL
-f2.c-- FAIL
+f2.c-- OK
 fact.c-- OK
 fadd.c-- OK
 failedcase.c-- OK
@@ -65,8 +65,8 @@ r64.c-- FAIL
 ralloc-000.c-- OK
 ratail.c-- OK
 rnd2.c-- OK
-round.c-- FAIL
-round2.c-- FAIL
+round.c-- OK
+round2.c-- OK
 sparcerr.c-- OK
 spdemo.c-- OK
 sub.c-- OK
