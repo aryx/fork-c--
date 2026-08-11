@@ -1,15 +1,15 @@
 
 /LUA
 
+# big
 Cminusminus_extra.nw
+/tests/cmm/exp-003.c--
 
 # submodules:
 /semgrep-pfff-libs
-#/caps
+/caps
 
-# for codegraph_build
+#old: for codegraph_build
 #dir: h_camlburg/parsing
 #dir: h_camlburg/demos
-
-# for codegraph_build
 #file: h_camlburg/main.cmt
