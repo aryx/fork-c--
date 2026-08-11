@@ -406,6 +406,45 @@ linked was a twenty-year-old binary. Half an hour went into wondering why
 printfs did not appear. If your instrumentation produces no output, check
 that the code you edited is the code being built.
 
+17. Find the spec before deciding whose bug it is
+---------------------------------------------------
+colmajor's collector crash came down to a garbage-collector root - stack
+slot 11 of tiger_main - holding the value from_space, the first byte of the
+heap, where a real object pointer would be from_space+4. Two readings were
+possible, and they point at different repositories:
+
+  ours   - we emit the wrong location or the wrong value for that slot
+  theirs - the slot is genuinely uninitialised and tiger says it is a root
+
+The instrumentation said which slot and which flag; the generated C-- said
+when it is written:
+
+    41:   call_gc() also aborts ;         <- first collection
+    57:   bits32[%add(fp, 44)] = Lgbl_70; <- slot 11 first written
+
+So the slot is read as a root sixteen lines before anything is stored in it.
+That still does not say who is wrong - it depends on what stackdata
+promises. docs/spec/ has the language definition:
+
+    labels and declarations appear in stackdata { ... }.
+    No initial value can be provided.
+
+which settles it: stackdata is uninitialised by definition, this compiler is
+right not to touch it, and a root map that claims an uninitialised slot
+holds a pointer is unsound. The bug is in the front end, and no change here
+would be a fix - only a way of hiding it.
+
+The general point: when a bug sits at the boundary between two components,
+the specification of that boundary decides which side owns it, and reading
+it is usually quicker than arguing from the code. Without it the tempting
+move here would have been to zero stackdata in the compiler, which would
+have made the test pass, cost every procedure a memset, and left the real
+defect in place for the next front end to trip over.
+
+The corollary is worth stating too: "make the test pass" and "fix the bug"
+are different objectives, and when they diverge it is worth saying so out
+loud rather than quietly choosing the first.
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
