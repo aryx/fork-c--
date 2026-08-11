@@ -137,8 +137,6 @@ done
 # Prune golden files for src/ corpus files that no longer fail - see the
 # header comment on why a stale one is worse than a missing one (doubly so
 # for .s2_but_should_work: a fixed gap should not still look unfixed).
-# Files outside the corpus (tests/src/big/) are left alone: their golden
-# file is inactive, not stale.
 if [ "$update" = yes ]; then
   for f in src/*.c--; do
     name=$(basename "$f" .c--)

@@ -23,11 +23,14 @@ deadcontvar.c-- OK
 deadcut.c-- OK
 divmod.c-- OK
 emptyifbody.c-- FAIL
+eqasolve-000.c-- OK
 err-000.c-- FAIL
 err-001.c-- FAIL
 err-002.c-- FAIL
 exp-000.c-- OK
 exp-001.c-- OK
+exp-002.c-- FAIL
+exp-003.c-- FAIL
 f2.c-- FAIL
 fact.c-- OK
 fadd.c-- OK
