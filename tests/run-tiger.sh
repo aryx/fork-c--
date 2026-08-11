@@ -37,6 +37,24 @@ here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}
 CC32=${CC32:-i686-linux-gnu-gcc}
+
+# How to run a 32-bit x86 binary. We do NOT rely on binfmt_misc: whether a
+# foreign binary "just runs" depends on host-wide registrations that a
+# container inherits only by accident - the interpreter path is resolved in
+# the container's mount namespace, so the same image works on one machine and
+# not another. Naming the emulator explicitly is portable.
+#
+# On a genuine x86 host, set RUN32= (empty) to run the binaries directly.
+# qc drives an external assembler, defaulting to clang because that is the one
+# compiler able to target i386 from any host. We already have a real i386
+# cross toolchain here, so point qc at it rather than requiring both.
+QC_AS=${QC_AS:-$CC32}
+QC_LD=${QC_LD:-$CC32}
+export QC_AS QC_LD
+
+if [ -z "${RUN32+set}" ]; then
+  if command -v qemu-i386 >/dev/null 2>&1; then RUN32=qemu-i386; else RUN32=; fi
+fi
 RT=../runtime
 LIB=$RT/build/libqcmm.a
 T=tiger
@@ -84,7 +102,7 @@ while read -r name src rc stdin_file; do
   fi
 
   if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=$T/$stdin_file; fi
-  timeout 60 "./$B/$name" < "$input" > "$B/$name.out" 2> "$B/$name.err"
+  timeout 60 $RUN32 "./$B/$name" < "$input" > "$B/$name.out" 2> "$B/$name.err"
   got=$?
 
   if ! diff "$B/$name.out" "$T/output/$name.1" > "$B/$name.diff" 2>&1; then

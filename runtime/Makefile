@@ -16,6 +16,13 @@
 CC32 ?= i686-linux-gnu-gcc
 B     = build
 
+# qc drives an external assembler, defaulting to clang because that is the one
+# compiler able to target i386 from any host. Here we already have a real i386
+# cross toolchain, so point qc at it: one toolchain for the C, the assembly and
+# the C--, rather than gcc for some objects and clang for others.
+export QC_AS = $(CC32)
+export QC_LD = $(CC32)
+
 # -w because this is 20-year-old C and its warnings are not ours to fix.
 #
 # -fcommon because GCC 10 flipped the default to -fno-common, which turns

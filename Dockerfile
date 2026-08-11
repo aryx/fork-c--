@@ -12,6 +12,22 @@ RUN apt-get update # needed otherwise can't find any package
 RUN apt-get install -y build-essential autoconf automake pkgconf \
       diffutils libpcre3-dev libpcre2-dev
 
+# The 32-bit x86 toolchain, for the behavioural test tier. qc only emits i386,
+# so the host compiler cannot assemble or link its output whatever the host
+# architecture happens to be.
+#
+# NOT gcc-multilib: multilib means secondary ABIs of the host's own
+# architecture family, so it offers i386 on an amd64 host but 32-bit ARM on an
+# arm64 one, and does not exist for arm64 at all. A cross compiler works
+# everywhere.
+#
+# qemu-user, not qemu-user-binfmt: the test runner names qemu-i386 explicitly
+# rather than relying on binfmt_misc. binfmt is a host-wide kernel
+# registration whose interpreter path is resolved inside the container's mount
+# namespace, so an image that runs on one machine silently fails on another -
+# too fragile to depend on across architectures, Docker and CI.
+RUN apt-get install -y gcc-i686-linux-gnu libc6-dev-i386-cross qemu-user
+
 # Setup OPAM and OCaml
 RUN apt-get install -y opam
 # Initialize opam (disable sandboxing due to Docker)
@@ -63,11 +79,17 @@ RUN eval $(opam env) && dune build @install
 # Test
 RUN ./bin/qc --help
 
-# The behavioural tier ("make test-tiger") is deliberately NOT run here. It
-# builds and executes 32-bit x86 programs, so it needs the i386 toolchain
-# and, on a non-x86 builder, working binfmt inside the container. On an
-# amd64 CI runner "apt-get install gcc-i686-linux-gnu libc6-dev-i386-cross"
-# would be enough since i386 binaries run natively there, but that has not
-# been verified, and a CI step that has never been seen to pass is not
-# worth adding blind. See tests/run-tiger.sh.
+# The cheap tier: run qc over every C-- file in tests/src and demos and compare
+# the outcome against the recorded baseline in tests/expected/. It needs
+# nothing but the qc we just built.
 RUN make test
+
+# The behavioural tier: build the Tiger programs in tests/tiger with qc, run
+# them under qemu-i386, and check their output and exit status against what
+# upstream recorded. This is what validates code generation rather than just
+# the absence of crashes - "make test" only proves qc does not fall over.
+#
+# Like the compile tier it compares against a recorded baseline, so it passes
+# while twelve of the fifteen still fail on the known PC-map bug, and reports
+# any *change*.
+RUN make test-tiger

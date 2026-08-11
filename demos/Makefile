@@ -30,12 +30,20 @@
 #    though, since the system ld has no elf_i386 emulation - the cross
 #    binutils that come with gcc-i686-linux-gnu are what fix that.)
 #
-# 4. To *run* the result on a non-x86 host, qemu's binfmt handler:
+# 4. To *run* the result on a non-x86 host, qemu's user-mode emulator:
 #
-#      sudo apt install qemu-user-binfmt
+#      sudo apt install qemu-user
 #
-#    We link -static so binfmt can run the binary directly. For a dynamic
-#    build you would need: qemu-i386 -L /usr/i686-linux-gnu ./build/hello
+#    The emulator is named explicitly (see RUN32 below) rather than relying
+#    on binfmt_misc. binfmt is a host-wide registration that a container
+#    inherits only by accident - the kernel resolves the interpreter path in
+#    the container's mount namespace - so the same image runs on one machine
+#    and not another. Being explicit is portable.
+#
+#    On a genuine x86 host nothing is needed: "make RUN32= run".
+#
+#    We link -static, so no sysroot argument is required. A dynamic build
+#    would need: qemu-i386 -L /usr/i686-linux-gnu ./build/hello
 #
 # 5. The extracted runtime views in ../runtime/. These are tangled from the
 #    literate sources with syncweb and are checked in; see the RUNTIME_VIEWS
@@ -50,6 +58,13 @@ CC32   ?= i686-linux-gnu-gcc
 
 RT    = ../runtime
 B     = build
+
+# qc drives an external assembler, defaulting to clang because that is the one
+# compiler able to target i386 from any host. Here we already have a real i386
+# cross toolchain, so point qc at it: one toolchain for the C, the assembly and
+# the C--, rather than gcc for some objects and clang for others.
+export QC_AS = $(CC32)
+export QC_LD = $(CC32)
 
 # -w because this is 20-year-old C and the warnings are not ours to fix.
 #
@@ -192,8 +207,13 @@ $(B)/hello: $(OBJS) $(RT)/pcmap.ld
 # written (14 for "Hello, world.\n"), and tiger's front end takes print(a)
 # as the value of the program and returns that register from tiger_main. So
 # report the status rather than treating a non-zero one as an error.
+# RUN32 names the emulator for the 32-bit binary rather than relying on
+# binfmt_misc, which is a host-wide registration a container inherits only by
+# accident. On a genuine x86 host, "make RUN32= run" runs it directly.
+RUN32 ?= $(shell command -v qemu-i386 2>/dev/null)
+
 run: hello
-	@./$(B)/hello; echo "[exit status $$?]"
+	@$(RUN32) ./$(B)/hello; echo "[exit status $$?]"
 
 clean:
 	rm -rf $(B)
