@@ -8,10 +8,19 @@
 # qc does not crash, whereas this proves the emitted machine code computes
 # the right answer.
 #
-# Everything links against tiger/tigermain-x86.o and tiger/stdlib-x86.a,
-# which are prebuilt and checked in. They are twenty years old and still
-# signature-compatible with what we emit today (same Cmm.globalsig hash),
-# so this suite needs no fork-tiger checkout - only qc and ../runtime.
+# The tiger support code - its main, its standard library, its allocator and
+# its collector - is built from source in $TIGDIR rather than taken from the
+# prebuilt tiger/tigermain-x86.o and tiger/stdlib-x86.a that ship here.
+#
+# Those prebuilt objects do still link, and for a while the suite used them,
+# but their .pcmap sections were emitted without the ALLOC flag - the same
+# bug we fixed in our own emitter - so a modern linker leaves their entries
+# out of the loaded map. Programs that collect then walk into a frame whose
+# descriptor cannot be found. queens fails that way and passes when built
+# from source.
+#
+# The cost is that this tier now needs a fork-tiger checkout; point TIGDIR at
+# it if it is not in the default place.
 #
 # Note the test's own .c-- is compiled WITH -globals: the prebuilt objects
 # reference Cmm.global_area but none of them defines it, so the unit under
@@ -37,6 +46,7 @@ here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}
 CC32=${CC32:-i686-linux-gnu-gcc}
+TIGDIR=${TIGDIR:-$HOME/github/fork-tiger}
 
 # How to run a 32-bit x86 binary. We do NOT rely on binfmt_misc: whether a
 # foreign binary "just runs" depends on host-wide registrations that a
@@ -74,8 +84,44 @@ if [ ! -f "$LIB" ]; then
   make -C "$RT" >/dev/null || exit 2
 fi
 
+if [ ! -d "$TIGDIR/runtime" ]; then
+  echo "run-tiger.sh: no fork-tiger at $TIGDIR; set TIGDIR" >&2
+  exit 2
+fi
+
 mkdir -p "$B"
 : > "$B/actual.txt"
+
+# Tiger's own support code. Same commands as demos/Makefile, including the
+# reason its C is compiled from inside its own directories: putting
+# $TIGDIR/stdlib on -I makes tiger's stdlib.h shadow the system one and
+# include itself forever.
+build_tiger_support() {
+  RTA=$(cd "$RT" && pwd)
+  OUT=$(cd "$B" && pwd)
+  # -fno-omit-frame-pointer is required, not cosmetic. Tiger's C stdlib
+  # allocates, so the stack can run C-- -> C -> C-- -> tig_call_gc, and the
+  # collector walks that middle C frame through its %ebp chain. Modern gcc
+  # uses %ebp as an ordinary register, which leaves the walk unable to cross
+  # back into the older C-- frames - so their roots are never scanned, their
+  # objects are collected while still live, and the heap is corrupted.
+  ( cd "$TIGDIR/stdlib"  && $CC32 -w -fcommon -fno-omit-frame-pointer \
+      -I "$RTA" -I "$TIGDIR/runtime" -c stdlib.c -o "$OUT/stdlib.o" ) || return 1
+  ( cd "$TIGDIR/runtime" && $CC32 -w -fcommon -fno-omit-frame-pointer \
+      -I "$RTA" -c gc.c -o "$OUT/gc.o" ) || return 1
+  for f in "$TIGDIR/runtime/runtime.c--" "$TIGDIR/runtime/alloc.c--" \
+           "$TIGDIR/stdlib/stdlibcmm.c--"; do
+    n=$(basename "$f" .c--)
+    "$QC" -stop .o -o "$B/tig_$n.o" "$f" >/dev/null 2>&1 || return 1
+  done
+}
+
+if ! build_tiger_support; then
+  echo "run-tiger.sh: could not build tiger's support code from $TIGDIR" >&2
+  exit 2
+fi
+# tig_runtime.o supplies main and is passed first, so it is not in here.
+SUPPORT="$B/tig_alloc.o $B/tig_stdlibcmm.o $B/stdlib.o $B/gc.o"
 
 update=no
 if [ "$1" = "--update" ]; then update=yes; shift; fi
@@ -96,7 +142,7 @@ while read -r name src rc stdin_file; do
   if ! "$QC" -globals -stop .o -o "$B/$name.o" "$T/$src" >"$B/$name.qcerr" 2>&1; then
     echo "FAIL $name (compile)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
-  if ! "$CC32" -static "$T/tigermain-x86.o" "$B/$name.o" "$T/stdlib-x86.a" \
+  if ! "$CC32" -static "$B/tig_runtime.o" "$B/$name.o" $SUPPORT \
        "$LIB" "$RT/pcmap.ld" -o "$B/$name" 2>"$B/$name.lderr"; then
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi

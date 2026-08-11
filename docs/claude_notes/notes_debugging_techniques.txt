@@ -364,6 +364,48 @@ does, and a value that resembles a *system quantity* - a heap size, a page
 size, a file length, -1 - is a strong hint about which quantity was
 misread.
 
+15. Re-test eliminated hypotheses after the ground moves
+---------------------------------------------------------
+Entry 11 recommends writing down what you eliminated. The complement: a
+negative result is only valid against the system as it was when you took it.
+
+"The prebuilt tiger objects are incompatible" was tested, found innocent,
+and written down as such. It was tested *before* the frame-pointer fix,
+when every garbage-collecting test crashed for an unrelated reason - so the
+experiment could not have shown a difference whatever the answer. Retested
+afterwards, the same hypothesis was correct: building tiger's support code
+from source makes queens pass, because the prebuilt objects' .pcmap sections
+carry no ALLOC flag and their entries never reach the loaded map.
+
+The tell to watch for is an experiment whose outcome is dominated by a
+failure you already know about. If every configuration crashes in the same
+place for a known reason, no configuration is being tested. Park the
+hypothesis rather than eliminating it, and re-run it once the known failure
+is gone.
+
+
+16. Two bugs can hide behind one symptom
+------------------------------------------
+After the change above, queens passed and colmajor - which had been passing -
+started failing. The count stayed at 14 of 15, which on a summary line looks
+like no progress and is in fact two separate defects being separated from
+each other:
+
+  with the prebuilt objects:  queens fails    (missing pcmap entries)
+  with source-built objects:  colmajor fails  (a bad GC root)
+
+Neither configuration passes everything, and no single change was going to.
+The useful move is to pick the configuration that is *more correct* rather
+than the one with the better score - source-built, here, since it has
+complete pcmap data, uses one toolchain, and can be instrumented - and then
+attack what remains with the noise removed.
+
+Being able to instrument mattered immediately. With the prebuilt archive in
+the link, editing tiger's gc.c had no effect at all, because the gc.o being
+linked was a twenty-year-old binary. Half an hour went into wondering why
+printfs did not appear. If your instrumentation produces no output, check
+that the code you edited is the code being built.
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
