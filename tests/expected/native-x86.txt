@@ -24,8 +24,8 @@ float-000 PASS
 float-001 PASS
 float-001-hero PASS
 float-001-coward PASS
-float-002 FAIL
-float-003 FAIL
+float-002 PASS
+float-003 PASS
 f2 PASS
 global PASS
 hello PASS

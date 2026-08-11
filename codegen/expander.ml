@@ -42,6 +42,21 @@ module Dn  = Rtl.Dn
 let upassn = Rtl.Up.assertion
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let unimpf  fmt = Printf.kprintf Impossible.unimp fmt
+
+(* claude: ops like pinf/mzero/pzero/minf/NaN have no hardware
+ * implementation on x86 - they're bit patterns "implemented in the
+ * simplifier using integer ops" (see Context.ml's comment on NaN) and are
+ * only ever meant to reach the postexpander already folded into a Const.
+ * That folding normally happens via Optimize.simplify_exps, which isn't
+ * wired into the pipeline yet (same gap the extract and %round_* fixes
+ * elsewhere in this file work around), so try it locally wherever an
+ * unrecognized operator would otherwise crash, rather than depend on that
+ * pass being plugged in.
+ *)
+let simplify_folds_to_const e =
+  match Dn.exp (Simplify.exp (Up.exp e)) with
+  | RP.Const _ as c -> Some c
+  | _ -> None
 (*x: expander.ml  *)
 let fetch l = RP.Fetch (Dn.loc l, RU.Width.loc l)
 let width e = RU.Width.exp (Up.exp e)
@@ -339,7 +354,10 @@ module IntFloatAddr (Post : Postexpander.S) = struct
           t, assign_slot room slot e tempw <:> is 
       | RP.App (("f2f_implicit_round", ws), [x]) ->
           to_temp room context (RP.App (("f2f", ws), [x; RP.Fetch(rounding_mode, 2)]))
-      | RP.App (op, args) -> (
+      | RP.App (op, args) as e -> (
+        match simplify_folds_to_const e with
+        | Some c -> to_temp' room context c
+        | None ->
         (*s: action for expanding [[op(args)]] into a temporary *)
         match Post.opclass op with
         | PX.Stack(dir, depth) ->
@@ -349,7 +367,7 @@ module IntFloatAddr (Post : Postexpander.S) = struct
             t, assign_slot room slot e w <:> is
         | PX.Register ->
             let w = width e in
-            let t = alloc_direct (Post.result_context op) w in 
+            let t = alloc_direct (Post.result_context op) w in
             let temp e c = to_temp room (contextmap c) e in
             let warg e c = to_warg room (contextmap c) e in
             let is = match O.capply temp warg op args (Post.arg_contexts op) with
@@ -365,7 +383,7 @@ module IntFloatAddr (Post : Postexpander.S) = struct
                 impossf "single-bit result direct into temporary"
             | O.Cmp _ | O.Width | O.Bool | O.Nullary ->
                 impossf "operator %%%s reached postexpander" (fst op) in
-            temp_in_context t context is 
+            temp_in_context t context is
         (*e: action for expanding [[op(args)]] into a temporary *)
       )
     (*s: other generic expander functions *)
@@ -479,7 +497,10 @@ module IntFloatAddr (Post : Postexpander.S) = struct
           let slot = exchange_slot w in
           assign_slot room slot e w <:>
           to_stack room (RP.App (f2f, [fetch_slot slot w; rm]))
-      | RP.App (op, args) -> (
+      | RP.App (op, args) as e -> (
+        match simplify_folds_to_const e with
+        | Some c -> to_stack' room c
+        | None ->
        (*s: action for expanding [[op(args)]] onto the stack *)
        Debug.eprintf "expander" "to_stack generic case for %s\n" (D.exp e);
        match Post.opclass op with
@@ -714,6 +735,17 @@ module IntFloatAddr (Post : Postexpander.S) = struct
                       impossf "bad aggregation in split assignment" in
                 (*e: definition of [[split_assignment]] *)
                 let a, is' = address room addr in
+                (* claude: give unresolved constant-folding ops (pinf, NaN,
+                   ...) a chance to become a plain Const here, so a wide one
+                   hits the RP.Const case below (which already knows how to
+                   split it into two stores) instead of falling through to
+                   the generic to_temp fallback, which cannot allocate a
+                   temp wider than this target's registers. See
+                   simplify_folds_to_const's comment. *)
+                let right =
+                  match simplify_folds_to_const right with
+                  | Some c -> c
+                  | None -> right in
                 (match right with
                 | 
                  (*s: \emph{pattern [[->]] action} for low-bit store *)

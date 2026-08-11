@@ -40,8 +40,8 @@ float-000.c-- OK
 float-001-coward.c-- OK
 float-001-hero.c-- OK
 float-001.c-- OK
-float-002.c-- FAIL
-float-003.c-- FAIL
+float-002.c-- OK
+float-003.c-- OK
 fork.c-- OK
 global.c-- OK
 hello.c-- OK
