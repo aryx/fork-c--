@@ -70,3 +70,26 @@ let liveness () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
 let rmvfp () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
   let g, changed = p.Proc.cc.Call.replace_vfp g in
   (g, p), changed
+
+(* Lua's Runtime.emit_data, the "*emit_data" phase that closes
+ * Opt.standard_phases. From LUA/lua-cmm-driver/lualink.ml:530:
+ *
+ *   fun asm _ (g,proc) ->
+ *     Runtimedata.emit_as_asm proc.Proc.target asm proc.Proc.symbol g;
+ *     ((g, proc), false)
+ *
+ * This is what writes the .pcmap entries describing each call site: where
+ * the frame is, which registers hold what, where the stack data lives. The
+ * run-time system reads them to walk the stack, which is how it garbage
+ * collects and unwinds. Without this phase the .pcmap section is empty,
+ * Cmm_pc_map and Cmm_pc_map_limit are equal, and every lookup returns NULL -
+ * so any program that collects or raises dies on
+ *
+ *   runtime.c:144: Cmm_YoungestActivation: Assertion `entry' failed
+ *
+ * Backend.x86 and Backend.ppc both set emit_data; Backend.interp leaves it
+ * nil, which is why the interpreter pipeline does not run it.
+ *)
+let emit_data asm () ((g, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
+  Runtimedata.emit_as_asm p.Proc.target asm ~procsym:p.Proc.symbol g;
+  (proc, false)

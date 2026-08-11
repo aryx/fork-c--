@@ -142,4 +142,6 @@ let optimizer (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
   let proc = run Flowra.ralloc proc in
   let proc = run layout proc in
   let proc = run Phases.rmvfp proc in
-  asm#cfg_instr proc
+  (* '*assemble' then '*emit_data', the last two of Opt.standard_phases *)
+  asm#cfg_instr proc;
+  ignore (Phases.emit_data asm () proc)
