@@ -11,6 +11,12 @@
 \input{latex/Macros}
 \input{Macros_cmm}
 
+% for widen.nw
+%\usepackage[leqno,centertags]{amsmath}
+%\usepackage{latexsym}
+%\usepackage{mathpartir}
+\input{widenmacros}
+
 %******************************************************************************
 % Prelude
 %******************************************************************************
