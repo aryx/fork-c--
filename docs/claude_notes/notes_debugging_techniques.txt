@@ -310,6 +310,60 @@ Two generalisations worth carrying:
    honours. Entry 5's known-good artefact is the sibling technique: it tells
    you whether *you* broke it. This one tells you whether anyone did.
 
+13. Reading globals in a binary with no debug info
+---------------------------------------------------
+These objects carry no DWARF, so gdb cannot say "print heap_size". The
+symbol table is still there, though, and that is enough:
+
+    i686-linux-gnu-nm queens | grep -E " [bBdD] (heap_size|space_end)$"
+      080f31fc b heap_size
+      080f3210 B space_end
+
+    (gdb) x/1dw 0x080f31fc     # as decimal
+    (gdb) x/1xw 0x080f3210     # as hex
+
+The lower-case letters in nm's output mean local (static) symbols, which is
+how file-scope statics in C stay visible. Reading a global this way settled
+in one step that the heap really was the size we had asked for and that
+space_end was consistent with it - killing two hypotheses that would
+otherwise have needed instrumentation.
+
+The same trick reaches data the compiler itself emits: the C-- global area
+is a symbol like any other, so
+
+    A=$(nm queens | awk '/Cmm.global_area/{print "0x"$1}')
+    (gdb) x/2xw $A
+
+prints the program's global variables - here alloc_ptr, which showed the
+allocation pointer sitting exactly at the start of the heap and so proved
+the collector had not been triggered by running out of room.
+
+
+14. An absurd argument is a better clue than the crash site
+------------------------------------------------------------
+The queens crash is inside memcpy, which tells you nothing by itself -
+memcpy is never the bug. The useful part was the register holding its
+length:
+
+    => 0x8077326 <memcpy+70>: rep movsl %ds:(%esi),%es:(%edi)
+    ecx  0x1e8482   2000002
+
+Two million words is eight megabytes, which was exactly the heap size in
+that run. An object claiming to be the size of the entire heap is not a
+corrupted object - it is not an object at all, and something has treated a
+non-object as one.
+
+That reframes the search immediately: stop looking at the copy, start
+looking at who decided this address was a live object. In a garbage
+collector that means the root set, which here comes from the span and
+pcmap data the compiler emits.
+
+Generally: when a crash lands in a library routine, the arguments at the
+crash site usually identify the caller's mistake faster than the backtrace
+does, and a value that resembles a *system quantity* - a heap size, a page
+size, a file length, -1 - is a strong hint about which quantity was
+misread.
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
