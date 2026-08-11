@@ -13,8 +13,16 @@
 # The sources here are tangled from the literate sources with syncweb and
 # are checked in; see docs/literate/mkfile.
 
+# Plain "qc", so that this Makefile works unchanged from its installed copy in
+# <prefix>/lib/cmm. In-tree callers pass an absolute QC pointing at ./bin/qc;
+# guessing a relative path here was worse, because "../bin/qc" resolves
+# differently depending on where make was invoked from.
+QC   ?= qc
 CC32 ?= i686-linux-gnu-gcc
-B     = build
+
+# Overridable so an installed, read-only copy can build elsewhere:
+#   make -C $(opam var prefix)/lib/cmm B=/tmp/qcrt
+B    ?= build
 
 # qc drives an external assembler, defaulting to clang because that is the one
 # compiler able to target i386 from any host. Here we already have a real i386
@@ -47,7 +55,6 @@ CFLAGS32 = -w -fcommon -I .
 # understood. See docs/claude_notes/plan_tiger_hello.md.
 GLOBALS_DECL ?= bits32 alloc_ptr;
 
-QC ?= ../bin/qc
 
 C_OBJS   = $(B)/runtime.o $(B)/pcmap.o $(B)/gcc-linux.o $(B)/x86cont.o
 CMM_OBJS = $(B)/cut.o $(B)/thread.o $(B)/yield.o

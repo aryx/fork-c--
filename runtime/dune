@@ -1,0 +1,41 @@
+; The run-time system is C and assembly, built by the Makefile in this
+; directory rather than by dune - it has to be cross-compiled for 32-bit x86,
+; which dune knows nothing about and which would break "dune build" on a
+; machine without the cross toolchain.
+;
+; What dune does own is *installing* it, so that "dune install" and "dune
+; uninstall" cover the run-time as well as the qc binary, rather than leaving
+; a pile of files that only a hand-written rule could remove. Everything below
+; lands in <prefix>/lib/cmm/, alongside the package's other installed files.
+;
+; A client - fork-tiger, say - then needs
+;
+;   qc--runtime.h        to compile its own C against the run-time interface
+;   pcmap.h              included by runtime.c
+;   pcmap.ld             on its link line; it places the .pcmap sections and
+;                        defines Cmm_pc_map and Cmm_pc_map_limit around them
+;   the .c/.s/.c-- files and the Makefile, to build the run-time itself
+;
+; Why the sources and not a prebuilt libqcmm.a: cut.c--, thread.c-- and
+; yield.c-- have to be compiled with the *client's* global-variable
+; declarations. Every C-- unit that touches the global area references a
+; symbol Cmm.globalsig.<hash> computed from those declarations, so an archive
+; built for a client with no globals will not link against one that declares
+; some - tiger declares "bits32 alloc_ptr;". Until that is resolved there is
+; no single archive that is correct for everybody, so we ship what is needed
+; to build the right one. See the XXX in this directory's Makefile.
+(install
+ (section lib)
+ (package cmm)
+ (files
+  qc--runtime.h
+  pcmap.h
+  pcmap.ld
+  runtime.c
+  pcmap.c
+  gcc-linux.c
+  x86cont.s
+  cut.c--
+  thread.c--
+  yield.c--
+  Makefile))

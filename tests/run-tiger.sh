@@ -78,7 +78,11 @@ if ! command -v "$CC32" >/dev/null 2>&1; then
 fi
 if [ ! -f "$LIB" ]; then
   echo "run-tiger.sh: building the run-time system first" >&2
-  make -C "$RT" >/dev/null || exit 2
+  # QC absolute: runtime/Makefile defaults to plain "qc" so that its
+  # installed copy works, and make -C changes directory, so a relative path
+  # would resolve against the wrong place.
+  make -C "$RT" QC="$(cd "$(dirname "$QC")" && pwd)/$(basename "$QC")" \
+    >/dev/null || exit 2
 fi
 
 mkdir -p "$B"

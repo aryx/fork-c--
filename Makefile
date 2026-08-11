@@ -10,8 +10,18 @@ all::
 	dune build
 clean::
 	dune clean
+# Only the cmm package: the workspace also contains caps and the
+# semgrep-pfff-libs packages, which come from submodules and are none of our
+# business to install into someone's switch.
+#
+# This installs the qc binary and, via runtime/dune, the run-time system's
+# headers, linker script and sources into <prefix>/lib/cmm. "make uninstall"
+# reverses both.
 install::
-	dune install
+	dune install cmm
+
+uninstall::
+	dune uninstall cmm
 # Two tiers, because they have very different requirements.
 #
 # "test" is the cheap one: does qc still translate every C-- file we have?
