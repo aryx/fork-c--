@@ -10,6 +10,7 @@ VERSION=1
 SRC_ORIG=Cminusminus.nw Cminusminus_extra.nw
 
 #TODO: sync also ast.asdl (or ast.ml generated code)
+#TODO: ir/vfp.ml split from layout/vfprewrite.ml
 
 SRC_VIEWS= \
  $TOP/commons/commons2/auxfuns.mli\
@@ -200,8 +201,8 @@ SRC_VIEWS= \
  $TOP/layout/mvalidate.ml\
  $TOP/layout/placevar.mli\
  $TOP/layout/placevar.ml\
- $TOP/layout/vfp.mli\
- $TOP/layout/vfp.ml\
+ $TOP/layout/vfprewrite.mli\
+ $TOP/layout/vfprewrite.ml\
  \
  $TOP/arch/dummy/dummy.mli\
  $TOP/arch/dummy/dummy.ml\

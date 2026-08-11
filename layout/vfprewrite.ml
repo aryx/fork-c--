@@ -1,4 +1,4 @@
-(*s: front_last/vfp.ml *)
+(*s: layout/vfprewrite.ml *)
 (*s: vfp.ml  *)
 module D  = Dataflow
 module G  = Zipcfg
@@ -158,4 +158,4 @@ let replace_with ~sp =
 let () = Debug.register "vfp" "stack adjustments for virtual frame pointer"
 (*x: vfp.ml  *)
 (*e: vfp.ml  *)
-(*e: front_last/vfp.ml *)
+(*e: layout/vfprewrite.ml *)

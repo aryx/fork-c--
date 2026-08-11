@@ -7848,8 +7848,6 @@ val relative  : Rtl.exp -> string -> (base:Rtl.exp  -> 'a) -> 'a
 val srelative : Rtl.exp -> string -> (start:Rtl.exp -> 'a) -> 'a
   (* construct address at unknown offset and call function *)
 
-(* pad: ugly *)
-val _empty_vfp_hook: (Rtl.width -> t) ref
 @
 %%
 %%\paragraph{Block Operations} Block composition is guided by
@@ -7967,13 +7965,12 @@ let add exp i = RU.addk (RU.Width.exp exp) exp i
 let offset base name ptrwidth =
     RU.add ptrwidth base (Rtl.late (Idgen.offset name) ptrwidth)
 
-let _empty_vfp_hook = ref (fun ptrwidth -> failwith "_empty_vfp_hook not set")
-let empty ptrwidth = 
-  !_empty_vfp_hook ptrwidth
-(* pad: was 
-    relative (Vfp.mk ptrwidth) "empty block" at ~size:0 ~alignment:1
-  but it was bringing too many dependencies
-*)
+(* claude: this was a _empty_vfp_hook ref, filled in by the caller, because
+ * Vfp then lived in layout/ and could not be reached from here. Its core is
+ * in ir/vfp.ml now, so the original one-liner works again.
+ *)
+let empty ptrwidth =
+  relative (Vfp.mk ptrwidth) "empty block" at ~size:0 ~alignment:1
 @
 %%
 %%\paragraph{Block Operations} When concatenating, we have to leave a gap
@@ -14445,9 +14442,6 @@ and freeLValueVars l tail = match l with
 %%
 <<nelab.ml >>=
 type scope = Local | Global
-(* pad: copy paste of Vfp.mk but brought too many dependencies *)
-let vfp_mk w =
-  Rtl.fetch (Rtl.reg (('V', Rtl.Identity, Cell.of_size w), 0, Rtl.C 1)) w
 
 let program ~swap validate srcmap asm ast =
   E.seq (Metrics.of_ast ~swap srcmap ast.N.target) (fun metrics ->
@@ -14456,10 +14450,9 @@ let program ~swap validate srcmap asm ast =
     let errorf r    = Printf.kprintf (fun s -> eprint r s; E.Error) in
     let findve r n  = E.catch (eprint r) (fun env -> snd (F.findv n env)) in
     let pointerty   = Types.Bits metrics.Metrics.pointersize in
-    let vfp         = 
-      (* pad: was Vfp.mk but brought too many dependencies *)
-      vfp_mk metrics.Metrics.wordsize
-   in
+    (* claude: was a local copy of Vfp.mk, which used to be unreachable from
+     * here; its core is in ir/vfp.ml now. *)
+    let vfp         = Vfp.mk metrics.Metrics.wordsize in
     let memsize     = metrics.Metrics.memsize in
     let aligned     = Elabexp.aligned metrics in
     let aligned r w = E.catch (eprint r) (fun a -> E.Ok (aligned w a)) in
@@ -26684,9 +26677,16 @@ let simplify_loc loc =
       | RP.Fetch (l,_)  -> loc l
       | RP.App (_,exps) -> List.fold_left (fun v e -> v || exp e) false exps
       | RP.Const _      -> false
-    and loc l = 
-      print_string "TODO: pad: reput Vfp.is_vfp\n";
-      if false (* Vfp.is_vfp l  *)
+    and loc l =
+      (* claude: this used to be stubbed out as "if false", because Vfp
+       * then lived in layout/ (cmm_front_last), which depends on this
+       * library - so it could not be called. That silently disabled the
+       * flatten branch below which turns a vfp-relative address into a
+       * plain frame offset, and span locations reached emit_loc still
+       * shaped like bits32L[$V[0] + 4], which it rejects. The predicate
+       * now lives in ir/vfp.ml and is reachable.
+       *)
+      if Vfp.is_vfp l
      then true 
      else match l with
       | RP.Mem   (_,_,e,_) -> exp e
@@ -29787,12 +29787,12 @@ let replace_globals _ (g, ({ Proc.target = tgt; Proc.global_map = gmap} as proc)
       subst in
   (G.map_rtls subst g, proc), true (* probably changed :-) *)
 @
-\section{[[front_last/vfp.nw]]}
-<<front_last/vfp.ml>>=
+\section{[[layout/vfp.nw]]}
+<<layout/vfprewrite.ml>>=
 <<vfp.ml >>
 @
 
-<<front_last/vfp.mli>>=
+<<front_last/vfprewrite.mli>>=
 <<vfp.mli >>
 @
 
@@ -29928,9 +29928,7 @@ let replace_globals _ (g, ({ Proc.target = tgt; Proc.global_map = gmap} as proc)
 %%assignment can be optimized away.
 %%\end{itemize}
 <<vfp.mli >>=
-val mk_space : Rtl.width       -> Space.t
-val mk       : Rtl.width       -> Rtl.exp
-val is_vfp   : Rtl.Private.loc -> bool
+(* claude: mk, mk_space and is_vfp are now in ir/vfp.ml *)
 val replace_with : sp:Rtl.loc -> Zipcfg.graph -> Zipcfg.graph * bool
 @ 
 <<vfp.ml >>=
@@ -29946,10 +29944,12 @@ module Up = Rtl.Up
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 
-let mk w = Rtl.fetch (Rtl.reg (('V', Rtl.Identity, Cell.of_size w), 0, Rtl.C 1)) w
-let is_vfp = function
-  | RP.Reg (('V', _, _), 0, _) -> true
-  | _ -> false
+(* claude: mk, is_vfp and mk_space moved to ir/vfp.ml, which needs only
+ * Rtl/Cell/Space and is therefore visible to the modules that could not
+ * reach this one - see the header there. What is left is the rewrite, which
+ * genuinely needs Zipcfg and Dataflow.
+ *)
+let is_vfp = Vfp.is_vfp
 @ 
 %%We replace $\vfp$ by $\sp+k$ using the identity
 %%$\vfp = \sp + (\vfp - \sp)$.
@@ -30108,14 +30108,6 @@ and find_k'_added_to_sp (RP.Rtl ges) =
   find false 0 ges in
 @ 
 <<vfp.ml >>=
-let mk_space w = 
-    { Space.space = ('V', Rtl.Identity, Cell.of_size w)
-    ; Space.doc = "holds the virtual frame pointer"
-    ; Space.indexwidth = w
-    ; Space.indexlimit = None
-    ; Space.widths = [w]
-    ; Space.classification = Space.Fixed
-    }
 @ 
 
 %******************************************************************************
@@ -30544,7 +30536,7 @@ let conv name jump specs =
  
   ; C.stack_growth     = Memalloc.Down
   ; C.stable_sp_loc    = std_sp_location
-  ; C.replace_vfp      = Vfp.replace_with ~sp
+  ; C.replace_vfp      = Vfprewrite.replace_with ~sp
   ; C.jump_tgt_reg     = R.reg (reg 7)
   ; C.sp_align         = sp_align    (* alignment of stack pointer at call/cut *)
   ; C.pre_nvregs       = nvolregs    (* registers preserved across calls *)
@@ -33960,7 +33952,7 @@ let cconv name specs =
   ; C.stack_growth     = growth
   ; C.stable_sp_loc    = std_sp_location
   ; C.jump_tgt_reg     = R.reg (rreg 7)
-  ; C.replace_vfp      = Vfp.replace_with ~sp
+  ; C.replace_vfp      = Vfprewrite.replace_with ~sp
   ; C.sp_align         = 4
   ; C.pre_nvregs       = nvolregs
   ; C.volregs          = volregs
@@ -34153,7 +34145,7 @@ let target =
    
        (* control flow is solid, except [[cutto]] is a lie *)
        ; T.machine = X.machine
-       ; T.cc_specs         = []      (* added by lua code *)
+       ; T.cc_specs         = Ppccc.cc_specs
        ; T.cc_spec_to_auto  = cconv
    
        ; T.is_instruction = Ppcrec.M.is_instruction
@@ -36883,7 +36875,7 @@ let conv ~preserved ~jump ~struct' ~altret name specs ~return_to cut =
   ; C.stack_growth     = Memalloc.Down
   ; C.stable_sp_loc    = std_sp_location
   ; C.jump_tgt_reg     = Rtl.reg edx
-  ; C.replace_vfp      = Vfp.replace_with ~sp
+  ; C.replace_vfp      = Vfprewrite.replace_with ~sp
   ; C.sp_align         = 4               (* alignment of stack pointer at call/cut *)
   ; C.ra_on_entry      = const (R.fetch ra 32)   (* where return address is on entry *)
   ; C.where_to_save_ra = (fun _ t -> Talloc.Multiple.loc t 't' 32)
@@ -36941,7 +36933,7 @@ let thread cut specs =
   ; C.stack_growth     = Memalloc.Down
   ; C.stable_sp_loc    = std_sp_location
   ; C.jump_tgt_reg     = Rtl.reg edx
-  ; C.replace_vfp      = Vfp.replace_with ~sp
+  ; C.replace_vfp      = Vfprewrite.replace_with ~sp
   ; C.sp_align         = 4               (* alignment of stack pointer at call/cut *)
   ; C.ra_on_entry      = const (R.fetch ra 32)   (* where return address is on entry *)
   ; C.where_to_save_ra = (fun _ t -> Talloc.Multiple.loc t 't' 32)
