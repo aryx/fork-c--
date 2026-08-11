@@ -81,3 +81,6 @@ external/stdlib/
 /demos/build/
 /runtime/build/
 /tests/build/
+
+# intermediate assembly left beside a regenerated tests/tiger artefact
+/tests/tiger/*.s

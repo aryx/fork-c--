@@ -24,6 +24,27 @@ int Cmm_c_change_activation(Cmm_Activation *a) {
   pc_map_entry *entry;
   int i;
 
+  /* claude: this must come before the assert below, and must accept 0.
+   *
+   * a->vfp here is a %ebp value recovered from a C frame, and the whole C
+   * walk assumes %ebp forms a frame-pointer chain ending in 0. That held
+   * when this was written, but modern glibc and crt are built with
+   * -fomit-frame-pointer and use %ebp as an ordinary register, so whatever
+   * it holds when main is called is not a frame pointer. What that is
+   * varies by libc: 0x1 on this machine's glibc 2.39, 0 on the 2.35 in the
+   * Docker image - and 0 tripped the assert, which is why the suite passed
+   * here and failed there.
+   *
+   * There is no way to walk a C stack that has no frame pointers, so an
+   * implausible one ends the walk instead. A real frame pointer is a
+   * non-null word-aligned stack address.
+   *
+   * For a C-- program called from main this loses nothing: the frames above
+   * the outermost C-- one belong to crt and libc and hold no C-- data.
+   */
+  if (a->vfp == 0 || ((Cmm_Word)a->vfp & (sizeof(Cmm_Word) - 1)) != 0)
+    return 0;
+
   assert(a->vfp != 0);   /* protect against an unexpected error */
   /*s: possibly shout about our departure, showing arguments */
   #if NOISY
@@ -35,22 +56,6 @@ int Cmm_c_change_activation(Cmm_Activation *a) {
    }
   #endif
   /*e: possibly shout about our departure, showing arguments */
-  /* claude: a->vfp here is a %ebp value recovered from a C frame, and the
-   * whole C walk assumes %ebp forms a frame-pointer chain ending in 0. That
-   * held when this was written, but modern glibc and crt are built with
-   * -fomit-frame-pointer and use %ebp as an ordinary register, so the value
-   * handed to main is junk - 0x1 on this machine. Dereferencing it crashes.
-   *
-   * There is no way to walk a C stack that has no frame pointers, so treat an
-   * implausible one as the end of the walk instead. A real frame pointer is a
-   * word-aligned stack address; 0 already ends the walk below.
-   *
-   * For a C-- program called from main this loses nothing: the frames above
-   * the outermost C-- one belong to crt and libc and hold no C-- data.
-   */
-  if (((Cmm_Word)a->vfp & (sizeof(Cmm_Word) - 1)) != 0)
-    return 0;
-
   callerebp = *(Cmm_Word *)a->vfp;
   /*s: possibly announce caller's ebp */
   #if 0
