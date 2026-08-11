@@ -107,8 +107,9 @@ let version = "0.1"
 (* -o. Empty means "derive it from the input file name". *)
 let output_file = ref ""
 
-(* -interp. There is no -x86 flag because x86 is the default, as in
- * qc--(1); see the backend type below.
+(* -interp. -x86 is accepted too, just for symmetry with -ppc/-interp in
+ * --help; it is a no-op since x86 is the default (see the backend type
+ * below), but it can override an earlier -ppc/-interp on the command line.
  *)
 let use_interp = ref false
 
@@ -627,6 +628,8 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " generate bytecode for the C-- interpreter instead of x86 assembly";
     "-ppc", Arg.Set use_ppc,
     " generate 32-bit big-endian PowerPC assembly instead of x86";
+    "-x86", Arg.Unit (fun () -> use_interp := false; use_ppc := false),
+    " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
     "-stop", Arg.Set_string stop_after,
