@@ -162,7 +162,11 @@ module Post = struct
   (*x: x86 postexpander *)
   let move ~dst ~src = if Register.eq dst src then DG.Nop else tempstore dst (tempval src)
   (*x: x86 postexpander *)
-  let extract   ~dst ~lsb ~src = impossf "extract on x86"
+  let extract ~dst ~lsb ~src =
+    let w = tempwidth src in
+    let n = tempwidth dst in
+    let v = if lsb = 0 then tempval src else RO.shrl w (tempval src) (RO.unsigned w lsb) in
+    tempstore dst (if n = w then v else RO.lobits w n v)
   let aggregate ~dst      ~src = impossf "aggregate on x86"
   (*x: x86 postexpander *)
   let li  ~dst const = tempstore dst (Up.const const)
