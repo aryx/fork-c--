@@ -15,7 +15,7 @@ bits-bug.c-- OK
 blockcpy.c-- OK
 bool.c-- OK
 call3.c-- OK
-carry.c-- FAIL
+carry.c-- OK
 conj.c-- OK
 const.c-- OK
 cut.c-- OK
@@ -61,7 +61,7 @@ non-local-cut.c-- FAIL
 not.c-- OK
 nums.c-- FAIL
 ovrflow.c-- OK
-r64.c-- FAIL
+r64.c-- OK
 ralloc-000.c-- OK
 ratail.c-- OK
 rnd2.c-- OK

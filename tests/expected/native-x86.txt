@@ -7,7 +7,7 @@ arglist PASS
 bits-bug PASS
 bool PASS
 blockcpy PASS
-carry FAIL
+carry PASS
 cut PASS
 conj PASS
 deadcut PASS
@@ -39,7 +39,7 @@ not PASS
 ovrflow PASS
 ralloc-000 PASS
 ratail PASS
-r64 FAIL
+r64 PASS
 rnd2 PASS
 round PASS
 round2 PASS

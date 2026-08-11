@@ -278,16 +278,33 @@ module IntFloatAddr (Post : Postexpander.S) = struct
           t, Post.hwget ~dst:(fill,t) ~src:r 
       (*e: cases for sign extending or zero extending a narrow hardware register *)
       (*s: cases for extracting from a wide temporary *)
-      | RP.App (("lobits", [w;n]), [RP.App (("shrl", [w']), [e; RP.Const (RP.Bits b)])]) ->
+      | RP.App (("lobits", [w;n]), [RP.App (("shrl", [w']), [e; RP.Const (RP.Bits b)])]) as orig ->
           let shamt = Bits.U.to_int b in
           assert (w = w' && shamt < w);
-          let t = alloc context n in
-          let src, is = to_temp room (guess_context e) e in
-          t, is <:> Post.extract ~dst:t ~lsb:shamt ~src
-      | RP.App (("lobits", [w;n]), [e]) ->
-          let t = alloc context n in
-          let src, is = to_temp room (guess_context e) e in
-          t, is <:> Post.extract ~dst:t ~lsb:0 ~src
+          (* claude: e can be wider than any temp this target supports (e.g.
+             a bits64 fetch on x86, whose temps are all 32 bits) - to_temp
+             below would then crash trying to allocate one just to shift and
+             discard most of it. Simplify already knows how to turn "shift a
+             memory/register fetch right by a whole cell, then truncate"
+             into a directly narrower fetch at an offset address/index
+             (elab/simplify.ml's lobits), so try that first; it's the same
+             rewrite Optimize.simplify_exps would have applied earlier if
+             that pass were wired into the pipeline (it isn't yet). *)
+          (match Dn.exp (Simplify.exp (Up.exp orig)) with
+           | (RP.Fetch ((RP.Mem _ | RP.Reg _), _)) as simplified ->
+               to_temp' room context simplified
+           | _ ->
+               let t = alloc context n in
+               let src, is = to_temp room (guess_context e) e in
+               t, is <:> Post.extract ~dst:t ~lsb:shamt ~src)
+      | RP.App (("lobits", [w;n]), [e]) as orig ->
+          (match Dn.exp (Simplify.exp (Up.exp orig)) with
+           | (RP.Fetch ((RP.Mem _ | RP.Reg _), _)) as simplified ->
+               to_temp' room context simplified
+           | _ ->
+               let t = alloc context n in
+               let src, is = to_temp room (guess_context e) e in
+               t, is <:> Post.extract ~dst:t ~lsb:0 ~src)
       (*e: cases for extracting from a wide temporary *)
       (*s: cases for narrow weird value operators *)
       | RP.App ((("sx"|"zx") as xop, [n; w]),
