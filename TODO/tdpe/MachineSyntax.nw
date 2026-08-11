@@ -1,0 +1,36 @@
+% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
+% l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
+% l2h macro exfile 1 <a href="#$1"><tt>#1</tt></a>
+
+
+This module contains special definitions to abstract the syntactic
+definition.
+
+<<machineSyntax.mli>>=
+type exp = <<Machine>>Syntax.exp
+val pprint : exp -> unit
+
+<<machineSyntax.ml>>=
+type exp = <<Machine>>Syntax.exp
+let pprint = <<Machine>>Syntax.pprint
+
+<<machine.ml>>=
+type t = <<Machine>>Trees.M.t
+module MT = <<Machine>>Trees.Rec(<<Machine>>RtlMk.M)
+let encode x = try MT.rec_t x with Sledlib.Failure s -> Rtl.Up.rtl(Rtl.Private.Rtl [])
+module MR = <<Machine>>RtlRec.M(<<Machine>>TreesBuild.Build)
+let recognizeInstruction =
+  fun rtl ->
+    try Some(MR.defaultOfInstruction (Rtl.Dn.rtl rtl))
+    with Match_failure _ -> None
+    | Sledlib.Failure _ -> None
+let instruction = Tdpe.RR(<<Machine>>Nbe.reify_t,<<Machine>>Nbe.reflect_t)
+
+<<machine.mli>>=
+type t = <<Machine>>Trees.M.t
+val instruction : t Tdpe.rr
+val encode : t -> Rtl.rtl
+val recognizeInstruction : Rtl.rtl -> t option
+
+@
+

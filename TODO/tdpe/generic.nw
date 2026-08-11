@@ -1,0 +1,82 @@
+% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
+% l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
+% l2h macro exfile 1 <a href="#$1"><tt>#1</tt></a>
+
+\input{macros.tex}
+
+\title{Machine-dependent optimiziation functions}
+
+In this module we are defining the machine-dependent optimization
+functions, as simple composition of the RTL-based optimizers with the
+encoding and decoding functions.
+
+The types of the machine-dependent functions may be:
+<<type definitions>>=
+type subst_type =
+    Machine.t ->
+      Machine.t ->
+        Machine.t option
+
+type 'a read_write_type = 
+    'a Rtlutil.ReadWrite.observer ->
+      'a Rtlutil.ReadWrite.observer ->
+        Machine.t ->
+          'a -> 'a
+
+@ \section{Interface}
+
+<<generic.mli>>=
+<<type definitions>>
+
+val frwdSubstInst : subst_type
+val frwdSubstInst' : subst_type
+val frwdInstMerge : subst_type
+
+val identity : Machine.t -> Machine.t
+val identInstr : Machine.t -> Machine.t option
+
+val read_write_listsInstr : 'a read_write_type
+val read_write_locsInstr : 'a read_write_type
+
+val read_write_setsInstr : Machine.t -> Register.Set.t * Register.Set.t
+
+    
+@ \section{Implementation}
+<<generic.ml>>=
+<<type definitions>>
+module M = Machine
+
+let mkMachineSubst f =
+  fun i1 -> fun i2 ->
+    OpOps.bind
+      M.recognizeInstruction
+      (f (M.encode i1) (M.encode i2))
+
+let frwdSubstInst =
+  mkMachineSubst RtlSubst.frwdSubst
+
+let frwdSubstInst' =
+  mkMachineSubst RtlSubst2.frwdSubst'
+
+@ We assume completely pessimistic liveness information.
+<<generic.ml>>=
+let frwdInstMerge =
+  mkMachineSubst
+    (fun i1 -> fun i2 ->
+      RtlMerge.frwdMerge i1 i2 (fun _ -> false))
+
+let identity instruction = instruction
+let identInstr i1 = M.recognizeInstruction (M.encode i1)
+
+
+let read_write_listsInstr read write instruction zero =
+  Rtlutil.ReadWrite.fold read write (M.encode instruction) zero
+
+let read_write_setsInstr instruction =
+  Rtlutil.ReadWrite.sets (M.encode instruction)
+
+let read_write_locsInstr read write instruction zero =
+  ReadWrite.read_write_sets
+    read write (M.encode instruction) zero
+
+@ 

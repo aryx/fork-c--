@@ -1,0 +1,25 @@
+% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
+
+\section{Tools for TDPE}
+
+Basically, a simple gensym function.
+
+<<tools.mli>>=
+val gensym : string -> string
+val resetGen : unit -> unit
+
+val fst : ('a * 'b) -> 'a
+
+@ \section{Implementation}
+
+<<tools.ml>>=
+let idcount = Cell.newCell()
+
+let gensym stub =
+  Cell.inc(idcount);
+  stub ^ (string_of_int (!idcount))
+
+let resetGen () = Cell.reset idcount
+
+let fst (x,y) = x
+@ 

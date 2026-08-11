@@ -1,0 +1,272 @@
+% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
+% l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
+% l2h macro exfile 1 <a href="#$1"><tt>#1</tt></a>
+
+\input{macros.tex}
+\section{Introduction}
+
+In this module, we define an interface to program specialization and we
+provide several specialization targets. The specialization targets are
+the available RTL-optimization functions.
+
+For the purpose of generality, a ``specializable'' term is defined with
+a [[TEST_INSTANCE]] module.
+<<spec.mli>>=
+module type TEST_INSTANCE =
+    <<specialization instance signature>>
+@ The actual specialization call is obtained as an associated [[TEST]]
+module, with the help of a functor.
+<<spec.mli>>=
+module type TEST =
+    <<specialization signature>>
+module MkTest(B : TEST_INSTANCE) : TEST
+@ 
+\section{Specialization targets}
+\label{sec:targets}
+The specialization targets that we provide at this point are the
+following: identity function, forward substitutions, locations read and
+written by an instruction.
+<<spec.mli>>=
+module IdTest            : TEST
+module IdTranslationTest : TEST
+
+module FrwdSubstTest  : TEST
+module FrwdSubstTest' : TEST
+module FrwdMergeTest  : TEST
+
+module ReadWriteTest  : TEST
+module ReadWriteTest' : TEST
+(*module ReadWriteTestS : TEST*)
+
+@ A [[TEST_INSTANCE]] module, defines a specialization target by
+specifying the term, its type, its associated Tdpe combinator, and the
+name of residual value.
+<<specialization instance signature>>=
+  sig
+    type tau
+    val term : tau
+    val termName : string
+    val combinator : tau Tdpe.rr
+  end
+@ Available specialization directives/outputs. We might provide
+functions for writing specialized code into files, etc.
+<<specialization signature>>=
+  sig
+    val normalize : unit -> Tdpe.dynamic
+    val pprint : unit -> unit
+    val pprintModule : unit -> unit
+    val pprintOutput : unit -> unit
+  end
+@ \section{Implementation}
+<<spec.ml>>=
+module type TEST_INSTANCE =
+    <<specialization instance signature>>
+module type TEST =
+    <<specialization signature>>
+
+module T = Tdpe
+module M = Machine
+module Ms = MachineSyntax
+module S = Syntax
+module G = Generic
+
+<<specialization code>>
+<<test instances>>
+<<visible instances>>
+
+@ This is the actual specialization code. We provide functions for
+pretty-printing on output, as a compilable Caml module, etc.
+<<specialization code>>=
+module MkTest(Ts : TEST_INSTANCE) =
+  struct
+    let normalize () = T.nbe Ts.combinator Ts.term
+    let pprint () =
+      let resTerm = normalize() in
+      Ms.pprint resTerm;
+      Pprint.print_flush();
+      print_newline()
+
+    let pprintModule () =
+      print_string "open Sparcrep\n";
+      print_string "let v = \n";
+      pprint ();
+      print_newline()
+
+    let pprintOutput () =
+      print_string "++++++++++++++++++++++++++++++++++++++\n";
+      print_string "The specialization of ";
+      print_string Ts.termName;
+      print_string " is:\n";
+      print_newline();
+      pprint ();
+      print_newline()
+  end
+
+@ \subsection{Specialization targets} Specialization targets are defined
+as instances of the [[TEST_INSTANCE]] signature.  The [[Id]] instance
+may be used to visualize the reflection over the [[instruction]] type.
+<<test instances>>=
+module Id : TEST_INSTANCE =
+  struct
+    type tau = M.t -> M.t
+    let term = RtlFuns.identity
+    let termName = "identity"
+    let combinator = T.arrow(M.instruction,M.instruction)
+  end
+@ The [[IdTranslation]] instance produces the residualizing version of
+the composition of the RTL-encoder and RTL-recognizer. Ideally, it
+should yield a similar result as with the test above (modulo the
+[[option]] answer type).
+<<test instances>>=
+module IdTranslation : TEST_INSTANCE =
+  struct
+    type tau = M.t -> M.t option
+    let term = G.identInstr
+    let termName = "identInstr"
+    let combinator = T.arrow(M.instruction,T.option(M.instruction))
+  end
+
+@ \subsubsection{Forward substitution instances}
+
+There are several instances of forward-substitution functions which have
+the same type (and TDPE combinator). Therefore, we abstract over them.
+<<test instances>>=
+module type FS_INSTANCE =
+  sig
+    val term : G.subst_type
+    val termName : string
+  end
+
+module MkFS(B : FS_INSTANCE) : TEST_INSTANCE =
+  struct
+    open B
+     type tau = G.subst_type
+    let combinator =
+      T.arrow(M.instruction,
+              T.arrow(M.instruction,T.option(M.instruction)))
+    let term = B.term
+    let termName = B.termName
+  end
+@
+The [[FSI]] instance is associated with the first implementation of
+forward substitution on RTLs.
+<<test instances>>=
+module FSI : FS_INSTANCE =
+  struct
+    let term = G.frwdSubstInst
+    let termName = "frwdSubstInst"
+  end
+@ Respectively, [[FSI']] is associated with the second implementation of
+the forward substitution on RTLs.
+<<test instances>>=
+module FSI' : FS_INSTANCE =
+  struct
+    let term = G.frwdSubstInst'
+    let termName = "frwSubstInstX"
+  end
+@ And [[FMI]] is associated with the RTL-merge procedure.
+<<test instances>>=
+module FMI : FS_INSTANCE =
+  struct
+    let term = G.frwdInstMerge
+    let termName = "frwdInstMerge"
+  end
+
+module FS = MkFS(FSI)
+module FS' = MkFS(FSI')
+module FM = MkFS(FMI)
+
+@ \subsubsection{The read-write instances} There are two [[read_write_]]
+functions with the same type: they are also treated generically.
+<<test instances>>=
+module type RW_INSTANCE =
+    sig
+      val term : T.dynamic G.read_write_type
+      val termName : string
+    end
+@ The [[_cd]] indicates that this module is the ``by-the-book'' use of
+TDPE, but leads to code duplication.
+<<test instances>>=
+module MkRW_cd(B : RW_INSTANCE) : TEST_INSTANCE =
+  struct
+    type tau =  T.dynamic G.read_write_type
+    let treg =
+      T.arrowN(T.char,
+               T.arrowN(T.a',
+                        T.arrowN(T.int,
+                                 T.arrowStub("z",T.a',T.a'))))
+    let combinator =
+      T.arrowStub
+        ("read",treg,
+         T.arrowStub("write",treg,
+                     T.arrowStub("instruction",M.instruction,
+                                 T.arrowStub("zero",T.a',T.a'))))
+    let term = B.term
+    let termName = B.termName
+  end
+@ This module exploits some knowledge about the functions and does not
+produce code duplication.
+<<test instances>>=
+module MkRW(B : RW_INSTANCE) : TEST_INSTANCE =
+  struct
+    type tau =
+        T.dynamic Rtlutil.ReadWrite.observer ->
+          T.dynamic Rtlutil.ReadWrite.observer ->
+            T.dynamic ->
+              T.dynamic -> T.dynamic 
+
+    let treg =
+      T.arrowN(T.char,
+               T.arrowN(T.a',
+                        T.arrowN(T.int,
+                                 T.arrowStub("z",T.a',T.a'))))
+    let combinator =
+      T.arrowStub("read",treg,
+                  T.arrowStub("write",treg,
+                              T.arrowStub("instruction",T.a',
+                                          T.arrowStub("zero",T.a',T.a'))))
+    let term =
+      (fun read -> fun write -> fun instr -> fun zero -> 
+        B.term read write (Tdpe.nbe' M.instruction instr) zero)
+    let termName = B.termName
+  end
+
+module RWI : RW_INSTANCE =
+  struct
+    let term = G.read_write_listsInstr
+    let termName = "read_write_setsInstr"
+  end
+module RWI' : RW_INSTANCE =
+  struct
+    let term = G.read_write_locsInstr
+    let termName = "read_write_locsInstr'"
+  end
+
+(*module RWS : TEST_INSTANCE =
+  struct
+    let term = G.read_write_setsInstr
+    let termName = "read_write_locsInstr'"
+    type tau =
+        T.dynamic -> T.dynamic * T.dynamic
+    let combinator =
+      T.arrowStub("instruction",T.a',T.pair(T.a',T.a'))
+  end*)
+
+module RW = MkRW(RWI)
+module RW' = MkRW(RWI')
+
+@ These are the actual modules.
+<<visible instances>>=
+
+module IdTest = MkTest(Id)
+module IdTranslationTest = MkTest(IdTranslation)
+
+module FrwdSubstTest  = MkTest(FS)
+module FrwdSubstTest' = MkTest(FS')
+module FrwdMergeTest  = MkTest(FM)
+
+module ReadWriteTest = MkTest(RW)
+module ReadWriteTest' = MkTest(RW')
+(*module ReadWriteTestS = MkTest(RWS)*)
+@ 
+

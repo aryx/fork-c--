@@ -1,0 +1,17 @@
+
+
+Make a proper implementation of the bits/bitops code.
+
+Integrate the SML code with the toolikit. A better use of file names
+
+Change the syntactic representation of machine instructions.
+
+Find a way to deal with relocatable addresses
+
+Benchmarking? Generating instruction streams?
+
+Residualizing instance: pprining to file, streams, etc.
+
+Straighten out the RTL-substitution code.
+
+----------------------------------------

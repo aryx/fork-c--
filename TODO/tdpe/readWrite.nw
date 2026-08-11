@@ -1,0 +1,83 @@
+% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
+% l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
+% l2h macro exfile 1 <a href="#$1"><tt>#1</tt></a>
+
+\input{macros.tex}
+
+\title{Set-based read and write functions}
+
+This module defines a function [[read_write_sets]] collecting the
+locations read and written by a function. The function
+[[read_write_sets]] is based on the [[read_write_lists]] from the
+\module{../src/rtlutil} module. The function makes use of a trivial
+list-based implementation of sets.
+
+<<readWrite.mli ((evaluating))>>=
+type 'a set
+<<common types>>
+<<common values declarations>>
+
+<<readWrite.mli ((residualizing))>>=
+type set = MachineSyntax.exp
+<<common types>>
+<<common value declarations>>
+
+<<common types>>=
+type index = Base.std_int
+type loc = Rtl.space * index * Rtl.width
+type locInfo = loc * loc
+
+<<common value declarations>>=
+val read_write_sets : 'a Rtlutil.ReadWrite.observer -> 'a Rtlutil.ReadWrite.observer ->
+  Rtl.rtl -> 'a -> 'a
+    
+    
+@ \section{Evaluating Implementation}
+
+<<readWrite.ml ((evaluating))>>=
+type set = 'a list
+<<common types>>
+let empty = []
+<<common code>>
+
+@ \section{Residualizing Implementation}
+<<readWrite.ml ((residualizing))>>=
+type set = MachineSyntax.exp
+<<common types>>
+let empty = []
+
+module Sy = Syntax
+<<common code>>
+
+@ \subsection{The common code}
+
+I have to mention that, in the residualizing interpretation, the
+equality on indexes is structural equality on expressions: it this
+limited context, is meaning-preserving, but it is a conservative
+approximation of the ``best code''... Introducing the usual equality
+would lead to dynamic tests in static contexts.
+
+<<common code>>=
+let insert space index width list =
+  let rec walk ls =
+    match ls with
+      [] -> [(space,index,width)]
+    | (space',index',width')::ls' ->
+        if space = space' && index=index' && width=width'
+        then ls
+        else (space',index',width')::(walk ls')
+  in walk list
+
+let insert_left space index width (set1,set2) =
+  (insert space index width set1,set2)
+let insert_right space index width (set1,set2) =
+  (set1,insert space index width set2)
+
+let read_write_sets read write rtl z =
+  let rws = Rtlutil.ReadWrite.fold insert_left insert_right in
+  let (readlist, writelist) = rws rtl (empty, empty) in
+  let read ls (s,i,w) = read s i w ls in
+  let write ls (s,i,w) = write s i w ls in
+  List.fold_left read (List.fold_left write z writelist) readlist
+
+@ 

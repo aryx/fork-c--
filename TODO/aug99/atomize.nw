@@ -1,0 +1,138 @@
+% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
+
+\section{Atomization --- an approximation of instruction selection}
+
+\providecommand\gets{\mathrel{:=}}
+% l2h substitution gets :=
+
+This module converts complicated RTLs to simple ones, by introducing
+temporaries.
+<<interface>>=
+type allocator = RTL.width -> RTL.location (* give me a temporary *)
+
+val atomize : 
+  allocator -> IRNode.atts -> IRNode.node -> RTL.rtl -> IRNode.node
+  (* given a successor and an RTL, return sequence of atomized RTLs *)
+@ The following assignments are atomic:
+\begin{itemize}
+\item $t_1 \gets \mathit{primop}(t_2, \ldots, t_n)$
+\item $t_1 \gets t_2$
+\item $t_2 \gets \$m[t_2]$
+\item $\$m[t_1] \gets [t_2]$
+\item $t_1 \gets k$
+\item $t_1 \gets v$
+\item $v \gets t_1$
+\item $t_1 \mathrel{\mathit{relop}} t_2 \rightarrow a$, where $a$~is
+an atomic assignment.
+\end{itemize}
+An RTL is atomic if all the assignments therein are atomic.
+
+[[atomize]] produces a sequence of atomic RTLs with the additional
+property that every temporary is dead after its first use.
+@
+\subsection{Implementation}
+
+A typical function takes a value of type~[['a]] and returns a new
+value of type~[['a]], \emph{plus} a sequence of RTLs  that,
+when executed first, establish the invariant that the (run-time) value
+of the result is the same as the value of the argument.
+For example, given an expression $x+y$, we might return a new
+expression $t_3$, plus the sequence of RTLs $t_1 \gets x; t_2 \gets y;
+t_3 \gets t_1 + t2$.
+We actually represent this list as a function from successor node to
+successor node; the function prepends the list to its argument.
+This representation avoids lots of copying
+<<implementation>>=
+type 'a preceded = 'a * (IRNode.node -> IRNode.node)
+let (@<<) f g x = f (g x)     (* function composition *)
+@ Looks to me like a monad.
+We define a whole set of combinators for this.
+<<implementation>>=
+type allocator = RTL.width -> RTL.location (* give me a temporary *)
+module New = struct
+  <<monad operations>>
+  let app operator args =
+    let (args, pre) = Lift.list args
+    in  (RTL.APP(operator, args), pre)
+  let fetch (loc, pre) ty = (RTL.FETCH (loc, ty), pre)
+  let agg a (cell, pre)  = (RTL.AGG (a, cell), pre)
+  let cell space (addr, pre) = (RTL.CELL (space, addr), pre)
+  let const k = (RTL.CONST k, fun x -> x)
+  let var v ty = (RTL.VAR (v, ty), fun x -> x)
+  let store (loc, pre1) (src, pre2) ty = (RTL.STORE(loc, src, ty), pre2 @<< pre1)
+  let guard (g, pre1) (e, pre2) = (RTL.GUARDED (g, e), pre2 @<< pre1)
+  let rtl gs = let (gs, pre) = Lift.list gs in (RTL.RTL gs, pre)
+end
+@
+Dunno if we need these\ldots
+<<monad operations>>=
+let map f (x, l) = (f x, l)
+let unit x = (x, fun x -> x)
+let join ((x, l), l') = (x, l' @<< l)
+module Lift = struct
+  let list l =
+    let cons (h, pre1) (t, pre2) = (h :: t, pre2 @<< pre1)
+    in  List.fold_right cons l ([], fun x -> x)
+end
+@
+<<implementation>>=
+module Temp = struct
+  type temp = RTL.location * RTL.width
+  let rvalue (t, ty) = RTL.FETCH(t, ty)
+  let store (t, ty) e = RTL.STORE (t, e, ty)
+end
+@
+[[exp]] develops an [[RTL.exp]] into a temporary.
+<<implementation>>=
+<<type utilities>>
+let prepend_rtls alloc attributes =
+  let rec exp : RTL.exp -> RTL.exp preceded =
+            <<function to atomize expression>>
+      and effect = function
+            | RTL.STORE (l, src, ty) -> New.store (loc l) (exp src) ty
+            | eff -> New.unit eff
+      and guarded (RTL.GUARDED (g, e)) = New.guard (guard g) (effect e)
+      and guard = <<function to atomize guard>>
+      and loc = function RTL.VAR _ as v -> New.unit v
+                       | RTL.AGG (a, c) -> New.agg a (cell c)
+      and cell (RTL.CELL (space, addr)) = New.cell space (exp addr)
+      and rtl (RTL.RTL guardeds) = New.rtl (List.map guarded guardeds)
+  in  fun r -> let (r, pred) = rtl r in
+                 fun succ -> pred (IRNode.Assign (attributes, r, succ))
+let atomize (alloc : allocator) attributes successor rtl =
+  prepend_rtls alloc attributes rtl successor
+@
+<<function to atomize expression>>=
+   let truth = RTL.CONST (RTL.BOOL true)
+in let alloc ty = (alloc ty, ty)
+in let always eff : RTL.rtl = RTL.RTL [RTL.GUARDED (truth, eff)]
+in let put rtl succ = IRNode.Assign(attributes, rtl, succ)
+in function 
+   | RTL.CONST k as e -> 
+       let t = alloc (const_width k)
+       in  (Temp.rvalue t, put (always (Temp.store t e)))
+   | RTL.FETCH (l, ty) ->
+       let t = alloc ty in
+       let (l, p) = loc l 
+       in  (Temp.rvalue t, put (always (Temp.store t (RTL.FETCH(l, ty)))) @<< p)
+   | RTL.APP (rator, args) ->
+       let t = alloc (result_ty rator)  in
+       let (rhs, pre) = New.app rator (List.map exp args)
+       in  (Temp.rvalue t, put (always (Temp.store t rhs)) @<< pre)
+@
+<<function to atomize guard>>=
+function
+| RTL.CONST k as e -> (e, fun x -> x)
+| RTL.FETCH _ -> assert false
+| RTL.APP (rator, args) -> New.app rator (List.map exp args)
+@
+
+<<type utilities>>=
+let const_width = function
+    | RTL.INT        (_, t) -> t
+    | RTL.LINK_CONST (_, t) -> t
+    | RTL.BOOL _ -> assert false
+@
+<<type utilities>>=
+let result_ty rator = 32 (* bogus *)
+

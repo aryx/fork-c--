@@ -1,0 +1,202 @@
+% l2h substitution PAL C--
+
+\providecommand\PAL{C$--$}
+
+\makeatletter
+\def\tabpar#1{\@tempdimc=\linewidth \advance\@tempdimc by -\@totalleftmargin
+   \advance\@tempdimc by -\leftmargin
+   \parbox{\@tempdimc}{\strut#1\strut}}
+\makeatother
+
+
+\section{Overview}
+
+Here's a somewhat lengthy suggestion about a structure for the code generator.
+\begin{enumerate} 
+\item
+\emph{Decide how registers will be used in this procedure.}
+This involves looking at calling conventions, etc.
+May be a bit fuzzy.
+\item
+\emph{Find locations for variables.}
+What's written here assumes that the ``register pool'' includes the
+following:
+\begin{itemize}
+\item 
+\emph{Temporaries}, which are not live at basic-block boundaries
+(possibly EBBs), and which therefore can live in volatile registers.
+\item
+\emph{The callee-saves variable pool}, which are preserved across
+calls, and are  potentially live across block boundaries.
+\item 
+\emph{The caller-saves variable pool}, which are live across block
+boundaries, but which must be spilled and reloaded across calls.
+\end{itemize}
+It would be desirable to find a way to merge the latter two categories
+into a uniform ``variable pool,'' because the spill and reload needs
+potentially differ at each call site.
+Note especially that even ``nonvolatile'' variables will need to be
+spilled if they are live at a \texttt{cuts to} continuation.
+
+Here's one possibility for proceeding.
+\begin{enumerate}
+\item 
+Get things into \emph{EBB-normal form}:
+\begin{itemize}
+\item Extended basic blocks headed by labels.
+      Leaves are [[Goto]], [[CutTo]], [[Jump]], and [[Exit]].
+\item Labels appear \emph{only} ast [[RTL.const]] (part of an
+      expression in a [[Goto]] etc.), as the list of targets on a
+      [[Goto]] node, or as heads of extended basic blocks.
+\end{itemize}
+Extended basic blocks, like nodes, should have a place to hang attributes.
+\item 
+Attach to each node the set of {\PAL} variables live \emph{after} that node.
+The set of variables live on entry to an extended basic block will
+have to live somewhere, too.
+\item 
+Assign variables to live ranges.\\
+\begin{tabbing}
+MM\=MM\=MM\=MM\=MM\=MM\=\kill
+For each basic block bb do\+\\
+  For each variable v such that\+\\
+    (a) v's live range intersects the block, and\\
+    (b) v is dead on entry to and exit from the block\-\\
+  do\+\\
+    for each def of v (assignment to v) do\+\\
+      \+\tabpar{\raggedright\hangindent=2em\hangafter=1
+        replace that def, and all the uses of that def,
+        with a fresh temporary (drawn from scratch space 
+        -- call must end a bb).  It is OK if the temporary has
+        multiple uses, provided they are all in the same basic block.
+        Each temporary must have exactly one def, however.}\-\\
+      \+\tabpar{\raggedright\hangindent=2em\hangafter=1
+        to each node in the live range of the new temporary, attach to
+        the node's attribute an indication that the variable has been
+        mapped to the temporary}\-\-\\
+    done\-\\
+  done\-\\
+done
+\end{tabbing}
+\item
+By solving a network flow problem, estimate the frequency of use of
+each label.
+The network flow problem comes from doing depth-first search from the
+entry node.
+\begin{itemize} 
+\item 
+A computed goto has equal probability of reaching all targets.
+\item  
+Any pair of backward or non-backward edges have equal probability of
+being taken.
+\item
+If a backward edge is paired with a non-backward edge, it is taken
+with probability~$.9$.
+\end{itemize}
+\item 
+Using the information about labels, estimate frequency of use of each remaining 
+  {\PAL} variable. Use these to sort the variables in priority order, most used first.
+\item 
+Using the liveness information, build an interference graph for the remaining 
+{\PAL} variables.
+\item 
+Using the priority order and the interference graph, assign registers to
+ {\PAL} variables greedily until no more
+variables can be assigned to registers.
+Assign the remaining variables to slots in the stack frame (continuing to use
+the interference graph so as to reuse slots when possible).  Be careful of alignment.
+
+There are quite a few alternatives for mapping variables.
+\begin{itemize}
+\item 
+Variables that are live across blocks, but not live across calls, can
+be assigned to volatile registers.
+\item
+Variables can be assigned to volatile registers, with spills and
+reloads inserted across calls.
+\item
+Variables can be assigned to nonvolatile registers, with spills and
+reloads necessary if a variable is live going into a [[cuts to]]
+continuation.
+Note that, because the continuation is a value, the reloads must be
+inserted \emph{after} the continuation value.
+Predecessors must therefore all have spills, except that unconditional
+branches to the continuation, if known statically, can be shifted to
+after the reloads.
+Got that?
+\end{itemize}
+\item 
+Substitute for variables in the control-flow graph as dictated by the assignments,
+inserting spills and reloads as needed.
+ Update attributes of nodes to record those assignments.
+\end{enumerate}
+\item 
+Run one or more \emph{lowering passes} to eliminate all nodes except assignment 
+and control flow.
+The hardest part appears to be prologs and epilogs.
+
+After this step, the only nodes remaining are [[Assign]], [[Branch]],
+[[Goto]], [[Call]], [[Jump]], and [[CutTo]].
+\item
+\emph{Linearize the flow graph}.
+This means converting extended basic blocks to basic blocks, and
+choosing and ordering.
+This pass establishes the following invariants:
+\begin{itemize}
+\item
+Every successor of a fork node is a [[Goto]].
+(The extended basic blocks are now basic blocks.)
+\item
+Each [[Goto]] that goes to its immediate successor in the linear order
+is marked as not requiring any code.
+\item
+The RTL associated with a branch node subsumes its true alternative.
+To be precise, the node [[Branch(p, Goto t, Goto f)]] is associated
+with the RTL [[p --> PC := t]].
+The inline successor of the branch is [[Goto f]].
+The linearizer will probably arrange for [[f]] to follow the branch,
+so no code is needed for [[Goto f]], but to get the best flow graph,
+it may do so by negating~[[p]] and swapping [[t]]~and~[[f]].
+\end{itemize}
+\item 
+Over each basic block, run a pass of \emph{instruction selection},
+introducing def-once,  
+use-once temporaries from the scratch pool.
+We would like parameter-passing registers to participate in the
+scratch pool until they are needed to hold parameters.
+It's not clear how to manage this.
+
+At this stage, the invariant is \emph{every node is associated with an
+RTL, which under a suitable substitution of hardware registers for
+temporaries, is representable as a single machine instruction}.
+\item 
+\emph{Optional code improvements}, e.g.,
+ local common-subexpression elimination over each basic block.
+%%\item 
+%%Optionally do many of  the steps above with extended basic blocks
+%%instead of ordinary basic blocks.
+\item 
+\emph{Register allocation}.
+The register allocator maps one-def, many-use temporaries into 
+hardware registers from the scratch pool.
+\item
+\emph{Emit code through the assembly interface}.
+This requires mapping each IR node to its corresponding RTL,
+recognizing the RTL and getting
+the corresponding instruction, and emitting the instructions through the
+assembly interface.
+([[Call]] nodes with [[returns to]] annotations will also emit a table
+of branch instructions.)
+Run the IR through first the recognizer, then the assembly interface,
+to get assembly code or object code.
+The recognizer will be generated from a $\lambda$-RTL description, and
+the instruction emitter from a SLED description.
+\end{enumerate}
+We have machine code.
+
+
+
+
+
+
+

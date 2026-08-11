@@ -1,0 +1,266 @@
+# this is the machine on which the C-- runtime system will execute
+TARGET=x86-linux
+ASDLGEN=camlGen
+
+NOWEAVE=`echo ${NOWEAVE-noweave}`
+
+ASDLSRC=asm cmmir ast rtl
+OCAMLSRC=sourcemap util atomize ralloc error mkrtl iRFuns rtlFuns primops reglike
+
+
+ASDLSRCDOTDEFS=`echo $ASDLSRC | sed 's/ /.defs /g;s/$/.defs/'`
+ASDLSRCDOTTEX=`echo   $ASDLSRC | sed 's/ /.tex /g;s/$/.tex/'`
+ASDLSRCDOTASDL=`echo   $ASDLSRC | sed 's/ /.asdl /g;s/$/.asdl/'`
+ASDLSRCDOTHTML=`echo   $ASDLSRC | sed 's/ /.html /g;s/$/.html/'`
+ASDLSRCDOTNW=`echo   $ASDLSRC | sed 's/ /.nw /g;s/$/.nw/'`
+ASDLSRCREGEXP=`echo $ASDLSRC | sed 's/ /|/g'`
+
+OCAMLSRCDOTDEFS=`echo $OCAMLSRC | sed 's/ /.defs /g;s/$/.defs/'`
+OCAMLSRCDOTTEX=`echo  $OCAMLSRC | sed 's/ /.tex /g;s/$/.tex/'`
+OCAMLSRCDOTML=`echo   $OCAMLSRC | sed 's/ /.ml /g;s/$/.ml/'`
+OCAMLSRCDOTMLI=`echo  $OCAMLSRC | sed 's/ /.mli /g;s/$/.mli/'`
+OCAMLSRCDOTCMO=`echo   $OCAMLSRC | sed 's/ /.cmo /g;s/$/.cmo/'`
+OCAMLSRCDOTCMI=`echo   $OCAMLSRC | sed 's/ /.cmi /g;s/$/.cmi/'`
+OCAMLSRCDOTHTML=`echo $OCAMLSRC | sed 's/ /.html /g;s/$/.html/'`
+OCAMLSRCDOTNW=`echo   $OCAMLSRC | sed 's/ /.nw /g;s/$/.nw/'`
+OCAMLSRCREGEXP=`echo  $OCAMLSRC | sed 's/ /|/g'`
+
+
+
+NWLIB1=/usr/public/pkg/noweb/lib
+NWLIB2=/usr/local/lib/noweb
+NWLIB3=/usr/cs/contrib/lib/noweb
+NWLIB4=/usr/local/noweb/lib
+
+# change code to put things in derived locations
+
+HTMLDIR=WWW/
+TEXDIR=TEX/
+
+ASDLSRCDOTHTML=`echo $ASDLSRC | sed "s@^@$HTMLDIR@;s@ @.html $HTMLDIR@g;s/\$/.html/"`
+OCAMLSRCDOTHTML=`echo $OCAMLSRC | sed "s@^@$HTMLDIR@;s@ @.html $HTMLDIR@g;s/\$/.html/"`
+
+%.g: %.nw
+	notangle -L -R$target $prereq | cpif $target
+
+
+all:V: caml
+
+docs:V: doc.ps rti.ps
+
+clean:V: 
+	rm -f *.html *~ *.t cm.dot cm.ps cm.eps 
+	rm -f *.aux *.dvi *.toc *.ps *.log *.blg
+	rm -f *.cmi *.cmo *.o 
+
+clobber:V: clean
+	rm -f *.g *.sml *.sig *.ord *.lex *.tab *.mli *.ml *.[ch] *.mly
+	rm -f *.tex *.html *.defs cm.gif *.a
+	rm -rf CM NW WWW
+	rm -f *.asdl
+
+html:V: $ASDLSRCDOTHTML $OCAMLSRCDOTHTML 
+
+################################################################
+#
+#	counting lines of code
+
+counts:V: count
+count:V: $ASDLSRCDOTNW
+	PATH="$NWLIB1:$NWLIB2:$NWLIB3:$NWLIB4:$PATH"
+	export PATH
+	markup $prereq | elide 'refman:*' '\*' | nocount -f
+
+
+
+$TEXDIR%.ps: %.dot
+	dot -Tps $prereq > $target
+
+%.eps: %.ps
+	ps2epsi $prereq $target
+
+$HTMLDIR%.gif: %.dot
+	egrep -v '^  (page|size|ratio) = ' $prereq |
+	dot -Tgif | giftool -rgb white > $target
+
+WWW:
+	mkdir $target 2>/dev/null
+
+^$HTMLDIR($ASDLSRCREGEXP)'\.'html:R: '\1'.nw
+	sh -c "[ -d $HTMLDIR ] || mkdir $HTMLDIR; exit 0"
+	echo '\section*{Contents}
+	\tableofcontents' |
+	$NOWEAVE -filter 'elide refman:*' -filter l2h -autodefs asdl -html -index - $prereq | htmltoc > $target
+
+^$HTMLDIR($OCAMLSRCREGEXP)'\.'html:R: '\1'.nw
+	sh -c "[ -d $HTMLDIR ] || mkdir $HTMLDIR; exit 0"
+	echo '\section*{Contents}
+	\tableofcontents' |
+	$NOWEAVE -filter 'elide refman:*' -filter l2h -html -index - $prereq | htmltoc > $target
+
+${HTMLDIR}index.html: index.nw
+	$NOWEAVE -filter l2h -html $prereq | htmltoc | htmlgif > $target
+
+
+################ defined identifiers (not used here)
+
+^($ASDLSRCREGEXP)'\.'defs:R: '\1'.nw 
+	nodefs -auto asdl $prereq > $target
+
+all.defs: $ASDLSRCDOTDEFS 
+	sort -u $prereq | cpif $target
+
+################ literate source 
+
+^($ASDLSRCREGEXP)'\.'tex:R: '\1'.nw
+	$NOWEAVE -autodefs asdl -index -n $stem1.nw >$target
+
+^($OCAMLSRCREGEXP)'\.'tex:R: '\1'.nw
+	$NOWEAVE -x -n $stem1.nw >$target
+
+rti.tex: rti.nw
+	$NOWEAVE -autodefs c -index -n $prereq > $target
+
+
+DOCINPUTS="doc.tex $ASDLSRCDOTTEX $OCAMLSRCDOTTEX rti.tex index.tex calling.tex"
+
+docin:V: $DOCINPUTS
+
+doc.dvi: $DOCINPUTS
+
+doc.tex: doc.nw
+	$NOWEAVE -delay doc.nw >$target
+
+doc-check:V: doc.tex
+	for i in $ASDLSRCDOTTEX $OCAMLSRCDOTTEX; do 
+	  j=`basename $i .tex`
+	  fgrep -s "\include{$j}" doc.tex || echo "$i not in doc" 1>&2
+        done
+
+%.nwi: %.tex
+	noindex $prereq
+
+index.tex: index.nw
+	$NOWEAVE -n $prereq > $target
+calling.tex: calling.nw
+	$NOWEAVE -n $prereq > $target
+
+
+###################
+#
+#  Targets for interfaces
+
+UTILS=option.mli option.ml 
+UTILSOBJ=`echo $UTILS | sed 's/\.mli/.cmi/g;s/\.ml/.cmo/g'`
+DERIVEDCAMLOBJ=asm.cmi asm.cmo iRNode.cmi iRNode.cmo aST.cmi aST.cmo iR.cmi iR.cmo 
+DERIVEDCAMLSRC=`echo $DERIVEDCAMLOBJ | sed 's/[.]cmi/.mli/g;s/[.]cmo/.ml/g'`
+
+ALLCAMLSRC="$OCAMLSRCDOTMLI $OCAMLSRCDOTML $UTILS $DERIVEDCAMLSRC"
+
+caml:V: $OCAMLSRCDOTCMI $OCAMLSRCDOTCMO $UTILSOBJ $DERIVEDCAMLOBJ
+
+CAMLOPTS="-I ../lib"
+
+$UTILS: util.nw
+	for i in $target; do
+	  notangle -R$i -L'# %L "%F"%N' $prereq > $i || exit 1
+	done
+
+asm.mli asm.ml asmUtil.mli asmUtil.ml: asm.asdl
+	$ASDLGEN --ocaml --pickler=sexp $prereq
+
+rTL.mli rTL.ml: rtl.asdl
+	$ASDLGEN --ocaml --pickler=sexp $prereq
+
+iRNode.mli iRNode.ml: rtl.asdl irnode.asdl
+	$ASDLGEN --ocaml --pickler=sexp $prereq
+
+iR.mli iR.ml: ir.asdl irnode.asdl rtl.asdl ast.asdl
+	$ASDLGEN --ocaml --pickler=sexp $prereq
+
+aST.mli aST.ml aSTUtil.mli aSTUtil.ml: ast.asdl
+	$ASDLGEN --ocaml --pickler=sexp $prereq
+
+%.asdl: %.nw
+	notangle -R$target -L' --#line %-1L "%F"%N'  $prereq > $target
+
+irnode.asdl: cmmir.nw
+	notangle -filter 'nocond codegen' -R$target -L' --#line %-1L "%F"%N'  $prereq > $target
+ir.asdl: cmmir.nw
+	notangle -R$target -L' --#line %-1L "%F"%N'  $prereq > $target
+
+%.ml: %.nw
+	notangle -Rimplementation -L'# %L "%F"%N' $prereq > $target
+%.mli: %.nw
+	notangle -Rinterface -L'# %L "%F"%N' $prereq | cpif $target
+
+%.cmi: %.mli
+	ocamlc $CAMLOPTS -c $stem.mli
+%.cmo: %.ml
+	ocamlc $CAMLOPTS -c $stem.ml
+
+
+################################################################
+#
+#	Run-time interface
+
+cmmrti.h: rti.nw
+	notangle -filter "nocond '$TARGET'" -R$target -L $prereq | cpif $target
+
+rti:V: cmmrti.h
+	(echo '#include "cmmrti.h"'; echo 'int garbage = 77;') > rti-test.c
+	gcc -ansi -pedantic -Wall -c rti-test.c
+
+
+
+DEPENDMARK="#### dependencies follow --- write nothing after this line"
+
+depend:VQ: $ALLCAMLSRC
+	ocamldep $prereq > /dev/null || exit 1
+	rm -f mkfile.new
+	(sed "/^$DEPENDMARK/,"'$d' mkfile; echo $DEPENDMARK; ocamldep $prereq) > mkfile.new
+	if [ -r mkfile.new ]; then overwrite mkfile cat mkfile.new; fi; : ignore
+	rm -f mkfile.new
+	
+#### dependencies follow --- write nothing after this line
+atomize.cmi: iRNode.cmi rTL.cmi 
+error.cmi: sourcemap.cmi 
+mkrtl.cmi: rTL.cmi 
+iRFuns.cmi: iRNode.cmi rTL.cmi 
+rtlFuns.cmi: rTL.cmi 
+primops.cmi: rTL.cmi 
+reglike.cmi: rTL.cmi 
+sourcemap.cmo: option.cmi sourcemap.cmi 
+sourcemap.cmx: option.cmx sourcemap.cmi 
+util.cmo: util.cmi 
+util.cmx: util.cmi 
+atomize.cmo: iRNode.cmi rTL.cmi atomize.cmi 
+atomize.cmx: iRNode.cmx rTL.cmx atomize.cmi 
+ralloc.cmo: iRFuns.cmi iRNode.cmi mkrtl.cmi rTL.cmi reglike.cmi rtlFuns.cmi \
+    ralloc.cmi 
+ralloc.cmx: iRFuns.cmx iRNode.cmx mkrtl.cmx rTL.cmx reglike.cmx rtlFuns.cmx \
+    ralloc.cmi 
+error.cmo: sourcemap.cmi error.cmi 
+error.cmx: sourcemap.cmx error.cmi 
+mkrtl.cmo: primops.cmi rTL.cmi mkrtl.cmi 
+mkrtl.cmx: primops.cmx rTL.cmx mkrtl.cmi 
+iRFuns.cmo: iRNode.cmi mkrtl.cmi primops.cmi rTL.cmi rtlFuns.cmi iRFuns.cmi 
+iRFuns.cmx: iRNode.cmx mkrtl.cmx primops.cmx rTL.cmx rtlFuns.cmx iRFuns.cmi 
+rtlFuns.cmo: mkrtl.cmi primops.cmi rTL.cmi rtlFuns.cmi 
+rtlFuns.cmx: mkrtl.cmx primops.cmx rTL.cmx rtlFuns.cmi 
+primops.cmo: rTL.cmi primops.cmi 
+primops.cmx: rTL.cmx primops.cmi 
+reglike.cmo: rTL.cmi rtlFuns.cmi reglike.cmi 
+reglike.cmx: rTL.cmx rtlFuns.cmx reglike.cmi 
+option.cmo: option.cmi 
+option.cmx: option.cmi 
+asm.cmo: asm.cmi 
+asm.cmx: asm.cmi 
+iRNode.cmi: rTL.cmi 
+iRNode.cmo: rTL.cmi iRNode.cmi 
+iRNode.cmx: rTL.cmx iRNode.cmi 
+aST.cmo: aST.cmi 
+aST.cmx: aST.cmi 
+iR.cmi: aST.cmi iRNode.cmi 
+iR.cmo: aST.cmi iRNode.cmi iR.cmi 
+iR.cmx: aST.cmx iRNode.cmx iR.cmi 
