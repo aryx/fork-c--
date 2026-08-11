@@ -1,4 +1,7 @@
 ; TARGET=mlburg, SRC=main.ml in the legacy Makefile.
 (executable
  (name main)
+ ; public_name installs this as bin/ocamlburg (dir name, not the legacy
+ ; Makefile TARGET=mlburg), like driver/dune does for qc.
+ (public_name ocamlburg)
  (libraries cmm_h_camlburg_burg))
