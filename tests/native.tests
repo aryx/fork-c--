@@ -1,0 +1,92 @@
+# Behavioural tests: general native-backend regression suite.
+#
+# Ported from arch/all.x86.tst + lua/l32files.lua. The file list is
+# upstream's and is deliberately backend-agnostic - all.ppc.tst and
+# all.sparc.tst reused the exact same l32files.lua - so this manifest is
+# meant to be driven against more than one backend eventually. Today only
+# run-native.sh's default (x86) is exercised; ppc/sparc need their own
+# cross toolchain and a recorded baseline before they can join test-all.
+#
+# Unlike rt.tests, Ld.rtend = "" upstream: none of these need the full
+# run-time system (no cut/thread/pcmap linking), so run-native.sh does not
+# link against a libqcmm.a or pcmap.ld. Every unit still needs -globals on
+# exactly one compilation, though - qc references Cmm.globalsig.<hash> from
+# every unit regardless of whether it declares C-- globals (see run-rt.sh's
+# header for the longer version of this).
+#
+# Columns:  name  cmm-sources(+-joined)  other-c-source(or -)  rc  stdin(or -)  [argv...]
+# argv, if present, is the rest of the line and may contain spaces/multiple
+# arguments (see tadd22, altread).
+#
+# Expected stdout is tests/output/<name>.1 when it exists. Five entries
+# (carry, deadcut, if-false, if-false2, live_rtd) have no recorded output
+# upstream; inspection shows they print only on internal failure (e.g.
+# ctest.c's lladd/llsub/llmul checks), so run-native.sh treats a missing
+# .1 as "expect empty stdout" rather than skipping the check.
+
+add            add.c--                -              0  -
+altread        altread.c--            src/errno.c    0  -  output/altread.1 /does-not-exist
+altret         altret.c--             -              0  -
+altret2        altret2.c--            -              1  altret2.0
+altret3        altret3.c--            src/errno.c    0  -  src/altret3.c-- nonexists .
+arglist        arglist.c--            -              0  -
+bits-bug       bits-bug.c--           -              0  -
+bool           bool.c--               -              0  -
+blockcpy       blockcpy.c--           -              0  -
+carry          carry.c--              src/ctest.c    0  -
+cut            cut.c--                -              0  -
+conj           conj.c--               -              0  -
+deadcut        deadcut.c--            -              0  -
+divmod         divmod.c--             -              0  -
+emptyifbody    emptyifbody.c--        -              0  -
+if-false       if-false.c--           -              0  -
+if-false2      if-false2.c--          -              0  -
+exp-000        exp-000.c--            -              0  -
+exp-001        exp-001.c--            -              0  -
+fadd           fadd.c--               -              0  -
+failedcase     failedcase.c--         -              0  -
+fargres        fargres.c--            src/double.c   0  -
+float-000      float-000.c--          -              0  -
+float-001      float-001.c--          -              0  -
+float-001-hero    float-001-hero.c--     -           0  -
+float-001-coward  float-001-coward.c--   -           0  -
+float-002      float-002.c--          -              0  -
+float-003      float-003.c--          -              0  -
+f2             f2.c--                 -              0  -
+global         global.c--+incn.c--    -              0  -
+hello          hello.c--              -              0  -
+hex            hex.c--                -              0  -
+jtab           jtab.c--               -              0  -
+ladd           ladd.c--               src/ops64.c    0  -
+lit8           lit8.c--               src/lit8main.c 0  -
+live_rtd       live_rtd.c--           -              0  -
+multasgn       multasgn.c--           -              0  -
+not            not.c--                -              0  -
+ovrflow        ovrflow.c--            -              0  -
+ralloc-000     ralloc-000.c--         -              0  -
+ratail         ratail.c--             -              0  -
+r64            r64.c--                src/r64main.c  0  -
+rnd2           rnd2.c--               -              0  -
+round          round.c--              -              0  -
+round2         round2.c--             -              0  -
+sparcerr       sparcerr.c--           -              0  -
+spdemo         spdemo.c--             -              0  -  4
+sub            sub.c--                -              0  -
+switch         switch.c--             -              0  -
+tadd           tadd.c--               -              0  -
+tadd22         tadd.c--               -              0  -  2 2
+tadd100-       tadd.c--               -              0  -  100 -1
+tadd11         tadd.c--               -              0  -  -1 -1
+taddov         tadd.c--               -              1  -  536870912 536870912
+tail           tail.c--               -              0  -
+tail_from_c    tail_from_c.c--        -              0  -
+tailbug        tailbug.c--            -              0  -
+tail2          tail2.c--+call3.c--    -              0  -
+tailnot        tailnot.c--+call3.c-- -              0  -
+test-039       test-039.c--           -              0  -
+test-050       test-050.c--           -              0  -
+tf             tf.c--                 -              0  -
+wtizzy         wtizzy.c--             -              0  -
+x86-000        x86-000.c--            -              0  -
+x86-001        x86-001.c--            -              0  -
+zerou          zerou.c--              -              0  -

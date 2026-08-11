@@ -93,3 +93,9 @@ RUN make test-tiger
 # test-tiger proves nothing about them. Also baseline-compared; one of the
 # six (trace) currently fails, see tests/rt.tests.
 RUN make test-rt
+
+# The general native-backend regression suite (needs no run-time system,
+# unlike the two above). Also baseline-compared; 15 of 66 currently fail,
+# mostly known widen/simplify_exps gaps plus two real parser gaps (carry,
+# tadd) - see tests/native.tests.
+RUN make test-native
