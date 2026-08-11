@@ -445,6 +445,200 @@ The corollary is worth stating too: "make the test pass" and "fix the bug"
 are different objectives, and when they diverge it is worth saying so out
 loud rather than quietly choosing the first.
 
+18. -backtrace plus OCAMLRUNPARAM=b turns "Impossible" into a call chain
+-------------------------------------------------------------------------
+This compiler's own "can't happen" exceptions (Impossible.impossible) print a
+message but, by default, only the outermost few frames - main.ml's top-level
+handler, not where the check actually fired. There is a real flag for it:
+
+    qc -backtrace ...             # main.ml re-raises instead of swallowing
+    OCAMLRUNPARAM=b qc -backtrace ...   # and OCaml prints the full trace
+
+which turned
+
+    This can't happen: Asked for temporary in space
+      'general-purpose temporaries' with unsupported width 64
+
+into the exact chain that produced it:
+
+    Talloc.Single.for_space.(fun)                    ir/talloc.ml:29
+    Expander.IntFloatAddr.alloc            (inlined)  codegen/expander.ml:144
+    Expander.IntFloatAddr.expand.to_temp'             codegen/expander.ml:240
+    Expander.IntFloatAddr.expand.to_temp              codegen/expander.ml:961
+    Expander.IntFloatAddr.expand.to_temp'             codegen/expander.ml:285
+    ...
+    Expander.IntFloatAddr.expand.assign_room          codegen/expander.ml:888
+
+Reading that bottom-to-top named the exact match arm (the "lobits of a
+shifted wide temporary" case) and its caller (assign_room's "store into a
+register" branch), which is what made the fix a five-line, targeted change
+instead of a guess. Root's -g flag (already on for this whole build, see the
+top-level dune's comment) is what makes this available at all; without debug
+info the backtrace is empty frames.
+
+Generalises past this project: any OCaml codebase with -g, check for a
+"-backtrace"-style escape hatch (or just set OCAMLRUNPARAM=b and see what
+happens) before reasoning from the exception message alone.
+
+
+19. git log -p on the *upstream* file, not just the local one
+----------------------------------------------------------------
+Bare "<<" and ">>" (shift operators) had silently become invalid C-- syntax
+- the lexer only accepted "@<<"/"@>>". Two hypotheses: this fork broke it
+during the port, or upstream's own history explains the "@". The second one
+only shows up by walking the *original* project's history, not this fork's:
+
+    git -C ~/software-src/dev-toolchain/qc-- log -p --follow -- src/parser.nw \
+      | awk '/^commit /{c=$2} /"<<"|"@<</{print c": "$0}'
+
+which found the exact commit (f956c662, 2001) and, crucially, its message:
+"Inserted the proper names into <<>>= chunks." That is a *noweb cleanup*
+commit (naming anonymous chunks), not a language-design change - and noweb's
+own chunk-reference syntax is literally "<<name>>", so a raw "<<" appearing
+in program text needs escaping to survive a noweb-aware tool. The "@" was
+never part of the C-- language; it was noweb punctuation that a modern
+tangler (this fork's syncweb) failed to strip back out, and it has sat in
+every build since.
+
+Two things made this findable at all: having the *original* project checked
+out locally (not just this fork), and reading the *message* of the
+commit, not just its diff - the diff alone ("<<" -> "@<<") is equally
+consistent with "the language changed" and "an escape leaked through", and
+only the message disambiguates them.
+
+
+20. Independent corpus files corroborate a hypothesis better than one
+------------------------------------------------------------------------
+The first read of the "<<" bug treated tests/cmm/tadd.c-- as a single buggy
+fixture (three years newer than a syntax change, so plausibly just a stale
+typo) and nearly got "fixed" by rewriting that one file to use backticks
+instead. Before doing that:
+
+    grep -rln '[^@]<<\|[^@]>>' tests/cmm/*.c-- demos/*.c--
+
+found bare "<<"/">>" independently in const.c--, carry.c--, and err-002.c--
+too - four unrelated files, written by different people at different times,
+all assuming the same syntax works. One file being wrong could be a typo;
+four independent files being wrong the same way is corpus-wide evidence that
+the *lexer* is wrong, not the tests - which sent the investigation to
+scan.mll instead, and was the actual bug (see entry 19).
+
+When a "clearly broken" file turns out to be old, check whether anything
+*else* in the corpus makes the same assumption before deciding the file is
+the thing to fix.
+
+
+21. Decompress and hand-trace the checked-in golden assembly
+-----------------------------------------------------------------
+tests/cmm/x86/*.s.gz are upstream's own compiled output from twenty years
+ago - proof of what the compiler used to produce, not just what it was
+supposed to. For the "bits64 on a 32-bit backend" investigation:
+
+    gunzip -c tests/cmm/x86/r64.s.gz
+
+and reading the whole function by hand (not skimming) showed the 64-bit
+constant 0xfeedfacedeadbeef stored as two independent 32-bit immediate
+stores to two adjacent stack addresses - never assembled into one register.
+First pass through this trace concluded "no edx used, must all be memory"
+and was wrong: a later, slower re-read found `movl %ecx,%edx` a few lines
+down, meaning both eax *and* edx do end up holding the two halves at the
+final `ret`. The correction mattered - it's what led to Automaton's
+combine_loc (target/automaton.ml) as the real mechanism, rather than a
+dead-end theory about a hidden-pointer return convention.
+
+The general lesson is really two: (a) a golden binary artifact answers "did
+this used to work, and how" more reliably than reading source, since source
+tells you intent and the binary tells you what actually happened; (b) when
+hand-tracing registers through a disassembly, check whether each one is
+still live at the *last* instruction before concluding it was unused -
+skimming for one keyword ("edx") without following where it goes is how the
+first pass got it backwards.
+
+
+22. The program's own debug hooks, again, for a different subsystem
+------------------------------------------------------------------------
+Entry 2 found pcmap.c's QCDEBUG hook. codegen/expander.ml has its own,
+independent one - Debug.eprintf "expander" ..., gated by the same QCDEBUG
+environment variable (error/debug.ml: `Str.split "," (Sys.getenv "QCDEBUG")`):
+
+    QCDEBUG=expander qc -stop .s -o /tmp/out.s tests/cmm/float-003.c--
+
+prints every expansion step, including the exact expression being pushed
+onto the x87 stack right before the crash:
+
+    Expanding bits64L[$V[0] + ...] := %f2f64(%f2f80(%pinf(), rm), rm)
+
+which showed the widener had wrapped %pinf() in a *double* float-precision
+conversion (f2f64(f2f80(...))) - not something visible from the source
+(f = %pinf64;) or from the backtrace alone, which only named the match arm,
+not the expression it was matching. Worth checking for a QCDEBUG word
+*before* adding a temporary printf: `grep -rn 'Debug.on\|Debug.eprintf'` in
+the module you're stuck in.
+
+
+23. One missing pipeline stage causes lookalike bugs in unrelated places
+-----------------------------------------------------------------------
+Across one session, four crashes that looked unrelated -
+
+  - %bool(...)/%false() reaching a conditional-guard expander unresolved
+  - %round_down()/%round_nearest() reaching a "weird argument" slot unresolved
+  - a %lobits(%shrl(<64-bit fetch>)) needing a temp wider than any register
+  - %pinf()/%NaN64(...) reaching the postexpander as a live operator
+
+all traced back to the same missing piece: Optimize.simplify_exps
+(TODO/optimizers/optimize.nw), which upstream ran right before expansion and
+this fork never wired in. elab/simplify.ml - the module that pass would have
+called - already implements every one of these folds (bool, round_*, the
+address-narrowing lobits/shrl-of-memory case, pinf/NaN-to-bit-pattern); they
+just never got a chance to run on RTL built after elaboration (by widening,
+by the calling-convention automaton).
+
+Once the pattern was recognised, the question for each new "reached
+postexpander" crash stopped being "what should this operator do" and became
+"does elab/simplify.ml already do this, and why isn't it running here" -
+usually a one-line check (`grep -n '"pinf"\|"round_down"\|...' elab/simplify.ml`)
+that turned an open-ended implementation task into "call Simplify.exp (or
+copy its rewrite) at the one unguarded call site."
+
+Whether to fix this by wiring in the missing pass once, or by hardening each
+call site that can be reached with unsimplified RTL, is itself a real
+choice - this project chose the latter deliberately (see the commit
+messages for these fixes), reasoning that correctness should not depend on
+an optional optimization pass being plugged in, and that plugging the pass
+in later should not regress anything that was made to work without it. That
+is a defensible general default: an "optimization" whose absence causes a
+crash rather than just worse code is not really optional, so either make it
+mandatory infrastructure or make the code work without it - do not leave it
+load-bearing while labelled optional.
+
+
+24. Verify the minimal patch before reaching for the general fix
+---------------------------------------------------------------------
+tests/tiger/colmajor.c-- had one conditional branch whose then- and
+else-arms both jumped to the same label (goto Lalc_gc_76 either way), which
+looked like it could be a symptom of almost anything - a degenerate CFG the
+backend mishandles, a register-allocator bug, anything. Before writing a
+regenerate-from-source script, or chasing a "does the backend handle
+identical branch targets" theory:
+
+    python3 - <<'EOF'   # patch just that one line, nothing else
+    ...
+    EOF
+    qc -globals ... && cc ... && qemu-i386 ./colmajor < input | diff - expected
+
+Patching *only* the one suspicious line, with no other change, and getting a
+clean pass proved the whole crash was that single corrupted label -
+immediately ruling out every backend-side theory without needing to test any
+of them. Only after that confirmation was it worth the larger, "more
+correct" fix (regenerating from fork-tiger's real tigerc), because by then
+the risk of that larger change hiding a different bug was gone.
+
+The general shape: when a plausible one-line patch exists, apply *just* that
+one and re-test before reaching for the systemic fix, even if the systemic
+fix is what you intend to ship. It is the cheapest experiment available and
+it tells you whether you are about to fix one bug or paper over two.
+
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
@@ -461,3 +655,11 @@ Tooling traps in this particular working copy
 - Wrapping a command as "cmd; echo EXIT=$?" makes the wrapper's exit status
   0, so an automated check sees success. Let the command be the last thing
   that runs.
+
+- "cmd | grep -v pattern" reports grep's exit status, not cmd's - and grep -v
+  exits 1 when every line matched the pattern (nothing left to print), which
+  looks exactly like failure. Piping a real command through a warning filter
+  and then checking "$?" reported a successful link as failed for several
+  minutes. Check the underlying command's own exit status (a separate
+  variable, or restructure so grep isn't last) instead of trusting $? after
+  a filter pipe.
