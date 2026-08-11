@@ -1033,6 +1033,35 @@ let dpwiden (g,proc) r =
     | RP.Mem(sp,w,e,a) -> RP.Mem(sp,w,find_best_soln e Z ptrwidth, a)
     | RP.Slice(w,i,l)  -> RP.Slice(w,i, widen_loc l)
     | l                -> l in
+
+(*
+  let find_best_soln_index r tau n w =
+    let solns  = all_solutions m r in
+    let solns  = List.filter (fun s -> index s = n && width s = w && fill s =*= tau) solns in
+    let () = if null solns then
+      (* try simplifier and run again *)
+      impossf "dpwiden couldn't widen %s" (Rtlutil.ToString.exp (Up.exp r)) in
+    let soln   = minimum_cost solns in
+    if print_debug then Printf.eprintf "cost: %i\n" soln.cost;
+    soln.e' in
+  let find_best_soln r tau w =
+    let construct r = 
+      let solns  = all_solutions m r in
+      let solns  = List.filter (fun s -> width s = w && fill s =*= tau) solns in
+      solns
+    in
+    let solns = construct r in
+    let solns =
+      if null solns then (* try the simplifier and run again *)
+        construct (simplify r)
+      else solns
+    in
+    let () = if null solns then
+      impossf "dpwiden couldn't widen %s" (Rtlutil.ToString.exp (Up.exp r)) in
+    let soln = minimum_cost solns in
+    if print_debug then Printf.eprintf "cost: %i\n" soln.cost;
+    soln.e' in
+*)
 (*x: widen.ml  *)
   let widen_guarded (g, eff) =
     try
