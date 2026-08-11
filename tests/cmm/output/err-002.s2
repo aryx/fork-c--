@@ -1,2 +1,2 @@
-File "src/err-002.c--", line 42, character 31 Error: parse error
+File "cmm/err-002.c--", line 42, character 31 Error: parse error
 Fatal error: exception Error.ErrorExn("parse error - compilation aborted")

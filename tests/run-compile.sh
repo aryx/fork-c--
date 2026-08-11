@@ -33,28 +33,31 @@
 # main.ml line-number changes and carry no diagnostic signal.
 #
 # Two golden-file kinds, not one:
-#   output/<name>.s2                  upstream's own naming. Only ever
-#                                      updated for a name that already has
-#                                      one - those are files upstream
-#                                      itself curated as INTENTIONAL
-#                                      negative tests (test-0NN, err-0NN,
-#                                      badlit8, const, ...), where this
-#                                      diagnostic is the permanently
-#                                      correct result.
-#   output/<name>.s2_but_should_work  everything else that currently
-#                                      FAILs. As of this fork these are
-#                                      almost always POSITIVE tests broken
-#                                      by a known, still-being-worked-on
-#                                      gap (simplify_exps, the remaining
-#                                      widen cases, ...) - freezing that
-#                                      text as a plain .s2 would
-#                                      canonicalize the bug as correct
-#                                      behaviour instead of tracking it.
-#                                      Once the underlying gap is fixed the
-#                                      file starts passing and --update
-#                                      prunes its .s2_but_should_work
-#                                      automatically - nothing to remember
-#                                      to clean up by hand.
+#   cmm/output/<name>.s2                  upstream's own naming. Only ever
+#                                          updated for a name that already
+#                                          has one - those are files
+#                                          upstream itself curated as
+#                                          INTENTIONAL negative tests
+#                                          (test-0NN, err-0NN, badlit8,
+#                                          const, ...), where this
+#                                          diagnostic is the permanently
+#                                          correct result.
+#   cmm/output/<name>.s2_but_should_work  everything else that currently
+#                                          FAILs. As of this fork these are
+#                                          almost always POSITIVE tests
+#                                          broken by a known,
+#                                          still-being-worked-on gap
+#                                          (simplify_exps, the remaining
+#                                          widen cases, ...) - freezing
+#                                          that text as a plain .s2 would
+#                                          canonicalize the bug as correct
+#                                          behaviour instead of tracking
+#                                          it. Once the underlying gap is
+#                                          fixed the file starts passing
+#                                          and --update prunes its
+#                                          .s2_but_should_work
+#                                          automatically - nothing to
+#                                          remember to clean up by hand.
 #
 # Usage:
 #   ./run-compile.sh              check against the baseline
@@ -89,7 +92,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 # The corpus: the regression sources plus the demos. Sorted so the output
 # is stable across machines.
-corpus=$(ls src/*.c-- ../demos/*.c-- 2>/dev/null | sort)
+corpus=$(ls cmm/*.c-- ../demos/*.c-- 2>/dev/null | sort)
 
 update=no
 if [ "$1" = "--update" ]; then update=yes; fi
@@ -104,16 +107,16 @@ for f in $corpus; do
   fi
   echo "$name.c-- FAIL" >> "$tmp/actual.txt"
 
-  # Message-checking only applies to tests/src/: output/*.s2 is upstream's
-  # own naming, always scoped to Test.source = "src" in the old .tst files.
-  # demos/ is this fork's own addition and is not namespaced the same way -
-  # demos/bool.c-- and src/bool.c-- would otherwise collide on the same
-  # output/bool.s2 (currently harmless, since the two files are
-  # byte-identical, but fragile).
+  # Message-checking only applies to tests/cmm/: cmm/output/*.s2 is
+  # upstream's own naming, always scoped to Test.source = "src" (now
+  # "cmm") in the old .tst files. demos/ is this fork's own addition and
+  # is not namespaced the same way - demos/bool.c-- and cmm/bool.c--
+  # would otherwise collide on the same cmm/output/bool.s2 (currently
+  # harmless, since the two files are byte-identical, but fragile).
   case "$f" in
-    src/*)
-      s2="output/$name.s2"
-      todo="output/$name.s2_but_should_work"
+    cmm/*)
+      s2="cmm/output/$name.s2"
+      todo="cmm/output/$name.s2_but_should_work"
       if [ -f "$s2" ]; then target=$s2; kind="error message"
       else                  target=$todo; kind="known-gap message"
       fi
@@ -134,14 +137,14 @@ for f in $corpus; do
   esac
 done
 
-# Prune golden files for src/ corpus files that no longer fail - see the
+# Prune golden files for cmm/ corpus files that no longer fail - see the
 # header comment on why a stale one is worse than a missing one (doubly so
 # for .s2_but_should_work: a fixed gap should not still look unfixed).
 if [ "$update" = yes ]; then
-  for f in src/*.c--; do
+  for f in cmm/*.c--; do
     name=$(basename "$f" .c--)
     grep -q "^$name\\.c-- FAIL\$" "$tmp/actual.txt" && continue
-    rm -f "output/$name.s2" "output/$name.s2_but_should_work"
+    rm -f "cmm/output/$name.s2" "cmm/output/$name.s2_but_should_work"
   done
 fi
 

@@ -1,2 +1,2 @@
-File "src/test-013.c--", line 12, characters 5-33 Error: too many initial values
+File "cmm/test-013.c--", line 12, characters 5-33 Error: too many initial values
 Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

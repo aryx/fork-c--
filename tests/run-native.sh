@@ -93,10 +93,10 @@ while IFS='|' read -r name srcs other rc stdin_file argv; do
     IFS=$oldifs
     obj="$B/$name.$(basename "$src" .c--).o"
     if [ "$first" = 1 ]; then
-      "$QC" -globals -stop .o -o "$obj" "src/$src" >"$B/$name.qcerr" 2>&1 || ok=0
+      "$QC" -globals -stop .o -o "$obj" "cmm/$src" >"$B/$name.qcerr" 2>&1 || ok=0
       first=0
     else
-      "$QC" -stop .o -o "$obj" "src/$src" >>"$B/$name.qcerr" 2>&1 || ok=0
+      "$QC" -stop .o -o "$obj" "cmm/$src" >>"$B/$name.qcerr" 2>&1 || ok=0
     fi
     objs="$objs $obj"
     IFS='+'
@@ -118,13 +118,13 @@ while IFS='|' read -r name srcs other rc stdin_file argv; do
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
 
-  if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=src/$stdin_file; fi
+  if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=cmm/$stdin_file; fi
   timeout 60 $RUN32 "./$B/$name" $argv < "$input" > "$B/$name.out" 2> "$B/$name.err"
   got=$?
 
   # Five entries (see native.tests) have no recorded output upstream and
   # print only on internal failure; expect empty stdout for those.
-  expected_out="output/$name.1"
+  expected_out="cmm/output/$name.1"
   [ -f "$expected_out" ] || expected_out=/dev/null
 
   if ! diff "$B/$name.out" "$expected_out" > "$B/$name.diff" 2>&1; then

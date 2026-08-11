@@ -1,2 +1,2 @@
-File "src/non-local-cut.c--", line 25, characters 10-14 Error: unknown value: cont
+File "cmm/non-local-cut.c--", line 25, characters 10-14 Error: unknown value: cont
 Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

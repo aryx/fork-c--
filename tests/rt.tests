@@ -12,7 +12,7 @@
 # and its Cmm.globalsig hash would not match.
 #
 # Columns:  name  cmm-source  other-source  expected-rc  stdin ("-" for none)
-# Expected stdout is always tests/output/<name>.1
+# Expected stdout is always tests/cmm/output/<name>.1
 
 deadcontvar  deadcontvar.c--  deadcontvar-unwind.c  0  -
 fact         fact.c--         factmain.c            0  -

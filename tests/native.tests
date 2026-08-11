@@ -18,22 +18,22 @@
 # argv, if present, is the rest of the line and may contain spaces/multiple
 # arguments (see tadd22, altread).
 #
-# Expected stdout is tests/output/<name>.1 when it exists. Five entries
+# Expected stdout is tests/cmm/output/<name>.1 when it exists. Five entries
 # (carry, deadcut, if-false, if-false2, live_rtd) have no recorded output
 # upstream; inspection shows they print only on internal failure (e.g.
 # ctest.c's lladd/llsub/llmul checks), so run-native.sh treats a missing
 # .1 as "expect empty stdout" rather than skipping the check.
 
 add            add.c--                -              0  -
-altread        altread.c--            src/errno.c    0  -  output/altread.1 /does-not-exist
+altread        altread.c--            cmm/errno.c    0  -  cmm/output/altread.1 /does-not-exist
 altret         altret.c--             -              0  -
 altret2        altret2.c--            -              1  altret2.0
-altret3        altret3.c--            src/errno.c    0  -  src/altret3.c-- nonexists .
+altret3        altret3.c--            cmm/errno.c    0  -  cmm/altret3.c-- nonexists .
 arglist        arglist.c--            -              0  -
 bits-bug       bits-bug.c--           -              0  -
 bool           bool.c--               -              0  -
 blockcpy       blockcpy.c--           -              0  -
-carry          carry.c--              src/ctest.c    0  -
+carry          carry.c--              cmm/ctest.c    0  -
 cut            cut.c--                -              0  -
 conj           conj.c--               -              0  -
 deadcut        deadcut.c--            -              0  -
@@ -45,7 +45,7 @@ exp-000        exp-000.c--            -              0  -
 exp-001        exp-001.c--            -              0  -
 fadd           fadd.c--               -              0  -
 failedcase     failedcase.c--         -              0  -
-fargres        fargres.c--            src/double.c   0  -
+fargres        fargres.c--            cmm/double.c   0  -
 float-000      float-000.c--          -              0  -
 float-001      float-001.c--          -              0  -
 float-001-hero    float-001-hero.c--     -           0  -
@@ -57,15 +57,15 @@ global         global.c--+incn.c--    -              0  -
 hello          hello.c--              -              0  -
 hex            hex.c--                -              0  -
 jtab           jtab.c--               -              0  -
-ladd           ladd.c--               src/ops64.c    0  -
-lit8           lit8.c--               src/lit8main.c 0  -
+ladd           ladd.c--               cmm/ops64.c    0  -
+lit8           lit8.c--               cmm/lit8main.c 0  -
 live_rtd       live_rtd.c--           -              0  -
 multasgn       multasgn.c--           -              0  -
 not            not.c--                -              0  -
 ovrflow        ovrflow.c--            -              0  -
 ralloc-000     ralloc-000.c--         -              0  -
 ratail         ratail.c--             -              0  -
-r64            r64.c--                src/r64main.c  0  -
+r64            r64.c--                cmm/r64main.c  0  -
 rnd2           rnd2.c--               -              0  -
 round          round.c--              -              0  -
 round2         round2.c--             -              0  -

@@ -5,8 +5,8 @@ Test.color = nil --- don't bother tracking separate results for dummy
 Test.asmdir = Test.asmdir or "dummy"
 Ld.rtend = ""  --- don't need the run-time system
 
--- source files live in src directory
-Test.source  = "src"
+-- source files live in cmm directory
+Test.source  = "cmm"
 Test.files = { "badlit8.c--"
              , "eqasolve-000.c--"
              , { source = "exp-002.c--", asmerr = 'dummy/exp-002.s2' }

@@ -89,10 +89,10 @@ while read -r name cmm other rc stdin_file; do
     case " $want " in *" $name "*) ;; *) continue ;; esac
   fi
 
-  if ! "$QC" -globals -stop .o -o "$B/$name.o" "src/$cmm" >"$B/$name.qcerr" 2>&1; then
+  if ! "$QC" -globals -stop .o -o "$B/$name.o" "cmm/$cmm" >"$B/$name.qcerr" 2>&1; then
     echo "FAIL $name (compile)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
-  if ! "$CC32" -w -fcommon -I "$RT" -c "src/$other" -o "$B/$name.other.o" \
+  if ! "$CC32" -w -fcommon -I "$RT" -c "cmm/$other" -o "$B/$name.other.o" \
        2>"$B/$name.ccerr"; then
     echo "FAIL $name (compile other)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
@@ -101,11 +101,11 @@ while read -r name cmm other rc stdin_file; do
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
 
-  if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=src/$stdin_file; fi
+  if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=cmm/$stdin_file; fi
   timeout 60 $RUN32 "./$B/$name" < "$input" > "$B/$name.out" 2> "$B/$name.err"
   got=$?
 
-  if ! diff "$B/$name.out" "output/$name.1" > "$B/$name.diff" 2>&1; then
+  if ! diff "$B/$name.out" "cmm/output/$name.1" > "$B/$name.diff" 2>&1; then
     echo "FAIL $name (stdout differs; see $B/$name.diff)"
     if [ -s "$B/$name.err" ]; then
       echo "     stderr: $(head -1 "$B/$name.err")"
