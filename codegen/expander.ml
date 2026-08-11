@@ -598,9 +598,18 @@ module IntFloatAddr (Post : Postexpander.S) = struct
         | RP.Fetch _ -> impossf "fetch as conditional guard"
         | RP.App (("not", []), [g]) -> expand g kfalse ktrue
         | RP.App (("conjoin", []), [x;y]) ->
-            let kfalse = DG.shared kfalse in expand x (expand y ktrue kfalse) kfalse 
+            let kfalse = DG.shared kfalse in expand x (expand y ktrue kfalse) kfalse
         | RP.App (("disjoin", []), [x;y]) ->
             let ktrue  = DG.shared ktrue  in expand x ktrue (expand y ktrue kfalse)
+        | RP.App (("false", []), []) -> kfalse
+        | RP.App (("true",  []), []) -> ktrue
+        | RP.App (("bool",  []), [RP.App (("lobits", [w; 1]), [x])]) ->
+            (* claude: same rewrite as Simplify.bool, applied here as a fallback for
+               %bool(...) guards that reach the expander unsimplified (e.g. after
+               widening) *)
+            let is1 = RP.Const (RP.Bits (Bits.U.of_int 1 w)) in
+            let is0 = RP.Const (RP.Bits (Bits.U.of_int 0 w)) in
+            expand (RP.App (("ne", [w]), [RP.App (("and", [w]), [x; is1]); is0])) ktrue kfalse
         | RP.App (cmp, ([x; y] as args)) ->
             begin
               match Post.opclass cmp with

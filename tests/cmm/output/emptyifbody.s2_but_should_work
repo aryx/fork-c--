@@ -1,3 +1,0 @@
-rtl exp: %bool(%lobits1(0))
-Not implemented in qc--: non-binary comparison in conditional guard
-Fatal error: exception Impossible.Impossible("non-binary comparison in conditional guard")

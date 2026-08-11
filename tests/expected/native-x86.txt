@@ -5,14 +5,14 @@ altret2 PASS
 altret3 PASS
 arglist PASS
 bits-bug PASS
-bool FAIL
+bool PASS
 blockcpy PASS
 carry FAIL
 cut PASS
 conj PASS
 deadcut PASS
 divmod PASS
-emptyifbody FAIL
+emptyifbody PASS
 if-false PASS
 if-false2 PASS
 exp-000 PASS
@@ -59,7 +59,7 @@ tail2 PASS
 tailnot PASS
 test-039 PASS
 test-050 PASS
-tf FAIL
+tf PASS
 wtizzy PASS
 x86-000 PASS
 x86-001 PASS

@@ -1,4 +1,4 @@
-bool.c-- FAIL
+bool.c-- OK
 forloop_tiger.c-- OK
 hello.c-- OK
 hello_tiger.c-- OK
@@ -13,7 +13,7 @@ availexprs.c-- OK
 badlit8.c-- FAIL
 bits-bug.c-- OK
 blockcpy.c-- OK
-bool.c-- FAIL
+bool.c-- OK
 call3.c-- OK
 carry.c-- FAIL
 conj.c-- OK
@@ -22,7 +22,7 @@ cut.c-- OK
 deadcontvar.c-- OK
 deadcut.c-- OK
 divmod.c-- OK
-emptyifbody.c-- FAIL
+emptyifbody.c-- OK
 eqasolve-000.c-- OK
 err-000.c-- FAIL
 err-001.c-- FAIL
@@ -127,7 +127,7 @@ test-048.c-- FAIL
 test-049.c-- FAIL
 test-050.c-- OK
 test-051.c-- FAIL
-tf.c-- FAIL
+tf.c-- OK
 trace.c-- OK
 unwind.c-- OK
 wtizzy.c-- OK
