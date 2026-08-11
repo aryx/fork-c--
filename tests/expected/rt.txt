@@ -2,5 +2,5 @@ deadcontvar PASS
 fact PASS
 fork PASS
 nest PASS
-trace FAIL
+trace PASS
 unwind PASS

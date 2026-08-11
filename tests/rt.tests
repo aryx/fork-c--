@@ -21,12 +21,13 @@ nest         nest.c--         nestmain.c            0  -
 trace        trace.c--        tracemain.c           0  -
 unwind       unwind.c--       unwindt.c             0  -
 
-# trace currently FAILS: the stack walk it prints stops after 2
-# "Undescribed frame" entries instead of continuing through ~30 more before
-# reaching the next Descriptor. No crash, empty stderr - the walk just
-# terminates early. Plausibly related to plan_tiger_hello.md's observation
-# that our frames run much smaller than upstream's (28 bytes below
-# stackdata for continuations/spills/outgoing args, vs upstream's 168):
-# fewer/different C frames between the qc---generated calls could mean the
-# walker runs out of recognizable frames sooner. Not diagnosed further; see
-# expected/rt.txt, which records it as a known failure like tiger/colmajor.
+# trace used to FAIL here: the stack walk stopped after 2 "Undescribed
+# frame" entries instead of continuing through the rest of the C region back
+# into C--. Root cause: it crosses C frames by chasing the %ebp chain (see
+# runtime/gcc-linux.c's Cmm_c_change_activation), and tracemain.c called
+# glibc's qsort - built without frame pointers on modern glibc, so the walk
+# died one step into it. Fixed by swapping qsort for a hand-rolled sort
+# tracemain.c compiles itself (see the "claude:" comment there) and passing
+# -fno-omit-frame-pointer for cmm/$other in run-rt.sh. The exact number of
+# "Undescribed frame" lines in cmm/output/trace.1 is an artifact of that
+# sort's call depth, not a value worth matching exactly.

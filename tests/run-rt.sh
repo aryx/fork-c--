@@ -92,8 +92,13 @@ while read -r name cmm other rc stdin_file; do
   if ! "$QC" -globals -stop .o -o "$B/$name.o" "cmm/$cmm" >"$B/$name.qcerr" 2>&1; then
     echo "FAIL $name (compile)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
-  if ! "$CC32" -w -fcommon -I "$RT" -c "cmm/$other" -o "$B/$name.other.o" \
-       2>"$B/$name.ccerr"; then
+  # -fno-omit-frame-pointer: trace.c--'s rt_check crosses C frames by
+  # chasing the %ebp chain (see runtime/gcc-linux.c's Cmm_c_change_activation),
+  # which needs every C frame in the walk to actually have one - not the
+  # modern default. Harmless for the other rt.tests, which don't walk C
+  # frames at all.
+  if ! "$CC32" -w -fcommon -fno-omit-frame-pointer -I "$RT" -c "cmm/$other" \
+       -o "$B/$name.other.o" 2>"$B/$name.ccerr"; then
     echo "FAIL $name (compile other)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
   if ! "$CC32" -static "$B/$name.o" "$B/$name.other.o" "$LIB" "$RT/pcmap.ld" \

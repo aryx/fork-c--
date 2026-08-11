@@ -17,7 +17,23 @@ int compare(const void* a, const void* b) {
 #define length 10
 int numbs[length] = { 11,52,223,14,45,6,17,89,999,10 };
 
-void c_a() { qsort(numbs, length, sizeof(int), compare); }
+/* claude: was qsort(numbs, length, sizeof(int), compare) - swapped for a
+ * hand-rolled sort so every C frame between h() and c_b() is code we
+ * compile (with -fno-omit-frame-pointer, see run-rt.sh), rather than glibc's
+ * own qsort, which modern glibc builds without frame pointers. rt_check's
+ * stack walk crosses C frames by chasing the %ebp chain (see the "claude:"
+ * comment in runtime/gcc-linux.c's Cmm_c_change_activation), so a frame
+ * glibc didn't preserve a frame pointer for ends the walk right there.
+ */
+void own_sort(int* base, int n, int (*cmp)(const void*, const void*)) {
+  int i, j, tmp;
+  for (i = 1; i < n; i++)
+    for (j = i; j > 0 && cmp(&base[j-1], &base[j]) > 0; j--) {
+      tmp = base[j-1]; base[j-1] = base[j]; base[j] = tmp;
+    }
+}
+
+void c_a() { own_sort(numbs, length, compare); }
 void c_b() { c_a(); }
 
 
