@@ -1,0 +1,16 @@
+target byteorder big;
+
+// ppc-elf counterpart of max.c-- - see that file's header comment. Same
+// source, just byteorder big instead of little (like demos/hello_ppc.c--
+// vs demos/hello.c--: qc requires the source's declared byteorder to
+// match the target's).
+export max;
+max(bits32 a, bits32 b) {
+  bits32 m;
+  if (a > b) {
+    m = a;
+  } else {
+    m = b;
+  }
+  return(m);
+}

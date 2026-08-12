@@ -1,0 +1,20 @@
+target byteorder little;
+
+// Toy example for register allocation (regalloc/flowra.ml) - the
+// low-pressure counterpart to spill_pressure.c--. Every exported
+// procedure spills one callee-save register to a single private stack
+// slot as part of this compiler's stack-overflow-check/calling-convention
+// lowering (arch/x86/x86backend.ml's `layout`), even a trivial one-line
+// function - so "no spill at all" isn't achievable here. What register
+// pressure from user values *does* change is how many distinct spill
+// slots appear: this function only ever has 2-3 values live at once, so
+// QCDEBUG=ralloc-cfg's AFTER dump has just that one baseline slot pair
+// (offsets <private:o6> and <private:o6>+4). Compare against
+// spill_pressure.c--, where 8 live values force 11 distinct slot offsets
+// instead of 2.
+export few_live;
+few_live(bits32 a, bits32 b, bits32 c) {
+  bits32 s;
+  s = a + b + c;
+  return(s);
+}

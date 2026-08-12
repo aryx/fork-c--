@@ -17,6 +17,7 @@ module T   = Target
 module U   = Unique
 module UP  = Unique.Prop
 module VM  = Varmap
+let () = Debug.register "ralloc-cfg" "show the CFG before and after register allocation"
 let eprintf x    = Debug.eprintf "flowra" x
 let print_vm x y = if Debug.on "flowra" then VM.print' x y else ()
 let imposs       = Impossible.impossible
@@ -83,6 +84,10 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
   let is_tmp (s,_,_) = T.is_tmp tgt s in
   let is_vfp t       = Vfp.is_vfp (Dn.loc (Rtl.reg t)) in
   if debug then (eprintf "ralloc begin\n"; Cfgutil.print_cfg g);
+  (* claude: QCDEBUG=ralloc-cfg is a quieter before/after showcase of just
+   * the CFG (no per-instruction dataflow trace) - see tests/phases/regalloc/. *)
+  if Debug.on "ralloc-cfg" then
+    (Debug.eprintf "ralloc-cfg" "BEFORE register allocation:\n"; Cfgutil.print_cfg g);
   (*s: set up the map from temps to spill locations *)
   let spillMap = ref RM.empty in
   let get_spill_loc ((_, _, ms), _, c as temp) =
@@ -651,6 +656,8 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
   G.iter_blocks upd_entry_span g;
   (*e: update entry label spans *)
   if debug then (eprintf "ralloc begin\n"; Cfgutil.print_cfg g);
+  if Debug.on "ralloc-cfg" then
+    (Debug.eprintf "ralloc-cfg" "AFTER register allocation:\n"; Cfgutil.print_cfg g);
   (g, proc), b
 (*e: flowra.ml  *)
 (*e: flowra.ml *)

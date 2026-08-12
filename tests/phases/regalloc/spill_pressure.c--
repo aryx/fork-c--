@@ -1,0 +1,22 @@
+target byteorder little;
+
+// Toy example for register allocation (regalloc/flowra.ml's Flowra.ralloc,
+// wired in as arch/x86/x86backend.ml's `run Flowra.ralloc proc`). x86 has
+// 6 general-purpose allocatable registers - eax,ebx,ecx,edx,esi,edi; esp
+// and ebp are reserved for the stack/frame pointer, see
+// arch/x86/x86regs.ml. Every one of a..h below is used once early (in the
+// product) and again at the very end (in the sum), so all 8 live ranges
+// span the whole function body at once - more than fit in 6 registers.
+//
+// Run with QCDEBUG=ralloc-cfg and compare the BEFORE/AFTER dumps: every
+// exported procedure spills one callee-save register to a private stack
+// slot regardless of pressure (see few_live.c--'s header comment for
+// why), but AFTER here has 11 distinct <private:oN> slot offsets instead
+// of few_live.c--'s 2 - the extra 9 are a..h's spill/reload pairs, which
+// few_live.c-- has no pressure to need.
+export spill_pressure;
+spill_pressure(bits32 a, bits32 b, bits32 c, bits32 d, bits32 e, bits32 f, bits32 g, bits32 h) {
+  bits32 prod;
+  prod = a*b*c*d*e*f*g*h;
+  return(prod + a + b + c + d + e + f + g + h);
+}

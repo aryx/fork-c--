@@ -1,0 +1,30 @@
+target byteorder little;
+
+// Toy example for instruction selection (arch/x86/x86rec.mlb's burg
+// grammar, run as `X86.X.cfg` in arch/x86/x86backend.ml). A comparison
+// used by a branch is a classic case where target machines differ. Run
+// this file and max_ppc.c-- (same source, -ppc-elf) both with
+// QCDEBUG=instrsel-cfg and look at the cbranch guard in the AFTER dump:
+// x86 has no separate compare-and-branch instruction, only an implicit
+// EFLAGS register that a compare sets and a Jcc reads, so its grammar
+// must materialize that as two RTLs qc can reason about separately -
+// "$c[2] := %x86_subflags(a, b)" (the compare) then a machine-specific
+// test "%x86_a($c[2])" (the branch, "above" = unsigned >) reading it
+// back. ppc's grammar instead recognizes the whole "%gtu(a,b) used as a
+// cbranch guard" as one pattern and leaves it as the abstract %gtu
+// operator, unlowered, right through instruction selection - no separate
+// compare RTL, no named condition value at this stage at all; expanding
+// that pattern to ppc's own two real instructions (cmpw then bc) is left
+// for assembly emission. Run:
+//   QCDEBUG=instrsel-cfg qc -stop .s -o /dev/null max.c--
+//   QCDEBUG=instrsel-cfg qc -ppc-elf -stop .s -o /dev/null max_ppc.c--
+export max;
+max(bits32 a, bits32 b) {
+  bits32 m;
+  if (a > b) {
+    m = a;
+  } else {
+    m = b;
+  }
+  return(m);
+}

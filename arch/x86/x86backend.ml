@@ -257,6 +257,12 @@ let store_const32 () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
 (* Entry point *)
 (*****************************************************************************)
 
+(* claude: print a proc's CFG under a given QCDEBUG word, for tests/phases/
+ * showcases of individual pipeline phases (see tests/run-phases.sh). *)
+let () = Debug.register "instrsel-cfg" "show the CFG before and after instruction selection"
+let dump_cfg word label (proc : Ast2ir.proc) : unit =
+  if Debug.on word then (Debug.eprintf word "%s\n" label; Cfgutil.print_cfg (fst proc))
+
 (* Pass this to Ast2ir.translate (via Driver.compile) as the optimizer.
  *
  * ~opt_level gates the phases upstream's Backend.x86 got from opti/
@@ -286,7 +292,12 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   (* Optimize.simplify_exps, then the 'preopt' phase *)
   let proc = if opt_level > 0 then run Optimize.simplify_exps proc else proc in
   let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in
+  (* claude: QCDEBUG=instrsel-cfg dumps the CFG immediately around
+   * instruction selection (still machine-independent RTLs vs. x86
+   * instructions) - see tests/phases/instrsel/. *)
+  dump_cfg "instrsel-cfg" "BEFORE instruction selection (x86):" proc;
   let proc = run X86.X.cfg proc in
+  dump_cfg "instrsel-cfg" "AFTER instruction selection (x86):" proc;
   (* the 'improve' phase *)
   let proc = if opt_level > 0 then run Optimize.validate proc else proc in
   let proc = run Phases.liveness proc in

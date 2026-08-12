@@ -1,0 +1,67 @@
+BEFORE instruction selection (x86):
+
+BEGIN CFG
+<entry>
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$t[6] := $r[0] | $t[7] := bits32L[$V[0] + 4]
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$t[4] := $r[7] | $t[3] := $r[6] | $t[2] := $r[5] | $t[1] := $r[3]
+$t[5] := bits32L[$V[0]]
+<branch> $\000[0] := .Linitialize_continuations_l3 [.Linitialize continuations:l3]
+.Linitialize continuations:l3:
+<branch> $\000[0] := .Lproc_body_start_l2 [.Lproc body start:l2]
+.Lproc body start:l2:
+$t[8] := bits32L[$t[6] + %mul(4, $t[7])]
+skip
+%gt($r[4], $V[0] + (<out ovfl results:o4> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o4> + -4)
+$r[0] := $t[8]
+bits32L[$V[0] + (<out ovfl results:o4> + -4)] := $t[5]
+$r[7] := $t[4] | $r[6] := $t[3] | $r[5] := $t[2] | $r[3] := $t[1]
+%ne($r[4], $V[0] + (<out ovfl results:o4> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o4> + -4)
+<return> $c[0] := bits32L[$r[4]] | $r[4] := $r[4] + 4 []
+END CFG
+AFTER instruction selection (x86):
+
+BEGIN CFG
+<entry>
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$t[6] := $r[0]
+$t[11] := $V[0]
+$t[12] := 4
+$t[10] := $t[11]
+$t[10] := $t[10] + $t[12] | $c[2] := %x86_addflags($t[10], $t[12])
+$t[9] := bits32L[$t[10]]
+$t[7] := $t[9]
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$t[4] := $r[7]
+$t[3] := $r[6]
+$t[2] := $r[5]
+$t[1] := $r[3]
+$t[14] := $V[0]
+$t[13] := bits32L[$t[14]]
+$t[5] := $t[13]
+<branch> $c[0] := .Linitialize_continuations_l3 [.Linitialize continuations:l3]
+.Linitialize continuations:l3:
+<branch> $c[0] := .Lproc_body_start_l2 [.Lproc body start:l2]
+.Lproc body start:l2:
+$t[18] := 4
+$t[17] := $t[18]
+$t[17] := %mul($t[17], $t[7]) | $c[2] := %x86_mulflags($t[17], $t[7])
+$t[16] := $t[6]
+$t[16] := $t[16] + $t[17] | $c[2] := %x86_addflags($t[16], $t[17])
+$t[15] := bits32L[$t[16]]
+$t[8] := $t[15]
+%gt($r[4], $V[0] + (<out ovfl results:o4> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o4> + -4)
+$r[0] := $t[8]
+$t[20] := $V[0]
+$t[21] := <out ovfl results:o4> + -4
+$t[19] := $t[20]
+$t[19] := $t[19] + $t[21] | $c[2] := %x86_addflags($t[19], $t[21])
+bits32L[$t[19]] := $t[5]
+$r[7] := $t[4]
+$r[6] := $t[3]
+$r[5] := $t[2]
+$r[3] := $t[1]
+%ne($r[4], $V[0] + (<out ovfl results:o4> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o4> + -4)
+<return> $c[0] := bits32L[$r[4]] | $r[4] := $r[4] + 4 []
+END CFG

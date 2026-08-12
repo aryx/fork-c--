@@ -1,0 +1,83 @@
+BEFORE instruction selection (ppc):
+
+BEGIN CFG
+<entry>
+%gt($r[1], $V[0] + <minus frame size>) --> $r[1] := $V[0] + <minus frame size>
+$t[20] := $r[3] | $t[21] := $r[4]
+%ne($r[1], $V[0] + <minus frame size>) --> $r[1] := $V[0] + <minus frame size>
+$t[18] := $r[31] | $t[17] := $r[30] | $t[16] := $r[29] | $t[15] := $r[28] | $t[14] := $r[27] | $t[13] := $r[26] | $t[12] := $r[25] | $t[11] := $r[24] | $t[10] := $r[23] | $t[9] := $r[22] | $t[8] := $r[21] | $t[7] := $r[20] | $t[6] := $r[19] | $t[5] := $r[18] | $t[4] := $r[17] | $t[3] := $r[16] | $t[2] := $r[15] | $t[1] := $r[14]
+$t[19] := $c[5]
+<branch> $\000[0] := .Linitialize_continuations_l3 [.Linitialize continuations:l3]
+.Linitialize continuations:l3:
+<branch> $\000[0] := .Lproc_body_start_l2 [.Lproc body start:l2]
+.Lproc body start:l2:
+$t[22] := bits32B[$t[20] + %mul(4, $t[21])]
+skip
+%gt($r[1], $V[0] + (<out ovfl results:o4> + -24)) --> $r[1] := $V[0] + (<out ovfl results:o4> + -24)
+$r[3] := $t[22]
+$c[5] := $t[19]
+$r[31] := $t[18] | $r[30] := $t[17] | $r[29] := $t[16] | $r[28] := $t[15] | $r[27] := $t[14] | $r[26] := $t[13] | $r[25] := $t[12] | $r[24] := $t[11] | $r[23] := $t[10] | $r[22] := $t[9] | $r[21] := $t[8] | $r[20] := $t[7] | $r[19] := $t[6] | $r[18] := $t[5] | $r[17] := $t[4] | $r[16] := $t[3] | $r[15] := $t[2] | $r[14] := $t[1]
+%ne($r[1], $V[0] + (<out ovfl results:o4> + -24)) --> $r[1] := $V[0] + (<out ovfl results:o4> + -24)
+<return> $c[0] := $c[5] []
+END CFG
+AFTER instruction selection (ppc):
+
+BEGIN CFG
+<entry>
+%gt($r[1], $V[0] + <minus frame size>) --> $r[1] := $V[0] + <minus frame size>
+$t[20] := $r[3]
+$t[21] := $r[4]
+%ne($r[1], $V[0] + <minus frame size>) --> $r[1] := $V[0] + <minus frame size>
+$t[18] := $r[31]
+$t[17] := $r[30]
+$t[16] := $r[29]
+$t[15] := $r[28]
+$t[14] := $r[27]
+$t[13] := $r[26]
+$t[12] := $r[25]
+$t[11] := $r[24]
+$t[10] := $r[23]
+$t[9] := $r[22]
+$t[8] := $r[21]
+$t[7] := $r[20]
+$t[6] := $r[19]
+$t[5] := $r[18]
+$t[4] := $r[17]
+$t[3] := $r[16]
+$t[2] := $r[15]
+$t[1] := $r[14]
+$t[19] := $c[5]
+<branch> $c[0] := .Linitialize_continuations_l3 [.Linitialize continuations:l3]
+.Linitialize continuations:l3:
+<branch> $c[0] := .Lproc_body_start_l2 [.Lproc body start:l2]
+.Lproc body start:l2:
+$t[26] := %shl(%shrl(4, 16) + %zx32(%lobits1(%shrl(4, 15))), 16)
+$t[26] := $t[26] + %sx32(%lobits16(4))
+$t[25] := %mul($t[26], $t[21])
+$t[24] := $t[20] + $t[25]
+$t[23] := bits32B[$t[24]]
+$t[22] := $t[23]
+%gt($r[1], $V[0] + (<out ovfl results:o4> + -24)) --> $r[1] := $V[0] + (<out ovfl results:o4> + -24)
+$r[3] := $t[22]
+$c[5] := $t[19]
+$r[31] := $t[18]
+$r[30] := $t[17]
+$r[29] := $t[16]
+$r[28] := $t[15]
+$r[27] := $t[14]
+$r[26] := $t[13]
+$r[25] := $t[12]
+$r[24] := $t[11]
+$r[23] := $t[10]
+$r[22] := $t[9]
+$r[21] := $t[8]
+$r[20] := $t[7]
+$r[19] := $t[6]
+$r[18] := $t[5]
+$r[17] := $t[4]
+$r[16] := $t[3]
+$r[15] := $t[2]
+$r[14] := $t[1]
+%ne($r[1], $V[0] + (<out ovfl results:o4> + -24)) --> $r[1] := $V[0] + (<out ovfl results:o4> + -24)
+<return> $c[0] := $c[5] []
+END CFG

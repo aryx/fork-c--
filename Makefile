@@ -81,7 +81,10 @@ test-lcc::
 test-optimizer::
 	tests/run-optimizer.sh
 
-test-all:: test test-tiger test-tiger-ppc test-rt test-native test-native-ppc test-lcc test-optimizer
+test-phases::
+	tests/run-phases.sh
+
+test-all:: test test-tiger test-tiger-ppc test-rt test-native test-native-ppc test-lcc test-optimizer test-phases
 build-docker:
 	docker build -t "cmm" .
 

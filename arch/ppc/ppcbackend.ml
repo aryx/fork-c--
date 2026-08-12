@@ -134,6 +134,14 @@ let layout () ((_, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
 (* Entry point *)
 (*****************************************************************************)
 
+(* claude: print a proc's CFG under a given QCDEBUG word, for tests/phases/
+ * showcases of individual pipeline phases (see tests/run-phases.sh).
+ * "instrsel-cfg" is registered once, in arch/x86/x86backend.ml - both
+ * backends link into the same qc binary (driver/dune) and Debug.register
+ * rejects a second registration of the same word. *)
+let dump_cfg word label (proc : Ast2ir.proc) : unit =
+  if Debug.on word then (Debug.eprintf word "%s\n" label; Cfgutil.print_cfg (fst proc))
+
 (* Pass this to Ast2ir.translate (via Driver.compile) as the optimizer.
  *
  * ~opt_level gates the opti/ passes (opti/optimize.ml) the same way
@@ -154,7 +162,11 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = run (Placevar.context Ppc.placevars) proc in
   let proc = if opt_level > 0 then run Optimize.simplify_exps proc else proc in
   let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in
+  (* claude: QCDEBUG=instrsel-cfg dumps the CFG immediately around
+   * instruction selection - see tests/phases/instrsel/. *)
+  dump_cfg "instrsel-cfg" "BEFORE instruction selection (ppc):" proc;
   let proc = run Ppc.X.cfg proc in
+  dump_cfg "instrsel-cfg" "AFTER instruction selection (ppc):" proc;
   let proc = run Phases.liveness proc in
   let proc = run Flowra.ralloc proc in
   let proc = run layout proc in
