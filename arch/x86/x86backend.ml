@@ -339,9 +339,27 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = if opt_level > 0 then run Optimize.elim_dead_assignments proc else proc in
   let proc = run Phases.liveness proc in
   (* Upstream's Backend.x86 used Ralloc.dls (TODO/backend/registers/dls.nw,
-   * a DFS linear scan). Flowra is the dataflow-based allocator and is the
-   * one that is in the build; both satisfy the same one-function
-   * interface, so swapping is a one-line change if this one misbehaves.
+   * a DFS linear scan). Flowra is the dataflow-based allocator that is in
+   * the build and is what runs here, unconditionally.
+   *
+   * claude: Colorgraph (regalloc/colorgraph.ml) is a second, newer
+   * graph-coloring allocator with the same one-function interface
+   * (val ralloc : 'a -> Ast2ir.proc -> Ast2ir.proc * bool), extracted
+   * from its Lua/Backplane wrapper the same way this file's own pipeline
+   * was, but NOT wired in here (yet): compiling tests/cmm/add.c-- - a
+   * program already in the regression corpus, nothing exotic, just one
+   * foreign "C" call - with Colorgraph at -O3 hangs. Root cause not yet
+   * found: build()'s get_regs undercounted registers relative to
+   * addInterference's own live set (Live.live_out_last vs a hand-rolled
+   * defs/uses/spans union), fixed in colorgraph.ml, but that fix traded
+   * a crash for this hang on the same file, so there is a second,
+   * deeper bug in the spill/retry loop (build -> ... -> selectSpill ->
+   * assignColors -> resetProgram -> build -> ...) that never converges
+   * once a call is involved. None of make test-all's suites would have
+   * caught either bug: none of them pass -O3, so this never ran at all
+   * until tests/run-optimizer.sh's -O3 goldens exercised it directly.
+   * Do not wire Colorgraph in here until that loop is shown to
+   * terminate on a real corpus, not just hand-picked toy examples.
    *)
   let proc = run Flowra.ralloc proc in
   (* ralloc runs before freeze: it is what decides how many spill slots

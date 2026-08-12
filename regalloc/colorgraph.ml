@@ -12,8 +12,13 @@ module RM  = Register.Map
 module RS  = Register.Set
 module RSX = Register.SetX
 module RU  = Rtlutil
-let ( ++ ) = RS.union 
-let ( -- ) = RS.diff 
+
+(* claude: Nopoly.(=*=) below needs this open; every other .nw-tangled
+ * .ml in this tree gets it prepended automatically by the (now-dropped)
+ * generator, so it has to be added by hand here. *)
+open Nopoly
+let ( ++ ) = RS.union
+let ( -- ) = RS.diff
 let imposs = Impossible.impossible
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 
@@ -264,28 +269,42 @@ let degree_for_temp target cg temp =
   else
     0
 (*e: graph coloring types *)
-module GCT : Lua.Lib.USERTYPE with type 'a t = 'a colorGraph = struct
-    type 'a t = 'a colorGraph
-    let tname = "Graph Coloring"
-    let eq _ x y = x =*= y  (* may be dangerous *)
-    let to_string vs _ = "<cgInfo>"
-end
-module Make (BackplaneT : Lua.Lib.TYPEVIEW with type 'a t = 'a Backplane.M.action)
-            (GCT : Lua.Lib.TYPEVIEW with type 'a t = 'a GCT.t
-                                  and type 'a combined = 'a BackplaneT.combined)
-            (ProcT : Lua.Lib.TYPEVIEW with type 'a t = Ast2ir.proc
-                                      and  type 'a combined = 'a BackplaneT.combined)
-      : Lua.Lib.USERCODE with type 'a userdata' = 'a BackplaneT.combined =
-  struct
-    type 'a userdata' = 'a BackplaneT.combined
-    module M (Interp : Lua.Lib.CORE
-                with type 'a V.userdata' = 'a BackplaneT.combined) = struct
-        module V = Interp.V
-        let cgmap = GCT.makemap V.userdata V.projection
-
-                module RT = Register.RT (Interp)
-                let register = RT.map
-
+(* claude: this used to be wrapped in a Lua/Backplane binding shell,
+ * mirroring x86backend.ml's decision not to port Backplane - the real
+ * algorithm below never referenced Lua/Interp/V/register itself (only
+ * the deleted stageFn table at the very end of this chunk did), so it
+ * moves out unchanged into a plain PreMake, and [[ralloc]] at the end of
+ * this functor is the new straight-line OCaml driver replacing whatever
+ * Lua policy script used to sequence build/makeWorklist/simplify/coalesce/
+ * freeze/selectSpill/assignColors/resetProgram/applyColors (that script
+ * itself, referenced as Ralloc.color = ColorGraph.color in
+ * LUA/lua-cmm-driver/luacompile.nw:667, is not present anywhere in this
+ * fork or the upstream checkout - reconstructed from the stage names/
+ * signatures here, which match Appel's iterated-register-coalescing
+ * algorithm exactly). Old shell, kept for comparison against the port:
+ *
+ * module GCT : Lua.Lib.USERTYPE with type 'a t = 'a colorGraph = struct
+ *     type 'a t = 'a colorGraph
+ *     let tname = "Graph Coloring"
+ *     let eq _ x y = x =*= y  (* may be dangerous *)
+ *     let to_string vs _ = "<cgInfo>"
+ * end
+ * module Make (BackplaneT : Lua.Lib.TYPEVIEW with type 'a t = 'a Backplane.M.action)
+ *             (GCT : Lua.Lib.TYPEVIEW with type 'a t = 'a GCT.t
+ *                                   and type 'a combined = 'a BackplaneT.combined)
+ *             (ProcT : Lua.Lib.TYPEVIEW with type 'a t = Ast2ir.proc
+ *                                       and  type 'a combined = 'a BackplaneT.combined)
+ *       : Lua.Lib.USERCODE with type 'a userdata' = 'a BackplaneT.combined =
+ *   struct
+ *     type 'a userdata' = 'a BackplaneT.combined
+ *     module M (Interp : Lua.Lib.CORE
+ *                 with type 'a V.userdata' = 'a BackplaneT.combined) = struct
+ *         module V = Interp.V
+ *         let cgmap = GCT.makemap V.userdata V.projection
+ *
+ *                 module RT = Register.RT (Interp)
+ *                 let register = RT.map
+ *)
         (*s: graph coloring builtins *)
             let verb   = 18
             let cfgSay = Verbose.say verb
@@ -553,11 +572,30 @@ module Make (BackplaneT : Lua.Lib.TYPEVIEW with type 'a t = 'a Backplane.M.actio
                     ()
               end
             (*x: build *)
+            (* claude: [[last]] used to union in only
+             * "add_live_spansl l RSX.empty" (defs/uses/spans local to this
+             * node), but addInterference's own vis_last below computes its
+             * live set as "add_live_spansl last (Live.live_out_last last)"
+             * - the real backward-liveness fact, a strictly bigger set
+             * whenever a register is live out of this block's terminator
+             * without being defined or used anywhere in the whole
+             * procedure (a pure pass-through, e.g. a convention-mandated
+             * live register on a short, flat function with nothing else to
+             * touch it). That gap meant regToItem/regToClass below could
+             * be missing a register addInterference then calls addEdge on,
+             * crashing addToAdjList's "RM.find t2 cg.regToItem" with
+             * Not_found - reproduced on a small 7-argument function with no
+             * branches; the existing native.tests corpus never hit it
+             * because its multi-block programs happen to touch the same
+             * registers elsewhere too. Fixed by mirroring vis_last's own
+             * live expression exactly, so both passes agree on what a
+             * "last" node's registers are. *)
             let get_regs cfg =
               let first  f rst = R.promote_rxset (G.add_live_spansf f RSX.empty) ++ rst in
               let middle m rst = defsm m ++ usesm m ++ rst in
               let last   l rst = defsl l ++ usesl l ++
-                                 R.promote_rxset (G.add_live_spansl l RSX.empty) ++ rst in
+                                 R.promote_rxset (G.add_live_spansl l (Live.live_out_last l)) ++
+                                 rst in
               let block b rst = GR.fold_fwd_block first middle last b rst in
               G.fold_blocks block RS.empty cfg
 
@@ -1123,37 +1161,75 @@ module Make (BackplaneT : Lua.Lib.TYPEVIEW with type 'a t = 'a Backplane.M.actio
               ((G.of_blocks (UM.map filter_copies (G.to_blocks cfg)), proc), true)
             (*e: resetProgram *)
         (*x: graph coloring builtins *)
-        let proc = ProcT.makemap V.userdata V.projection
-        let ( **-> ) = V.( **-> )
-        let stageFn = V.efunc (cgmap **-> proc **-> V.resultpair proc V.bool) 
-        let graph_coloring_module =
-          [ "build",            stageFn build
-          ; "makeWorklist",     stageFn makeWorklist
-          ; "simplify",         stageFn simplify
-          ; "coalesce",         stageFn coalesce
-          ; "freeze",           stageFn freeze
-          ; "selectSpill",      stageFn selectSpill
-          ; "assignColors",     stageFn assignColors
-          ; "haveSpilledTemps", stageFn haveSpilledTemps
-          ; "clearCGInfo",      stageFn clearCGInfo
-          ; "resetProgram",     stageFn resetProgram
-          ; "updateProgram",    stageFn updateProgram
-          ; "applyColors",      stageFn applyColors
-          ; "printCG",          stageFn printCGInfo
-          ; "cgInfo",           cgmap.V.embed cgInfo
-        (**** not used anywhere except maybe for debugging
-          ; "setRegisters",     V.efunc (V.value **-> V.result V.unit)
-              (fun value -> cgInfo.luaColorOverride <- value; cgInfo.colors <- SpaceMap.empty)
-        *)
-          ]
+        (* claude: dropped the Lua module-registration table this chunk used
+         * to end with, exposing build/makeWorklist/.../applyColors to Lua
+         * under "ColorGraph" - see the comment above [[graph coloring
+         * builtins]]'s opening. [[ralloc]] below calls the same functions
+         * directly. Old table, kept for comparison against the port:
+         *
+         * let proc = ProcT.makemap V.userdata V.projection
+         * let ( **-> ) = V.( **-> )
+         * let stageFn = V.efunc (cgmap **-> proc **-> V.resultpair proc V.bool)
+         * let graph_coloring_module =
+         *   [ "build",            stageFn build
+         *   ; "makeWorklist",     stageFn makeWorklist
+         *   ; "simplify",         stageFn simplify
+         *   ; "coalesce",         stageFn coalesce
+         *   ; "freeze",           stageFn freeze
+         *   ; "selectSpill",      stageFn selectSpill
+         *   ; "assignColors",     stageFn assignColors
+         *   ; "haveSpilledTemps", stageFn haveSpilledTemps
+         *   ; "clearCGInfo",      stageFn clearCGInfo
+         *   ; "resetProgram",     stageFn resetProgram
+         *   ; "updateProgram",    stageFn updateProgram
+         *   ; "applyColors",      stageFn applyColors
+         *   ; "printCG",          stageFn printCGInfo
+         *   ; "cgInfo",           cgmap.V.embed cgInfo
+         *   (* not used anywhere except maybe for debugging:
+         *    "setRegisters", V.efunc (V.value **-> V.result V.unit)
+         *      (fun value -> cgInfo.luaColorOverride <- value;
+         *                    cgInfo.colors <- SpaceMap.empty) *)
+         *   ]
+         *
+         * let init = Interp.register_module "ColorGraph" graph_coloring_module
+         *)
         (*e: graph coloring builtins *)
 
-        let init = Interp.register_module "ColorGraph" graph_coloring_module
-          (* FIX -- register init code here? *)
-    end
-  end
+  (* claude: the driver that used to be a Lua policy script (see the comment
+   * at the top of [[graph coloring builtins]]) - Appel's iterated register
+   * coalescing main loop: build the interference graph, repeatedly prefer
+   * simplify over coalesce over freeze over spilling a candidate until none
+   * of those can make progress, assign colors, and - if that produced any
+   * spills - rewrite the program to materialize them and start over from
+   * build; otherwise remove the now-redundant coalesced moves and rewrite
+   * every temp to its assigned color. *)
+  let ralloc _ (cfg, proc) =
+    let cg = cgInfo in
+    let rec fixpoint (cfg, proc) =
+      let (cfg, proc), changed = simplify cg (cfg, proc) in
+      if changed then fixpoint (cfg, proc) else
+      let (cfg, proc), changed = coalesce cg (cfg, proc) in
+      if changed then fixpoint (cfg, proc) else
+      let (cfg, proc), changed = freeze cg (cfg, proc) in
+      if changed then fixpoint (cfg, proc) else
+      let (cfg, proc), changed = selectSpill cg (cfg, proc) in
+      if changed then fixpoint (cfg, proc) else
+      (cfg, proc) in
+    let rec main (cfg, proc) =
+      let (cfg, proc), _ = clearCGInfo cg (cfg, proc) in
+      let (cfg, proc), _ = build cg (cfg, proc) in
+      let (cfg, proc), _ = makeWorklist cg (cfg, proc) in
+      let (cfg, proc) = fixpoint (cfg, proc) in
+      let (cfg, proc), _ = assignColors cg (cfg, proc) in
+      let (cfg, proc), spilled = haveSpilledTemps cg (cfg, proc) in
+      if spilled then
+        let (cfg, proc), _ = resetProgram cg (cfg, proc) in
+        main (cfg, proc)
+      else
+        let (cfg, proc), _ = updateProgram cg (cfg, proc) in
+        applyColors cg (cfg, proc) in
+    main (cfg, proc)
 end
-
 
 module XXX = PreMake(RegColor)
 include XXX

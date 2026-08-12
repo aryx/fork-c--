@@ -183,6 +183,9 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
    * elim_dead_assignments.c--. *)
   let proc = if opt_level > 0 then run Optimize.elim_dead_assignments proc else proc in
   let proc = run Phases.liveness proc in
+  (* claude: Colorgraph (regalloc/colorgraph.ml) is not wired in here (yet)
+   * - see arch/x86/x86backend.ml's optimizer for the hang it still has
+   * at -O3 on tests/cmm/add.c--, not yet root-caused. *)
   let proc = run Flowra.ralloc proc in
   let proc = run layout proc in
   let proc = run Phases.rmvfp proc in
