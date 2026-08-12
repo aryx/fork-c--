@@ -131,6 +131,46 @@ let cmm_results = c_results *> overflow
 let cmm = { A.call = c_call; A.results = cmm_results; A.cutto = c_cutto }
 
 (*****************************************************************************)
+(* The C-- thread convention *)
+(*****************************************************************************)
+(* claude: added (not in the upstream Lua's PPC.cc table, which stopped at
+ * "C"/"C--"/"notail" - see the "Entry point" comment below for what that
+ * table actually had). Needed to link tiger's runtime/thread.c-- for ppc
+ * at all: it failed outright with "This back end does not support the
+ * 'C-- thread' calling convention" since Ppc.cconv (ppc.ml) never got a
+ * spec for that name. Mirrors x86cc.ml's thread verbatim - a thread may
+ * only receive parameters, never returns and never cuts, so there is
+ * nothing target-specific about it beyond the overflow alignment, which
+ * upstream's own PPC.overflow already fixes at 4. *)
+let thread =
+  { A.call = A.overflow ~growth:Memalloc.Up ~max_alignment:4
+  ; A.results = A.unit
+  ; A.cutto = A.unit
+  }
+
+(*****************************************************************************)
+(* The gc convention *)
+(*****************************************************************************)
+(* claude: also added, same reasoning as thread above - not in upstream's
+ * Lua PPC.cc table. Mirrors x86cc.ml's gc: no registers for the call
+ * itself (a GC call is dominated by the collection work, so keep it
+ * cheap for the caller by leaving its temporaries alone), just r3/f1 for
+ * the returned pointer. Ppc.overflow has no "down" growth variant the
+ * way x86's does (upstream's Lua only ever defined one direction for
+ * ppc), so this uses the same single `overflow` as everywhere else here
+ * rather than inventing an unused second one. *)
+let gc_results =
+  A.choice
+    [ A.is_kind "float", widen_exact 64 *> useregs [ f 1 ]
+    ; A.is_any, widen_exact 32 *> useregs [ r 3 ]
+    ]
+
+let gc_call = widen_multiple 32 *> overflow
+let gc_cutto = widen_exact 32 *> overflow
+
+let gc = { A.call = gc_call; A.results = gc_results; A.cutto = gc_cutto }
+
+(*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 (* The table the Lua built with A.register_cc(Backend.ppc.target, ...):
@@ -140,13 +180,19 @@ let cmm = { A.call = c_call; A.results = cmm_results; A.cutto = c_cutto }
  *   A.register_cc(Backend.ppc.target,"C--"   ,PPC.cc["C--"])
  *   A.register_cc(Backend.ppc.target,"notail",PPC.cc["C--"])
  *
- * Fewer conventions than x86 registers: no "gc", no "C-- thread", no
- * "paranoid C". Ppc.cconv must handle every name that appears here.
- *)
+ * That table stopped there - no "gc", no "C-- thread", no "paranoid C",
+ * unlike x86's (x86cc.ml). Ppc.cconv (ppc.ml) does not branch on the
+ * convention name at all (unlike X86call.cconv), so adding entries here
+ * needs no matching change there - see thread/gc above for the two this
+ * fork actually hit a need for; the rest just alias "C" the way x86 does. *)
 
 let cc_specs =
   [ "C", c
   ; "C'", c
+  ; "paranoid C", c
+  ; "C returns struct", c
   ; "C--", cmm
+  ; "C-- thread", thread
   ; "notail", cmm
+  ; "gc", gc
   ]

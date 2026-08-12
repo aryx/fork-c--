@@ -35,6 +35,7 @@
   pcmap.c
   gcc-linux.c
   x86cont.s
+  ppccont.s
   cut.c--
   thread.c--
   yield.c--
