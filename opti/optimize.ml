@@ -53,26 +53,47 @@ let trim_unreachable_code _ (g, proc) =
   let changed = List.length g' < Unique.Map.size (G.to_blocks g) in
   (G.of_block_list g', proc), changed
 (*x: optimize.ml  *)
-let collapse_branch_chains _ {Proc.cfg = cfg} =
-  let brp node = OG.kind node =*= OG.Branch && OG.kind (OG.pred node) =*= OG.Join in
-  let to_collapse =
-    OG.fold_nodes (fun n rst -> if brp n then n :: rst else rst) [] cfg in
-  let collapse n =
-    let j = OG.pred n in
-    let s = OG.succ n in
-    List.iter (fun p -> match OG.kind p with
-                        | OG.Cbranch ->
-                          if OG.eq (OG.tsucc p) j then OG.set_tsucc cfg p s;
-                          if OG.eq (OG.fsucc p) j then OG.set_fsucc cfg p s
-                        | OG.Mbranch -> Impossible.unimp "redirect multiway branch"
-                        | OG.Branch  -> OG.set_succ cfg p s
-                        | _ -> ())
-              (OG.preds j);
-    if List.for_all (fun n -> OG.kind n =*= OG.Illegal) (OG.preds j)
-    then (OG.delete cfg j; OG.delete cfg n) in
-  List.iter collapse to_collapse;
-  not_null to_collapse
-let collapse_branch_chains _ = Impossible.unimp "new optimizer"
+(* claude: ported to Zipcfg (the old version above operated on the
+ * retired mutable Cfgx.M graph and was already dead code, shadowed by
+ * a stub -- see docs/claude_notes/ for why). Since a [[Branch]]'s RTL is
+ * baked in by the target's own [[goto]] embedder at construction time
+ * (Zipcfg.branch), we cannot retarget a branch to a new label by editing
+ * fields -- only the embedder that built it knows how to encode a jump.
+ * Instead, for a chain of empty blocks that are nothing but an
+ * unconditional branch, we chase the chain to the [[last]] of the final,
+ * non-trivial hop and reuse that value verbatim (its RTL already jumps
+ * straight to the real target) as the new [[last]] of every block earlier
+ * in the chain. A cycle of such empty blocks (an infinite loop with no
+ * side effects) is left alone rather than collapsed past, guarded by
+ * [[seen]]. *)
+let () = Debug.register "collapse-branch-chains"
+           "count the branch hops Optimize.collapse_branch_chains removes"
+let collapse_branch_chains _ (g, proc) =
+  let blocks = G.to_blocks g in
+  let mem_uid u l = List.exists (Unique.eq u) l in
+  let rec chase uid seen =
+    if mem_uid uid seen then None
+    else
+      match Unique.Map.find uid blocks with
+      | (_, GR.Last (GR.Branch (_, (target, _)) as last)) ->
+          (match chase target (uid :: seen) with
+           | Some _ as deeper -> deeper
+           | None -> Some (target, last))
+      | _ -> None
+  in
+  let n = ref 0 in
+  let blocks =
+    Unique.Map.map (fun (first, tail) ->
+      match tail with
+      | GR.Last (GR.Branch (_, (target, _))) ->
+          (match chase target [ GR.fid first ] with
+           | Some (_, final_last) -> incr n; (first, GR.Last final_last)
+           | None -> (first, tail))
+      | _ -> (first, tail))
+      blocks
+  in
+  if !n > 0 then Debug.eprintf "collapse-branch-chains" "collapsed %d branch(es)\n" !n;
+  (G.of_blocks blocks, proc), !n > 0
 (*x: optimize.ml  *)
 type limit = { mutable lim : int }
 let remove_nops _ (g, proc) =

@@ -1,0 +1,30 @@
+target byteorder little;
+
+// Toy example for Optimize.collapse_branch_chains (opti/optimize.ml).
+//
+// chain() loops "goto L1; L1: goto L2; L2: goto L3; L3: <loop test/body>",
+// with the loop's back edge jumping to L1, not straight to L3. L1 and L2
+// are nothing but an unconditional forwarding branch to the next label -
+// exactly the chain this pass exists to shorten.
+//
+// It does NOT show up as fewer "jmp" instructions: this backend already
+// elides a jump to a target that is immediately next in layout order, and
+// a chain of pure gotos like this one is laid out contiguously regardless
+// of this pass, so L1/L2/L3 cost nothing extra at -O0 either. What
+// changes is reachability: once collapse_branch_chains rewrites L1's own
+// branch to jump straight to L3 (reusing L2's already-correct "goto L3"
+// verbatim, rather than resolving anything itself - see that function's
+// comment for why), nothing branches to L2 any more, so it drops out of
+// the CFG entirely and its label never reaches the emitted assembly. The
+// visible -O0-vs-O3 story here is "L1: L2: L3:" shrinking to just "L1:".
+export chain;
+chain(bits32 x) {
+  bits32 i;
+  i = 0;
+  goto L1;
+  L1: goto L2;
+  L2: goto L3;
+  L3:
+    if (i < x) { i = i + 1; goto L1; }
+    return(i);
+}

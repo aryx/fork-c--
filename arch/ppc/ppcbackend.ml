@@ -168,6 +168,10 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = run (Placevar.context Ppc.placevars) proc in
   let proc = if opt_level > 0 then run Optimize.simplify_exps proc else proc in
   let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in
+  (* claude: new integration, gated like the rest of opti/ - see
+   * arch/x86/x86backend.ml's optimizer and tests/optimizer/
+   * collapse_branch_chains.c--. *)
+  let proc = if opt_level > 0 then run Optimize.collapse_branch_chains proc else proc in
   (* claude: QCDEBUG=instrsel-cfg dumps the CFG immediately around
    * instruction selection - see tests/phases/instrsel/. *)
   dump_cfg "instrsel-cfg" "BEFORE instruction selection (ppc):" proc;
