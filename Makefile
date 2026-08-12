@@ -75,6 +75,23 @@ test-native::
 test-native-ppc::
 	BACKEND=ppc TIMEOUT=1 tests/run-native.sh
 
+# claude: OPT=3 counterparts of test-native/test-native-ppc - added after
+# discovering that no suite in this list ever passed -O3, so a whole
+# opt_level's worth of passes went completely unexercised by the
+# regression corpus (that's how regalloc/colorgraph.ml's hang on this
+# very suite's add.c-- went unnoticed - see arch/x86/x86backend.ml's
+# optimizer). TIMEOUT=15 here (vs test-native's default 60s): generous
+# enough not to cut off a slow-but-legitimate pass, tight enough that a
+# real hang doesn't make test-all slow - tighten further only after
+# confirming, the way test-native-ppc's own comment did for TIMEOUT=1,
+# that it doesn't change the pass/fail set. TIMEOUT=1 for ppc, matching
+# test-native-ppc exactly (same reasoning, same already-known hangs).
+test-native-o3::
+	OPT=3 TIMEOUT=15 tests/run-native.sh
+
+test-native-ppc-o3::
+	OPT=3 BACKEND=ppc TIMEOUT=1 tests/run-native.sh
+
 test-lcc::
 	tests/run-lcc.sh
 
@@ -84,7 +101,7 @@ test-optimizer::
 test-phases::
 	tests/run-phases.sh
 
-test-all:: test test-tiger test-tiger-ppc test-rt test-native test-native-ppc test-lcc test-optimizer test-phases
+test-all:: test test-tiger test-tiger-ppc test-rt test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 build-docker:
 	docker build -t "cmm" .
 

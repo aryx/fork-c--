@@ -44,6 +44,21 @@
 #   ./run-native.sh --update       re-record the baseline (review the diff!)
 #   ./run-native.sh add hello      run only those, report but do not compare
 #   BACKEND=ppc ./run-native.sh    same, for the ppc-elf backend
+#   OPT=3 ./run-native.sh          same, compiled at -O3 instead of the
+#                                  default -O0 - its own $B/baseline, same
+#                                  reasoning as BACKEND (see claude's note
+#                                  below on why this exists)
+#
+# claude: added OPT after Colorgraph.ralloc (regalloc/colorgraph.ml, a
+# second, newer register allocator) turned out to hang at -O3 on add.c--
+# - one of *this* suite's own files - which make test-all's other suites
+# never would have caught: none of them passed -O3 at all before this,
+# so a whole opt_level's worth of passes (Optimize.collapse_branch_chains/
+# elim_dead_assignments, Peephole.subst_forward, and whatever ralloc ends
+# up wired to next) ran completely unexercised by the regression corpus.
+# Colorgraph itself is not wired in yet (see arch/x86/x86backend.ml's
+# optimizer), so OPT=3 exercises the other -O3 passes for now, but is
+# exactly the harness that would have caught this had it existed first.
 #
 # NB: goken's Plan 9 diff/sed/tail shadow the GNU ones on pad's PATH, so
 # this script sticks to plain "diff a b" and avoids diff -q.
@@ -52,11 +67,17 @@ here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}
 BACKEND=${BACKEND:-x86}
+OPT=${OPT:-0}
 
 case "$BACKEND" in
   x86) CC32_DEFAULT=i686-linux-gnu-gcc;    RUN32_DEFAULT=qemu-i386; QCFLAG= ;;
   ppc) CC32_DEFAULT=powerpc-linux-gnu-gcc; RUN32_DEFAULT=qemu-ppc;  QCFLAG=-ppc-elf ;;
   *)   echo "run-native.sh: unknown BACKEND=$BACKEND" >&2; exit 2 ;;
+esac
+case "$OPT" in
+  0) ;;
+  3) QCFLAG="$QCFLAG -O3" ;;
+  *) echo "run-native.sh: unknown OPT=$OPT (want 0 or 3)" >&2; exit 2 ;;
 esac
 CC32=${CC32:-$CC32_DEFAULT}
 
@@ -76,7 +97,8 @@ if [ -z "${RUN32+set}" ]; then
   if command -v "$RUN32_DEFAULT" >/dev/null 2>&1; then RUN32=$RUN32_DEFAULT; else RUN32=; fi
 fi
 
-B=build/native-$BACKEND
+if [ "$OPT" = 0 ]; then suffix=$BACKEND; else suffix=$BACKEND-O$OPT; fi
+B=build/native-$suffix
 
 if [ ! -x "$QC" ]; then
   echo "run-native.sh: no qc at $QC (run 'dune build' first)" >&2
@@ -97,7 +119,7 @@ mkdir -p "$B"
 update=no
 if [ "$1" = "--update" ]; then update=yes; shift; fi
 want=$*
-baseline=expected/native-$BACKEND.txt
+baseline=expected/native-$suffix.txt
 
 # Read the manifest, skipping comments and blank lines. argv is whatever is
 # left on the line after the first five columns, so it may contain spaces.
@@ -185,7 +207,7 @@ done < "$B/manifest.txt"
 pass=$(grep -c " PASS$" "$B/actual.txt" || true)
 fail=$(grep -c " FAIL$" "$B/actual.txt" || true)
 echo
-echo "native-$BACKEND: $pass passed, $fail failed"
+echo "native-$suffix: $pass passed, $fail failed"
 
 # Running a subset says nothing about the whole, so do not compare then.
 if [ -n "$want" ]; then exit 0; fi
