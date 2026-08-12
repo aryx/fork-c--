@@ -63,7 +63,7 @@ if [ -z "${RUN32+set}" ]; then
   if command -v qemu-i386 >/dev/null 2>&1; then RUN32=qemu-i386; else RUN32=; fi
 fi
 RT=../runtime
-LIB=$RT/build/libqcmm.a
+LIB=$RT/build-x86/libqcmm.a
 T=tiger
 B=build/tiger
 
