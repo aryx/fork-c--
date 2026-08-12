@@ -28,21 +28,24 @@ uninstall::
 # It needs nothing but qc, runs in seconds, and is the one to run while
 # working on the compiler.
 #
-# "test-tiger", "test-rt", "test-native" and "test-lcc" validate code
-# generation rather than just the absence of crashes: they build and run
-# real programs and check their output and exit code. All four need the
-# i386 cross toolchain and qemu binfmt (see demos/Makefile for the
-# requirements), so they are kept separate. test-rt covers what test-tiger
-# cannot (`cut to`, `foreign "C-- thread"`, stack unwinding); test-native is
-# the general regression suite (tests/native.tests, ported from
-# arch/all.x86.tst); test-lcc is LCC's own regression suite translated to
-# C-- (tests/lcc.tests, ported from lcc.x86.tst).
+# "test-tiger", "test-rt", "test-quest", "test-native" and "test-lcc"
+# validate code generation rather than just the absence of crashes: they
+# build and run real programs and check their output and exit code. All
+# five need the i386 cross toolchain and qemu binfmt (see demos/Makefile
+# for the requirements), so they are kept separate. test-rt covers what
+# test-tiger cannot (`cut to`, `foreign "C-- thread"`, stack unwinding);
+# test-quest is pure calling-convention ABI tests, qc-- linked against gcc
+# in both directions (tests/quest.tests, ported from TODO/tests/quest);
+# test-native is the general regression suite (tests/native.tests, ported
+# from arch/all.x86.tst); test-lcc is LCC's own regression suite translated
+# to C-- (tests/lcc.tests, ported from lcc.x86.tst).
 #
-# All seven compare against a recorded baseline rather than demanding that
+# All eight compare against a recorded baseline rather than demanding that
 # everything pass, since a third of tests/src consists of negative tests
 # and there are known failures in the others (see tests/rt.tests,
-# tests/native.tests, tests/lcc.tests and tests/tiger.tests). Re-record
-# with the scripts' --update flag, and review the diff when you do.
+# tests/quest.tests, tests/native.tests, tests/lcc.tests and
+# tests/tiger.tests). Re-record with the scripts' --update flag, and review
+# the diff when you do.
 test::
 	tests/run-compile.sh
 
@@ -60,6 +63,13 @@ test-tiger-ppc::
 
 test-rt::
 	tests/run-rt.sh
+
+# claude: calling-convention ABI tests, ported from TODO/tests/quest (see
+# tests/quest.tests's header). Same i386/qemu requirement as test-tiger and
+# test-rt, but needs no runtime library - pure argument/return-value
+# passing between qc-- and gcc, in both directions.
+test-quest::
+	tests/run-quest.sh
 
 test-native::
 	tests/run-native.sh
@@ -101,7 +111,7 @@ test-optimizer::
 test-phases::
 	tests/run-phases.sh
 
-test-all:: test test-tiger test-tiger-ppc test-rt test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
+test-all:: test test-tiger test-tiger-ppc test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 build-docker:
 	docker build -t "cmm" .
 

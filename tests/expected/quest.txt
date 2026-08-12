@@ -1,0 +1,6 @@
+test-0-cmm-gcc PASS
+test-0-gcc-cmm PASS
+test-1-cmm-gcc FAIL
+test-1-gcc-cmm FAIL
+test-2-cmm-gcc FAIL
+test-2-gcc-cmm FAIL
