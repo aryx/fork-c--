@@ -1,0 +1,28 @@
+target byteorder little;
+
+// Toy example for Peephole.subst_forward (opti/peephole.ml), the
+// available-expressions substitution pass. "y = x + 1; return(y + 1);"
+// keeps y's definition around only long enough for the return statement
+// to use it once - a classic case for forward substitution: once "x + 1"
+// is known to be available wherever y is fetched, subst_forward inlines
+// it into "y + 1", and elab/simplify.ml folds the resulting "(x + 1) + 1"
+// into "x + 2". At -O0 this shows up as two separate additions through a
+// stored y; at -O3 it collapses into a single "leal 2(%eax), %eax" and y
+// never round-trips through memory/a register at all.
+//
+// Peephole.sequential (the other opti/peephole.ml entry point) is NOT
+// used anywhere in this pipeline: it solves the available-expressions
+// analysis once with the plain, non-rewriting Availpass.analysis and
+// then separately rewrites and cross-checks the result against that now
+// - stale solve, which cfg/dataflow/dataflow.ml's fixed-point assertion
+// correctly rejects the moment a substitution changes an RTL's shape.
+// subst_forward solves and rewrites with the same combined computation
+// throughout, so it can't disagree with itself - see
+// arch/x86/x86backend.ml's optimizer for the fuller writeup.
+//
+// remove_nops.c--/simplify_exps.c--'s -O3 goldens also move slightly
+// once this pass is on (it forwards %esp-relative addresses too, not
+// just this file's arithmetic chain) - their header comments still
+// describe the dominant, clearly-attributable transformation in each.
+export chain;
+chain(bits32 x) { bits32 y; y = x + 1; return(y + 1); }

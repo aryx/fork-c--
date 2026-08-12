@@ -175,8 +175,9 @@ let ld_cmd = ref (getenv_or "QC_LD" "")
 let exportglobals = ref false
 
 (* claude: -O0/-O3, gating the opti/ passes (Optimize.simplify_exps,
- * Optimize.remove_nops, Optimize.validate) that X86backend.optimizer and
- * Ppcbackend.optimizer now run when opt_level > 0. Only two levels are
+ * Optimize.remove_nops, Optimize.validate, Peephole.subst_forward) that
+ * X86backend.optimizer and Ppcbackend.optimizer now run when
+ * opt_level > 0. Only two levels are
  * distinguished today - there is a single on/off tier of optimizations
  * wired up, not four - but the int (rather than a bool) leaves room to
  * add -O1/-O2 later without a signature change. Defaults to 0 (matching
@@ -693,7 +694,7 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     "-O0", Arg.Unit (fun () -> opt_level := 0),
     " disable the opti/ passes (default)";
     "-O3", Arg.Unit (fun () -> opt_level := 3),
-    " enable the opti/ passes (simplify_exps, remove_nops, validate)";
+    " enable the opti/ passes (simplify_exps, remove_nops, validate, peephole)";
     "-stop", Arg.Set_string stop_after,
     " .<ext> stop after producing .s or .o (cc's -S and -c)";
     "-L", Arg.String (fun d -> libdirs := d :: !libdirs),

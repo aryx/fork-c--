@@ -152,7 +152,13 @@ let dump_cfg word label (proc : Ast2ir.proc) : unit =
  * Opt.standard_phases, not looked up from backend.preopt -
  * LUA/lua-cmm-driver/luacompile.nw:593-594) plus Backend.ppc's own
  * preopt/rmvfp remove_nops (:905,:911-913). Backend.ppc set no 'improve',
- * so unlike x86 there is no Optimize.validate call here.
+ * so unlike x86 there is no Optimize.validate call here - but
+ * Peephole.subst_forward still runs (gated the same way): it was never
+ * wired into either backend's Lua phase list, so adding it to ppc
+ * alongside x86 is new integration, not something to keep asymmetric.
+ * See arch/x86/x86backend.ml's optimizer for why subst_forward rather
+ * than Peephole.sequential (the latter hits a real Impossible in
+ * cfg/dataflow/dataflow.ml, not a target-specific issue).
  *
  * trim_unreachable_code runs first and unconditionally (not gated by
  * opt_level) - see arch/x86/x86backend.ml's optimizer for why.
@@ -167,6 +173,7 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   dump_cfg "instrsel-cfg" "BEFORE instruction selection (ppc):" proc;
   let proc = run Ppc.X.cfg proc in
   dump_cfg "instrsel-cfg" "AFTER instruction selection (ppc):" proc;
+  let proc = if opt_level > 0 then run Peephole.subst_forward proc else proc in
   let proc = run Phases.liveness proc in
   let proc = run Flowra.ralloc proc in
   let proc = run layout proc in

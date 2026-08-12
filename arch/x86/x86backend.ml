@@ -269,10 +269,12 @@ let dump_cfg word label (proc : Ast2ir.proc) : unit =
  * (docs/literate/Cminusminus.nw's optimize.nw/peephole.nw, now
  * opti/optimize.ml - see the file header): 0 (-O0, the default) skips
  * them and reproduces exactly what this function did before they were
- * wired in; >0 (-O3) runs simplify_exps/preopt/improve/the rmvfp cleanup
- * as upstream's Backend.x86 phase list did unconditionally
- * (LUA/lua-cmm-driver/luacompile.nw:797-823). Peephole.subst_forward is
- * not wired in yet - opti/peephole.ml still doesn't build, see opti/dune.
+ * wired in; >0 (-O3) runs simplify_exps/preopt/improve (now including
+ * Peephole.subst_forward)/the rmvfp cleanup - the preopt/validate/rmvfp
+ * trio as upstream's Backend.x86 phase list did unconditionally
+ * (LUA/lua-cmm-driver/luacompile.nw:797-823); peephole substitution is
+ * new integration upstream never wired into Backend.x86 either, see the
+ * 'improve' comment below.
  *
  * trim_unreachable_code runs first and unconditionally (not gated by
  * opt_level): upstream ran it right before the optimizer, unconditionally,
@@ -298,7 +300,26 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   dump_cfg "instrsel-cfg" "BEFORE instruction selection (x86):" proc;
   let proc = run X86.X.cfg proc in
   dump_cfg "instrsel-cfg" "AFTER instruction selection (x86):" proc;
-  (* the 'improve' phase *)
+  (* the 'improve' phase. Peephole.subst_forward, not Peephole.sequential:
+   * peephole.mli's comment next to subst_forward ("composed; probably
+   * should be sequential") reads like the upstream author's own untested
+   * aspiration, and it doesn't hold up - nothing upstream ever exercised
+   * this end to end (only reachable as a named Lua stage, never wired
+   * into any Backend.*'s phase list - LUA/lua-cmm-driver/lualink.nw:639,
+   * luacompile.nw's Optimize.improve/oimprove reference it but are never
+   * assigned to Backend.x86.improve either). sequential's cfg/dataflow.ml
+   * Dataflow.F.rewrite_solved first solves with the plain
+   * Availpass.analysis (ignoring what the rewrite will do), then rewrites
+   * and cross-checks the result against that now-stale solve - unsound
+   * the moment a substitution changes an RTL's shape, which is the whole
+   * point of this pass. subst_forward's Dataflow.F.rewrite solves and
+   * rewrites with the same combined (analysis + rewrite) computation
+   * throughout, so it can't disagree with itself; empirically it's the
+   * one that doesn't trip "property ... changed after supposedly
+   * reaching fixed point" (Impossible, cfg/dataflow/dataflow.ml:478).
+   * New integration either way, gated the same as the rest of opti/.
+   * Runs before validate so validate checks its output too. *)
+  let proc = if opt_level > 0 then run Peephole.subst_forward proc else proc in
   let proc = if opt_level > 0 then run Optimize.validate proc else proc in
   let proc = run Phases.liveness proc in
   (* Upstream's Backend.x86 used Ralloc.dls (TODO/backend/registers/dls.nw,

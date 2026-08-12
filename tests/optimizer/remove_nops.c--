@@ -6,8 +6,11 @@ target byteorder little;
 // setup and epilogue/vfp teardown, and at -O0 that machinery leaves behind
 // RTLs remove_nops recognizes as no-ops: Kill effects (emitted as literal
 // "nop" instructions) and self-stores "l := fetch(l)" (emitted as
-// "movl %r,%r"). There is nothing here for Optimize.simplify_exps to do -
-// no arithmetic at all - so the -O0/-O3 diff is remove_nops' effect alone.
-// See simplify_exps.c-- for that pass instead.
+// "movl %r,%r"). There is no arithmetic here for Optimize.simplify_exps to
+// fold, so the nop/self-move removal is remove_nops' effect specifically.
+// Peephole.subst_forward is also on at -O3 (see peephole.c--) and forwards
+// %esp-relative addresses here too, so the -O0/-O3 diff has a little of
+// its noise mixed in, but the nop/self-move removal is still the
+// dominant, easy-to-read story.
 export foo;
 foo(bits32 x) { return; }

@@ -126,14 +126,23 @@ let tx (g, proc) =
 
 let _ = Debug.register "avail-dataflow" "computation of available expressions"
 
+(* claude: upstream's Backplane.of_dataflow (LUA/lua-cmm-driver/backplane.nw:899)
+ * is just this lift from a graph rewrite to a procedure rewrite. This fork
+ * dropped the rest of Backplane (see arch/x86/x86backend.ml's header
+ * comment on why), so inline the one function actually needed here
+ * instead of porting the whole module. *)
+let of_dataflow graph_rewrite _ (g, proc) =
+  let g, changed = graph_rewrite g in
+  (g, proc), changed
+
 let subst_forward v gproc =
   let pass = D.a_t Availpass.analysis (tx gproc) in
   let pass = if Debug.on "avail-dataflow" then D.debug Avail.to_string pass else pass in
-  Backplane.of_dataflow (D.rewrite pass ~entry_fact:Avail.unknown) v gproc
+  of_dataflow (D.rewrite pass ~entry_fact:Avail.unknown) v gproc
 
 let sequential v (g,proc) =
   let pass = D.a_t Availpass.analysis (tx (g,proc)) in
   D.run_anal Availpass.analysis Avail.unknown g;
-  Backplane.of_dataflow (D.rewrite_solved pass ~entry_fact:Avail.unknown) v (g,proc)
+  of_dataflow (D.rewrite_solved pass ~entry_fact:Avail.unknown) v (g,proc)
 (*e: peephole.ml  *)
 (*e: peephole.ml *)
