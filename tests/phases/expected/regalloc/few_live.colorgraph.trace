@@ -1,0 +1,45 @@
+BEFORE register allocation:
+
+BEGIN CFG
+<entry>
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$t[19] := $V[0]
+$t[5] := bits32L[$t[19]]
+<branch> $c[0] := .Linitialize_continuations_l3 [.Linitialize continuations:l3]
+.Linitialize continuations:l3:
+<branch> $c[0] := .Lproc_body_start_l2 [.Lproc body start:l2]
+.Lproc body start:l2:
+$t[21] := $r[0]
+$t[21] := $t[21] + bits32L[$V[0] + 4] | $c[2] := %x86_addflags($t[21], bits32L[$V[0] + 4])
+$t[20] := $t[21]
+$t[20] := $t[20] + bits32L[$V[0] + 8] | $c[2] := %x86_addflags($t[20], bits32L[$V[0] + 8])
+%gt($r[4], $V[0] + (<out ovfl results:o4> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o4> + -4)
+$r[0] := $t[20]
+bits32L[$V[0] + (<out ovfl results:o4> + -4)] := $t[5]
+$r[7] := $r[7]
+$r[6] := $r[6]
+$r[5] := $r[5]
+$r[3] := $r[3]
+%ne($r[4], $V[0] + (<out ovfl results:o4> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o4> + -4)
+<return> $c[0] := bits32L[$r[4]] | $r[4] := $r[4] + 4 []
+END CFG
+AFTER register allocation:
+
+BEGIN CFG
+<entry>
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$r[1] := $V[0]
+$r[1] := bits32L[$r[1]]
+<branch> $c[0] := .Linitialize_continuations_l3 [.Linitialize continuations:l3]
+.Linitialize continuations:l3:
+<branch> $c[0] := .Lproc_body_start_l2 [.Lproc body start:l2]
+.Lproc body start:l2:
+$r[0] := $r[0] + bits32L[$V[0] + 4] | $c[2] := %x86_addflags($r[0], bits32L[$V[0] + 4])
+$r[0] := $r[0] + bits32L[$V[0] + 8] | $c[2] := %x86_addflags($r[0], bits32L[$V[0] + 8])
+%gt($r[4], $V[0] + (<out ovfl results:o4> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o4> + -4)
+bits32L[$V[0] + (<out ovfl results:o4> + -4)] := $r[1]
+%ne($r[4], $V[0] + (<out ovfl results:o4> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o4> + -4)
+<return> $c[0] := bits32L[$r[4]] | $r[4] := $r[4] + 4 []
+END CFG

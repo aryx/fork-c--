@@ -1,0 +1,473 @@
+BEFORE register allocation:
+
+BEGIN CFG
+<entry>
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$t[39] := $V[0]
+$t[5] := bits32L[$t[39]]
+<branch> $c[0] := .Linitialize_continuations_l4 [.Linitialize continuations:l4]
+.Linitialize continuations:l4:
+<branch> $c[0] := .Lproc_body_start_l3 [.Lproc body start:l3]
+.Lproc body start:l3:
+$t[40] := bits32L[$V[0] + 4]
+$t[40] := $t[40] + 1 | $c[2] := %x86_addflags($t[40], 1)
+$t[42] := bits32L[$V[0] + 8]
+$t[42] := $t[42] + 2 | $c[2] := %x86_addflags($t[42], 2)
+$t[44] := bits32L[$V[0] + 12]
+$t[44] := $t[44] + 3 | $c[2] := %x86_addflags($t[44], 3)
+$t[46] := bits32L[$V[0] + 16]
+$t[46] := $t[46] + 4 | $c[2] := %x86_addflags($t[46], 4)
+$t[48] := bits32L[$V[0] + 20]
+$t[48] := $t[48] + 5 | $c[2] := %x86_addflags($t[48], 5)
+$t[53] := $t[40]
+$t[53] := $t[53] + $t[42] | $c[2] := %x86_addflags($t[53], $t[42])
+$t[52] := $t[53]
+$t[52] := $t[52] + $t[44] | $c[2] := %x86_addflags($t[52], $t[44])
+$t[51] := $t[52]
+$t[51] := $t[51] + $t[46] | $c[2] := %x86_addflags($t[51], $t[46])
+$t[50] := $t[51]
+$t[50] := $t[50] + $t[48] | $c[2] := %x86_addflags($t[50], $t[48])
+<branch> $c[0] := .Lbranch_target_l10 [.Lbranch target:l10]
+.Lbranch target:l10:
+<branch> $c[0] := .Lbranch_target_l14 [.Lbranch target:l14]
+.Lbranch target:l14:
+$c[2] := %x86_subflags($r[0], 0)
+<cbranch> %x86_e($c[2]) --> $c[0] := .Lbranch_target_l9 [.Lbranch target:l7 .Lbranch target:l9]
+.Lbranch target:l7:
+%gt($r[4], $V[0] + <out call parms:o6>) --> $r[4] := $V[0] + <out call parms:o6>
+$t[74] := $r[0]
+$t[74] := $t[74] - 1 | $c[2] := %x86_subflags($t[74], 1)
+$r[0] := $t[74]
+$t[73] := bits32L[$V[0] + 4]
+$t[73] := $t[73] + $t[50] | $c[2] := %x86_addflags($t[73], $t[50])
+bits32L[$V[0] + <out call parms:o6>] := $t[73]
+$t[69] := bits32L[$V[0] + 8]
+$t[69] := $t[69] + $t[40] | $c[2] := %x86_addflags($t[69], $t[40])
+bits32L[$V[0] + (<out call parms:o6> + 4)] := $t[69]
+$t[65] := bits32L[$V[0] + 12]
+$t[65] := $t[65] + $t[42] | $c[2] := %x86_addflags($t[65], $t[42])
+bits32L[$V[0] + (<out call parms:o6> + 8)] := $t[65]
+$t[61] := bits32L[$V[0] + 16]
+$t[61] := $t[61] + $t[44] | $c[2] := %x86_addflags($t[61], $t[44])
+bits32L[$V[0] + (<out call parms:o6> + 12)] := $t[61]
+$t[57] := bits32L[$V[0] + 20]
+$t[57] := $t[57] + $t[46] | $c[2] := %x86_addflags($t[57], $t[46])
+bits32L[$V[0] + (<out call parms:o6> + 16)] := $t[57]
+$r[7] := $r[7]
+$r[6] := $r[6]
+$r[5] := $r[5]
+$r[3] := $r[3]
+bits32L[$V[0] + (<out call parms:o6> + -4)] := $t[5]
+$r[4] := $V[0] + (<out call parms:o6> + -4)
+<jump> $c[0] := loop_help []
+.Lbranch target:l9:
+%gt($r[4], $V[0] + (<out ovfl results:o8> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o8> + -4)
+$r[0] := $t[50]
+bits32L[$V[0] + (<out ovfl results:o8> + -4)] := $t[5]
+$r[7] := $r[7]
+$r[6] := $r[6]
+$r[5] := $r[5]
+$r[3] := $r[3]
+%ne($r[4], $V[0] + (<out ovfl results:o8> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o8> + -4)
+<return> $c[0] := bits32L[$r[4]] | $r[4] := $r[4] + 4 []
+END CFG
+AFTER register allocation:
+
+BEGIN CFG
+<entry>
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$r[1] := $V[0]
+$r[1] := bits32L[$r[1]]
+bits32L[$V[0] + (<private:o12> + 12)] := $r[1]
+<branch> $c[0] := .Linitialize_continuations_l4 [.Linitialize continuations:l4]
+.Linitialize continuations:l4:
+<branch> $c[0] := .Lproc_body_start_l3 [.Lproc body start:l3]
+.Lproc body start:l3:
+$r[1] := bits32L[$V[0] + 4]
+bits32L[$V[0] + (<private:o12> + 432)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 432)]
+$r[1] := $r[1] + 1 | $c[2] := %x86_addflags($r[1], 1)
+bits32L[$V[0] + (<private:o12> + 432)] := $r[1]
+$r[1] := bits32L[$V[0] + 8]
+bits32L[$V[0] + <private:o12>] := $r[1]
+$r[1] := bits32L[$V[0] + <private:o12>]
+$r[1] := $r[1] + 2 | $c[2] := %x86_addflags($r[1], 2)
+bits32L[$V[0] + <private:o12>] := $r[1]
+$r[1] := bits32L[$V[0] + 12]
+bits32L[$V[0] + (<private:o12> + 4)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 4)]
+$r[1] := $r[1] + 3 | $c[2] := %x86_addflags($r[1], 3)
+bits32L[$V[0] + (<private:o12> + 4)] := $r[1]
+$r[1] := bits32L[$V[0] + 16]
+bits32L[$V[0] + (<private:o12> + 8)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 8)]
+$r[1] := $r[1] + 4 | $c[2] := %x86_addflags($r[1], 4)
+bits32L[$V[0] + (<private:o12> + 8)] := $r[1]
+$r[1] := bits32L[$V[0] + 20]
+bits32L[$V[0] + (<private:o12> + 20)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 20)]
+$r[1] := $r[1] + 5 | $c[2] := %x86_addflags($r[1], 5)
+bits32L[$V[0] + (<private:o12> + 20)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 432)]
+$r[2] := bits32L[$V[0] + <private:o12>]
+$r[1] := $r[1] + $r[2] | $c[2] := %x86_addflags($r[1], $r[2])
+$r[2] := bits32L[$V[0] + (<private:o12> + 4)]
+$r[1] := $r[1] + $r[2] | $c[2] := %x86_addflags($r[1], $r[2])
+bits32L[$V[0] + (<private:o12> + 424)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 424)]
+bits32L[$V[0] + (<private:o12> + 224)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 224)]
+bits32L[$V[0] + (<private:o12> + 120)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 120)]
+bits32L[$V[0] + (<private:o12> + 64)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 64)]
+bits32L[$V[0] + (<private:o12> + 36)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 8)]
+bits32L[$V[0] + (<private:o12> + 68)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 36)]
+bits32L[$V[0] + (<private:o12> + 124)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 68)]
+bits32L[$V[0] + (<private:o12> + 228)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 124)]
+bits32L[$V[0] + (<private:o12> + 428)] := $r[1]
+$r[2] := bits32L[$V[0] + (<private:o12> + 228)]
+$r[1] := bits32L[$V[0] + (<private:o12> + 428)]
+$r[1] := $r[1] + $r[2] | $c[2] := %x86_addflags($r[1], $r[2])
+bits32L[$V[0] + (<private:o12> + 428)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 428)]
+bits32L[$V[0] + (<private:o12> + 124)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 124)]
+bits32L[$V[0] + (<private:o12> + 36)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 36)]
+$r[2] := bits32L[$V[0] + (<private:o12> + 20)]
+bits32L[$V[0] + (<private:o12> + 292)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 292)]
+bits32L[$V[0] + (<private:o12> + 156)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 156)]
+bits32L[$V[0] + (<private:o12> + 288)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 288)]
+bits32L[$V[0] + (<private:o12> + 84)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 84)]
+bits32L[$V[0] + (<private:o12> + 284)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 284)]
+bits32L[$V[0] + (<private:o12> + 152)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 152)]
+bits32L[$V[0] + (<private:o12> + 280)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 280)]
+bits32L[$V[0] + (<private:o12> + 44)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 44)]
+bits32L[$V[0] + (<private:o12> + 276)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 276)]
+bits32L[$V[0] + (<private:o12> + 148)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 148)]
+bits32L[$V[0] + (<private:o12> + 272)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 272)]
+bits32L[$V[0] + (<private:o12> + 80)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 80)]
+bits32L[$V[0] + (<private:o12> + 268)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 268)]
+bits32L[$V[0] + (<private:o12> + 144)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 144)]
+bits32L[$V[0] + (<private:o12> + 264)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 264)]
+bits32L[$V[0] + (<private:o12> + 24)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 24)]
+bits32L[$V[0] + (<private:o12> + 260)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 260)]
+bits32L[$V[0] + (<private:o12> + 140)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 140)]
+bits32L[$V[0] + (<private:o12> + 256)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 256)]
+bits32L[$V[0] + (<private:o12> + 76)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 76)]
+bits32L[$V[0] + (<private:o12> + 252)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 252)]
+bits32L[$V[0] + (<private:o12> + 136)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 136)]
+bits32L[$V[0] + (<private:o12> + 248)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 248)]
+bits32L[$V[0] + (<private:o12> + 40)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 40)]
+bits32L[$V[0] + (<private:o12> + 244)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 244)]
+bits32L[$V[0] + (<private:o12> + 132)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 132)]
+bits32L[$V[0] + (<private:o12> + 240)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 240)]
+bits32L[$V[0] + (<private:o12> + 72)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 72)]
+bits32L[$V[0] + (<private:o12> + 236)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 236)]
+bits32L[$V[0] + (<private:o12> + 128)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 128)]
+bits32L[$V[0] + (<private:o12> + 232)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 232)]
+$r[1] := $r[1] + $r[2] | $c[2] := %x86_addflags($r[1], $r[2])
+<branch> $c[0] := .Lbranch_target_l10 [.Lbranch target:l10]
+.Lbranch target:l10:
+<branch> $c[0] := .Lbranch_target_l14 [.Lbranch target:l14]
+.Lbranch target:l14:
+$c[2] := %x86_subflags($r[0], 0)
+<cbranch> %x86_e($c[2]) --> $c[0] := .Lbranch_target_l9 [.Lbranch target:l7 .Lbranch target:l9]
+.Lbranch target:l7:
+%gt($r[4], $V[0] + <out call parms:o6>) --> $r[4] := $V[0] + <out call parms:o6>
+$r[0] := $r[0] - 1 | $c[2] := %x86_subflags($r[0], 1)
+$r[2] := bits32L[$V[0] + 4]
+bits32L[$V[0] + (<private:o12> + 420)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 420)]
+bits32L[$V[0] + (<private:o12> + 220)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 220)]
+bits32L[$V[0] + (<private:o12> + 416)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 416)]
+bits32L[$V[0] + (<private:o12> + 116)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 116)]
+bits32L[$V[0] + (<private:o12> + 412)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 412)]
+bits32L[$V[0] + (<private:o12> + 216)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 216)]
+bits32L[$V[0] + (<private:o12> + 408)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 408)]
+bits32L[$V[0] + (<private:o12> + 60)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 60)]
+bits32L[$V[0] + (<private:o12> + 404)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 404)]
+bits32L[$V[0] + (<private:o12> + 212)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 212)]
+bits32L[$V[0] + (<private:o12> + 400)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 400)]
+bits32L[$V[0] + (<private:o12> + 112)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 112)]
+bits32L[$V[0] + (<private:o12> + 396)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 396)]
+bits32L[$V[0] + (<private:o12> + 208)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 208)]
+bits32L[$V[0] + (<private:o12> + 392)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 392)]
+bits32L[$V[0] + (<private:o12> + 32)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 32)]
+bits32L[$V[0] + (<private:o12> + 388)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 388)]
+bits32L[$V[0] + (<private:o12> + 204)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 204)]
+bits32L[$V[0] + (<private:o12> + 384)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 384)]
+bits32L[$V[0] + (<private:o12> + 108)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 108)]
+bits32L[$V[0] + (<private:o12> + 380)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 380)]
+bits32L[$V[0] + (<private:o12> + 200)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 200)]
+bits32L[$V[0] + (<private:o12> + 376)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 376)]
+bits32L[$V[0] + (<private:o12> + 56)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 56)]
+bits32L[$V[0] + (<private:o12> + 372)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 372)]
+bits32L[$V[0] + (<private:o12> + 196)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 196)]
+bits32L[$V[0] + (<private:o12> + 368)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 368)]
+bits32L[$V[0] + (<private:o12> + 104)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 104)]
+bits32L[$V[0] + (<private:o12> + 364)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 364)]
+bits32L[$V[0] + (<private:o12> + 192)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 192)]
+bits32L[$V[0] + (<private:o12> + 360)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 360)]
+bits32L[$V[0] + (<private:o12> + 16)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 16)]
+bits32L[$V[0] + (<private:o12> + 356)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 356)]
+bits32L[$V[0] + (<private:o12> + 188)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 188)]
+bits32L[$V[0] + (<private:o12> + 352)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 352)]
+bits32L[$V[0] + (<private:o12> + 100)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 100)]
+bits32L[$V[0] + (<private:o12> + 348)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 348)]
+bits32L[$V[0] + (<private:o12> + 184)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 184)]
+bits32L[$V[0] + (<private:o12> + 344)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 344)]
+bits32L[$V[0] + (<private:o12> + 52)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 52)]
+bits32L[$V[0] + (<private:o12> + 340)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 340)]
+bits32L[$V[0] + (<private:o12> + 180)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 180)]
+bits32L[$V[0] + (<private:o12> + 336)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 336)]
+bits32L[$V[0] + (<private:o12> + 96)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 96)]
+bits32L[$V[0] + (<private:o12> + 332)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 332)]
+bits32L[$V[0] + (<private:o12> + 176)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 176)]
+bits32L[$V[0] + (<private:o12> + 328)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 328)]
+bits32L[$V[0] + (<private:o12> + 28)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 28)]
+bits32L[$V[0] + (<private:o12> + 324)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 324)]
+bits32L[$V[0] + (<private:o12> + 172)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 172)]
+bits32L[$V[0] + (<private:o12> + 320)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 320)]
+bits32L[$V[0] + (<private:o12> + 92)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 92)]
+bits32L[$V[0] + (<private:o12> + 316)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 316)]
+bits32L[$V[0] + (<private:o12> + 168)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 168)]
+bits32L[$V[0] + (<private:o12> + 312)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 312)]
+bits32L[$V[0] + (<private:o12> + 48)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 48)]
+bits32L[$V[0] + (<private:o12> + 308)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 308)]
+bits32L[$V[0] + (<private:o12> + 164)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 164)]
+bits32L[$V[0] + (<private:o12> + 304)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 304)]
+bits32L[$V[0] + (<private:o12> + 88)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 88)]
+bits32L[$V[0] + (<private:o12> + 300)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 300)]
+bits32L[$V[0] + (<private:o12> + 160)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 160)]
+bits32L[$V[0] + (<private:o12> + 296)] := $r[2]
+$r[2] := bits32L[$V[0] + (<private:o12> + 296)]
+$r[2] := $r[2] + $r[1] | $c[2] := %x86_addflags($r[2], $r[1])
+bits32L[$V[0] + (<private:o12> + 296)] := $r[2]
+$r[1] := bits32L[$V[0] + (<private:o12> + 296)]
+bits32L[$V[0] + (<private:o12> + 160)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 160)]
+bits32L[$V[0] + (<private:o12> + 88)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 88)]
+bits32L[$V[0] + (<private:o12> + 48)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 48)]
+bits32L[$V[0] + (<private:o12> + 28)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 28)]
+bits32L[$V[0] + (<private:o12> + 16)] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 16)]
+bits32L[$V[0] + <out call parms:o6>] := $r[1]
+$r[2] := bits32L[$V[0] + 8]
+$r[1] := bits32L[$V[0] + (<private:o12> + 432)]
+$r[2] := $r[2] + $r[1] | $c[2] := %x86_addflags($r[2], $r[1])
+bits32L[$V[0] + (<out call parms:o6> + 4)] := $r[2]
+$r[2] := bits32L[$V[0] + 12]
+$r[1] := bits32L[$V[0] + <private:o12>]
+$r[2] := $r[2] + $r[1] | $c[2] := %x86_addflags($r[2], $r[1])
+bits32L[$V[0] + (<out call parms:o6> + 8)] := $r[2]
+$r[2] := bits32L[$V[0] + 16]
+$r[1] := bits32L[$V[0] + (<private:o12> + 4)]
+$r[2] := $r[2] + $r[1] | $c[2] := %x86_addflags($r[2], $r[1])
+bits32L[$V[0] + (<out call parms:o6> + 12)] := $r[2]
+$r[2] := bits32L[$V[0] + 20]
+$r[1] := bits32L[$V[0] + (<private:o12> + 8)]
+$r[2] := $r[2] + $r[1] | $c[2] := %x86_addflags($r[2], $r[1])
+bits32L[$V[0] + (<out call parms:o6> + 16)] := $r[2]
+$r[1] := bits32L[$V[0] + (<private:o12> + 12)]
+bits32L[$V[0] + (<out call parms:o6> + -4)] := $r[1]
+$r[4] := $V[0] + (<out call parms:o6> + -4)
+<jump> $c[0] := loop_help []
+.Lbranch target:l9:
+%gt($r[4], $V[0] + (<out ovfl results:o8> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o8> + -4)
+$r[0] := $r[1]
+$r[1] := bits32L[$V[0] + (<private:o12> + 12)]
+bits32L[$V[0] + (<out ovfl results:o8> + -4)] := $r[1]
+%ne($r[4], $V[0] + (<out ovfl results:o8> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o8> + -4)
+<return> $c[0] := bits32L[$r[4]] | $r[4] := $r[4] + 4 []
+END CFG
+BEFORE register allocation:
+
+BEGIN CFG
+<entry>
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$t[4] := $r[7]
+$t[3] := $r[6]
+$t[2] := $r[5]
+$t[1] := $r[3]
+$t[18] := $V[0]
+$t[5] := bits32L[$t[18]]
+<branch> $c[0] := .Linitialize_continuations_l21 [.Linitialize continuations:l21]
+.Linitialize continuations:l21:
+<branch> $c[0] := .Lproc_body_start_l20 [.Lproc body start:l20]
+.Lproc body start:l20:
+%gt($r[4], $V[0] + <out call parms:o26>) --> $r[4] := $V[0] + <out call parms:o26>
+$r[0] := 5
+bits32L[$V[0] + <out call parms:o26>] := 1
+bits32L[$V[0] + (<out call parms:o26> + 4)] := 2
+bits32L[$V[0] + (<out call parms:o26> + 8)] := 3
+bits32L[$V[0] + (<out call parms:o26> + 12)] := 4
+bits32L[$V[0] + (<out call parms:o26> + 16)] := 5
+%ne($r[4], $V[0] + <out call parms:o26>) --> $r[4] := $V[0] + <out call parms:o26>
+<call> $c[0] := loop_help | bits32L[$r[4] - 4] := $c[0] | $r[4] := $r[4] - 4 [.Lcall successor:l28]
+.Lcall successor:l28:
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%gt($r[4], $V[0] + <out call parms:o23>) --> $r[4] := $V[0] + <out call parms:o23>
+$t[50] := fmt
+bits32L[$V[0] + <out call parms:o23>] := $t[50]
+bits32L[$V[0] + (<out call parms:o23> + 4)] := $r[0]
+%ne($r[4], $V[0] + <out call parms:o23>) --> $r[4] := $V[0] + <out call parms:o23>
+<call> $c[0] := printf | bits32L[$r[4] - 4] := $c[0] | $r[4] := $r[4] - 4 [.Lcall successor:l25]
+.Lcall successor:l25:
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%gt($r[4], $V[0] + (<out ovfl results:o22> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o22> + -4)
+$r[0] := 0
+bits32L[$V[0] + (<out ovfl results:o22> + -4)] := $t[5]
+$r[7] := $t[4]
+$r[6] := $t[3]
+$r[5] := $t[2]
+$r[3] := $t[1]
+%ne($r[4], $V[0] + (<out ovfl results:o22> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o22> + -4)
+<return> $c[0] := bits32L[$r[4]] | $r[4] := $r[4] + 4 []
+END CFG
+AFTER register allocation:
+
+BEGIN CFG
+<entry>
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+$r[0] := $V[0]
+$r[0] := bits32L[$r[0]]
+bits32L[$V[0] + <private:o30>] := $r[0]
+<branch> $c[0] := .Linitialize_continuations_l21 [.Linitialize continuations:l21]
+.Linitialize continuations:l21:
+<branch> $c[0] := .Lproc_body_start_l20 [.Lproc body start:l20]
+.Lproc body start:l20:
+%gt($r[4], $V[0] + <out call parms:o26>) --> $r[4] := $V[0] + <out call parms:o26>
+$r[0] := 5
+bits32L[$V[0] + <out call parms:o26>] := 1
+bits32L[$V[0] + (<out call parms:o26> + 4)] := 2
+bits32L[$V[0] + (<out call parms:o26> + 8)] := 3
+bits32L[$V[0] + (<out call parms:o26> + 12)] := 4
+bits32L[$V[0] + (<out call parms:o26> + 16)] := 5
+%ne($r[4], $V[0] + <out call parms:o26>) --> $r[4] := $V[0] + <out call parms:o26>
+<call> $c[0] := loop_help | bits32L[$r[4] - 4] := $c[0] | $r[4] := $r[4] - 4 [.Lcall successor:l28]
+.Lcall successor:l28:
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%gt($r[4], $V[0] + <out call parms:o23>) --> $r[4] := $V[0] + <out call parms:o23>
+$r[1] := fmt
+bits32L[$V[0] + <out call parms:o23>] := $r[1]
+bits32L[$V[0] + (<out call parms:o23> + 4)] := $r[0]
+%ne($r[4], $V[0] + <out call parms:o23>) --> $r[4] := $V[0] + <out call parms:o23>
+<call> $c[0] := printf | bits32L[$r[4] - 4] := $c[0] | $r[4] := $r[4] - 4 [.Lcall successor:l25]
+.Lcall successor:l25:
+%gt($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%ne($r[4], $V[0] + <minus frame size>) --> $r[4] := $V[0] + <minus frame size>
+%gt($r[4], $V[0] + (<out ovfl results:o22> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o22> + -4)
+$r[0] := 0
+$r[1] := bits32L[$V[0] + <private:o30>]
+bits32L[$V[0] + (<out ovfl results:o22> + -4)] := $r[1]
+%ne($r[4], $V[0] + (<out ovfl results:o22> + -4)) --> $r[4] := $V[0] + (<out ovfl results:o22> + -4)
+<return> $c[0] := bits32L[$r[4]] | $r[4] := $r[4] + 4 []
+END CFG

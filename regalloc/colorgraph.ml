@@ -880,16 +880,65 @@ let degree_for_temp target cg temp =
                     | None -> (proc, false))
             (*e: freeze *)
             (*s: selectSpill *)
+            (* claude: cg.liveRange/numUses (used by cheaper below) are
+             * accumulated by addInterference's single linear backward walk
+             * over each block, seeded from the real (correctly
+             * fixed-pointed) Live.live_out_last - so they're accurate as a
+             * *static* "how many program points is this live across"
+             * count, but that count has no idea a block is inside a loop:
+             * a value carried around a back-edge (e.g. a self-recursive
+             * tail call's own induction variables) gets exactly the same
+             * modest liveRange as any other value that merely spans one
+             * block, even though spilling it costs a reload every runtime
+             * iteration, not once. Confirmed via
+             * docs/claude_notes/notes_debugging_techniques.txt entry 27:
+             * without this, selectSpill kept *preferring* exactly such a
+             * value round after round (their liveRange/degree ratio looks
+             * "cheap"), and each spill's own reload is itself loop-carried
+             * the same way, so it needed spilling next round too -
+             * |get_regs cfg| grew by one forever on tests/cmm/
+             * tail_from_c.c--'s self-recursive sp2_help, never converging.
+             *
+             * Real loop-nesting-depth-weighted cost would need dominator/
+             * natural-loop analysis this file doesn't have (see
+             * TODO/dominator.nw, still unintegrated). Approximating
+             * instead: a block whose last has a successor at or before its
+             * own position in a postorder DFS is a back edge (standard
+             * test - a tree/forward edge always goes to a strictly later
+             * postorder position, since postorder finishes a node only
+             * after all its descendants), and Live.live_out_last of that
+             * *source* block already contains (is a superset of) whatever
+             * is live-in to the loop header on the other end - no need to
+             * separately walk into the target block. Loop-carried
+             * candidates are heavily deprioritized, not excluded: they can
+             * still be chosen as a last resort if nothing else is on the
+             * worklist, so this cannot itself get selectSpill stuck with
+             * nothing to pick. *)
+            let loop_carried_regs cfg =
+              let order = G.postorder_dfs cfg in
+              let (_, posnum) =
+                List.fold_left (fun (i, m) b -> (i + 1, UM.add (GR.id b) i m))
+                  (0, UM.empty) order in
+              let pos u = try UM.find u posnum with Not_found -> -1 in
+              G.fold_blocks (fun b regs ->
+                let (_, last) = GR.goto_end (GR.unzip b) in
+                let bpos = pos (GR.id b) in
+                if List.exists (fun s -> pos s >= bpos) (GR.succs last)
+                then R.promote_rxset (Live.live_out_last last) ++ regs
+                else regs)
+                RS.empty cfg
             let selectSpill cg (cfg, proc) =
               Debug.eprintf "color" "color::selectSpill()\n"; flush stderr;
               let lst = !(cg.tempLG SpillWorklist) in
               match lst with
               | None   -> ((cfg, proc), false)
               | Some t ->
+                let loop_carried = loop_carried_regs cfg in
                 let cheaper ({v = v} as t) (cost, _ as best) =
                   let i2f = float_of_int in
                   let cost' = (i2f (RM.find v cg.numUses)) /.
                               (i2f (RM.find v cg.liveRange) *. i2f (RM.find v cg.degreeMap)) in
+                  let cost' = if RS.mem v loop_carried then cost' *. 1000. else cost' in
                   if cost' <. cost then (cost', t) else best in
                 let (_, spillee) = ilg_fold cheaper lst (infinity, t) in
                 if RS.mem spillee.v cg.spills then
@@ -1270,8 +1319,15 @@ let degree_for_temp target cg temp =
    * spills - rewrite the program to materialize them and start over from
    * build; otherwise remove the now-redundant coalesced moves and rewrite
    * every temp to its assigned color. *)
+  (* claude: "ralloc-cfg" is already Debug.register'd by regalloc/flowra.ml
+   * - both link into the same qc binary, and Debug.register errors on a
+   * second registration of the same word - so this reuses it via
+   * Debug.on/Debug.eprintf only, matching Flowra.ralloc's own before/after
+   * dump exactly. *)
   let ralloc _ (cfg, proc) =
     let cg = cgInfo in
+    if Debug.on "ralloc-cfg" then
+      (Debug.eprintf "ralloc-cfg" "BEFORE register allocation:\n"; Cfgutil.print_cfg cfg);
     let rec fixpoint (cfg, proc) =
       let (cfg, proc), changed = simplify cg (cfg, proc) in
       if changed then fixpoint (cfg, proc) else
@@ -1316,7 +1372,10 @@ let degree_for_temp target cg temp =
       else
         let (cfg, proc), _ = updateProgram cg (cfg, proc) in
         applyColors cg (cfg, proc) in
-    main (cfg, proc)
+    let (cfg, proc), changed as result = main (cfg, proc) in
+    if Debug.on "ralloc-cfg" then
+      (Debug.eprintf "ralloc-cfg" "AFTER register allocation:\n"; Cfgutil.print_cfg cfg);
+    result
 end
 
 module XXX = PreMake(RegColor)

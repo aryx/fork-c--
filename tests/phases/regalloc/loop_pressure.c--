@@ -1,0 +1,48 @@
+target byteorder little;
+import bits32 printf;
+export main;
+
+section "data" { fmt: bits8[] "%d\n\0"; }
+
+// Second allocator comparison: regalloc/flowra.ml's Flowra.ralloc (the
+// -O0 default, see this dir's other files) vs regalloc/colorgraph.ml's
+// Colorgraph.ralloc (wired in at -O3, arch/x86/x86backend.ml's
+// ~opt_level). Compare regalloc/loop_pressure.trace against
+// regalloc/loop_pressure.colorgraph.trace.
+//
+// This is NOT a "colorgraph is better" showcase - it's the opposite, and
+// deliberately so: loop_help's self-tail-call (`jump loop_help(...)`)
+// keeps a..e and t1..t5 all live across the back edge at once, more live
+// ranges than x86 has registers, so both allocators must spill under real
+// loop-carried pressure. Flowra's on-the-fly, next-use-distance heuristic
+// picks its spills locally, one register at a time as it walks the block;
+// Colorgraph's global graph-coloring picks a discrete set of temps to
+// spill (weighted by regalloc/colorgraph.ml's `loop_carried_regs` cost
+// bump - see its header comment) and rewrites every use/def of each. AFTER
+// here has far more <private:oN> slot traffic for colorgraph.trace than
+// for the plain trace: both are correct (this file's expected stdout,
+// computed by hand and checked under qemu, is unaffected), but
+// graph-coloring's coarser whole-loop-body view costs more spill code on
+// this particular shape than flowra's narrower local one. Not every
+// allocator wins every example - this is the example where it doesn't.
+loop_help(bits32 n, bits32 a, bits32 b, bits32 c, bits32 d, bits32 e) {
+  bits32 t1, t2, t3, t4, t5, t6;
+  t1 = a + 1;
+  t2 = b + 2;
+  t3 = c + 3;
+  t4 = d + 4;
+  t5 = e + 5;
+  t6 = t1 + t2 + t3 + t4 + t5;
+  if n == 0 {
+    return(t6);
+  } else {
+    jump loop_help(n - 1, a + t6, b + t1, c + t2, d + t3, e + t4);
+  }
+}
+
+foreign "C" main("unsigned" bits32 iargc, "address" bits32 iargv) {
+  bits32 r;
+  r = loop_help(5, 1, 2, 3, 4, 5);
+  foreign "C" printf("address" fmt, r);
+  foreign "C" return(0);
+}

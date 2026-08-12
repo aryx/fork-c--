@@ -369,7 +369,7 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
    * pipeline to catch it (tests/run-native.sh itself only times out the
    * emulated *run* step, not the qc compile step).
    *)
-  let proc = run Flowra.ralloc proc in
+  let proc = if opt_level > 0 then run Colorgraph.ralloc proc else run Flowra.ralloc proc in
   (* ralloc runs before freeze: it is what decides how many spill slots
    * the frame needs, and freeze is what turns that into offsets. *)
   let proc = run layout proc in

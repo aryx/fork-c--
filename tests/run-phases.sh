@@ -78,39 +78,54 @@ mkdir -p "$B/regalloc" "$B/instrsel" "$exp/regalloc" "$exp/instrsel"
 pass=0
 fail=0
 
-# --- register allocation: QCDEBUG=ralloc-cfg, x86 only, one golden ---
+# --- register allocation: QCDEBUG=ralloc-cfg, x86 only, one golden per
+# allocator - default (-O0, regalloc/flowra.ml's Flowra.ralloc) as
+# regalloc/<name>.trace, and -O3 (regalloc/colorgraph.ml's Colorgraph.ralloc,
+# see arch/x86/x86backend.ml's ~opt_level wiring) as
+# regalloc/<name>.colorgraph.trace. Both allocators share the "ralloc-cfg"
+# QCDEBUG word (only flowra.ml calls Debug.register for it; colorgraph.ml
+# reuses it via Debug.on/Debug.eprintf only, since registering the same word
+# twice errors), so no flag is needed to pick which dump comes out - the -O3
+# flag alone picks the allocator.
 for f in phases/regalloc/*.c--; do
   name=$(basename "$f" .c--)
   if [ -n "$want" ]; then
     case " $want " in *" $name "*) ;; *) continue ;; esac
   fi
 
-  if ! QCDEBUG=ralloc-cfg "$QC" -stop .s -o "$B/regalloc/$name.s" "$f" \
-       > /dev/null 2> "$B/regalloc/$name.trace"; then
-    echo "FAIL regalloc/$name (compile)"; cat "$B/regalloc/$name.trace"
-    fail=$((fail+1)); continue
-  fi
-  if [ ! -s "$B/regalloc/$name.trace" ]; then
-    echo "FAIL regalloc/$name (QCDEBUG=ralloc-cfg produced no output" \
-         "- is that word still registered in regalloc/flowra.ml?)"
-    fail=$((fail+1)); continue
-  fi
+  for oflag in "" "-O3"; do
+    if [ -z "$oflag" ]; then ext=trace; label="regalloc/$name"
+    else ext=colorgraph.trace; label="regalloc/$name.colorgraph"
+    fi
+    b="$B/regalloc/$name.$ext"
 
-  g="$exp/regalloc/$name.trace"
-  if [ "$update" = yes ]; then
-    cp "$B/regalloc/$name.trace" "$g"
-    echo "recorded regalloc/$name"; pass=$((pass+1)); continue
-  fi
-  if [ ! -f "$g" ]; then
-    echo "FAIL regalloc/$name (no expected/ golden yet; run with --update)"
-    fail=$((fail+1)); continue
-  fi
-  if diff "$g" "$B/regalloc/$name.trace" > "$B/regalloc/$name.diff" 2>&1; then
-    echo "PASS regalloc/$name"; pass=$((pass+1))
-  else
-    echo "FAIL regalloc/$name (ralloc-cfg dump changed)"
-    cat "$B/regalloc/$name.diff"; fail=$((fail+1))
-  fi
+    if ! QCDEBUG=ralloc-cfg "$QC" $oflag -stop .s -o "$B/regalloc/$name.s" "$f" \
+         > /dev/null 2> "$b"; then
+      echo "FAIL $label (compile)"; cat "$b"
+      fail=$((fail+1)); continue
+    fi
+    if [ ! -s "$b" ]; then
+      echo "FAIL $label (QCDEBUG=ralloc-cfg produced no output" \
+           "- is that word still registered in regalloc/flowra.ml?)"
+      fail=$((fail+1)); continue
+    fi
+
+    g="$exp/regalloc/$name.$ext"
+    if [ "$update" = yes ]; then
+      cp "$b" "$g"
+      echo "recorded $label"; pass=$((pass+1)); continue
+    fi
+    if [ ! -f "$g" ]; then
+      echo "FAIL $label (no expected/ golden yet; run with --update)"
+      fail=$((fail+1)); continue
+    fi
+    if diff "$g" "$b" > "$b.diff" 2>&1; then
+      echo "PASS $label"; pass=$((pass+1))
+    else
+      echo "FAIL $label (ralloc-cfg dump changed)"
+      cat "$b.diff"; fail=$((fail+1))
+    fi
+  done
 done
 
 # --- instruction selection: QCDEBUG=instrsel-cfg dump + the .s. Target is
