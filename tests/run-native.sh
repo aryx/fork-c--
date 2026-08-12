@@ -14,19 +14,36 @@
 # one unit per program must define it (undeclared globals just hash to the
 # empty set - see run-rt.sh's header for the longer version).
 #
-# BACKEND selects the target (x86 or ppc; -$BACKEND is a real qc flag for
-# ppc and a documented no-op for x86, which is qc's default). native.tests
-# is upstream's file list shared by all.x86.tst/all.ppc.tst/all.sparc.tst,
-# so this script is written to take a backend rather than being x86-only -
-# but only x86 has a cross toolchain configured and a recorded baseline
-# below. Extend TOOLCHAIN_FOR when ppc is ready to join test-all; the
-# powerpc-linux-gnu-gcc/qemu-ppc guess there is unverified.
+# BACKEND selects the target (x86 or ppc). native.tests is upstream's file
+# list shared by all.x86.tst/all.ppc.tst/all.sparc.tst, so this script is
+# written to take a backend rather than being x86-only, but only x86 is
+# part of test-all (see the top-level Makefile) - ppc is still slower and
+# newer, so it is run by hand for now.
+#
+# claude: every cmm/*.c-- source declares "target byteorder little"
+# (matching x86, the suite's original and long only target), which qc
+# correctly refuses to compile for ppc ("metrics of source code don't
+# match the target"). The byteorder declaration is source-level C--
+# semantics, not just a codegen flag, so flipping it is required, not
+# optional - but doing that in
+# cmm/*.c-- in place would break BACKEND=x86 and run-compile.sh, which
+# read the very same files. So for BACKEND=ppc this copies each source
+# into $B/src with byteorder flipped to big, on the fly, and compiles
+# that copy instead - see the loop below.
+#
+# Similarly, most tests' expected stdout does not depend on the target
+# (C-- is meant to be portable), but a few genuinely do - PPC's stack
+# frame sizes differ from x86's (tail, tail2, tail_from_c, tailnot,
+# altret3), and its overflow/divide-overflow detection behaves
+# differently at runtime (ovrflow). Those - and if-false/if-false2, which
+# only ever had a ppc golden - live in cmm/output-ppc/, consulted before
+# the shared cmm/output/.
 #
 # Usage:
 #   ./run-native.sh                run them all, check against the baseline
 #   ./run-native.sh --update       re-record the baseline (review the diff!)
 #   ./run-native.sh add hello      run only those, report but do not compare
-#   BACKEND=ppc ./run-native.sh    same, for another backend (untested)
+#   BACKEND=ppc ./run-native.sh    same, for the ppc-elf backend
 #
 # NB: goken's Plan 9 diff/sed/tail shadow the GNU ones on pad's PATH, so
 # this script sticks to plain "diff a b" and avoids diff -q.
@@ -37,8 +54,8 @@ QC=${QC:-../bin/qc}
 BACKEND=${BACKEND:-x86}
 
 case "$BACKEND" in
-  x86) CC32_DEFAULT=i686-linux-gnu-gcc;   RUN32_DEFAULT=qemu-i386 ;;
-  ppc) CC32_DEFAULT=powerpc-linux-gnu-gcc; RUN32_DEFAULT=qemu-ppc ;;
+  x86) CC32_DEFAULT=i686-linux-gnu-gcc;    RUN32_DEFAULT=qemu-i386; QCFLAG= ;;
+  ppc) CC32_DEFAULT=powerpc-linux-gnu-gcc; RUN32_DEFAULT=qemu-ppc;  QCFLAG=-ppc-elf ;;
   *)   echo "run-native.sh: unknown BACKEND=$BACKEND" >&2; exit 2 ;;
 esac
 CC32=${CC32:-$CC32_DEFAULT}
@@ -59,7 +76,10 @@ if [ ! -x "$QC" ]; then
 fi
 if ! command -v "$CC32" >/dev/null 2>&1; then
   echo "run-native.sh: no $CC32 for BACKEND=$BACKEND" >&2
-  [ "$BACKEND" = x86 ] && echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
+  case "$BACKEND" in
+    x86) echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2 ;;
+    ppc) echo "  sudo apt install gcc-powerpc-linux-gnu libc6-dev-powerpc-cross" >&2 ;;
+  esac
   exit 2
 fi
 
@@ -92,11 +112,17 @@ while IFS='|' read -r name srcs other rc stdin_file argv; do
   for src in $srcs; do
     IFS=$oldifs
     obj="$B/$name.$(basename "$src" .c--).o"
+    srcpath="cmm/$src"
+    if [ "$BACKEND" = ppc ]; then
+      mkdir -p "$B/src"
+      sed 's/byteorder[ ][ ]*little/byteorder big/' "cmm/$src" > "$B/src/$src"
+      srcpath="$B/src/$src"
+    fi
     if [ "$first" = 1 ]; then
-      "$QC" -globals -stop .o -o "$obj" "cmm/$src" >"$B/$name.qcerr" 2>&1 || ok=0
+      "$QC" $QCFLAG -globals -stop .o -o "$obj" "$srcpath" >"$B/$name.qcerr" 2>&1 || ok=0
       first=0
     else
-      "$QC" -stop .o -o "$obj" "cmm/$src" >>"$B/$name.qcerr" 2>&1 || ok=0
+      "$QC" $QCFLAG -stop .o -o "$obj" "$srcpath" >>"$B/$name.qcerr" 2>&1 || ok=0
     fi
     objs="$objs $obj"
     IFS='+'
@@ -123,8 +149,14 @@ while IFS='|' read -r name srcs other rc stdin_file argv; do
   got=$?
 
   # Five entries (see native.tests) have no recorded output upstream and
-  # print only on internal failure; expect empty stdout for those.
-  expected_out="cmm/output/$name.1"
+  # print only on internal failure; expect empty stdout for those. A
+  # handful of others have arch-dependent output (see the header comment)
+  # and are looked up in cmm/output-$BACKEND/ first, falling back to the
+  # shared cmm/output/ - symmetric across backends, though only ppc
+  # currently has any overrides there: cmm/output/ was itself recorded
+  # from x86 runs, so there is nothing yet for x86 to diverge from.
+  expected_out="cmm/output-$BACKEND/$name.1"
+  [ -f "$expected_out" ] || expected_out="cmm/output/$name.1"
   [ -f "$expected_out" ] || expected_out=/dev/null
 
   if ! diff "$B/$name.out" "$expected_out" > "$B/$name.diff" 2>&1; then
