@@ -38,9 +38,9 @@ uninstall::
 # arch/all.x86.tst); test-lcc is LCC's own regression suite translated to
 # C-- (tests/lcc.tests, ported from lcc.x86.tst).
 #
-# All five compare against a recorded baseline rather than demanding that
+# All six compare against a recorded baseline rather than demanding that
 # everything pass, since a third of tests/src consists of negative tests
-# and there are known failures in the other four (see tests/rt.tests,
+# and there are known failures in the others (see tests/rt.tests,
 # tests/native.tests, tests/lcc.tests and tests/tiger.tests). Re-record
 # with the scripts' --update flag, and review the diff when you do.
 test::
@@ -55,10 +55,21 @@ test-rt::
 test-native::
 	tests/run-native.sh
 
+# claude: ppc is newer and has more known failures than x86, including a
+# few genuine hangs (not crashes) rather than fast wrong-answers, from
+# bugs not yet root-caused. TIMEOUT=1 keeps test-all bounded regardless -
+# a passing test finishes in well under a second, so 1s is generous
+# margin, not a tight race (verified: same pass/fail set as the default
+# 60s timeout). Run "BACKEND=ppc tests/run-native.sh" by hand (default
+# TIMEOUT=60) when actually chasing one of those hangs, so a
+# slow-but-legitimate run isn't cut off before it would finish anyway.
+test-native-ppc::
+	BACKEND=ppc TIMEOUT=1 tests/run-native.sh
+
 test-lcc::
 	tests/run-lcc.sh
 
-test-all:: test test-tiger test-rt test-native test-lcc
+test-all:: test test-tiger test-rt test-native test-native-ppc test-lcc
 build-docker:
 	docker build -t "cmm" .
 

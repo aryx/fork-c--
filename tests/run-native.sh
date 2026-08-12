@@ -64,6 +64,14 @@ QC_AS=${QC_AS:-$CC32}
 QC_LD=${QC_LD:-$CC32}
 export QC_AS QC_LD
 
+# claude: per-test wall-clock cap for the emulated run, not for qc/as/ld.
+# A passing test finishes in well under a second; this only matters for a
+# test that hangs (an actual infinite loop, not just slow) instead of
+# crashing or returning wrong output. Overridable so a slow-but-legitimate
+# manual run can afford to wait longer than the short value test-all uses
+# to stay fast despite some tests still hanging as backends mature.
+TIMEOUT=${TIMEOUT:-60}
+
 if [ -z "${RUN32+set}" ]; then
   if command -v "$RUN32_DEFAULT" >/dev/null 2>&1; then RUN32=$RUN32_DEFAULT; else RUN32=; fi
 fi
@@ -145,7 +153,7 @@ while IFS='|' read -r name srcs other rc stdin_file argv; do
   fi
 
   if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=cmm/$stdin_file; fi
-  timeout 60 $RUN32 "./$B/$name" $argv < "$input" > "$B/$name.out" 2> "$B/$name.err"
+  timeout "$TIMEOUT" $RUN32 "./$B/$name" $argv < "$input" > "$B/$name.out" 2> "$B/$name.err"
   got=$?
 
   # Five entries (see native.tests) have no recorded output upstream and
