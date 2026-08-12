@@ -1011,7 +1011,7 @@ let degree_for_temp target cg temp =
                               (node, loads, spillMap, spills, newTemps as accum) =
                 let spillee = spillee.v in
                 let reads, writes = reads_writes instr spillee in
-                if reads || writes then 
+                if reads || writes then
                   let (mem, spill_regs) = RM.find spillee spillMap in
                   let tmp   = Talloc.Multiple.reg_like proc.Proc.temps spillee in
                   let subst = fun x -> if Register.eq x spillee then tmp else x in 
@@ -1025,7 +1025,74 @@ let degree_for_temp target cg temp =
                   (map_rtl map, loads, spillMap, spills, newTemps)
                 else accum in
 
+              (* claude: a Call/Cut/Jump/Return's uses of real registers are
+               * not always expressed in its own RTL (GR.last_instr):
+               * - Call carries a separate cal_uses field; Cut/Jump/Return
+               *   their own positional uses:regs (zipcfg.ml's
+               *   add_inedge_uses, which build()/addInterference already
+               *   read through usesl/defsl, folds these in).
+               * - Call/Cut's continuation edges (cal_contedges / Cut's own
+               *   edgelist) each carry their own defs:regs and kills:regs
+               *   (zipcfg.ml's union_over_outedges, which defsl also reads)
+               *   - registers considered defined/killed across that edge,
+               *   independent of cal_i's own RTL.
+               * reads_writes/updateInstr above only inspect the RTL, and
+               * Zipcfg.map_rtll (used below to rewrite cal_i) only touches
+               * a contedge's assertion field, never its defs/kills. So a
+               * spillee referenced *only* via one of these extra fields was
+               * never substituted: the old register survived the rewrite
+               * untouched, so the very next build() saw it as still
+               * needing a color and picked it right back out of the spill
+               * worklist - forever (reproduced on tests/cmm/add.c--, a
+               * trivial one-call function: selectSpill chose the same temp
+               * every single round; resetProgram's "already spilled" check
+               * never caught it because that check only tracks the
+               * *replacement* temps from past rounds, not the original -
+               * confirmed the spilled temp appeared in a continuation
+               * edge's kills/defs, not cal_uses, by tracing every
+               * candidate field by hand). Fixed by also substituting
+               * spillee for a fresh reload temp inside all of these
+               * fields directly, mirroring what updateInstr already does
+               * for the RTL itself. *)
+              let contedges_of = function
+                | GR.Call c -> c.GR.cal_contedges
+                | GR.Cut (_, es, _) -> es
+                | _ -> [] in
+              let last_extra_uses last =
+                let ce_regs =
+                  List.fold_left
+                    (fun r (ce : G.contedge) -> RSX.union r (RSX.union ce.G.defs ce.G.kills))
+                    RSX.empty (contedges_of last) in
+                let own_uses = match last with
+                  | GR.Call c -> c.GR.cal_uses
+                  | GR.Cut (_, _, u) | GR.Jump (_, u, _) | GR.Return (_, _, u) -> u
+                  | _ -> RSX.empty in
+                RSX.union own_uses ce_regs in
+              let subst_last_extra_uses spillee tmp last =
+                let subst_elt = function
+                  | R.Reg r when Register.eq r spillee -> R.Reg tmp
+                  | R.Slice (w, i, r) when Register.eq r spillee -> R.Slice (w, i, tmp)
+                  | x -> x in
+                let subst_ce (ce : G.contedge) =
+                  { ce with G.defs  = RSX.map subst_elt ce.G.defs
+                          ; G.kills = RSX.map subst_elt ce.G.kills } in
+                match last with
+                | GR.Call c -> GR.Call { c with GR.cal_uses = RSX.map subst_elt c.GR.cal_uses
+                                              ; GR.cal_contedges = List.map subst_ce c.GR.cal_contedges }
+                | GR.Cut (r, es, u)   -> GR.Cut (r, List.map subst_ce es, RSX.map subst_elt u)
+                | GR.Jump (r, u, tg)  -> GR.Jump (r, RSX.map subst_elt u, tg)
+                | GR.Return (i, r, u) -> GR.Return (i, r, RSX.map subst_elt u)
+                | _ -> last in
               let updateLast spillee (last, loads, spillMap, spills, newTemps) =
+                let spillee_v = spillee.v in
+                let last, loads, spillMap, newTemps =
+                  if RSX.mem (R.Reg spillee_v) (last_extra_uses last) then
+                    let (mem, spill_regs) = RM.find spillee_v spillMap in
+                    let tmp = Talloc.Multiple.reg_like proc.Proc.temps spillee_v in
+                    let loads = tgt.T.machine.T.reload proc mem tmp :: loads in
+                    let spillMap = RM.add tmp (mem, tmp :: spill_regs) spillMap in
+                    (subst_last_extra_uses spillee_v tmp last, loads, spillMap, tmp :: newTemps)
+                  else (last, loads, spillMap, newTemps) in
                 match updateInstr (fun map -> G.map_rtll map map last) (GR.last_instr last) spillee
                                   (last, loads, spillMap, [], newTemps) with
                 | (_, _, _, [], _) as x -> x
@@ -1216,6 +1283,27 @@ let degree_for_temp target cg temp =
       if changed then fixpoint (cfg, proc) else
       (cfg, proc) in
     let rec main (cfg, proc) =
+      (* claude: build()/get_regs below calls Live.live_out_last directly,
+       * which only *reads* a uid-keyed property table (Unique.Prop) - it
+       * does not compute liveness itself. That table is populated once,
+       * before ralloc even runs (arch/x86/x86backend.ml's Phases.liveness),
+       * and nothing in this retry loop ever re-solves it, even though
+       * resetProgram rewrites the cfg every round (inserting spill/reload
+       * code). So build() on round 2+ was reading round-0's liveness
+       * facts against a structurally different cfg: a temp whose every
+       * real reference had already been correctly rewritten away by the
+       * spill insertion could still show up as "live" per the stale
+       * table, so selectSpill kept re-picking the exact same temp every
+       * round with no way to ever converge - reproduced as a genuine
+       * infinite loop on tests/cmm/add.c--, a trivial one-call function
+       * (confirmed by ruling out every other place a spilled register
+       * could still be referenced - RTL, cal_uses/cut/jump/return uses,
+       * continuation-edge defs/kills, spans - all correctly cleared by
+       * the spill rewrite; only the separately-cached liveness fact
+       * survived). Re-solving fresh here, every round (round 1 included,
+       * for consistency, even though it happens to already be fresh from
+       * Phases.liveness), is what actually fixes it. *)
+      let cfg, _ = Dataflow.B.rewrite (Dataflow.B.anal Live.live_in) cfg in
       let (cfg, proc), _ = clearCGInfo cg (cfg, proc) in
       let (cfg, proc), _ = build cg (cfg, proc) in
       let (cfg, proc), _ = makeWorklist cg (cfg, proc) in

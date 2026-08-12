@@ -346,20 +346,28 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
    * graph-coloring allocator with the same one-function interface
    * (val ralloc : 'a -> Ast2ir.proc -> Ast2ir.proc * bool), extracted
    * from its Lua/Backplane wrapper the same way this file's own pipeline
-   * was, but NOT wired in here (yet): compiling tests/cmm/add.c-- - a
-   * program already in the regression corpus, nothing exotic, just one
-   * foreign "C" call - with Colorgraph at -O3 hangs. Root cause not yet
-   * found: build()'s get_regs undercounted registers relative to
-   * addInterference's own live set (Live.live_out_last vs a hand-rolled
-   * defs/uses/spans union), fixed in colorgraph.ml, but that fix traded
-   * a crash for this hang on the same file, so there is a second,
-   * deeper bug in the spill/retry loop (build -> ... -> selectSpill ->
-   * assignColors -> resetProgram -> build -> ...) that never converges
-   * once a call is involved. None of make test-all's suites would have
-   * caught either bug: none of them pass -O3, so this never ran at all
-   * until tests/run-optimizer.sh's -O3 goldens exercised it directly.
-   * Do not wire Colorgraph in here until that loop is shown to
-   * terminate on a real corpus, not just hand-picked toy examples.
+   * was, but NOT wired in here (yet). Three real bugs found and fixed in
+   * colorgraph.ml's own retry loop (build -> ... -> selectSpill ->
+   * assignColors -> resetProgram -> build -> ...) so far - see that
+   * file's own comments at get_regs, updateLast's last_extra_uses, and
+   * main's Live.live_in re-solve. With those, tests/run-native.sh OPT=3
+   * (this suite, at -O3, with Colorgraph substituted in for testing)
+   * goes from hanging on add.c-- to 65/66 passing. The one holdout,
+   * tail_from_c.c--, isolates to any procedure with a self-recursive
+   * tail call (a real loop in the cfg) under enough register pressure to
+   * force a spill: |get_regs cfg| grows by +1 every single retry round,
+   * forever (see docs/claude_notes/notes_debugging_techniques.txt entry
+   * 27) - selectSpill's cost heuristic keeps choosing loop-carried
+   * values (their liveRange is a single linear cfg pass, not a
+   * fixed-point computation, so it undercounts exactly the
+   * "spans the back-edge" case that makes them the worst possible
+   * candidate), and each such spill's own reload is itself loop-carried,
+   * so it needs spilling too, next round. A real algorithmic fix (a
+   * loop-aware spill cost, or hoisting reloads out of the loop), not a
+   * quick one like the first three. Until then, do not wire Colorgraph
+   * in here - a hang during compilation has no timeout anywhere in this
+   * pipeline to catch it (tests/run-native.sh itself only times out the
+   * emulated *run* step, not the qc compile step).
    *)
   let proc = run Flowra.ralloc proc in
   (* ralloc runs before freeze: it is what decides how many spill slots

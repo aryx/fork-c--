@@ -756,6 +756,54 @@ backup when the file started clean (git is the more trustworthy source of
 "clean"), and only reach for a `/tmp` backup when there's uncommitted work
 in the file that a `git checkout` would discard.
 
+27. A retry loop that never terminates: measure growth, don't just watch
+    it spin
+---------------------------------------------------------------------------
+regalloc/colorgraph.ml's build -> ... -> selectSpill -> assignColors ->
+resetProgram -> build retry loop hung on two different files, and looked
+identical from the outside (both just spun, no crash, no progress
+visible in the final output). Printf-tracing which register selectSpill
+picked each round told them apart immediately:
+
+- tests/cmm/add.c-- picked the exact same temp every round (thousands of
+  identical "picked $t[5]" lines) - a *stuck* loop. The fix was finding
+  what stale reference to that temp survived every rewrite attempt (see
+  entry 16's sibling case: this took three wrong guesses -
+  Call.cal_uses, then contedge defs/kills, before the real answer -
+  Live.live_out_last reading a liveness property table that was
+  populated once before the retry loop started and never re-solved as
+  the loop rewrote the cfg round after round).
+
+- tests/cmm/tail_from_c.c-- (isolated further to a minimal repro: any
+  procedure with a *self-recursive tail call*, i.e. a real loop in the
+  cfg, under enough register pressure to force a spill at all) picked a
+  *different* temp every round, over 500 rounds without a single repeat.
+  Same symptom (never terminates), different disease: not stuck, but
+  diverging. Tracing "picked the same thing" would have found nothing
+  here - the right measurement instead was |get_regs cfg| (the
+  interference graph's own register count) printed at the top of each
+  build(), which grew by exactly +1 every single round forever while
+  |blocks| stayed constant. That pointed straight at the real mechanism:
+  spilling a loop-carried value (live across the back-edge, e.g. a
+  tail-recursive loop's own induction variables) inserts a reload whose
+  live range *also* spans the loop, so it interferes with everything
+  else alive there and needs spilling itself next round - and
+  selectSpill's own cost heuristic (numUses / (liveRange * degree))
+  keeps *choosing* loop-carried values because their liveRange is
+  computed via a single linear pass over the cfg (not a fixed-point
+  computation like the liveness analysis it borrows), undercounting
+  exactly the "spans the back-edge" case that makes them the worst
+  possible spill candidates.
+
+The general lesson: "it never terminates" is not one bug shape. Before
+hunting for a root cause, print something that grows (or doesn't) each
+iteration - a chosen candidate's identity, a data structure's size,
+anything cheap to measure - and let *that* shape (repeats vs. strictly
+increasing, bounded vs. unbounded) decide which of "stuck" or
+"diverging" you're actually chasing. They need entirely different
+fixes, and guessing wrong wastes exactly the kind of time this entry is
+trying to save.
+
 
 Tooling traps in this particular working copy
 ----------------------------------------------
