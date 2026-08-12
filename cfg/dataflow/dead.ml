@@ -35,9 +35,26 @@ let middle_in live m = match m with
     all_regs_assigned rtl
       (fun regs ->
         if List.for_all is_dead regs then
-          (<<announce dead elimination>>; Some G.empty)
+          (
+            (*s: announce dead elimination *)
+            (if Debug.on "dead" then
+              begin
+                epr "dead: eliminating dead assignment %s\n" (S.rtl rtl);
+                epr "dead: assigned to registers %s\n" (String.concat ", " (List.map S.reg regs));
+                epr "dead: live = { %s }\n" (RS.to_string live);
+              end)
+            (*e: announce dead elimination *)
+            ; Some G.empty)
         else
-          (<<announce dead non-elimination>>; None))
+          (
+             (*s: announce dead non-elimination *)
+             (if Debug.on "dead" then
+               begin
+                 epr "dead: something is live out\n";
+                 epr "dead: live = { %s }\n" (RS.to_string live);
+               end)
+             (*e: announce dead non-elimination *)
+            ; None))
       (fun () -> None)
 | _ -> None
 

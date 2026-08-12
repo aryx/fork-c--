@@ -3100,9 +3100,13 @@ let middle_in live m = match m with
     all_regs_assigned rtl
       (fun regs ->
         if List.for_all is_dead regs then
-          (<<announce dead elimination>>; Some G.empty)
+          (
+            <<announce dead elimination>>
+            ; Some G.empty)
         else
-          (<<announce dead non-elimination>>; None))
+          (
+             <<announce dead non-elimination>>
+            ; None))
       (fun () -> None)
 | _ -> None
 
