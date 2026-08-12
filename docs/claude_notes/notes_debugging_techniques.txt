@@ -669,6 +669,36 @@ without the "this is real libc code, so the bug is in what we handed it,
 not in the call itself" framing that the backtrace + disassembly gave for
 free.
 
+A few refinements that came up reusing this same setup for later bugs
+(hangs, not crashes - tests/cmm/tail.c--'s tail-recursive "down"):
+
+- Break on the symbol name ("break down"), not a hand-computed address
+  from objdump. An address copied from a *different* binary's
+  disassembly (stale from an earlier iteration of the same investigation)
+  is a real mistake to make under time pressure, and gdb resolves symbol
+  names from the target's own symbol table regardless of ASLR/reloading,
+  so there is no reason to compute addresses by hand at all.
+
+- Always wrap *both* the backgrounded "qemu-ppc -g 1234 ..." and the gdb
+  invocation in "timeout N". A breakpoint that is never hit (wrong
+  address, wrong symbol, or the bug means that code path is never
+  reached) leaves gdb's "continue" blocked forever, which without a
+  wrapper hangs the whole shell command - and once that happens the qemu
+  process is still running in the background afterward too, so
+  "pkill -9 qemu-ppc" is worth doing before the next attempt.
+
+- For a bug that only shows up after N iterations (not a crash, not
+  reproducible on the first hit), don't single-step through everything -
+  either loop "-ex continue -ex 'print $rN'" pairs (build the -ex list
+  in a shell for loop, one pair per iteration, and grep the batch output
+  for the "$N = ..." lines) to watch a register evolve iteration by
+  iteration, or use "ignore <bpnum> <count>" to jump straight to a later
+  hit and bisect from there. This is what separated "the stack pointer
+  drifts by one frame every iteration" (visible checking every hit) from
+  "arguments read back as garbage after ~20 iterations" (found by jumping
+  ahead with ignore, then narrowing with the loop form once corruption
+  was confirmed to exist somewhere in that range).
+
 
 Tooling traps in this particular working copy
 ----------------------------------------------
