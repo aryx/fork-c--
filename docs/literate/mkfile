@@ -198,6 +198,8 @@ SRC_VIEWS= \
  $TOP/cfg/dataflow/live.ml\
  $TOP/cfg/dataflow/availpass.mli\
  $TOP/cfg/dataflow/availpass.ml\
+ $TOP/cfg/dataflow/dead.mli\
+ $TOP/cfg/dataflow/dead.ml\
  \
  $TOP/regalloc/flowra.mli\
  $TOP/regalloc/flowra.ml\

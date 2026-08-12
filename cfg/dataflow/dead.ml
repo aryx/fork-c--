@@ -1,0 +1,50 @@
+(*s: dead.ml *)
+(*s: dead.ml  *)
+module D  = Dataflow.B
+module G  = Zipcfg
+module GR = Zipcfg.Rep
+module R  = Register
+module RS = Register.SetX
+module RP = Rtl.Private
+module S  = Rtlutil.ToString
+(*x: dead.ml  *)
+let () = Debug.register "dead" "dead-assignment elimination"
+let debug fmt = Debug.eprintf "dead" fmt
+let epr = Printf.eprintf 
+
+(*s: [[Dead]] utilities *)
+let all_regs_assigned rtl succ fail =
+  let fail () = Debug.eprintf "dead" "assigned to non-register\n"; fail () in
+  let RP.Rtl effs = Rtl.Dn.rtl rtl in
+  let rec effects regs = function
+    | [] -> succ regs
+    | (_, RP.Store(RP.Reg r, _, _)) :: es -> effects (r::regs) es
+    | (_, RP.Store((RP.Mem _ | RP.Var _ | RP.Global _), _, _)) :: es -> fail ()
+    | (_, RP.Kill _) :: es -> effects regs es
+    | (g, RP.Store(RP.Slice(_, _, l), r, w)) :: es ->
+        effects regs ((g, RP.Store(l, r, w)) :: es) in
+  effects [] effs
+(*e: [[Dead]] utilities *)
+(*x: dead.ml  *)
+let last_in l = None
+let middle_in live m = match m with
+| GR.Instruction rtl -> (* don't eliminate dead stack adjustments or assertions *)
+    let is_dead r =
+      let r = Register.Reg r in
+      not (RS.exists (fun r' -> Register.contains r r') live) in
+    all_regs_assigned rtl
+      (fun regs ->
+        if List.for_all is_dead regs then
+          (<<announce dead elimination>>; Some G.empty)
+        else
+          (<<announce dead non-elimination>>; None))
+      (fun () -> None)
+| _ -> None
+
+let first_in live f = None
+(*x: dead.ml  *)
+let elim_assignments =
+  { D.name = "dead";
+    D.last_in = last_in; D.middle_in = middle_in; D.first_in = first_in; }
+(*e: dead.ml  *)
+(*e: dead.ml *)
