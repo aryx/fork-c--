@@ -78,6 +78,7 @@
       | "neg"  -> "neg"
       | "or"   -> "or"
       | "shl"  -> "slw"
+      | "shra" -> "sraw"
       | "shrl" -> "srw"
       | "sub"  -> "sub"
       | "xor"  -> "xor"
@@ -247,9 +248,24 @@ inst: Store(lrl,  reg, w:int) {: s "mtlr %s" reg  :}
 (* claude: PPC has no direct memory<->lr transfer; mflr/mtlr need a GPR, so saving/restoring lr (Stack.freeze's prologue/epilogue) goes through scratch register r0, the PPC ABI's conventional choice for this *)
 inst: Store(Mem(addr), lr, 32)      {: s "mflr %s\n\tstw %s,%s" (r0_str ()) (r0_str ()) addr :}
 inst: Store(lrl, Fetch(Mem(addr),32), 32) {: s "lwz %s,%s\n\tmtlr %s" (r0_str ()) addr (r0_str ()) :}
+(* claude: cut/alternate-return continuation adjustment adds an offset to lr directly; same r0-mediated two-instruction idiom as the memory<->lr rules above *)
+inst: Store(lrl, Add(lr, x:reg), 32) {: s "mflr %s\n\tadd %s,%s,%s\n\tmtlr %s" (r0_str ()) (r0_str ()) (r0_str ()) x (r0_str ()) :}
 inst: Store(regl,  cr, w:int) {: s "mfcr %s" regl :}
 
 inst: Store(regl, const16, 32) {: s "addi %s,0,%s" regl const16 :}
+
+(* claude: a 32-bit constant too wide for const16, reaching the recognizer unsplit (e.g. via the generic move path, fine for x86's one-instruction movl but not ppc) - addis+ori avoids addi's sign-extension rounding *)
+const32: Bits(bits)
+    [{: guard (not (Bits.S.fits 16 bits)) :}]
+    {: let i64 = Bits.U.to_int64 bits in
+       ( Int64.to_int (Int64.logand (Int64.shift_right_logical i64 16) 0xffffL)
+       , Int64.to_int (Int64.logand i64 0xffffL) )
+    :}
+
+inst : Store(regl, const32, 32)
+    {: let (hi, lo) = const32 in
+       s "addis %s,0,0x%x\n\tori %s,%s,0x%x" regl hi regl regl lo
+    :}
 
 inst: Store (regl, Fetch(Mem(addr    ),32), 32)     {: s "lwz %s,%s" regl addr  :}
 inst: Store (regl, Fetch(Mem(ndx_addr),32), 32)     {: s "lwzx %s,%s" regl ndx_addr :}

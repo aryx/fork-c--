@@ -60,6 +60,8 @@
 
 type
     (
+        't66,
+        't65,
         't64,
         't63,
         't62,
@@ -129,64 +131,66 @@ type
 nonterm
 =
     {
-        _Zx9: ( 't64 ) Camlburg.nt;
-        _Zx7: ( 't63 ) Camlburg.nt;
-        _Zx13: ( 't62 ) Camlburg.nt;
-        _Zx11: ( 't61 ) Camlburg.nt;
-        _Unop35: ( 't60 ) Camlburg.nt;
-        _Sxlo26: ( 't59 ) Camlburg.nt;
-        _Sxlo23: ( 't58 ) Camlburg.nt;
-        _Sxlo16: ( 't57 ) Camlburg.nt;
-        _Sxlo15: ( 't56 ) Camlburg.nt;
-        _Sx18: ( 't55 ) Camlburg.nt;
-        _Sx17: ( 't54 ) Camlburg.nt;
-        _Store29: ( 't53 ) Camlburg.nt;
-        _Store28: ( 't52 ) Camlburg.nt;
-        _OvSet31: ( 't51 ) Camlburg.nt;
-        _Mem6: ( 't50 ) Camlburg.nt;
-        _Mem3: ( 't49 ) Camlburg.nt;
-        _Mem1: ( 't48 ) Camlburg.nt;
-        _Lobits20: ( 't47 ) Camlburg.nt;
-        _Lobits19: ( 't46 ) Camlburg.nt;
-        _Goto30: ( 't45 ) Camlburg.nt;
-        _Goto27: ( 't44 ) Camlburg.nt;
-        _Fetch8: ( 't43 ) Camlburg.nt;
-        _Fetch5: ( 't42 ) Camlburg.nt;
-        _Fetch4: ( 't41 ) Camlburg.nt;
-        _Fetch32: ( 't40 ) Camlburg.nt;
-        _Fetch14: ( 't39 ) Camlburg.nt;
-        _Fetch12: ( 't38 ) Camlburg.nt;
-        _Fetch10: ( 't37 ) Camlburg.nt;
-        _Diff2: ( 't36 ) Camlburg.nt;
-        _Com36: ( 't35 ) Camlburg.nt;
-        _Binop38: ( 't34 ) Camlburg.nt;
-        _Binop37: ( 't33 ) Camlburg.nt;
+        _Zx8: ( 't66 ) Camlburg.nt;
+        _Zx14: ( 't65 ) Camlburg.nt;
+        _Zx12: ( 't64 ) Camlburg.nt;
+        _Zx10: ( 't63 ) Camlburg.nt;
+        _Unop36: ( 't62 ) Camlburg.nt;
+        _Sxlo27: ( 't61 ) Camlburg.nt;
+        _Sxlo24: ( 't60 ) Camlburg.nt;
+        _Sxlo17: ( 't59 ) Camlburg.nt;
+        _Sxlo16: ( 't58 ) Camlburg.nt;
+        _Sx19: ( 't57 ) Camlburg.nt;
+        _Sx18: ( 't56 ) Camlburg.nt;
+        _Store30: ( 't55 ) Camlburg.nt;
+        _Store29: ( 't54 ) Camlburg.nt;
+        _OvSet32: ( 't53 ) Camlburg.nt;
+        _Mem7: ( 't52 ) Camlburg.nt;
+        _Mem3: ( 't51 ) Camlburg.nt;
+        _Mem1: ( 't50 ) Camlburg.nt;
+        _Lobits21: ( 't49 ) Camlburg.nt;
+        _Lobits20: ( 't48 ) Camlburg.nt;
+        _Goto31: ( 't47 ) Camlburg.nt;
+        _Goto28: ( 't46 ) Camlburg.nt;
+        _Fetch9: ( 't45 ) Camlburg.nt;
+        _Fetch6: ( 't44 ) Camlburg.nt;
+        _Fetch4: ( 't43 ) Camlburg.nt;
+        _Fetch33: ( 't42 ) Camlburg.nt;
+        _Fetch15: ( 't41 ) Camlburg.nt;
+        _Fetch13: ( 't40 ) Camlburg.nt;
+        _Fetch11: ( 't39 ) Camlburg.nt;
+        _Diff2: ( 't38 ) Camlburg.nt;
+        _Com37: ( 't37 ) Camlburg.nt;
+        _Binop39: ( 't36 ) Camlburg.nt;
+        _Binop38: ( 't35 ) Camlburg.nt;
+        _Add5: ( 't34 ) Camlburg.nt;
+        _Add35: ( 't33 ) Camlburg.nt;
         _Add34: ( 't32 ) Camlburg.nt;
-        _Add33: ( 't31 ) Camlburg.nt;
+        _Add26: ( 't31 ) Camlburg.nt;
         _Add25: ( 't30 ) Camlburg.nt;
-        _Add24: ( 't29 ) Camlburg.nt;
+        _Add23: ( 't29 ) Camlburg.nt;
         _Add22: ( 't28 ) Camlburg.nt;
-        _Add21: ( 't27 ) Camlburg.nt;
-        xerl: ( 't26 ) Camlburg.nt;
-        spl: ( 't25 ) Camlburg.nt;
-        sp: ( 't24 ) Camlburg.nt;
-        regl: ( 't23 ) Camlburg.nt;
-        reg: ( 't22 ) Camlburg.nt;
-        pic: ( 't21 ) Camlburg.nt;
-        pcl: ( 't20 ) Camlburg.nt;
-        pc: ( 't19 ) Camlburg.nt;
-        next: ( 't18 ) Camlburg.nt;
-        ndx_addr: ( 't17 ) Camlburg.nt;
-        lrl: ( 't16 ) Camlburg.nt;
-        lr: ( 't15 ) Camlburg.nt;
-        lconst: ( 't14 ) Camlburg.nt;
-        k4: ( 't13 ) Camlburg.nt;
-        k16: ( 't12 ) Camlburg.nt;
-        k15: ( 't11 ) Camlburg.nt;
-        inst: ( 't10 ) Camlburg.nt;
-        ha16: ( 't9 ) Camlburg.nt;
-        crl: ( 't8 ) Camlburg.nt;
-        cr: ( 't7 ) Camlburg.nt;
+        xerl: ( 't27 ) Camlburg.nt;
+        spl: ( 't26 ) Camlburg.nt;
+        sp: ( 't25 ) Camlburg.nt;
+        regl: ( 't24 ) Camlburg.nt;
+        reg: ( 't23 ) Camlburg.nt;
+        pic: ( 't22 ) Camlburg.nt;
+        pcl: ( 't21 ) Camlburg.nt;
+        pc: ( 't20 ) Camlburg.nt;
+        next: ( 't19 ) Camlburg.nt;
+        ndx_addr: ( 't18 ) Camlburg.nt;
+        lrl: ( 't17 ) Camlburg.nt;
+        lr: ( 't16 ) Camlburg.nt;
+        lconst: ( 't15 ) Camlburg.nt;
+        k4: ( 't14 ) Camlburg.nt;
+        k16: ( 't13 ) Camlburg.nt;
+        k15: ( 't12 ) Camlburg.nt;
+        inst: ( 't11 ) Camlburg.nt;
+        ha16: ( 't10 ) Camlburg.nt;
+        crl: ( 't9 ) Camlburg.nt;
+        cr: ( 't8 ) Camlburg.nt;
+        const32: ( 't7 ) Camlburg.nt;
         const16: ( 't6 ) Camlburg.nt;
         cmp: ( 't5 ) Camlburg.nt;
         cial: ( 't4 ) Camlburg.nt;
@@ -205,6 +209,7 @@ inf =
     ;cial = (Camlburg.infinity)
     ;cmp = (Camlburg.infinity)
     ;const16 = (Camlburg.infinity)
+    ;const32 = (Camlburg.infinity)
     ;cr = (Camlburg.infinity)
     ;crl = (Camlburg.infinity)
     ;ha16 = (Camlburg.infinity)
@@ -225,44 +230,45 @@ inf =
     ;sp = (Camlburg.infinity)
     ;spl = (Camlburg.infinity)
     ;xerl = (Camlburg.infinity)
-    ;_Add21 = (Camlburg.infinity)
     ;_Add22 = (Camlburg.infinity)
-    ;_Add24 = (Camlburg.infinity)
+    ;_Add23 = (Camlburg.infinity)
     ;_Add25 = (Camlburg.infinity)
-    ;_Add33 = (Camlburg.infinity)
+    ;_Add26 = (Camlburg.infinity)
     ;_Add34 = (Camlburg.infinity)
-    ;_Binop37 = (Camlburg.infinity)
+    ;_Add35 = (Camlburg.infinity)
+    ;_Add5 = (Camlburg.infinity)
     ;_Binop38 = (Camlburg.infinity)
-    ;_Com36 = (Camlburg.infinity)
+    ;_Binop39 = (Camlburg.infinity)
+    ;_Com37 = (Camlburg.infinity)
     ;_Diff2 = (Camlburg.infinity)
-    ;_Fetch10 = (Camlburg.infinity)
-    ;_Fetch12 = (Camlburg.infinity)
-    ;_Fetch14 = (Camlburg.infinity)
-    ;_Fetch32 = (Camlburg.infinity)
+    ;_Fetch11 = (Camlburg.infinity)
+    ;_Fetch13 = (Camlburg.infinity)
+    ;_Fetch15 = (Camlburg.infinity)
+    ;_Fetch33 = (Camlburg.infinity)
     ;_Fetch4 = (Camlburg.infinity)
-    ;_Fetch5 = (Camlburg.infinity)
-    ;_Fetch8 = (Camlburg.infinity)
-    ;_Goto27 = (Camlburg.infinity)
-    ;_Goto30 = (Camlburg.infinity)
-    ;_Lobits19 = (Camlburg.infinity)
+    ;_Fetch6 = (Camlburg.infinity)
+    ;_Fetch9 = (Camlburg.infinity)
+    ;_Goto28 = (Camlburg.infinity)
+    ;_Goto31 = (Camlburg.infinity)
     ;_Lobits20 = (Camlburg.infinity)
+    ;_Lobits21 = (Camlburg.infinity)
     ;_Mem1 = (Camlburg.infinity)
     ;_Mem3 = (Camlburg.infinity)
-    ;_Mem6 = (Camlburg.infinity)
-    ;_OvSet31 = (Camlburg.infinity)
-    ;_Store28 = (Camlburg.infinity)
+    ;_Mem7 = (Camlburg.infinity)
+    ;_OvSet32 = (Camlburg.infinity)
     ;_Store29 = (Camlburg.infinity)
-    ;_Sx17 = (Camlburg.infinity)
+    ;_Store30 = (Camlburg.infinity)
     ;_Sx18 = (Camlburg.infinity)
-    ;_Sxlo15 = (Camlburg.infinity)
+    ;_Sx19 = (Camlburg.infinity)
     ;_Sxlo16 = (Camlburg.infinity)
-    ;_Sxlo23 = (Camlburg.infinity)
-    ;_Sxlo26 = (Camlburg.infinity)
-    ;_Unop35 = (Camlburg.infinity)
-    ;_Zx11 = (Camlburg.infinity)
-    ;_Zx13 = (Camlburg.infinity)
-    ;_Zx7 = (Camlburg.infinity)
-    ;_Zx9 = (Camlburg.infinity)
+    ;_Sxlo17 = (Camlburg.infinity)
+    ;_Sxlo24 = (Camlburg.infinity)
+    ;_Sxlo27 = (Camlburg.infinity)
+    ;_Unop36 = (Camlburg.infinity)
+    ;_Zx10 = (Camlburg.infinity)
+    ;_Zx12 = (Camlburg.infinity)
+    ;_Zx14 = (Camlburg.infinity)
+    ;_Zx8 = (Camlburg.infinity)
     }
 
 
@@ -292,7 +298,7 @@ and update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 319 "ppcrec.mlb"
+# 335 "ppcrec.mlb"
                                 ( s "<%s>" any )
                                 
 # 000 "/dev/stdout"
@@ -331,7 +337,7 @@ and update_const16 =
                             let const16 = x.const16.Camlburg.action ()
                             in
                                 
-# 238 "ppcrec.mlb"
+# 239 "ppcrec.mlb"
                                 ( s "%s(%s)" const16 (r0_str ()) )
                                 
 # 000 "/dev/stdout"
@@ -339,6 +345,12 @@ and update_const16 =
                     })
                     x)
                 { x with const16 = (nt) }
+and update_const32 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.const32.Camlburg.cost then
+            x
+        else
+            { x with const32 = (nt) }
 and update_cr =
     fun nt x ->
         if nt.Camlburg.cost >= x.cr.Camlburg.cost then
@@ -442,7 +454,7 @@ and update_reg =
                             let reg = x.reg.Camlburg.action ()
                             in
                                 
-# 239 "ppcrec.mlb"
+# 240 "ppcrec.mlb"
                                 ( s  "0(%s)" reg         )
                                 
 # 000 "/dev/stdout"
@@ -474,132 +486,138 @@ and update_xerl =
             x
         else
             { x with xerl = (nt) }
-and update__Add21 =
-    fun nt x ->
-        if nt.Camlburg.cost >= x._Add21.Camlburg.cost then
-            x
-        else
-            { x with _Add21 = (nt) }
 and update__Add22 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Add22.Camlburg.cost then
             x
         else
             { x with _Add22 = (nt) }
-and update__Add24 =
+and update__Add23 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Add24.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Add23.Camlburg.cost then
             x
         else
-            { x with _Add24 = (nt) }
+            { x with _Add23 = (nt) }
 and update__Add25 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Add25.Camlburg.cost then
             x
         else
             { x with _Add25 = (nt) }
-and update__Add33 =
+and update__Add26 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Add33.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Add26.Camlburg.cost then
             x
         else
-            { x with _Add33 = (nt) }
+            { x with _Add26 = (nt) }
 and update__Add34 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Add34.Camlburg.cost then
             x
         else
             { x with _Add34 = (nt) }
-and update__Binop37 =
+and update__Add35 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Binop37.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Add35.Camlburg.cost then
             x
         else
-            { x with _Binop37 = (nt) }
+            { x with _Add35 = (nt) }
+and update__Add5 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Add5.Camlburg.cost then
+            x
+        else
+            { x with _Add5 = (nt) }
 and update__Binop38 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Binop38.Camlburg.cost then
             x
         else
             { x with _Binop38 = (nt) }
-and update__Com36 =
+and update__Binop39 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Com36.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Binop39.Camlburg.cost then
             x
         else
-            { x with _Com36 = (nt) }
+            { x with _Binop39 = (nt) }
+and update__Com37 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Com37.Camlburg.cost then
+            x
+        else
+            { x with _Com37 = (nt) }
 and update__Diff2 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Diff2.Camlburg.cost then
             x
         else
             { x with _Diff2 = (nt) }
-and update__Fetch10 =
+and update__Fetch11 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch10.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch11.Camlburg.cost then
             x
         else
-            { x with _Fetch10 = (nt) }
-and update__Fetch12 =
+            { x with _Fetch11 = (nt) }
+and update__Fetch13 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch12.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch13.Camlburg.cost then
             x
         else
-            { x with _Fetch12 = (nt) }
-and update__Fetch14 =
+            { x with _Fetch13 = (nt) }
+and update__Fetch15 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch14.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch15.Camlburg.cost then
             x
         else
-            { x with _Fetch14 = (nt) }
-and update__Fetch32 =
+            { x with _Fetch15 = (nt) }
+and update__Fetch33 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch32.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch33.Camlburg.cost then
             x
         else
-            { x with _Fetch32 = (nt) }
+            { x with _Fetch33 = (nt) }
 and update__Fetch4 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Fetch4.Camlburg.cost then
             x
         else
             { x with _Fetch4 = (nt) }
-and update__Fetch5 =
+and update__Fetch6 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch5.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch6.Camlburg.cost then
             x
         else
-            { x with _Fetch5 = (nt) }
-and update__Fetch8 =
+            { x with _Fetch6 = (nt) }
+and update__Fetch9 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch8.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch9.Camlburg.cost then
             x
         else
-            { x with _Fetch8 = (nt) }
-and update__Goto27 =
+            { x with _Fetch9 = (nt) }
+and update__Goto28 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Goto27.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Goto28.Camlburg.cost then
             x
         else
-            { x with _Goto27 = (nt) }
-and update__Goto30 =
+            { x with _Goto28 = (nt) }
+and update__Goto31 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Goto30.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Goto31.Camlburg.cost then
             x
         else
-            { x with _Goto30 = (nt) }
-and update__Lobits19 =
-    fun nt x ->
-        if nt.Camlburg.cost >= x._Lobits19.Camlburg.cost then
-            x
-        else
-            { x with _Lobits19 = (nt) }
+            { x with _Goto31 = (nt) }
 and update__Lobits20 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Lobits20.Camlburg.cost then
             x
         else
             { x with _Lobits20 = (nt) }
+and update__Lobits21 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Lobits21.Camlburg.cost then
+            x
+        else
+            { x with _Lobits21 = (nt) }
 and update__Mem1 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Mem1.Camlburg.cost then
@@ -612,96 +630,96 @@ and update__Mem3 =
             x
         else
             { x with _Mem3 = (nt) }
-and update__Mem6 =
+and update__Mem7 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Mem6.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Mem7.Camlburg.cost then
             x
         else
-            { x with _Mem6 = (nt) }
-and update__OvSet31 =
+            { x with _Mem7 = (nt) }
+and update__OvSet32 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._OvSet31.Camlburg.cost then
+        if nt.Camlburg.cost >= x._OvSet32.Camlburg.cost then
             x
         else
-            { x with _OvSet31 = (nt) }
-and update__Store28 =
-    fun nt x ->
-        if nt.Camlburg.cost >= x._Store28.Camlburg.cost then
-            x
-        else
-            { x with _Store28 = (nt) }
+            { x with _OvSet32 = (nt) }
 and update__Store29 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Store29.Camlburg.cost then
             x
         else
             { x with _Store29 = (nt) }
-and update__Sx17 =
+and update__Store30 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sx17.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Store30.Camlburg.cost then
             x
         else
-            { x with _Sx17 = (nt) }
+            { x with _Store30 = (nt) }
 and update__Sx18 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Sx18.Camlburg.cost then
             x
         else
             { x with _Sx18 = (nt) }
-and update__Sxlo15 =
+and update__Sx19 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sxlo15.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Sx19.Camlburg.cost then
             x
         else
-            { x with _Sxlo15 = (nt) }
+            { x with _Sx19 = (nt) }
 and update__Sxlo16 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Sxlo16.Camlburg.cost then
             x
         else
             { x with _Sxlo16 = (nt) }
-and update__Sxlo23 =
+and update__Sxlo17 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sxlo23.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Sxlo17.Camlburg.cost then
             x
         else
-            { x with _Sxlo23 = (nt) }
-and update__Sxlo26 =
+            { x with _Sxlo17 = (nt) }
+and update__Sxlo24 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sxlo26.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Sxlo24.Camlburg.cost then
             x
         else
-            { x with _Sxlo26 = (nt) }
-and update__Unop35 =
+            { x with _Sxlo24 = (nt) }
+and update__Sxlo27 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Unop35.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Sxlo27.Camlburg.cost then
             x
         else
-            { x with _Unop35 = (nt) }
-and update__Zx11 =
+            { x with _Sxlo27 = (nt) }
+and update__Unop36 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Zx11.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Unop36.Camlburg.cost then
             x
         else
-            { x with _Zx11 = (nt) }
-and update__Zx13 =
+            { x with _Unop36 = (nt) }
+and update__Zx10 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Zx13.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Zx10.Camlburg.cost then
             x
         else
-            { x with _Zx13 = (nt) }
-and update__Zx7 =
+            { x with _Zx10 = (nt) }
+and update__Zx12 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Zx7.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Zx12.Camlburg.cost then
             x
         else
-            { x with _Zx7 = (nt) }
-and update__Zx9 =
+            { x with _Zx12 = (nt) }
+and update__Zx14 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Zx9.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Zx14.Camlburg.cost then
             x
         else
-            { x with _Zx9 = (nt) }
+            { x with _Zx14 = (nt) }
+and update__Zx8 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Zx8.Camlburg.cost then
+            x
+        else
+            { x with _Zx8 = (nt) }
 
 
 let rec
@@ -715,7 +733,7 @@ conZxlo =
                     and w = arg2
                     in
                         
-# 332 "ppcrec.mlb"
+# 348 "ppcrec.mlb"
                         ( s "Zxlo(%s,%d)" any w )
                         
 # 000 "/dev/stdout"
@@ -724,37 +742,37 @@ conZxlo =
             inf
 and conZx =
     fun arg1 ->
-        (update__Zx11
-            {Camlburg.cost = (arg1._Fetch12.Camlburg.cost)
+        (update__Zx10
+            {Camlburg.cost = (arg1._Fetch11.Camlburg.cost)
             ;Camlburg.action =
                 (fun () ->
-                    let _v1 = arg1._Fetch12.Camlburg.action ()
+                    let _v1 = arg1._Fetch11.Camlburg.action ()
                     in
-                        let addr = _v1 in addr)
+                        let ndx_addr = _v1 in ndx_addr)
             })
-            ((update__Zx13
-                {Camlburg.cost = (arg1._Fetch14.Camlburg.cost)
+            ((update__Zx12
+                {Camlburg.cost = (arg1._Fetch13.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
-                        let _v1 = arg1._Fetch14.Camlburg.action ()
+                        let _v1 = arg1._Fetch13.Camlburg.action ()
                         in
-                            let ndx_addr = _v1 in ndx_addr)
+                            let addr = _v1 in addr)
                 })
-                ((update__Zx7
-                    {Camlburg.cost = (arg1._Fetch8.Camlburg.cost)
+                ((update__Zx14
+                    {Camlburg.cost = (arg1._Fetch15.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let _v1 = arg1._Fetch8.Camlburg.action ()
+                            let _v1 = arg1._Fetch15.Camlburg.action ()
                             in
-                                let addr = _v1 in addr)
+                                let ndx_addr = _v1 in ndx_addr)
                     })
-                    ((update__Zx9
-                        {Camlburg.cost = (arg1._Fetch10.Camlburg.cost)
+                    ((update__Zx8
+                        {Camlburg.cost = (arg1._Fetch9.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
-                                let _v1 = arg1._Fetch10.Camlburg.action ()
+                                let _v1 = arg1._Fetch9.Camlburg.action ()
                                 in
-                                    let ndx_addr = _v1 in ndx_addr)
+                                    let addr = _v1 in addr)
                         })
                         ((update_any
                             {Camlburg.cost = (arg1.any.Camlburg.cost)
@@ -763,7 +781,7 @@ and conZx =
                                     let any = arg1.any.Camlburg.action ()
                                     in
                                         
-# 330 "ppcrec.mlb"
+# 346 "ppcrec.mlb"
                                         ( s "Zx(%s)" any  )
                                         
 # 000 "/dev/stdout"
@@ -772,7 +790,7 @@ and conZx =
                             inf))))
 and conUnop =
     fun arg1 arg2 ->
-        (update__Unop35
+        (update__Unop36
             {Camlburg.cost = (arg2.reg.Camlburg.cost)
             ;Camlburg.action =
                 (fun () ->
@@ -789,7 +807,7 @@ and conUnop =
                         and x = arg2.any.Camlburg.action ()
                         in
                             
-# 338 "ppcrec.mlb"
+# 354 "ppcrec.mlb"
                             ( s "Unop(%s,%s)" op x  )
                             
 # 000 "/dev/stdout"
@@ -803,7 +821,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 321 "ppcrec.mlb"
+# 337 "ppcrec.mlb"
                     ( "True"  )
                     
 # 000 "/dev/stdout"
@@ -812,26 +830,26 @@ and conTrue =
             inf
 and conSxlo =
     fun arg1 arg2 ->
-        (update__Sxlo15
+        (update__Sxlo16
             {Camlburg.cost =
                 (arg1.reg.Camlburg.cost + (Camlburg.matches 8) arg2)
             ;Camlburg.action =
                 (fun () -> let reg = arg1.reg.Camlburg.action () in reg)
             })
-            ((update__Sxlo16
+            ((update__Sxlo17
                 {Camlburg.cost =
                     (arg1.reg.Camlburg.cost + (Camlburg.matches 16) arg2)
                 ;Camlburg.action =
                     (fun () -> let reg = arg1.reg.Camlburg.action () in reg)
                 })
-                ((update__Sxlo23
+                ((update__Sxlo24
                     {Camlburg.cost =
                         (arg1.pic.Camlburg.cost + (Camlburg.matches 16) arg2)
                     ;Camlburg.action =
                         (fun () ->
                             let pic = arg1.pic.Camlburg.action () in pic)
                     })
-                    ((update__Sxlo26
+                    ((update__Sxlo27
                         {Camlburg.cost =
                             (arg1.lconst.Camlburg.cost
                             +
@@ -850,7 +868,7 @@ and conSxlo =
                                     and w = arg2
                                     in
                                         
-# 331 "ppcrec.mlb"
+# 347 "ppcrec.mlb"
                                         ( s "Sxlo(%s,%d)" any w )
                                         
 # 000 "/dev/stdout"
@@ -859,19 +877,19 @@ and conSxlo =
                             inf))))
 and conSx =
     fun arg1 ->
-        (update__Sx17
-            {Camlburg.cost = (arg1._Fetch12.Camlburg.cost)
+        (update__Sx18
+            {Camlburg.cost = (arg1._Fetch13.Camlburg.cost)
             ;Camlburg.action =
                 (fun () ->
-                    let _v1 = arg1._Fetch12.Camlburg.action ()
+                    let _v1 = arg1._Fetch13.Camlburg.action ()
                     in
                         let addr = _v1 in addr)
             })
-            ((update__Sx18
-                {Camlburg.cost = (arg1._Fetch14.Camlburg.cost)
+            ((update__Sx19
+                {Camlburg.cost = (arg1._Fetch15.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
-                        let _v1 = arg1._Fetch14.Camlburg.action ()
+                        let _v1 = arg1._Fetch15.Camlburg.action ()
                         in
                             let ndx_addr = _v1 in ndx_addr)
                 })
@@ -882,7 +900,7 @@ and conSx =
                             let any = arg1.any.Camlburg.action ()
                             in
                                 
-# 329 "ppcrec.mlb"
+# 345 "ppcrec.mlb"
                                 ( s "Sx(%s)" any  )
                                 
 # 000 "/dev/stdout"
@@ -891,7 +909,7 @@ and conSx =
                     inf))
 and conStore =
     fun arg1 arg2 arg3 ->
-        (update__Store28
+        (update__Store29
             {Camlburg.cost =
                 (arg1.regl.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -902,7 +920,7 @@ and conStore =
                     in
                         (regl ,reg ,w))
             })
-            ((update__Store29
+            ((update__Store30
                 {Camlburg.cost =
                     (arg1.lrl.Camlburg.cost + arg2.next.Camlburg.cost
                     +
@@ -924,7 +942,7 @@ and conStore =
                             and w = arg3
                             in
                                 
-# 353 "ppcrec.mlb"
+# 369 "ppcrec.mlb"
                                 ( s "Store(%s,%s,%d)" dst src w )
                                 
 # 000 "/dev/stdout"
@@ -943,7 +961,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 244 "ppcrec.mlb"
+# 245 "ppcrec.mlb"
                                         ( s "mr %s,%s" regl reg )
                                         
 # 000 "/dev/stdout"
@@ -960,7 +978,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 245 "ppcrec.mlb"
+# 246 "ppcrec.mlb"
                                         ( s "mflr %s" regl )
                                         
 # 000 "/dev/stdout"
@@ -977,7 +995,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 246 "ppcrec.mlb"
+# 247 "ppcrec.mlb"
                                         ( s "mtlr %s" reg  )
                                         
 # 000 "/dev/stdout"
@@ -997,7 +1015,7 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 248 "ppcrec.mlb"
+# 249 "ppcrec.mlb"
                                             ( s "mflr %s\n\tstw %s,%s" (r0_str ()) (r0_str ()) addr )
                                             
 # 000 "/dev/stdout"
@@ -1017,8 +1035,28 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 249 "ppcrec.mlb"
+# 250 "ppcrec.mlb"
                                             ( s "lwz %s,%s\n\tmtlr %s" (r0_str ()) addr (r0_str ()) )
+                                            
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.lrl.Camlburg.cost
+                                +
+                                arg2._Add5.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let lrl = arg1.lrl.Camlburg.action ()
+                                    and _v1 = arg2._Add5.Camlburg.action ()
+                                    in
+                                        let (lr, x) = _v1
+                                        in
+                                            
+# 252 "ppcrec.mlb"
+                                            ( s "mflr %s\n\tadd %s,%s,%s\n\tmtlr %s" (r0_str ()) (r0_str ()) (r0_str ()) x (r0_str ()) )
                                             
 # 000 "/dev/stdout"
 )
@@ -1034,7 +1072,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 250 "ppcrec.mlb"
+# 253 "ppcrec.mlb"
                                         ( s "mfcr %s" regl )
                                         
 # 000 "/dev/stdout"
@@ -1054,8 +1092,30 @@ and conStore =
                                         arg2.const16.Camlburg.action ()
                                     in
                                         
-# 252 "ppcrec.mlb"
+# 255 "ppcrec.mlb"
                                         ( s "addi %s,0,%s" regl const16 )
+                                        
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.regl.Camlburg.cost
+                                +
+                                arg2.const32.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let regl = arg1.regl.Camlburg.action ()
+                                    and
+                                        const32 =
+                                        arg2.const32.Camlburg.action ()
+                                    in
+                                        
+# 266 "ppcrec.mlb"
+                                        ( let (hi, lo) = const32 in
+       s "addis %s,0,0x%x\n\tori %s,%s,0x%x" regl hi regl regl lo
+    )
                                         
 # 000 "/dev/stdout"
 )
@@ -1074,7 +1134,7 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 254 "ppcrec.mlb"
+# 270 "ppcrec.mlb"
                                             ( s "lwz %s,%s" regl addr  )
                                             
 # 000 "/dev/stdout"
@@ -1083,18 +1143,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Fetch5.Camlburg.cost
+                                arg2._Fetch6.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Fetch5.Camlburg.action ()
+                                    and _v1 = arg2._Fetch6.Camlburg.action ()
                                     in
                                         let ndx_addr = _v1
                                         in
                                             
-# 255 "ppcrec.mlb"
+# 271 "ppcrec.mlb"
                                             ( s "lwzx %s,%s" regl ndx_addr )
                                             
 # 000 "/dev/stdout"
@@ -1103,18 +1163,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Zx7.Camlburg.cost
+                                arg2._Zx8.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Zx7.Camlburg.action ()
+                                    and _v1 = arg2._Zx8.Camlburg.action ()
                                     in
                                         let addr = _v1
                                         in
                                             
-# 256 "ppcrec.mlb"
+# 272 "ppcrec.mlb"
                                             ( s "lbz %s,%s" regl addr  )
                                             
 # 000 "/dev/stdout"
@@ -1123,18 +1183,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Zx9.Camlburg.cost
+                                arg2._Zx10.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Zx9.Camlburg.action ()
+                                    and _v1 = arg2._Zx10.Camlburg.action ()
                                     in
                                         let ndx_addr = _v1
                                         in
                                             
-# 257 "ppcrec.mlb"
+# 273 "ppcrec.mlb"
                                             ( s "lbzx %s,%s" regl ndx_addr  )
                                             
 # 000 "/dev/stdout"
@@ -1143,18 +1203,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Zx11.Camlburg.cost
+                                arg2._Zx12.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Zx11.Camlburg.action ()
+                                    and _v1 = arg2._Zx12.Camlburg.action ()
                                     in
                                         let addr = _v1
                                         in
                                             
-# 258 "ppcrec.mlb"
+# 274 "ppcrec.mlb"
                                             ( s "lhz %s,%s" regl addr  )
                                             
 # 000 "/dev/stdout"
@@ -1163,39 +1223,19 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Zx13.Camlburg.cost
+                                arg2._Zx14.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Zx13.Camlburg.action ()
+                                    and _v1 = arg2._Zx14.Camlburg.action ()
                                     in
                                         let ndx_addr = _v1
                                         in
                                             
-# 259 "ppcrec.mlb"
+# 275 "ppcrec.mlb"
                                             ( s "lhzx %s,%s" regl ndx_addr  )
-                                            
-# 000 "/dev/stdout"
-)
-                            }
-                            ;{Camlburg.cost =
-                                (arg1.regl.Camlburg.cost
-                                +
-                                arg2._Sxlo15.Camlburg.cost
-                                +
-                                (Camlburg.matches 32) arg3)
-                            ;Camlburg.action =
-                                (fun () ->
-                                    let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Sxlo15.Camlburg.action ()
-                                    in
-                                        let reg = _v1
-                                        in
-                                            
-# 260 "ppcrec.mlb"
-                                            ( s "extsb %s,%s" regl reg )
                                             
 # 000 "/dev/stdout"
 )
@@ -1214,8 +1254,8 @@ and conStore =
                                         let reg = _v1
                                         in
                                             
-# 261 "ppcrec.mlb"
-                                            ( s "extsh %s,%s" regl reg )
+# 276 "ppcrec.mlb"
+                                            ( s "extsb %s,%s" regl reg )
                                             
 # 000 "/dev/stdout"
 )
@@ -1223,19 +1263,19 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Sx17.Camlburg.cost
+                                arg2._Sxlo17.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Sx17.Camlburg.action ()
+                                    and _v1 = arg2._Sxlo17.Camlburg.action ()
                                     in
-                                        let addr = _v1
+                                        let reg = _v1
                                         in
                                             
-# 262 "ppcrec.mlb"
-                                            ( s "lha %s,%s" regl addr  )
+# 277 "ppcrec.mlb"
+                                            ( s "extsh %s,%s" regl reg )
                                             
 # 000 "/dev/stdout"
 )
@@ -1251,10 +1291,30 @@ and conStore =
                                     let regl = arg1.regl.Camlburg.action ()
                                     and _v1 = arg2._Sx18.Camlburg.action ()
                                     in
+                                        let addr = _v1
+                                        in
+                                            
+# 278 "ppcrec.mlb"
+                                            ( s "lha %s,%s" regl addr  )
+                                            
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.regl.Camlburg.cost
+                                +
+                                arg2._Sx19.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let regl = arg1.regl.Camlburg.action ()
+                                    and _v1 = arg2._Sx19.Camlburg.action ()
+                                    in
                                         let ndx_addr = _v1
                                         in
                                             
-# 263 "ppcrec.mlb"
+# 279 "ppcrec.mlb"
                                             ( s "lhax %s,%s" regl ndx_addr  )
                                             
 # 000 "/dev/stdout"
@@ -1274,27 +1334,27 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 265 "ppcrec.mlb"
+# 281 "ppcrec.mlb"
                                             ( s "stw %s,%s" reg addr  )
                                             
 # 000 "/dev/stdout"
 )
                             }
                             ;{Camlburg.cost =
-                                (arg1._Mem6.Camlburg.cost
+                                (arg1._Mem7.Camlburg.cost
                                 +
                                 arg2.reg.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
-                                    let _v1 = arg1._Mem6.Camlburg.action ()
+                                    let _v1 = arg1._Mem7.Camlburg.action ()
                                     and reg = arg2.reg.Camlburg.action ()
                                     in
                                         let ndx_addr = _v1
                                         in
                                             
-# 266 "ppcrec.mlb"
+# 282 "ppcrec.mlb"
                                             ( s "stwx %s,%s" reg ndx_addr )
                                             
 # 000 "/dev/stdout"
@@ -1303,7 +1363,7 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1._Mem3.Camlburg.cost
                                 +
-                                arg2._Lobits19.Camlburg.cost
+                                arg2._Lobits20.Camlburg.cost
                                 +
                                 (Camlburg.matches 8) arg3)
                             ;Camlburg.action =
@@ -1311,38 +1371,38 @@ and conStore =
                                     let _v1 = arg1._Mem3.Camlburg.action ()
                                     and
                                         _v2 =
-                                        arg2._Lobits19.Camlburg.action ()
+                                        arg2._Lobits20.Camlburg.action ()
                                     in
                                         let reg = _v2
                                         in
                                             let addr = _v1
                                             in
                                                 
-# 267 "ppcrec.mlb"
+# 283 "ppcrec.mlb"
                                                 ( s "stb %s,%s" reg addr  )
                                                 
 # 000 "/dev/stdout"
 )
                             }
                             ;{Camlburg.cost =
-                                (arg1._Mem6.Camlburg.cost
+                                (arg1._Mem7.Camlburg.cost
                                 +
-                                arg2._Lobits19.Camlburg.cost
+                                arg2._Lobits20.Camlburg.cost
                                 +
                                 (Camlburg.matches 8) arg3)
                             ;Camlburg.action =
                                 (fun () ->
-                                    let _v1 = arg1._Mem6.Camlburg.action ()
+                                    let _v1 = arg1._Mem7.Camlburg.action ()
                                     and
                                         _v2 =
-                                        arg2._Lobits19.Camlburg.action ()
+                                        arg2._Lobits20.Camlburg.action ()
                                     in
                                         let reg = _v2
                                         in
                                             let ndx_addr = _v1
                                             in
                                                 
-# 268 "ppcrec.mlb"
+# 284 "ppcrec.mlb"
                                                 ( s "stbx %s,%s" reg ndx_addr  )
                                                 
 # 000 "/dev/stdout"
@@ -1351,7 +1411,7 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1._Mem3.Camlburg.cost
                                 +
-                                arg2._Lobits20.Camlburg.cost
+                                arg2._Lobits21.Camlburg.cost
                                 +
                                 (Camlburg.matches 16) arg3)
                             ;Camlburg.action =
@@ -1359,38 +1419,38 @@ and conStore =
                                     let _v1 = arg1._Mem3.Camlburg.action ()
                                     and
                                         _v2 =
-                                        arg2._Lobits20.Camlburg.action ()
+                                        arg2._Lobits21.Camlburg.action ()
                                     in
                                         let reg = _v2
                                         in
                                             let addr = _v1
                                             in
                                                 
-# 269 "ppcrec.mlb"
+# 285 "ppcrec.mlb"
                                                 ( s "sth %s,%s" reg addr  )
                                                 
 # 000 "/dev/stdout"
 )
                             }
                             ;{Camlburg.cost =
-                                (arg1._Mem6.Camlburg.cost
+                                (arg1._Mem7.Camlburg.cost
                                 +
-                                arg2._Lobits20.Camlburg.cost
+                                arg2._Lobits21.Camlburg.cost
                                 +
                                 (Camlburg.matches 16) arg3)
                             ;Camlburg.action =
                                 (fun () ->
-                                    let _v1 = arg1._Mem6.Camlburg.action ()
+                                    let _v1 = arg1._Mem7.Camlburg.action ()
                                     and
                                         _v2 =
-                                        arg2._Lobits20.Camlburg.action ()
+                                        arg2._Lobits21.Camlburg.action ()
                                     in
                                         let reg = _v2
                                         in
                                             let ndx_addr = _v1
                                             in
                                                 
-# 270 "ppcrec.mlb"
+# 286 "ppcrec.mlb"
                                                 ( s "sthx %s,%s" reg ndx_addr  )
                                                 
 # 000 "/dev/stdout"
@@ -1399,18 +1459,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Add21.Camlburg.cost
+                                arg2._Add22.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Add21.Camlburg.action ()
+                                    and _v1 = arg2._Add22.Camlburg.action ()
                                     in
                                         let (reg, ha16) = _v1
                                         in
                                             
-# 272 "ppcrec.mlb"
+# 288 "ppcrec.mlb"
                                             ( s "addis %s,%s,%s" regl reg ha16 )
                                             
 # 000 "/dev/stdout"
@@ -1428,7 +1488,7 @@ and conStore =
                                     and ha16 = arg2.ha16.Camlburg.action ()
                                     in
                                         
-# 273 "ppcrec.mlb"
+# 289 "ppcrec.mlb"
                                         ( s "addis %s,0,%s" regl ha16 )
                                         
 # 000 "/dev/stdout"
@@ -1437,18 +1497,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Add22.Camlburg.cost
+                                arg2._Add23.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Add22.Camlburg.action ()
+                                    and _v1 = arg2._Add23.Camlburg.action ()
                                     in
                                         let (reg, pic) = _v1
                                         in
                                             
-# 275 "ppcrec.mlb"
+# 291 "ppcrec.mlb"
                                             ( s "addi %s,%s,lo16(%s)" regl reg pic )
                                             
 # 000 "/dev/stdout"
@@ -1457,18 +1517,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Sxlo23.Camlburg.cost
+                                arg2._Sxlo24.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Sxlo23.Camlburg.action ()
+                                    and _v1 = arg2._Sxlo24.Camlburg.action ()
                                     in
                                         let pic = _v1
                                         in
                                             
-# 276 "ppcrec.mlb"
+# 292 "ppcrec.mlb"
                                             ( s "addi %s,0,lo16(%s)" regl pic )
                                             
 # 000 "/dev/stdout"
@@ -1477,18 +1537,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Add24.Camlburg.cost
+                                arg2._Add25.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Add24.Camlburg.action ()
+                                    and _v1 = arg2._Add25.Camlburg.action ()
                                     in
                                         let (reg, absha16) = _v1
                                         in
                                             
-# 281 "ppcrec.mlb"
+# 297 "ppcrec.mlb"
                                             ( s "addis %s,%s,%s" regl reg absha16 )
                                             
 # 000 "/dev/stdout"
@@ -1508,7 +1568,7 @@ and conStore =
                                         arg2.absha16.Camlburg.action ()
                                     in
                                         
-# 282 "ppcrec.mlb"
+# 298 "ppcrec.mlb"
                                         ( s "addis %s,0,%s" regl absha16 )
                                         
 # 000 "/dev/stdout"
@@ -1517,18 +1577,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Add25.Camlburg.cost
+                                arg2._Add26.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Add25.Camlburg.action ()
+                                    and _v1 = arg2._Add26.Camlburg.action ()
                                     in
                                         let (reg, lconst) = _v1
                                         in
                                             
-# 284 "ppcrec.mlb"
+# 300 "ppcrec.mlb"
                                             ( s "addi %s,%s,%s" regl reg (abs_lo lconst) )
                                             
 # 000 "/dev/stdout"
@@ -1537,39 +1597,19 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Sxlo26.Camlburg.cost
+                                arg2._Sxlo27.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Sxlo26.Camlburg.action ()
+                                    and _v1 = arg2._Sxlo27.Camlburg.action ()
                                     in
                                         let lconst = _v1
                                         in
                                             
-# 285 "ppcrec.mlb"
+# 301 "ppcrec.mlb"
                                             ( s "addi %s,0,%s" regl (abs_lo lconst) )
-                                            
-# 000 "/dev/stdout"
-)
-                            }
-                            ;{Camlburg.cost =
-                                (arg1.regl.Camlburg.cost
-                                +
-                                arg2._Add33.Camlburg.cost
-                                +
-                                (Camlburg.matches 32) arg3)
-                            ;Camlburg.action =
-                                (fun () ->
-                                    let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Add33.Camlburg.action ()
-                                    in
-                                        let (x, y) = _v1
-                                        in
-                                            
-# 307 "ppcrec.mlb"
-                                            ( s "add %s,%s,%s" regl x y )
                                             
 # 000 "/dev/stdout"
 )
@@ -1588,7 +1628,27 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 308 "ppcrec.mlb"
+# 323 "ppcrec.mlb"
+                                            ( s "add %s,%s,%s" regl x y )
+                                            
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.regl.Camlburg.cost
+                                +
+                                arg2._Add35.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let regl = arg1.regl.Camlburg.action ()
+                                    and _v1 = arg2._Add35.Camlburg.action ()
+                                    in
+                                        let (x, y) = _v1
+                                        in
+                                            
+# 324 "ppcrec.mlb"
                                             ( s "addi %s,%s,%s" regl x y )
                                             
 # 000 "/dev/stdout"
@@ -1597,18 +1657,18 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Unop35.Camlburg.cost
+                                arg2._Unop36.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Unop35.Camlburg.action ()
+                                    and _v1 = arg2._Unop36.Camlburg.action ()
                                     in
                                         let (opr, x) = _v1
                                         in
                                             
-# 310 "ppcrec.mlb"
+# 326 "ppcrec.mlb"
                                             ( s "%s  %s,%s"    opr regl x )
                                             
 # 000 "/dev/stdout"
@@ -1617,41 +1677,19 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Com36.Camlburg.cost
+                                arg2._Com37.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and _v1 = arg2._Com36.Camlburg.action ()
+                                    and _v1 = arg2._Com37.Camlburg.action ()
                                     in
                                         let x = _v1
                                         in
                                             
-# 312 "ppcrec.mlb"
+# 328 "ppcrec.mlb"
                                             ( s "nor  %s,%s,%s" regl x x )
-                                            
-# 000 "/dev/stdout"
-)
-                            }
-                            ;{Camlburg.cost =
-                                (arg1.regl.Camlburg.cost
-                                +
-                                arg2._Binop37.Camlburg.cost
-                                +
-                                (Camlburg.matches 32) arg3)
-                            ;Camlburg.action =
-                                (fun () ->
-                                    let regl = arg1.regl.Camlburg.action ()
-                                    and
-                                        _v1 =
-                                        arg2._Binop37.Camlburg.action ()
-                                    in
-                                        let (opr, x, y) = _v1
-                                        in
-                                            
-# 313 "ppcrec.mlb"
-                                            ( s "%s  %s,%s,%s" opr regl x y )
                                             
 # 000 "/dev/stdout"
 )
@@ -1672,7 +1710,29 @@ and conStore =
                                         let (opr, x, y) = _v1
                                         in
                                             
-# 315 "ppcrec.mlb"
+# 329 "ppcrec.mlb"
+                                            ( s "%s  %s,%s,%s" opr regl x y )
+                                            
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.regl.Camlburg.cost
+                                +
+                                arg2._Binop39.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let regl = arg1.regl.Camlburg.action ()
+                                    and
+                                        _v1 =
+                                        arg2._Binop39.Camlburg.action ()
+                                    in
+                                        let (opr, x, y) = _v1
+                                        in
+                                            
+# 331 "ppcrec.mlb"
                                             ( s "%si %s,%s,%s" opr regl x y )
                                             
 # 000 "/dev/stdout"
@@ -1690,7 +1750,7 @@ and conSlice =
                     and y = arg3.any.Camlburg.action ()
                     in
                         
-# 348 "ppcrec.mlb"
+# 364 "ppcrec.mlb"
                         ( sprintf "Slice(%d, %d, %s)" w n y )
                         
 # 000 "/dev/stdout"
@@ -1707,7 +1767,7 @@ and conReg =
                     and n = arg2
                     in
                         
-# 351 "ppcrec.mlb"
+# 367 "ppcrec.mlb"
                         ( sprintf "Reg(%s, %d)" (Char.escaped char) n )
                         
 # 000 "/dev/stdout"
@@ -1719,7 +1779,7 @@ and conReg =
                 ;Camlburg.action =
                     (fun () ->
                         
-# 223 "ppcrec.mlb"
+# 224 "ppcrec.mlb"
                         ( () )
                         
 # 000 "/dev/stdout"
@@ -1733,7 +1793,7 @@ and conReg =
                     ;Camlburg.action =
                         (fun () ->
                             
-# 224 "ppcrec.mlb"
+# 225 "ppcrec.mlb"
                             ( () )
                             
 # 000 "/dev/stdout"
@@ -1747,7 +1807,7 @@ and conReg =
                         ;Camlburg.action =
                             (fun () ->
                                 
-# 226 "ppcrec.mlb"
+# 227 "ppcrec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -1761,7 +1821,7 @@ and conReg =
                             ;Camlburg.action =
                                 (fun () ->
                                     
-# 222 "ppcrec.mlb"
+# 223 "ppcrec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1772,7 +1832,7 @@ and conReg =
                                     (let n = arg2
                                     in
                                         
-# 235 "ppcrec.mlb"
+# 236 "ppcrec.mlb"
                                         ( guard (n<>0) )
                                         
 # 000 "/dev/stdout"
@@ -1784,7 +1844,7 @@ and conReg =
                                         let n = arg2
                                         in
                                             
-# 235 "ppcrec.mlb"
+# 236 "ppcrec.mlb"
                                             ( reg_str n )
                                             
 # 000 "/dev/stdout"
@@ -1798,7 +1858,7 @@ and conReg =
                                     ;Camlburg.action =
                                         (fun () ->
                                             
-# 227 "ppcrec.mlb"
+# 228 "ppcrec.mlb"
                                             ( () )
                                             
 # 000 "/dev/stdout"
@@ -1812,7 +1872,7 @@ and conReg =
                                         ;Camlburg.action =
                                             (fun () ->
                                                 
-# 225 "ppcrec.mlb"
+# 226 "ppcrec.mlb"
                                                 ( () )
                                                 
 # 000 "/dev/stdout"
@@ -1830,7 +1890,7 @@ and conPar =
                     and r = arg2.any.Camlburg.action ()
                     in
                         
-# 358 "ppcrec.mlb"
+# 374 "ppcrec.mlb"
                         ( s "Par(%s,%s)" l r )
                         
 # 000 "/dev/stdout"
@@ -1839,60 +1899,60 @@ and conPar =
             ((update_inst
                 (Camlburg.choice
                     [{Camlburg.cost =
-                        (arg1._Goto27.Camlburg.cost
+                        (arg1._Goto28.Camlburg.cost
                         +
-                        arg2._Store28.Camlburg.cost)
+                        arg2._Store29.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let _v1 = arg1._Goto27.Camlburg.action ()
-                            and _v2 = arg2._Store28.Camlburg.action ()
+                            let _v1 = arg1._Goto28.Camlburg.action ()
+                            and _v2 = arg2._Store29.Camlburg.action ()
                             in
                                 let (regl, reg, w) = _v2
                                 in
                                     let lr = _v1
                                     in
                                         
-# 292 "ppcrec.mlb"
+# 308 "ppcrec.mlb"
                                         ( sprintf "mr %s, %s; blr" regl reg )
                                         
 # 000 "/dev/stdout"
 )
                     }
                     ;{Camlburg.cost =
-                        (arg1._Goto27.Camlburg.cost
+                        (arg1._Goto28.Camlburg.cost
                         +
-                        arg2._Store29.Camlburg.cost)
+                        arg2._Store30.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let _v1 = arg1._Goto27.Camlburg.action ()
-                            and _v2 = arg2._Store29.Camlburg.action ()
+                            let _v1 = arg1._Goto28.Camlburg.action ()
+                            and _v2 = arg2._Store30.Camlburg.action ()
                             in
                                 let (lrl, next) = _v2
                                 in
                                     let lr = _v1
                                     in
                                         
-# 295 "ppcrec.mlb"
+# 311 "ppcrec.mlb"
                                         ( "blrl" )
                                         
 # 000 "/dev/stdout"
 )
                     }
                     ;{Camlburg.cost =
-                        (arg1._Goto30.Camlburg.cost
+                        (arg1._Goto31.Camlburg.cost
                         +
-                        arg2._Store29.Camlburg.cost)
+                        arg2._Store30.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let _v1 = arg1._Goto30.Camlburg.action ()
-                            and _v2 = arg2._Store29.Camlburg.action ()
+                            let _v1 = arg1._Goto31.Camlburg.action ()
+                            and _v2 = arg2._Store30.Camlburg.action ()
                             in
                                 let (lrl, next) = _v2
                                 in
                                     let lconst = _v1
                                     in
                                         
-# 296 "ppcrec.mlb"
+# 312 "ppcrec.mlb"
                                         ( s "bl %s" (ind_addr lconst) )
                                         
 # 000 "/dev/stdout"
@@ -1901,11 +1961,11 @@ and conPar =
                 inf)
 and conOvSet =
     fun arg1 ->
-        (update__OvSet31
-            {Camlburg.cost = (arg1._Fetch32.Camlburg.cost)
+        (update__OvSet32
+            {Camlburg.cost = (arg1._Fetch33.Camlburg.cost)
             ;Camlburg.action =
                 (fun () ->
-                    let _v1 = arg1._Fetch32.Camlburg.action ()
+                    let _v1 = arg1._Fetch33.Camlburg.action ()
                     in
                         let xerl = _v1 in xerl)
             })
@@ -1917,7 +1977,7 @@ and conNop =
             ;Camlburg.action =
                 (fun () ->
                     
-# 343 "ppcrec.mlb"
+# 359 "ppcrec.mlb"
                     ( "nop" )
                     
 # 000 "/dev/stdout"
@@ -1928,7 +1988,7 @@ and conNop =
                 ;Camlburg.action =
                     (fun () ->
                         
-# 318 "ppcrec.mlb"
+# 334 "ppcrec.mlb"
                         ( "nop" )
                         
 # 000 "/dev/stdout"
@@ -1951,7 +2011,7 @@ and conMem =
                     (fun () ->
                         let addr = arg1.addr.Camlburg.action () in addr)
                 })
-                ((update__Mem6
+                ((update__Mem7
                     {Camlburg.cost = (arg1.ndx_addr.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
@@ -1966,7 +2026,7 @@ and conMem =
                                 let any = arg1.any.Camlburg.action ()
                                 in
                                     
-# 350 "ppcrec.mlb"
+# 366 "ppcrec.mlb"
                                     ( s "Mem(%s)" any )
                                     
 # 000 "/dev/stdout"
@@ -1975,13 +2035,13 @@ and conMem =
                         inf)))
 and conLobits =
     fun arg1 arg2 ->
-        (update__Lobits19
+        (update__Lobits20
             {Camlburg.cost =
                 (arg1.reg.Camlburg.cost + (Camlburg.matches 8) arg2)
             ;Camlburg.action =
                 (fun () -> let reg = arg1.reg.Camlburg.action () in reg)
             })
-            ((update__Lobits20
+            ((update__Lobits21
                 {Camlburg.cost =
                     (arg1.reg.Camlburg.cost + (Camlburg.matches 16) arg2)
                 ;Camlburg.action =
@@ -1995,7 +2055,7 @@ and conLobits =
                             and w = arg2
                             in
                                 
-# 345 "ppcrec.mlb"
+# 361 "ppcrec.mlb"
                                 ( s "Lobits(%s, %d)" any w )
                                 
 # 000 "/dev/stdout"
@@ -2012,7 +2072,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 323 "ppcrec.mlb"
+# 339 "ppcrec.mlb"
                         ( s "Link(%s,%d)" (symbol#mangled_text) w )
                         
 # 000 "/dev/stdout"
@@ -2026,7 +2086,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 218 "ppcrec.mlb"
+# 219 "ppcrec.mlb"
                             ( symbol#mangled_text )
                             
 # 000 "/dev/stdout"
@@ -2042,7 +2102,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 354 "ppcrec.mlb"
+# 370 "ppcrec.mlb"
                         ( s "Kill(%s)" any )
                         
 # 000 "/dev/stdout"
@@ -2058,7 +2118,7 @@ and conHa16 =
                     let lconst = arg1.lconst.Camlburg.action ()
                     in
                         
-# 287 "ppcrec.mlb"
+# 303 "ppcrec.mlb"
                         ( abs_ha lconst )
                         
 # 000 "/dev/stdout"
@@ -2071,7 +2131,7 @@ and conHa16 =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 335 "ppcrec.mlb"
+# 351 "ppcrec.mlb"
                             ( s "Ha16(%s)" any )
                             
 # 000 "/dev/stdout"
@@ -2084,7 +2144,7 @@ and conHa16 =
                             let pic = arg1.pic.Camlburg.action ()
                             in
                                 
-# 278 "ppcrec.mlb"
+# 294 "ppcrec.mlb"
                                 ( s "ha16(%s)" pic )
                                 
 # 000 "/dev/stdout"
@@ -2102,7 +2162,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 356 "ppcrec.mlb"
+# 372 "ppcrec.mlb"
                         ( s "Guarded(%s,%s)" guard any )
                         
 # 000 "/dev/stdout"
@@ -2111,16 +2171,16 @@ and conGuarded =
             ((update_inst
                 (Camlburg.choice
                     [{Camlburg.cost =
-                        (arg1.cmp.Camlburg.cost + arg2._Goto30.Camlburg.cost)
+                        (arg1.cmp.Camlburg.cost + arg2._Goto31.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
                             let cmp = arg1.cmp.Camlburg.action ()
-                            and _v1 = arg2._Goto30.Camlburg.action ()
+                            and _v1 = arg2._Goto31.Camlburg.action ()
                             in
                                 let lconst = _v1
                                 in
                                     
-# 301 "ppcrec.mlb"
+# 317 "ppcrec.mlb"
                                     ( let (i_, (l_, op), x, y) = cmp in
           s "cmp%sw%s %s,%s,%s\n\tb%s %s"  l_ i_ (cr0_str ()) x y op lconst
        )
@@ -2129,20 +2189,20 @@ and conGuarded =
 )
                     }
                     ;{Camlburg.cost =
-                        (arg1._OvSet31.Camlburg.cost
+                        (arg1._OvSet32.Camlburg.cost
                         +
-                        arg2._Goto30.Camlburg.cost)
+                        arg2._Goto31.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let _v1 = arg1._OvSet31.Camlburg.action ()
-                            and _v2 = arg2._Goto30.Camlburg.action ()
+                            let _v1 = arg1._OvSet32.Camlburg.action ()
+                            and _v2 = arg2._Goto31.Camlburg.action ()
                             in
                                 let lconst = _v2
                                 in
                                     let xerl = _v1
                                     in
                                         
-# 305 "ppcrec.mlb"
+# 321 "ppcrec.mlb"
                                         ( s "bo %s" lconst )
                                         
 # 000 "/dev/stdout"
@@ -2151,12 +2211,12 @@ and conGuarded =
                 inf)
 and conGoto =
     fun arg1 ->
-        (update__Goto27
+        (update__Goto28
             {Camlburg.cost = (arg1.lr.Camlburg.cost)
             ;Camlburg.action =
                 (fun () -> let lr = arg1.lr.Camlburg.action () in lr)
             })
-            ((update__Goto30
+            ((update__Goto31
                 {Camlburg.cost = (arg1.lconst.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
@@ -2171,7 +2231,7 @@ and conGoto =
                             let any = arg1.any.Camlburg.action ()
                             in
                                 
-# 359 "ppcrec.mlb"
+# 375 "ppcrec.mlb"
                                 ( s "Goto(%s)" any )
                                 
 # 000 "/dev/stdout"
@@ -2187,7 +2247,7 @@ and conGoto =
                                         arg1.lconst.Camlburg.action ()
                                     in
                                         
-# 289 "ppcrec.mlb"
+# 305 "ppcrec.mlb"
                                         ( s "b %s" (ind_addr lconst) )
                                         
 # 000 "/dev/stdout"
@@ -2199,7 +2259,7 @@ and conGoto =
                                     let lr = arg1.lr.Camlburg.action ()
                                     in
                                         
-# 290 "ppcrec.mlb"
+# 306 "ppcrec.mlb"
                                         ( "blr"                      )
                                         
 # 000 "/dev/stdout"
@@ -2208,16 +2268,16 @@ and conGoto =
                         inf)))
 and conFetch =
     fun arg1 arg2 ->
-        (update__Fetch10
+        (update__Fetch11
             {Camlburg.cost =
-                (arg1._Mem6.Camlburg.cost + (Camlburg.matches 8) arg2)
+                (arg1._Mem7.Camlburg.cost + (Camlburg.matches 8) arg2)
             ;Camlburg.action =
                 (fun () ->
-                    let _v1 = arg1._Mem6.Camlburg.action ()
+                    let _v1 = arg1._Mem7.Camlburg.action ()
                     in
                         let ndx_addr = _v1 in ndx_addr)
             })
-            ((update__Fetch12
+            ((update__Fetch13
                 {Camlburg.cost =
                     (arg1._Mem3.Camlburg.cost + (Camlburg.matches 16) arg2)
                 ;Camlburg.action =
@@ -2226,18 +2286,18 @@ and conFetch =
                         in
                             let addr = _v1 in addr)
                 })
-                ((update__Fetch14
+                ((update__Fetch15
                     {Camlburg.cost =
-                        (arg1._Mem6.Camlburg.cost
+                        (arg1._Mem7.Camlburg.cost
                         +
                         (Camlburg.matches 16) arg2)
                     ;Camlburg.action =
                         (fun () ->
-                            let _v1 = arg1._Mem6.Camlburg.action ()
+                            let _v1 = arg1._Mem7.Camlburg.action ()
                             in
                                 let ndx_addr = _v1 in ndx_addr)
                     })
-                    ((update__Fetch32
+                    ((update__Fetch33
                         {Camlburg.cost =
                             (arg1.xerl.Camlburg.cost
                             +
@@ -2259,20 +2319,20 @@ and conFetch =
                                     in
                                         let addr = _v1 in addr)
                             })
-                            ((update__Fetch5
+                            ((update__Fetch6
                                 {Camlburg.cost =
-                                    (arg1._Mem6.Camlburg.cost
+                                    (arg1._Mem7.Camlburg.cost
                                     +
                                     (Camlburg.matches 32) arg2)
                                 ;Camlburg.action =
                                     (fun () ->
                                         let
                                             _v1 =
-                                            arg1._Mem6.Camlburg.action ()
+                                            arg1._Mem7.Camlburg.action ()
                                         in
                                             let ndx_addr = _v1 in ndx_addr)
                                 })
-                                ((update__Fetch8
+                                ((update__Fetch9
                                     {Camlburg.cost =
                                         (arg1._Mem3.Camlburg.cost
                                         +
@@ -2297,7 +2357,7 @@ and conFetch =
                                                 and w = arg2
                                                 in
                                                     
-# 327 "ppcrec.mlb"
+# 343 "ppcrec.mlb"
                                                     ( s "Fetch(%s,%d)" any w )
                                                     
 # 000 "/dev/stdout"
@@ -2316,7 +2376,7 @@ and conFetch =
                                                             ()
                                                     in
                                                         
-# 230 "ppcrec.mlb"
+# 231 "ppcrec.mlb"
                                                         ( () )
                                                         
 # 000 "/dev/stdout"
@@ -2336,7 +2396,7 @@ and conFetch =
                                                                 ()
                                                         in
                                                             
-# 231 "ppcrec.mlb"
+# 232 "ppcrec.mlb"
                                                             ( () )
                                                             
 # 000 "/dev/stdout"
@@ -2356,7 +2416,7 @@ and conFetch =
                                                                     ()
                                                             in
                                                                 
-# 232 "ppcrec.mlb"
+# 233 "ppcrec.mlb"
                                                                 ( () )
                                                                 
 # 000 "/dev/stdout"
@@ -2377,7 +2437,7 @@ and conFetch =
                                                                         ()
                                                                 in
                                                                     
-# 229 "ppcrec.mlb"
+# 230 "ppcrec.mlb"
                                                                     ( () )
                                                                     
 # 000 "/dev/stdout"
@@ -2402,7 +2462,7 @@ and conFetch =
                                                                             _v1
                                                                         in
                                                                             
-# 220 "ppcrec.mlb"
+# 221 "ppcrec.mlb"
                                                                             ( s "%s-%s" c1 c2 )
                                                                             
 # 000 "/dev/stdout"
@@ -2425,7 +2485,7 @@ and conFetch =
                                                                                 ()
                                                                         in
                                                                             
-# 236 "ppcrec.mlb"
+# 237 "ppcrec.mlb"
                                                                             ( regl )
                                                                             
 # 000 "/dev/stdout"
@@ -2448,7 +2508,7 @@ and conFetch =
                                                                                     ()
                                                                             in
                                                                                 
-# 233 "ppcrec.mlb"
+# 234 "ppcrec.mlb"
                                                                                 ( () )
                                                                                 
 # 000 "/dev/stdout"
@@ -2462,7 +2522,7 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 322 "ppcrec.mlb"
+# 338 "ppcrec.mlb"
                     ( "False" )
                     
 # 000 "/dev/stdout"
@@ -2490,7 +2550,7 @@ and conDiff =
                         and c2 = arg2.any.Camlburg.action ()
                         in
                             
-# 324 "ppcrec.mlb"
+# 340 "ppcrec.mlb"
                             ( s "Diff(%s, %s)" c1 c2 )
                             
 # 000 "/dev/stdout"
@@ -2507,7 +2567,7 @@ and conDiff =
                             and c2 = arg2.lconst.Camlburg.action ()
                             in
                                 
-# 219 "ppcrec.mlb"
+# 220 "ppcrec.mlb"
                                 ( s "%s-%s" c1 c2 )
                                 
 # 000 "/dev/stdout"
@@ -2516,7 +2576,7 @@ and conDiff =
                     inf))
 and conCom =
     fun arg1 ->
-        (update__Com36
+        (update__Com37
             {Camlburg.cost = (arg1.reg.Camlburg.cost)
             ;Camlburg.action =
                 (fun () -> let x = arg1.reg.Camlburg.action () in x)
@@ -2528,7 +2588,7 @@ and conCom =
                         let x = arg1.any.Camlburg.action ()
                         in
                             
-# 340 "ppcrec.mlb"
+# 356 "ppcrec.mlb"
                             ( s "Com(%s)" x  )
                             
 # 000 "/dev/stdout"
@@ -2547,7 +2607,7 @@ and conCmp =
                     and y = arg3.any.Camlburg.action ()
                     in
                         
-# 357 "ppcrec.mlb"
+# 373 "ppcrec.mlb"
                         ( s "Cmp(%s,%s,%s)" op x y )
                         
 # 000 "/dev/stdout"
@@ -2564,7 +2624,7 @@ and conCmp =
                             and y = arg3.reg.Camlburg.action ()
                             in
                                 
-# 298 "ppcrec.mlb"
+# 314 "ppcrec.mlb"
                                 ( ("",  ppc_op op,x,y) )
                                 
 # 000 "/dev/stdout"
@@ -2579,7 +2639,7 @@ and conCmp =
                             and y = arg3.const16.Camlburg.action ()
                             in
                                 
-# 299 "ppcrec.mlb"
+# 315 "ppcrec.mlb"
                                 ( ("i", ppc_op op,x,y) )
                                 
 # 000 "/dev/stdout"
@@ -2595,7 +2655,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 325 "ppcrec.mlb"
+# 341 "ppcrec.mlb"
                         ( sprintf "Bits(%s)" (Bits.to_string bits) )
                         
 # 000 "/dev/stdout"
@@ -2606,7 +2666,7 @@ and conBits =
                     (let bits = arg1
                     in
                         
-# 200 "ppcrec.mlb"
+# 201 "ppcrec.mlb"
                         ( guard (Bits.S.fits 16 bits) )
                         
 # 000 "/dev/stdout"
@@ -2616,20 +2676,19 @@ and conBits =
                         let bits = arg1
                         in
                             
-# 201 "ppcrec.mlb"
+# 202 "ppcrec.mlb"
                             ( Bits.to_decimal_string bits )
                             
 # 000 "/dev/stdout"
 )
                 })
-                ((update_k15
+                ((update_const32
                     {Camlburg.cost =
                         (let bits = arg1
                         in
                             
-# 204 "ppcrec.mlb"
-                            ( guard (Bits.width bits > 5 &&
-                   Bits.eq bits (Bits.U.of_int 15 (Bits.width bits))) )
+# 259 "ppcrec.mlb"
+                            ( guard (not (Bits.S.fits 16 bits)) )
                             
 # 000 "/dev/stdout"
 )
@@ -2638,20 +2697,23 @@ and conBits =
                             let bits = arg1
                             in
                                 
-# 206 "ppcrec.mlb"
-                                ( () )
+# 260 "ppcrec.mlb"
+                                ( let i64 = Bits.U.to_int64 bits in
+       ( Int64.to_int (Int64.logand (Int64.shift_right_logical i64 16) 0xffffL)
+       , Int64.to_int (Int64.logand i64 0xffffL) )
+    )
                                 
 # 000 "/dev/stdout"
 )
                     })
-                    ((update_k16
+                    ((update_k15
                         {Camlburg.cost =
                             (let bits = arg1
                             in
                                 
-# 209 "ppcrec.mlb"
+# 205 "ppcrec.mlb"
                                 ( guard (Bits.width bits > 5 &&
-                   Bits.eq bits (Bits.U.of_int 16 (Bits.width bits))) )
+                   Bits.eq bits (Bits.U.of_int 15 (Bits.width bits))) )
                                 
 # 000 "/dev/stdout"
 )
@@ -2660,20 +2722,20 @@ and conBits =
                                 let bits = arg1
                                 in
                                     
-# 211 "ppcrec.mlb"
+# 207 "ppcrec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
 )
                         })
-                        ((update_k4
+                        ((update_k16
                             {Camlburg.cost =
                                 (let bits = arg1
                                 in
                                     
-# 214 "ppcrec.mlb"
+# 210 "ppcrec.mlb"
                                     ( guard (Bits.width bits > 5 &&
-                   Bits.eq bits (Bits.U.of_int 4 (Bits.width bits))) )
+                   Bits.eq bits (Bits.U.of_int 16 (Bits.width bits))) )
                                     
 # 000 "/dev/stdout"
 )
@@ -2682,13 +2744,35 @@ and conBits =
                                     let bits = arg1
                                     in
                                         
-# 216 "ppcrec.mlb"
+# 212 "ppcrec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
 )
                             })
-                            inf))))
+                            ((update_k4
+                                {Camlburg.cost =
+                                    (let bits = arg1
+                                    in
+                                        
+# 215 "ppcrec.mlb"
+                                        ( guard (Bits.width bits > 5 &&
+                   Bits.eq bits (Bits.U.of_int 4 (Bits.width bits))) )
+                                        
+# 000 "/dev/stdout"
+)
+                                ;Camlburg.action =
+                                    (fun () ->
+                                        let bits = arg1
+                                        in
+                                            
+# 217 "ppcrec.mlb"
+                                            ( () )
+                                            
+# 000 "/dev/stdout"
+)
+                                })
+                                inf)))))
 and conBitExtract =
     fun arg1 arg2 arg3 ->
         (update_any
@@ -2701,7 +2785,7 @@ and conBitExtract =
                     and n = arg3
                     in
                         
-# 346 "ppcrec.mlb"
+# 362 "ppcrec.mlb"
                         ( sprintf "BitExtract(%s, %s, %d)" lsb y n )
                         
 # 000 "/dev/stdout"
@@ -2710,7 +2794,7 @@ and conBitExtract =
             inf
 and conBinop =
     fun arg1 arg2 arg3 ->
-        (update__Binop37
+        (update__Binop38
             {Camlburg.cost =
                 (arg2.reg.Camlburg.cost + arg3.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -2721,7 +2805,7 @@ and conBinop =
                     in
                         (opr ,x ,y))
             })
-            ((update__Binop38
+            ((update__Binop39
                 {Camlburg.cost =
                     (arg2.reg.Camlburg.cost + arg3.const16.Camlburg.cost)
                 ;Camlburg.action =
@@ -2742,7 +2826,7 @@ and conBinop =
                             and y = arg3.any.Camlburg.action ()
                             in
                                 
-# 341 "ppcrec.mlb"
+# 357 "ppcrec.mlb"
                                 ( s "Binop(%s,%s,%s)" op x y  )
                                 
 # 000 "/dev/stdout"
@@ -2751,7 +2835,7 @@ and conBinop =
                     inf))
 and conAdd =
     fun arg1 arg2 ->
-        (update__Add21
+        (update__Add22
             {Camlburg.cost =
                 (arg1.reg.Camlburg.cost + arg2.ha16.Camlburg.cost)
             ;Camlburg.action =
@@ -2761,17 +2845,17 @@ and conAdd =
                     in
                         (reg ,ha16))
             })
-            ((update__Add22
+            ((update__Add23
                 {Camlburg.cost =
-                    (arg1.reg.Camlburg.cost + arg2._Sxlo23.Camlburg.cost)
+                    (arg1.reg.Camlburg.cost + arg2._Sxlo24.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
                         let reg = arg1.reg.Camlburg.action ()
-                        and _v1 = arg2._Sxlo23.Camlburg.action ()
+                        and _v1 = arg2._Sxlo24.Camlburg.action ()
                         in
                             let pic = _v1 in (reg ,pic))
                 })
-                ((update__Add24
+                ((update__Add25
                     {Camlburg.cost =
                         (arg1.reg.Camlburg.cost + arg2.absha16.Camlburg.cost)
                     ;Camlburg.action =
@@ -2781,19 +2865,19 @@ and conAdd =
                             in
                                 (reg ,absha16))
                     })
-                    ((update__Add25
+                    ((update__Add26
                         {Camlburg.cost =
                             (arg1.reg.Camlburg.cost
                             +
-                            arg2._Sxlo26.Camlburg.cost)
+                            arg2._Sxlo27.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
                                 let reg = arg1.reg.Camlburg.action ()
-                                and _v1 = arg2._Sxlo26.Camlburg.action ()
+                                and _v1 = arg2._Sxlo27.Camlburg.action ()
                                 in
                                     let lconst = _v1 in (reg ,lconst))
                         })
-                        ((update__Add33
+                        ((update__Add34
                             {Camlburg.cost =
                                 (arg1.reg.Camlburg.cost
                                 +
@@ -2805,7 +2889,7 @@ and conAdd =
                                     in
                                         (x ,y))
                             })
-                            ((update__Add34
+                            ((update__Add35
                                 {Camlburg.cost =
                                     (arg1.reg.Camlburg.cost
                                     +
@@ -2819,98 +2903,115 @@ and conAdd =
                                         in
                                             (x ,y))
                                 })
-                                ((update_addr
+                                ((update__Add5
                                     {Camlburg.cost =
-                                        (arg1.reg.Camlburg.cost
+                                        (arg1.lr.Camlburg.cost
                                         +
-                                        arg2.const16.Camlburg.cost)
+                                        arg2.reg.Camlburg.cost)
                                     ;Camlburg.action =
                                         (fun () ->
                                             let
-                                                reg =
-                                                arg1.reg.Camlburg.action ()
+                                                lr =
+                                                arg1.lr.Camlburg.action ()
                                             and
-                                                const16 =
-                                                arg2.const16.Camlburg.action
-                                                    ()
+                                                x =
+                                                arg2.reg.Camlburg.action ()
                                             in
-                                                
-# 240 "ppcrec.mlb"
-                                                ( s "%s(%s)" const16 reg )
-                                                
-# 000 "/dev/stdout"
-)
+                                                (lr ,x))
                                     })
-                                    ((update_any
+                                    ((update_addr
                                         {Camlburg.cost =
-                                            (arg1.any.Camlburg.cost
+                                            (arg1.reg.Camlburg.cost
                                             +
-                                            arg2.any.Camlburg.cost)
+                                            arg2.const16.Camlburg.cost)
                                         ;Camlburg.action =
                                             (fun () ->
                                                 let
-                                                    x =
-                                                    arg1.any.Camlburg.action
+                                                    reg =
+                                                    arg1.reg.Camlburg.action
                                                         ()
                                                 and
-                                                    y =
-                                                    arg2.any.Camlburg.action
+                                                    const16 =
+                                                    arg2.const16.Camlburg.action
                                                         ()
                                                 in
                                                     
-# 333 "ppcrec.mlb"
-                                                    ( s "Add(%s, %s)" x y )
+# 241 "ppcrec.mlb"
+                                                    ( s "%s(%s)" const16 reg )
                                                     
 # 000 "/dev/stdout"
 )
                                         })
-                                        ((update_ndx_addr
+                                        ((update_any
                                             {Camlburg.cost =
-                                                (arg1.reg.Camlburg.cost
+                                                (arg1.any.Camlburg.cost
                                                 +
-                                                arg2.reg.Camlburg.cost)
+                                                arg2.any.Camlburg.cost)
                                             ;Camlburg.action =
                                                 (fun () ->
                                                     let
-                                                        reg1 =
-                                                        arg1.reg.Camlburg.action
+                                                        x =
+                                                        arg1.any.Camlburg.action
                                                             ()
                                                     and
-                                                        reg2 =
-                                                        arg2.reg.Camlburg.action
+                                                        y =
+                                                        arg2.any.Camlburg.action
                                                             ()
                                                     in
                                                         
-# 242 "ppcrec.mlb"
-                                                        ( s "%s,%s" reg1 reg2 )
+# 349 "ppcrec.mlb"
+                                                        ( s "Add(%s, %s)" x y )
                                                         
 # 000 "/dev/stdout"
 )
                                             })
-                                            ((update_next
+                                            ((update_ndx_addr
                                                 {Camlburg.cost =
-                                                    (arg1.cia.Camlburg.cost
+                                                    (arg1.reg.Camlburg.cost
                                                     +
-                                                    arg2.k4.Camlburg.cost)
+                                                    arg2.reg.Camlburg.cost)
                                                 ;Camlburg.action =
                                                     (fun () ->
                                                         let
-                                                            cia =
-                                                            arg1.cia.Camlburg.action
+                                                            reg1 =
+                                                            arg1.reg.Camlburg.action
                                                                 ()
                                                         and
-                                                            k4 =
-                                                            arg2.k4.Camlburg.action
+                                                            reg2 =
+                                                            arg2.reg.Camlburg.action
                                                                 ()
                                                         in
                                                             
-# 294 "ppcrec.mlb"
-                                                            ( () )
+# 243 "ppcrec.mlb"
+                                                            ( s "%s,%s" reg1 reg2 )
                                                             
 # 000 "/dev/stdout"
 )
                                                 })
-                                                inf)))))))))
+                                                ((update_next
+                                                    {Camlburg.cost =
+                                                        (arg1.cia.Camlburg.cost
+                                                        +
+                                                        arg2.k4.Camlburg.cost)
+                                                    ;Camlburg.action =
+                                                        (fun () ->
+                                                            let
+                                                                cia =
+                                                                arg1.cia.Camlburg.action
+                                                                    ()
+                                                            and
+                                                                k4 =
+                                                                arg2.k4.Camlburg.action
+                                                                    ()
+                                                            in
+                                                                
+# 310 "ppcrec.mlb"
+                                                                ( () )
+                                                                
+# 000 "/dev/stdout"
+)
+                                                    })
+                                                    inf))))))))))
 
 
 
@@ -2940,6 +3041,7 @@ and conAdd =
       | "neg"  -> "neg"
       | "or"   -> "or"
       | "shl"  -> "slw"
+      | "shra" -> "sraw"
       | "shrl" -> "srw"
       | "sub"  -> "sub"
       | "xor"  -> "xor"
