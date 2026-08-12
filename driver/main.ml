@@ -174,6 +174,17 @@ let ld_cmd = ref (getenv_or "QC_LD" "")
  *)
 let exportglobals = ref false
 
+(* claude: -O0/-O3, gating the opti/ passes (Optimize.simplify_exps,
+ * Optimize.remove_nops, Optimize.validate) that X86backend.optimizer and
+ * Ppcbackend.optimizer now run when opt_level > 0. Only two levels are
+ * distinguished today - there is a single on/off tier of optimizations
+ * wired up, not four - but the int (rather than a bool) leaves room to
+ * add -O1/-O2 later without a signature change. Defaults to 0 (matching
+ * this fork's behavior before these passes were wired in) so that
+ * turning optimization on is an explicit opt-in, comparable against the
+ * -O0 baseline on the same input. *)
+let opt_level = ref 0
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -315,13 +326,13 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     match backend with
     | X86 ->
         let asm = X86asm.make Cfgutil.emit chan in
-        X86.target, asm, X86backend.optimizer asm, true
+        X86.target, asm, X86backend.optimizer ~opt_level:!opt_level asm, true
     | Ppc ->
         let asm = Ppcasm.make Cfgutil.emit chan in
-        Ppc.target, asm, Ppcbackend.optimizer asm, true
+        Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level asm, true
     | PpcElf ->
         let asm = Ppcelfasm.make Cfgutil.emit chan in
-        Ppc.target, asm, Ppcbackend.optimizer asm, true
+        Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
          * see TODO/lua/lualink.ml:234 *)
@@ -679,6 +690,10 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
+    "-O0", Arg.Unit (fun () -> opt_level := 0),
+    " disable the opti/ passes (default)";
+    "-O3", Arg.Unit (fun () -> opt_level := 3),
+    " enable the opti/ passes (simplify_exps, remove_nops, validate)";
     "-stop", Arg.Set_string stop_after,
     " .<ext> stop after producing .s or .o (cc's -S and -c)";
     "-L", Arg.String (fun d -> libdirs := d :: !libdirs),

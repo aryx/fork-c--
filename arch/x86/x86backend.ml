@@ -257,8 +257,18 @@ let store_const32 () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
 (* Entry point *)
 (*****************************************************************************)
 
-(* Pass this to Ast2ir.translate (via Driver.compile) as the optimizer. *)
-let optimizer (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
+(* Pass this to Ast2ir.translate (via Driver.compile) as the optimizer.
+ *
+ * ~opt_level gates the phases upstream's Backend.x86 got from opti/
+ * (docs/literate/Cminusminus.nw's optimize.nw/peephole.nw, now
+ * opti/optimize.ml - see the file header): 0 (-O0, the default) skips
+ * them and reproduces exactly what this function did before they were
+ * wired in; >0 (-O3) runs simplify_exps/preopt/improve/the rmvfp cleanup
+ * as upstream's Backend.x86 phase list did unconditionally
+ * (LUA/lua-cmm-driver/luacompile.nw:797-823). Peephole.subst_forward is
+ * not wired in yet - opti/peephole.ml still doesn't build, see opti/dune.
+ *)
+let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
   let proc = run update_gamma_counts proc in
   let proc = run create_gamma proc in
   let proc = run widenlocs proc in
@@ -266,9 +276,12 @@ let optimizer (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
   let proc = run (Placevar.context X86.placevars) proc in
   let proc = run x86_floats proc in
   let proc = run store_const32 proc in
-  (* NOT YET: simplify_exps, preopt (TODO/optimizers/optimize.nw) *)
+  (* Optimize.simplify_exps, then the 'preopt' phase *)
+  let proc = if opt_level > 0 then run Optimize.simplify_exps proc else proc in
+  let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in
   let proc = run X86.X.cfg proc in
-  (* NOT YET: improve (TODO/optimizers/) *)
+  (* the 'improve' phase *)
+  let proc = if opt_level > 0 then run Optimize.validate proc else proc in
   let proc = run Phases.liveness proc in
   (* Upstream's Backend.x86 used Ralloc.dls (TODO/backend/registers/dls.nw,
    * a DFS linear scan). Flowra is the dataflow-based allocator and is the
@@ -280,6 +293,10 @@ let optimizer (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
    * the frame needs, and freeze is what turns that into offsets. *)
   let proc = run layout proc in
   let proc = run Phases.rmvfp proc in
+  (* rmvfp = seq { replace_vfp, remove_nops } upstream; Phases.rmvfp is
+   * only replace_vfp (layout/phases.ml), so the remove_nops half lives
+   * here, gated like the rest of opti/. *)
+  let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in
   (* '*assemble' then '*emit_data', the last two of Opt.standard_phases *)
   asm#cfg_instr proc;
   ignore (Phases.emit_data asm () proc)

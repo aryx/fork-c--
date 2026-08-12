@@ -1,0 +1,14 @@
+target byteorder little;
+
+// Toy example for Optimize.simplify_exps (opti/optimize.ml), which runs
+// elab/simplify.ml's Simplify.rtl over every RTL. "x + 0" hits the additive
+// identity at elab/simplify.ml:46 ("[x; Const 0] -> x"). Elaboration itself
+// does NOT apply this: Nelab only folds an expression down to a literal
+// constant opportunistically (elab/elabexp.ml:167), and "x + 0" simplifies
+// to "x", not to a constant, so that attempt fails and the redundant add
+// survives elaboration untouched (see codegen/expander.ml:50's comment on
+// the same gap). At -O0 it is materialized as a real "movl $0,%r; addl
+// %r,%r" pair; at -O3 simplify_exps removes it before instruction
+// selection ever sees it, so the generated code just returns x.
+export addzero;
+addzero(bits32 x) { bits32 y; y = x + 0; return(y); }

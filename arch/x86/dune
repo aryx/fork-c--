@@ -6,4 +6,4 @@
   cmm_ir cmm_front_target
   cmm_front_nelab cmm_front_cfg cmm_front_ir cmm_front_zipcfg
   cmm_front_last cmm_assembler cmm_h_camlburg_engine
-  cmm_cfg_dataflow cmm_regalloc))
+  cmm_cfg_dataflow cmm_regalloc cmm_opti))

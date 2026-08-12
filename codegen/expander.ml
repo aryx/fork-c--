@@ -47,11 +47,11 @@ let unimpf  fmt = Printf.kprintf Impossible.unimp fmt
  * implementation on x86 - they're bit patterns "implemented in the
  * simplifier using integer ops" (see Context.ml's comment on NaN) and are
  * only ever meant to reach the postexpander already folded into a Const.
- * That folding normally happens via Optimize.simplify_exps, which isn't
- * wired into the pipeline yet (same gap the extract and %round_* fixes
- * elsewhere in this file work around), so try it locally wherever an
- * unrecognized operator would otherwise crash, rather than depend on that
- * pass being plugged in.
+ * That folding normally happens via Optimize.simplify_exps, which is only
+ * wired in at -O3 (arch/x86/x86backend.ml's ~opt_level; -O0 is the
+ * default, same gap the extract and %round_* fixes elsewhere in this file
+ * work around), so try it locally wherever an unrecognized operator would
+ * otherwise crash, rather than depend on that pass being plugged in.
  *)
 let simplify_folds_to_const e =
   match Dn.exp (Simplify.exp (Up.exp e)) with
@@ -304,7 +304,8 @@ module IntFloatAddr (Post : Postexpander.S) = struct
              into a directly narrower fetch at an offset address/index
              (elab/simplify.ml's lobits), so try that first; it's the same
              rewrite Optimize.simplify_exps would have applied earlier if
-             that pass were wired into the pipeline (it isn't yet). *)
+             that pass were enabled (it only runs at -O3; -O0 is the
+             default - see arch/x86/x86backend.ml's ~opt_level). *)
           (match Dn.exp (Simplify.exp (Up.exp orig)) with
            | (RP.Fetch ((RP.Mem _ | RP.Reg _), _)) as simplified ->
                to_temp' room context simplified

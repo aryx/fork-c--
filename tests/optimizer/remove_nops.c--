@@ -1,0 +1,13 @@
+target byteorder little;
+
+// Toy example for Optimize.remove_nops (opti/optimize.ml).
+//
+// An empty procedure body still goes through the full x86 prologue/vfp
+// setup and epilogue/vfp teardown, and at -O0 that machinery leaves behind
+// RTLs remove_nops recognizes as no-ops: Kill effects (emitted as literal
+// "nop" instructions) and self-stores "l := fetch(l)" (emitted as
+// "movl %r,%r"). There is nothing here for Optimize.simplify_exps to do -
+// no arithmetic at all - so the -O0/-O3 diff is remove_nops' effect alone.
+// See simplify_exps.c-- for that pass instead.
+export foo;
+foo(bits32 x) { return; }

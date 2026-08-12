@@ -12,6 +12,10 @@ module Up = Rtl.Up
 module SS = Strutil.Set
 module T  = Target
 
+(* claude: Nopoly.(=*=) below needs this open; every other .nw-tangled
+ * .ml in this tree gets it prepended automatically by the (now-dropped)
+ * generator, so it has to be added by hand here. *)
+open Nopoly
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let not_null = function [] -> false | _ :: _ -> true
 (*x: optimize.ml  *)
