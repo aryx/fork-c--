@@ -612,7 +612,13 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
           let dest =
             match named_output () with
             | Some f when stop =*= Object -> f
-            | _ -> Filename.remove_extension file ^ ".o"
+            (* claude: same fix, and same reason, as assembly_of's dest
+             * above - when the .o is only an intermediate before linking,
+             * deriving it from the source file drops e.g. demos/hello.o
+             * next to demos/hello.c-- even though -o build/hello names
+             * where everything else (the .s, the executable) goes. *)
+            | Some f -> Filename.remove_extension f ^ ".o"
+            | None -> Filename.remove_extension file ^ ".o"
           in
           assemble caps backend ~src:s ~dest;
           dest
