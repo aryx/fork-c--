@@ -447,7 +447,34 @@ module Post = struct
           Up.rtl (RP.Rtl [RP.App( (negate op,[32]),[x;y]), RP.Store (pc,tgt,32)])
       | _ -> Impossible.impossible "ill-formed MIPS conditional branch"
   (*x: ppc postexpander *)
-  let call  = b
+  (* claude: "call = b" (unconditional branch, no return-address save)
+   * meant NO call on ppc could ever return to its actual caller -
+   * whatever function was called eventually did "blr", which returns to
+   * wherever lr last held a meaningful value, i.e. all the way back to
+   * the very first real hardware "bl" (deep in libc's startup code
+   * before it ever reaches this program's own entry point). That
+   * explains both demos/hello_ppc.c--'s wrong exit code (return(0) never
+   * executes; whatever raw register printf's own return left in r3
+   * becomes the "return value of main" instead) and the cut/altret
+   * family's garbage output. Fixed to build the same
+   * "Par(Goto(target), Store(lr, cia+4))" shape ppcrec.mlb's bl rule
+   * expects, mirroring x86.ml's call (R.par [store pc; push return
+   * addr]) - Goto first, lr-store second, since Par's constructor
+   * argument order matters for the grammar match. Root-caused via
+   * gdb-over-qemu-gdbserver on tests/cmm/altread.c--: a breakpoint right
+   * after a "b open" call site was never hit even though the real
+   * open(2) syscall plainly executed - it returned straight past this
+   * function's own dispatch logic. *)
+  let call ~tgt =
+    DG.Nop, R.par [ R.store pc_lhs (Up.const tgt) wordsize
+                   ; R.store lr (RU.addk wordsize (R.fetch cia wordsize) 4) wordsize ]
+  (* claude: callr (indirect call through a register) is likely the same
+   * bug - br sets lr := tgt then jumps through lr, which looks built for
+   * some other purpose (see cut_to below, which does something similar)
+   * rather than "save a return address, then jump". Not yet fixed: none
+   * of the cases investigated so far (cut, altret, foreign C calls) go
+   * through an indirect call, so there is no failing case yet to verify
+   * a fix against. *)
   let callr = br
 
   (* THIS IS SUSPECT -- WHY ARE WE SETTING THE LINK REGISTER? *)
