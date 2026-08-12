@@ -80,6 +80,7 @@ external/stdlib/
 # build directories of the demos, the run-time system and the test runners
 /demos/build/
 /runtime/build/
+/runtime/build-*/
 /tests/build/
 
 # intermediate assembly left beside a regenerated tests/tiger artefact

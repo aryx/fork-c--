@@ -1,14 +1,16 @@
-# The qc-- run-time system, built for 32-bit x86.
+# The qc-- run-time system, built for 32-bit x86 or 32-bit big-endian ppc.
 #
-# Produces build/libqcmm.a, which is what a C-- program links against. Both
-# demos/ and tests/ use this rather than each rebuilding the pieces, since
-# a couple of the flags are subtle enough that drift would be silent.
+# Produces build-$(BACKEND)/libqcmm.a, which is what a C-- program links
+# against. Both demos/ and tests/ use this rather than each rebuilding the
+# pieces, since a couple of the flags are subtle enough that drift would
+# be silent.
 #
-# Requires the i386 cross toolchain; see demos/Makefile for the full list of
-# requirements and why it is not gcc-multilib.
+# Requires the target's cross toolchain; see demos/Makefile for the full
+# list of requirements and why it is not gcc-multilib.
 #
-#   make                     build build/libqcmm.a
-#   make GLOBALS_DECL='...'  build it for a client with those globals
+#   make                       build build-x86/libqcmm.a
+#   make BACKEND=ppc           build build-ppc/libqcmm.a
+#   make GLOBALS_DECL='...'    build it for a client with those globals
 #
 # The sources here are tangled from the literate sources with syncweb and
 # are checked in; see docs/literate/mkfile.
@@ -18,16 +20,33 @@
 # guessing a relative path here was worse, because "../bin/qc" resolves
 # differently depending on where make was invoked from.
 QC   ?= qc
-CC32 ?= i686-linux-gnu-gcc
+
+# claude: BACKEND picks the target the same way tests/run-native.sh does.
+# B defaults to a backend-specific directory rather than a shared "build"
+# so switching BACKEND doesn't require a "make clean" first - reusing
+# stale x86 objects for a ppc build (or vice versa) would be a silent
+# wrong-architecture link, not a build error.
+BACKEND ?= x86
+ifeq ($(BACKEND),x86)
+CC32    ?= i686-linux-gnu-gcc
+CONTOBJ  = $(B)/x86cont.o
+QCFLAG   =
+else ifeq ($(BACKEND),ppc)
+CC32    ?= powerpc-linux-gnu-gcc
+CONTOBJ  = $(B)/ppccont.o
+QCFLAG   = -ppc-elf
+else
+$(error unknown BACKEND=$(BACKEND) - expected x86 or ppc)
+endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
 #   make -C $(opam var prefix)/lib/cmm B=/tmp/qcrt
-B    ?= build
+B    ?= build-$(BACKEND)
 
 # qc drives an external assembler, defaulting to clang because that is the one
-# compiler able to target i386 from any host. Here we already have a real i386
-# cross toolchain, so point qc at it: one toolchain for the C, the assembly and
-# the C--, rather than gcc for some objects and clang for others.
+# compiler able to target i386 from any host. Here we already have a real
+# cross toolchain, so point qc at it: one toolchain for the C, the assembly
+# and the C--, rather than gcc for some objects and clang for others.
 export QC_AS = $(CC32)
 export QC_LD = $(CC32)
 
@@ -56,7 +75,7 @@ CFLAGS32 = -w -fcommon -I .
 GLOBALS_DECL ?= bits32 alloc_ptr;
 
 
-C_OBJS   = $(B)/runtime.o $(B)/pcmap.o $(B)/gcc-linux.o $(B)/x86cont.o
+C_OBJS   = $(B)/runtime.o $(B)/pcmap.o $(B)/gcc-linux.o $(CONTOBJ)
 CMM_OBJS = $(B)/cut.o $(B)/thread.o $(B)/yield.o
 
 .PHONY: all clean
@@ -76,14 +95,25 @@ $(B)/gcc-linux.o: gcc-linux.c qc--runtime.h | $(B)
 	$(CC32) $(CFLAGS32) -c $< -o $@
 $(B)/x86cont.o: x86cont.s | $(B)
 	$(CC32) -c $< -o $@
+$(B)/ppccont.o: ppccont.s | $(B)
+	$(CC32) -c $< -o $@
 
 # The globals declaration is inserted after the "target byteorder" line so
-# the syncweb markers and everything else are preserved.
+# the syncweb markers and everything else are preserved. claude: ppc also
+# needs "byteorder little" flipped to "big" - qc refuses the mismatch
+# otherwise ("metrics of source code don't match the target") - done here
+# rather than as a separate step so there is still one .c-- per backend
+# under $(B), not two.
 $(B)/%.c--: %.c-- | $(B)
+ifeq ($(BACKEND),ppc)
+	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
+	  | sed 's/byteorder[ ][ ]*little/byteorder big/' > $@
+else
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< > $@
+endif
 
 $(B)/%.o: $(B)/%.c--
-	$(QC) -stop .o -o $@ $<
+	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B)
+	rm -rf $(B) build-x86 build-ppc
