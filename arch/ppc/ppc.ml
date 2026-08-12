@@ -567,7 +567,20 @@ let cconv name specs =
   ; C.where_to_save_ra = (fun _ t   -> Talloc.Multiple.loc t 't' ws)
   ; C.ra_on_exit       = (fun l e t -> lr)
   ; C.sp_on_unwind     = (fun e     -> RU.store sp e)
-  ; C.sp_on_jump       = (fun _ _   -> Rtl.null)
+  (* claude: was "fun _ _ -> Rtl.null" - a genuine no-op, so a tail call
+   * ("jump") never restored sp before re-entering the target's own
+   * prologue, which unconditionally does its own "addi sp,sp,-N". Every
+   * tail-recursive iteration (tests/cmm/tail.c--'s "down") therefore
+   * shrank sp by another frame instead of reusing the current one,
+   * corrupting whatever was below the original frame after enough
+   * iterations - not an immediate crash, but silent argument corruption
+   * (confirmed via gdb: i/n read back as garbage after ~20 iterations)
+   * that looks like an infinite loop/hang from outside. Mirrors
+   * x86call.ml's sp_on_jump (RU.store sp (addk (Block.base b) -4)) using
+   * this backend's own -24 linkage-area constant, the same one
+   * call_actuals/call_results/epilog already use via linkage_base above
+   * for the equivalent non-tail-call case. *)
+  ; C.sp_on_jump       = (fun b _   -> RU.store sp (addk (Block.base b) (-24)))
   }
 (*e: calling conventions *)
 (*s: target spec *)
