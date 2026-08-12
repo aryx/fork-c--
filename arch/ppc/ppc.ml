@@ -122,8 +122,16 @@ let fmach = F.machine sp
 
 let rreg n = (rspace, n, R.C 1)
 let regset s l = RS.of_list (List.map (fun r-> (s,r,R.C 1)) l)
-let vregs   = regset rspace [2;3;4;5;6;7;8;9;10;11;12]
-let nvregs  = regset rspace [13;14;15;16;17;18;19;20;21;
+(* claude: r2 and r13 are dedicated/reserved in the 32-bit PowerPC SVR4
+ * ABI, not general-purpose - r2 is a system-reserved pointer and r13 is
+ * glibc/Linux's TLS base register, both expected to survive any call
+ * unmodified by the caller. Including them here let the allocator hand
+ * them out as ordinary scratch registers, so any call to external code
+ * (e.g. printf) that itself read r2/r13 crashed on whatever we had left
+ * in them. Root-caused via a `lwz r11,-28680(r2)` segfault inside
+ * glibc's own printf. *)
+let vregs   = regset rspace [3;4;5;6;7;8;9;10;11;12]
+let nvregs  = regset rspace [14;15;16;17;18;19;20;21;
                              22;23;24;25;26;27;28;29;30;31]
 let fvregs  = regset fspace [0;1;2;3;4;5;6;7;8;9;10;11;12;13]
 let fnvregs = regset fspace [14;15;16;17;18;19;20;21;22;
