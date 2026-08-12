@@ -290,7 +290,6 @@ type backend =
   | PpcElf
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
-   * See docs/claude_notes/plan_tiger_hello.md.
    *)
   | Interp
 
@@ -557,11 +556,13 @@ let classify file =
 
 (* Upstream's main action was Compile.file in Lua
  * (TODO/lua/luacompile.nw:687), driven by the Backend.xxx table selected
- * on the command line. This is the OCaml equivalent, minus everything to
- * do with assembling and linking: qc-- has no assembler or linker of its
- * own, it drives the system ones (docs/man/qc--.1), and that part is not
- * revived yet. So for now this compiles exactly one C-- file to one
- * output file. See docs/claude_notes/plan_tiger_hello.md.
+ * on the command line. This is the OCaml equivalent: qc-- has no
+ * assembler or linker of its own, it drives the system ones
+ * (docs/man/qc--.1) via classify below, dispatching each input on its
+ * suffix (.c--/.cmm compile, .s assemble, .o/.a/anything else straight to
+ * the linker) - see tests/run-tiger.sh for this exercised end to end,
+ * tiger's own Makefiles' `qc -stop .o -o x.o x.c--` invocations translated
+ * into a standing test.
  *)
 let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
   let backend =

@@ -44,8 +44,10 @@
  * NOTE: 'simplify_exps' is not a string in that Lua phase list but a
  * stage value, so it was inserted unconditionally rather than looked up
  * in the backend table. It is an optimization, not a correctness
- * requirement, and TODO/optimizers/ is not in the build yet, so we drop
- * it. See docs/claude_notes/plan_tiger_hello.md.
+ * requirement; opti/ (Optimize.simplify_exps and friends) is in the build
+ * now and gated by ~opt_level on the x86/ppc backends (see
+ * arch/x86/x86backend.ml's optimizer), but wiring it into this one too is
+ * still unstarted - not a missing dependency, just not done yet.
  *)
 
 (*****************************************************************************)

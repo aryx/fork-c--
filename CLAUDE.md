@@ -30,8 +30,12 @@ tigerc demos/hello.tig > hello.c--
 qc -globals -o hello runtime/runtime.o stdlib/stdlib.a hello.c--
 ```
 
-which means `qc` needs a real `main_action` (today it raises `Todo`), a working
-x86 backend, and object-file/linking support — none of which exist yet.
+**This milestone is met** — `qc` has a real `main_action` (compile, assemble,
+and link, dispatching on each input's suffix), a working x86 backend, and
+object-file/linking support, and `tests/run-tiger.sh` (`make test-tiger`) runs
+the exact command above end to end against 15 tiger programs as a standing
+regression test. A `-ppc-elf` backend exists too, verified the same way via
+`tests/run-tiger-ppc.sh`, though with more known gaps (`tests/expected/tiger-ppc.txt`).
 
 This dependency is intended and settled: **`fork-tiger` depends on qc--, and
 qc-- is meant to be tiger's main backend.** Tiger may grow other backends later,
@@ -40,9 +44,11 @@ priority when deciding what to revive first, and do not design around the
 possibility of tiger dropping qc--. (`fork-tiger/pad.txt` notes the extra
 dependencies this brings; that cost is accepted.)
 
-`docs/claude_notes/plan_end_to_end.md` holds the current roadmap to that
-milestone and the diagnosis of what blocks it — read it before starting backend
-work, and re-verify its `file:line` references, which go stale.
+With the milestone met, "what's next" is no longer one linear roadmap — it's
+whichever gap in `tests/expected/*.txt`'s baselines matters most (the ppc
+suite has the most: 31/66 native, 3/15 tiger). Grep a test script's header
+comment for the relevant baseline file, or just run the suite and read what
+`FAIL`s.
 
 Two consequences worth keeping in mind when making changes here:
 

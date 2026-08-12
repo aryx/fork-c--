@@ -52,8 +52,9 @@
  *   *assemble  -> asm#cfg_instr
  *   simplify_exps, remove_nops, validate, trim_unreachable_code -> Optimize.*
  *
- * Only the phases whose modules are already in the build are run here; the
- * rest are still under TODO/. See docs/claude_notes/plan_end_to_end.md.
+ * claude: as of this writing every phase in that list is wired in below,
+ * including peephole substitution (gated by ~opt_level - see that
+ * parameter's doc comment).
  *)
 
 (*****************************************************************************)
@@ -209,10 +210,13 @@ let layout () (proc : Ast2ir.proc) : Ast2ir.proc * bool =
 (* codegen/widen.ml is Widen, ported from TODO/widen.nw. This is
  * legalization, not optimization: the x86 FPU only computes at 80-bit
  * extended precision, and x86 has few byte-addressable registers, so
- * without these phases tests/src/{fadd,f2,float-002,float-003,r64,rnd2,
- * round,round2,tf}.c-- fail with "does not support 32-bit value on the
- * machine stack" and tests/src/{nums,wtizzy}.c-- fail with
- * Impossible("...unsupported width 8"). See docs/claude_notes/plan_end_to_end.md.
+ * without these phases tests/cmm/{fadd,f2,float-002,float-003,r64,rnd2,
+ * round,round2,tf,wtizzy}.c-- fail with "does not support 32-bit value on
+ * the machine stack" (the float cases) or Impossible("...unsupported
+ * width 8") (wtizzy); with them, tests/run-native.sh passes all of them.
+ * tests/cmm/nums.c-- hits a related but different gap even with widening
+ * on - Impossible("...unsupported width 64"), not part of native.tests,
+ * still failing per tests/expected/compile.txt.
  *
  * Stage bodies below are ported from the "Widen" module bindings at
  * LUA/lua-cmm-driver/lualink.nw:750-812, dropping the Lua/Backplane

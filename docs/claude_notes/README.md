@@ -17,12 +17,13 @@ Conventions for this directory:
 
 Index:
 
-- [plan_tiger_hello.md](plan_tiger_hello.md) — **start here.** The narrow plan:
-  shortest path to a running tiger "hello world", with concrete commands to test
-  each step. Recommends routing through the interpreter back end first.
-- [plan_end_to_end.md](plan_end_to_end.md) — the broader roadmap for getting `qc`
-  to compile a `.c--` file to a working binary, and the diagnosis of what
-  currently blocks it. Where the two disagree, the narrow plan is newer.
 - [plan_reorg.md](plan_reorg.md) — proposed directory layout to replace the
   `front_*` scheme, with the old->new file mapping, where `todo/` lands, and the
   mechanics of renaming across the literate program.
+
+Retired: `plan_tiger_hello.md` and `plan_end_to_end.md` planned the path to
+`tigerc demos/hello.tig | qc ... | ./hello` actually running. That milestone
+was met (2026-08-10) and is now a standing regression test
+(`tests/run-tiger.sh`, `make test-tiger`) rather than a plan to execute by
+hand, so both were removed rather than left to rot — see `CLAUDE.md`'s "The
+goal" section for the current one-paragraph status instead.
