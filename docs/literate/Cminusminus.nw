@@ -5451,12 +5451,18 @@ to the unwind continuation) as killing the scratch register.
 @ 
 
 <<widen.ml >>=
+(* claude: Nopoly.(=$=)/(=*=) below need this open; every other .nw-tangled
+ * .ml in this tree gets it prepended automatically by the (now-dropped)
+ * generator, so it has to be added by hand here. *)
+open Nopoly
 let () =
-  Debug.register "widen"      "show results of widener";
-  Debug.register "widen-pre"  "show RTL before widening";
-  Debug.register "widen-vars" "show when a variable is widened";
-  Debug.register "gamma"      "show how Gamma is constructed";
-  Debug.register "widen-op-solns" "show operator solutions during widening"
+  (* claude: Debug.register takes labeled args now (error/debug.mli),
+   * upstream's positional call form no longer type-checks. *)
+  Debug.register ~word:"widen"      ~meaning:"show results of widener";
+  Debug.register ~word:"widen-pre"  ~meaning:"show RTL before widening";
+  Debug.register ~word:"widen-vars" ~meaning:"show when a variable is widened";
+  Debug.register ~word:"gamma"      ~meaning:"show how Gamma is constructed";
+  Debug.register ~word:"widen-op-solns" ~meaning:"show operator solutions during widening"
 let not_null = function [] -> false | _ :: _ -> true 
 @ 
 [[float]] is a simple widener for floating-point values.
@@ -6569,7 +6575,12 @@ let ast_combine m solns = function
       @ (mksolutions_lit_bits m S e)
       @ (mksolutions_lit_bits m F e)
       (* @ (mksolutions_lit_bits m.literals H e) *)
-  | (RP.Fetch(RP.Mem(_, _, mcell as ms,c,addr,a),_)) as e ->
+  (* claude: upstream matched Mem as a stale 6-field shape; the current
+   * Rtl.Private.loc's Mem is `space * count * exp * assertion` with space
+   * itself `char * aggregation * Cell.t` (see the working match a few
+   * hundred lines below at `Mem((_, _, ms),c,e,_)`). ms is the whole space,
+   * mcell just its cell component, needed for Cell.to_width. *)
+  | (RP.Fetch(RP.Mem(((_, _, mcell) as ms), c, addr, a),_)) as e ->
       let all  = match solns with [s] -> s | _ -> impossf "mem arity" in
       let best = List.filter (fun s -> fill s =*= Z && s.w = m.pointer) all in
       if null best then

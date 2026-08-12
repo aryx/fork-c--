@@ -23511,6 +23511,21 @@ module Dn  = Rtl.Dn
 let upassn = Rtl.Up.assertion
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let unimpf  fmt = Printf.kprintf Impossible.unimp fmt
+
+(* claude: ops like pinf/mzero/pzero/minf/NaN have no hardware
+ * implementation on x86 - they're bit patterns "implemented in the
+ * simplifier using integer ops" (see Context.ml's comment on NaN) and are
+ * only ever meant to reach the postexpander already folded into a Const.
+ * That folding normally happens via Optimize.simplify_exps, which isn't
+ * wired into the pipeline yet (same gap the extract and %round_* fixes
+ * elsewhere in this file work around), so try it locally wherever an
+ * unrecognized operator would otherwise crash, rather than depend on that
+ * pass being plugged in.
+ *)
+let simplify_folds_to_const e =
+  match Dn.exp (Simplify.exp (Up.exp e)) with
+  | RP.Const _ as c -> Some c
+  | _ -> None
 @ 
 <<expander.ml >>=
 let fetch l = RP.Fetch (Dn.loc l, RU.Width.loc l)
@@ -23787,7 +23802,10 @@ let rec to_temp' room context e =
       t, assign_slot room slot e tempw <:> is 
   | RP.App (("f2f_implicit_round", ws), [x]) ->
       to_temp room context (RP.App (("f2f", ws), [x; RP.Fetch(rounding_mode, 2)]))
-  | RP.App (op, args) -> (
+  | RP.App (op, args) as e -> (
+    match simplify_folds_to_const e with
+    | Some c -> to_temp' room context c
+    | None ->
     <<action for expanding [[op(args)]] into a temporary>>
   )
 <<other generic expander functions>>
@@ -23804,7 +23822,7 @@ match Post.opclass op with
     t, assign_slot room slot e w <:> is
 | PX.Register ->
     let w = width e in
-    let t = alloc_direct (Post.result_context op) w in 
+    let t = alloc_direct (Post.result_context op) w in
     let temp e c = to_temp room (contextmap c) e in
     let warg e c = to_warg room (contextmap c) e in
     let is = match O.capply temp warg op args (Post.arg_contexts op) with
@@ -23820,7 +23838,7 @@ match Post.opclass op with
         impossf "single-bit result direct into temporary"
     | O.Cmp _ | O.Width | O.Bool | O.Nullary ->
         impossf "operator %%%s reached postexpander" (fst op) in
-    temp_in_context t context is 
+    temp_in_context t context is
 @
 <<cases for converting a compile-time constant to a temporary>>=
 | RP.Const k ->
@@ -23850,16 +23868,33 @@ match Post.opclass op with
     impossf "memory-like access to non-memory space"
 @ 
 <<cases for extracting from a wide temporary>>=
-| RP.App (("lobits", [w;n]), [RP.App (("shrl", [w']), [e; RP.Const (RP.Bits b)])]) ->
+| RP.App (("lobits", [w;n]), [RP.App (("shrl", [w']), [e; RP.Const (RP.Bits b)])]) as orig ->
     let shamt = Bits.U.to_int b in
     assert (w = w' && shamt < w);
-    let t = alloc context n in
-    let src, is = to_temp room (guess_context e) e in
-    t, is <:> Post.extract ~dst:t ~lsb:shamt ~src
-| RP.App (("lobits", [w;n]), [e]) ->
-    let t = alloc context n in
-    let src, is = to_temp room (guess_context e) e in
-    t, is <:> Post.extract ~dst:t ~lsb:0 ~src
+    (* claude: e can be wider than any temp this target supports (e.g.
+       a bits64 fetch on x86, whose temps are all 32 bits) - to_temp
+       below would then crash trying to allocate one just to shift and
+       discard most of it. Simplify already knows how to turn "shift a
+       memory/register fetch right by a whole cell, then truncate"
+       into a directly narrower fetch at an offset address/index
+       (elab/simplify.ml's lobits), so try that first; it's the same
+       rewrite Optimize.simplify_exps would have applied earlier if
+       that pass were wired into the pipeline (it isn't yet). *)
+    (match Dn.exp (Simplify.exp (Up.exp orig)) with
+     | (RP.Fetch ((RP.Mem _ | RP.Reg _), _)) as simplified ->
+         to_temp' room context simplified
+     | _ ->
+         let t = alloc context n in
+         let src, is = to_temp room (guess_context e) e in
+         t, is <:> Post.extract ~dst:t ~lsb:shamt ~src)
+| RP.App (("lobits", [w;n]), [e]) as orig ->
+    (match Dn.exp (Simplify.exp (Up.exp orig)) with
+     | (RP.Fetch ((RP.Mem _ | RP.Reg _), _)) as simplified ->
+         to_temp' room context simplified
+     | _ ->
+         let t = alloc context n in
+         let src, is = to_temp room (guess_context e) e in
+         t, is <:> Post.extract ~dst:t ~lsb:0 ~src)
 @
 %%Sign-extending and zero-extending loads are done into integer registers only.
 %%This fact is documented in the postexpander interface.
@@ -23928,6 +23963,13 @@ and compile_weird_args room op args = match args, Post.arg_contexts op with
 and to_warg room context e = match e with
 | RP.Const (RP.Bits b) ->
     PX.WBits b, DG.Nop
+(* claude: same constants as Simplify.round_* in elab/simplify.ml (the
+   x87/IEEE-754 rounding-mode control-word encoding), applied here as a
+   fallback for %round_*() args that reach the expander unsimplified *)
+| RP.App (("round_nearest", []), []) -> PX.WBits (Bits.U.of_int 0 2), DG.Nop
+| RP.App (("round_down",    []), []) -> PX.WBits (Bits.U.of_int 1 2), DG.Nop
+| RP.App (("round_up",      []), []) -> PX.WBits (Bits.U.of_int 2 2), DG.Nop
+| RP.App (("round_zero",    []), []) -> PX.WBits (Bits.U.of_int 3 2), DG.Nop
 | RP.App (("lobits", [w; n]), [e]) ->
     let t, is = to_temp room context e in
     (PX.WTemp (Rg.Reg t)), is
@@ -24015,7 +24057,10 @@ and to_stack' room e =
       let slot = exchange_slot w in
       assign_slot room slot e w <:>
       to_stack room (RP.App (f2f, [fetch_slot slot w; rm]))
-  | RP.App (op, args) -> (
+  | RP.App (op, args) as e -> (
+    match simplify_folds_to_const e with
+    | Some c -> to_stack' room c
+    | None ->
    <<action for expanding [[op(args)]] onto the stack>>
 )
 @ 
@@ -24232,9 +24277,18 @@ and expand_cbinst g ktrue kfalse =
     | RP.Fetch _ -> impossf "fetch as conditional guard"
     | RP.App (("not", []), [g]) -> expand g kfalse ktrue
     | RP.App (("conjoin", []), [x;y]) ->
-        let kfalse = DG.shared kfalse in expand x (expand y ktrue kfalse) kfalse 
+        let kfalse = DG.shared kfalse in expand x (expand y ktrue kfalse) kfalse
     | RP.App (("disjoin", []), [x;y]) ->
         let ktrue  = DG.shared ktrue  in expand x ktrue (expand y ktrue kfalse)
+    | RP.App (("false", []), []) -> kfalse
+    | RP.App (("true",  []), []) -> ktrue
+    | RP.App (("bool",  []), [RP.App (("lobits", [w; 1]), [x])]) ->
+        (* claude: same rewrite as Simplify.bool, applied here as a fallback for
+           %bool(...) guards that reach the expander unsimplified (e.g. after
+           widening) *)
+        let is1 = RP.Const (RP.Bits (Bits.U.of_int 1 w)) in
+        let is0 = RP.Const (RP.Bits (Bits.U.of_int 0 w)) in
+        expand (RP.App (("ne", [w]), [RP.App (("and", [w]), [x; is1]); is0])) ktrue kfalse
     | RP.App (cmp, ([x; y] as args)) ->
         begin
           match Post.opclass cmp with
@@ -24301,6 +24355,17 @@ and assign_room room left right w =
             assert (agg =*= Post.byte_order || agg =*= Rtl.Identity);
             <<definition of [[split_assignment]]>>
             let a, is' = address room addr in
+            (* claude: give unresolved constant-folding ops (pinf, NaN,
+               ...) a chance to become a plain Const here, so a wide one
+               hits the RP.Const case below (which already knows how to
+               split it into two stores) instead of falling through to
+               the generic to_temp fallback, which cannot allocate a
+               temp wider than this target's registers. See
+               simplify_folds_to_const's comment. *)
+            let right =
+              match simplify_folds_to_const right with
+              | Some c -> c
+              | None -> right in
             (match right with
             | 
              <<\emph{pattern [[->]] action} for low-bit store>>
@@ -33559,7 +33624,10 @@ let sxload ~dst ~addr w assn =
 %%Registers are copied into registers with
 %%[[tstore]].
 <<ppc postexpander>>=
-let move ~dst ~src = tstore dst (tval src)
+(* claude: mirrors arch/x86/x86.ml's move, which elides dst=src - without
+ * this, ppcrec.mlb's regl production still fires (it has no guard
+ * against dst=src) and prints a real but pointless "mr rN,rN". *)
+let move ~dst ~src = if Register.eq dst src then DG.Nop else tstore dst (tval src)
 @ 
 %%Immediate values rewquire a two-instruction sequence in general.
 <<ppc postexpander>>=
@@ -33571,7 +33639,14 @@ let lix ~dst exp =
 let li ~dst const = lix dst (Up.exp (RP.Const const))
 @ 
 <<ppc postexpander>>=
-let extract ~dst ~lsb ~src = Impossible.unimp "extract"
+(* claude: machine-independent shift+mask, ported from arch/x86/x86.ml's
+ * extract; ppcrec.mlb already covers shrl and lobits so no new recognizer
+ * pattern is needed. *)
+let extract ~dst ~lsb ~src =
+  let w = twidth src in
+  let n = twidth dst in
+  let v = if lsb = 0 then tval src else RO.shrl w (tval src) (RO.unsigned w lsb) in
+  tstore dst (if n = w then v else RO.lobits w n v)
 let aggregate ~dst ~src = Impossible.unimp "aggregate"
 @ 
 <<ppc postexpander>>=
@@ -33809,7 +33884,34 @@ let bnegate r = match Dn.rtl r with
 @ 
 %%Call instructions are the same as branches with some additional effects.
 <<ppc postexpander>>=
-let call  = b
+(* claude: "call = b" (unconditional branch, no return-address save)
+ * meant NO call on ppc could ever return to its actual caller -
+ * whatever function was called eventually did "blr", which returns to
+ * wherever lr last held a meaningful value, i.e. all the way back to
+ * the very first real hardware "bl" (deep in libc's startup code
+ * before it ever reaches this program's own entry point). That
+ * explains both demos/hello_ppc.c--'s wrong exit code (return(0) never
+ * executes; whatever raw register printf's own return left in r3
+ * becomes the "return value of main" instead) and the cut/altret
+ * family's garbage output. Fixed to build the same
+ * "Par(Goto(target), Store(lr, cia+4))" shape ppcrec.mlb's bl rule
+ * expects, mirroring x86.ml's call (R.par [store pc; push return
+ * addr]) - Goto first, lr-store second, since Par's constructor
+ * argument order matters for the grammar match. Root-caused via
+ * gdb-over-qemu-gdbserver on tests/cmm/altread.c--: a breakpoint right
+ * after a "b open" call site was never hit even though the real
+ * open(2) syscall plainly executed - it returned straight past this
+ * function's own dispatch logic. *)
+let call ~tgt =
+  DG.Nop, R.par [ R.store pc_lhs (Up.const tgt) wordsize
+                 ; R.store lr (RU.addk wordsize (R.fetch cia wordsize) 4) wordsize ]
+(* claude: callr (indirect call through a register) is likely the same
+ * bug - br sets lr := tgt then jumps through lr, which looks built for
+ * some other purpose (see cut_to below, which does something similar)
+ * rather than "save a return address, then jump". Not yet fixed: none
+ * of the cases investigated so far (cut, altret, foreign C calls) go
+ * through an indirect call, so there is no failing case yet to verify
+ * a fix against. *)
 let callr = br
 
 (* THIS IS SUSPECT -- WHY ARE WE SETTING THE LINK REGISTER? *)
@@ -33872,8 +33974,16 @@ let fmach = F.machine sp
 
 let rreg n = (rspace, n, R.C 1)
 let regset s l = RS.of_list (List.map (fun r-> (s,r,R.C 1)) l)
-let vregs   = regset rspace [2;3;4;5;6;7;8;9;10;11;12]
-let nvregs  = regset rspace [13;14;15;16;17;18;19;20;21;
+(* claude: r2 and r13 are dedicated/reserved in the 32-bit PowerPC SVR4
+ * ABI, not general-purpose - r2 is a system-reserved pointer and r13 is
+ * glibc/Linux's TLS base register, both expected to survive any call
+ * unmodified by the caller. Including them here let the allocator hand
+ * them out as ordinary scratch registers, so any call to external code
+ * (e.g. printf) that itself read r2/r13 crashed on whatever we had left
+ * in them. Root-caused via a `lwz r11,-28680(r2)` segfault inside
+ * glibc's own printf. *)
+let vregs   = regset rspace [3;4;5;6;7;8;9;10;11;12]
+let nvregs  = regset rspace [14;15;16;17;18;19;20;21;
                              22;23;24;25;26;27;28;29;30;31]
 let fvregs  = regset fspace [0;1;2;3;4;5;6;7;8;9;10;11;12;13]
 let fnvregs = regset fspace [14;15;16;17;18;19;20;21;22;
@@ -33963,7 +34073,20 @@ let cconv name specs =
   ; C.where_to_save_ra = (fun _ t   -> Talloc.Multiple.loc t 't' ws)
   ; C.ra_on_exit       = (fun l e t -> lr)
   ; C.sp_on_unwind     = (fun e     -> RU.store sp e)
-  ; C.sp_on_jump       = (fun _ _   -> Rtl.null)
+  (* claude: was "fun _ _ -> Rtl.null" - a genuine no-op, so a tail call
+   * ("jump") never restored sp before re-entering the target's own
+   * prologue, which unconditionally does its own "addi sp,sp,-N". Every
+   * tail-recursive iteration (tests/cmm/tail.c--'s "down") therefore
+   * shrank sp by another frame instead of reusing the current one,
+   * corrupting whatever was below the original frame after enough
+   * iterations - not an immediate crash, but silent argument corruption
+   * (confirmed via gdb: i/n read back as garbage after ~20 iterations)
+   * that looks like an infinite loop/hang from outside. Mirrors
+   * x86call.ml's sp_on_jump (RU.store sp (addk (Block.base b) -4)) using
+   * this backend's own -24 linkage-area constant, the same one
+   * call_actuals/call_results/epilog already use via linkage_base above
+   * for the equivalent non-tail-call case. *)
+  ; C.sp_on_jump       = (fun b _   -> RU.store sp (addk (Block.base b) (-24)))
   }
 @ 
 %%The calling convention specs are written in Lua; they have no ML
@@ -34493,7 +34616,9 @@ method cfg_instr (cfg, proc) =
 <<ppcrec.mli>>=
 module M : sig
   val is_instruction : Rtl.rtl -> bool
-  val to_asm         : Rtl.rtl -> string list -> string
+  (* claude: elf defaults to false (Mach-O's bare "r3" register syntax);
+   * ppcelfasm.ml passes ~elf:true for GNU as/clang's required "%r3". *)
+  val to_asm         : ?elf:bool -> Rtl.rtl -> string list -> string
 end
 @ 
 %%
@@ -35197,7 +35322,11 @@ let move ~dst ~src = if Register.eq dst src then DG.Nop else tempstore dst (temp
 %%Because there's only one size of temporary in this back end, we don't
 %%need [[extract]] or [[aggregate]].
 <<x86 postexpander>>=
-let extract   ~dst ~lsb ~src = impossf "extract on x86"
+let extract ~dst ~lsb ~src =
+  let w = tempwidth src in
+  let n = tempwidth dst in
+  let v = if lsb = 0 then tempval src else RO.shrl w (tempval src) (RO.unsigned w lsb) in
+  tempstore dst (if n = w then v else RO.lobits w n v)
 let aggregate ~dst      ~src = impossf "aggregate on x86"
 @ 
 %%Load immediate is also a simple move.
