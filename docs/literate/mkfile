@@ -203,6 +203,8 @@ SRC_VIEWS= \
  \
  $TOP/regalloc/flowra.mli\
  $TOP/regalloc/flowra.ml\
+ $TOP/regalloc/registerclass.mli\
+ $TOP/regalloc/registerclass.ml\
  $TOP/regalloc/colorgraph.mli\
  $TOP/regalloc/colorgraph.ml\
  \
