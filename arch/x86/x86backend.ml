@@ -267,8 +267,15 @@ let store_const32 () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
  * as upstream's Backend.x86 phase list did unconditionally
  * (LUA/lua-cmm-driver/luacompile.nw:797-823). Peephole.subst_forward is
  * not wired in yet - opti/peephole.ml still doesn't build, see opti/dune.
+ *
+ * trim_unreachable_code runs first and unconditionally (not gated by
+ * opt_level): upstream ran it right before the optimizer, unconditionally,
+ * as basic graph hygiene rather than a speed optimization - see
+ * codegen/ast2ir.ml's comment at the "definition of [[proc]]" chunk for
+ * why it has to be called from here instead of there.
  *)
 let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
+  let proc = run Optimize.trim_unreachable_code proc in
   let proc = run update_gamma_counts proc in
   let proc = run create_gamma proc in
   let proc = run widenlocs proc in

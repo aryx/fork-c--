@@ -635,9 +635,15 @@ let translate target env ~optimizer ~defineglobals =
       ; Proc.exp_of_lbl     = exp_of_code_label
       } in
   (*x: definition of [[proc]], which translates one procedure *)
-    (* pad: *)
-    print_string "TODO: pad reput Optimize.trim_unreachable_code\n";
-    (* let i, _ = Optimize.trim_unreachable_code () i in *)
+    (* claude: upstream called Optimize.trim_unreachable_code right here,
+     * unconditionally, before the backend's optimizer. It can't be called
+     * from this file: opti/optimize.ml's Optimize depends on cmm_front_ir
+     * (this library) for the Ast2ir.proc type its signature names, so
+     * cmm_front_ir depending back on cmm_opti would be a cycle. Instead
+     * it's the first thing X86backend.optimizer/Ppcbackend.optimizer do
+     * (arch/x86/x86backend.ml, arch/ppc/ppcbackend.ml), which sit above
+     * both libraries in the dune graph - same position in the pipeline,
+     * just moved to where the dependency direction allows it. *)
     optimizer i (* runs optimizer, freezes, and assembles proc *)
   (*e: definition of [[proc]], which translates one procedure *)
   in

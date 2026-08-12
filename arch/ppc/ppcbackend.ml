@@ -138,14 +138,19 @@ let layout () ((_, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
  *
  * ~opt_level gates the opti/ passes (opti/optimize.ml) the same way
  * arch/x86/x86backend.ml's optimizer does - see its header comment. 0
- * (-O0, the default) reproduces this function's pre-opti behavior; >0
- * (-O3) adds Optimize.simplify_exps unconditionally (it was baked
- * directly into Opt.standard_phases, not looked up from backend.preopt -
+ * (-O0, the default) reproduces this function's pre-opti behavior except
+ * for trim_unreachable_code (see below); >0 (-O3) adds
+ * Optimize.simplify_exps unconditionally (it was baked directly into
+ * Opt.standard_phases, not looked up from backend.preopt -
  * LUA/lua-cmm-driver/luacompile.nw:593-594) plus Backend.ppc's own
  * preopt/rmvfp remove_nops (:905,:911-913). Backend.ppc set no 'improve',
  * so unlike x86 there is no Optimize.validate call here.
+ *
+ * trim_unreachable_code runs first and unconditionally (not gated by
+ * opt_level) - see arch/x86/x86backend.ml's optimizer for why.
  *)
 let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
+  let proc = run Optimize.trim_unreachable_code proc in
   let proc = run (Placevar.context Ppc.placevars) proc in
   let proc = if opt_level > 0 then run Optimize.simplify_exps proc else proc in
   let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in
