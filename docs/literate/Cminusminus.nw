@@ -7458,6 +7458,8 @@ Function [[validate]] does not actually do anything; it just checks
 the machine invariant.
 <<optimize.mli >>=
 val validate : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
+
+val elim_dead_assignments : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
 @
 
 % ------------------------------------------------------------------ 
@@ -7473,6 +7475,7 @@ We provide each of the optimization in turn.
 module OG = Cfgx.M
 module G  = Zipcfg
 module GR = Zipcfg.Rep
+module DB = Dataflow.B
 module P  = Proc
 module PA = Preast2ir
 module RP = Rtl.Private
@@ -7654,6 +7657,17 @@ let validate _ (g, proc) =
   let last l = check (GR.last_instr l) in
   G.iter_nodes first middle last g;
   (g, proc), false
+
+(* claude: wraps Dead.elim_assignments (cfg/dataflow/dead.ml) the way
+ * opti/peephole.ml's subst_forward wraps Availpass.analysis - combine the
+ * transformation with the backward liveness analysis it needs
+ * (Live.live_in) via Dataflow.B.a_t, then run it to a fixpoint with
+ * Dataflow.B.rewrite. No entry_fact, unlike Peephole's forward passes:
+ * a backward analysis starts from the exit, not the entry. *)
+let elim_dead_assignments _ (g, proc) =
+  let pass = DB.a_t Live.live_in Dead.elim_assignments in
+  let g, changed = DB.rewrite pass g in
+  (g, proc), changed
 @
 
 
