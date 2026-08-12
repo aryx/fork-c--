@@ -639,6 +639,37 @@ fix is what you intend to ship. It is the cheapest experiment available and
 it tells you whether you are about to fix one bug or paper over two.
 
 
+25. Attach gdb to qemu's gdbserver instead of reading a qemu -d in_asm trace
+---------------------------------------------------------------------------
+tests/run-native.sh BACKEND=ppc was segfaulting on most tests as soon as
+it actually started compiling for ppc (see arch/ppc/ppc.ml's vregs/nvregs
+fix). "qemu-ppc -d in_asm -D trace.log ./binary" dumps every instruction
+executed, which for anything past a trivial program is thousands of lines
+of raw opcodes with no register state - finding the fault in that requires
+manually simulating the CPU by eye.
+
+Instead: "qemu-ppc -g 1234 ./binary &", then
+"gdb-multiarch -batch -ex 'set architecture powerpc:common' -ex 'target
+remote :1234' -ex continue -ex bt -ex 'info registers' ./binary". This
+runs the real target binary under qemu's own instruction-accurate
+emulation (not a separate simulator) but gets a normal gdb session on top:
+the exact faulting instruction, disassembly around it, and every register
+at the moment of the crash, in seconds instead of a manual trace read.
+gdb-multiarch was already installed; a target-specific
+powerpc-linux-gnu-gdb was not, and was not needed - gdb-multiarch's
+`set architecture` covers it.
+
+This is what turned "qemu: uncaught target signal 11" into an actual
+diagnosis: the faulting instruction was "lwz r11,-28680(r2)" *inside
+glibc's own printf*, not in generated code at all - which is what pointed
+at r2 being clobbered rather than at some code-generation mistake in the
+printf call sequence itself. Reading a raw instruction trace would have
+shown the same faulting address eventually, but not nearly as fast, and
+without the "this is real libc code, so the bug is in what we handed it,
+not in the call itself" framing that the backtrace + disassembly gave for
+free.
+
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
