@@ -7557,7 +7557,9 @@ Here's the mutation code.
 The [[update]] function replaces an RTL, provided we haven't run out
 of transactions.
 <<code that may mutate the RTL at [[node]]>>=
-let search avail update rtl = <<do our best to use [[update]] to replace [[rtl]]>> in
+let search avail update rtl =
+ <<do our best to use [[update]] to replace [[rtl]]>>
+in
 let middle_out avail m = match m with
 | GR.Stack_adjust _ -> None
 | _ ->

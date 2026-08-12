@@ -93,7 +93,19 @@ let tx (g, proc) =
                          (fun () -> search_pairs xs succ fail) in
   (*e: utility functions that substitute expressions for locations *)
   (*s: code that may mutate the RTL at [[node]] *)
-  let search avail update rtl = <<do our best to use [[update]] to replace [[rtl]]>> in
+  let search avail update rtl =
+   (*s: do our best to use [[update]] to replace [[rtl]] *)
+   let try_pair le le' resume =
+     let rtl' = subst2 le le' rtl in
+     if ok rtl' then update rtl' else resume () in
+   let try_one le resume =
+     let rtl' = subst1 le rtl in
+     if ok rtl' then update rtl' else resume () in
+   (*x: do our best to use [[update]] to replace [[rtl]] *)
+   let cs = candidates avail (Dn.rtl rtl) in
+   search_pairs cs (wrap2 try_pair) (fun () -> search cs (wrap try_one) (fun () -> None))
+   (*e: do our best to use [[update]] to replace [[rtl]] *)
+  in
   let middle_out avail m = match m with
   | GR.Stack_adjust _ -> None
   | _ ->
