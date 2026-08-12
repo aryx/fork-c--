@@ -1,54 +1,5 @@
-
-% ------------------------------------------------------------------ 
-\section{Simple Optimization}
-% ------------------------------------------------------------------ 
-
-If you are looking for real optimizations, they don't exist yet.
-But we hope to make some effort in that direction in the near future.
-For now, we have a few simple transformations of the control-flow graph.
-
-% ------------------------------------------------------------------ 
-\subsection{The Optimizations}
-% ------------------------------------------------------------------ 
-
-We can simplify the expressions in the rtl's in a flow graph by calling
-[[simplify_exps]].
-<<optimize.mli>>=
-val simplify_exps : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
-@
-It is possible to build a flow graph such that a node cannot be reached
-by following successors from the entry node, but it can be reached by
-following predecessors from the exit node.
-The nodes that are unreachable by following successor edges from the entry node
-are removed by [[trim_unreachable_code]].
-<<optimize.mli>>=
-val trim_unreachable_code : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
-@
-It's also easy to collapse simple branch chains.
-We eliminate a branch to a join point if the branch is the only predecessor of the join
-point.
-<<optimize.mli>>=
-val collapse_branch_chains: 'a -> Ast2ir.proc -> Ast2ir.proc * bool
-@ 
-Remove any instruction that leaves the machine in the same state in
-which it started.  
-This includes not only [[Rtl.null]] but also assignments of the form 
-$x \mathbin{:=} x$.
-<<optimize.mli>>=
-val remove_nops : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
-@ 
-Function [[validate]] does not actually do anything; it just checks
-the machine invariant.
-<<optimize.mli>>=
-val validate : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
-@
-
-% ------------------------------------------------------------------ 
-\subsection{The Implementations}
-% ------------------------------------------------------------------ 
-
-We provide each of the optimization in turn.
-<<optimize.ml>>=
+(*s: optimize.ml *)
+(*s: optimize.ml  *)
 module OG = Cfgx.M
 module G  = Zipcfg
 module GR = Zipcfg.Rep
@@ -63,31 +14,12 @@ module T  = Target
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let not_null = function [] -> false | _ :: _ -> true
-@
-We traverse the flow graph and simplify rtl's.
-<<optimize.ml>>=
+(*x: optimize.ml  *)
 let simplify_exps _ (g, proc) =
   let changed = ref false in
   let g = G.map_rtls (fun r -> changed := true; Simplify.rtl r) g in
   (g, proc), !changed
-@
-A forward dfs followed by a backwards dfs will find nodes reachable from the entry
-(following successors) and nodes reachable from the exit (following predecessors).
-Since we want to catch loops, we can't just look for nodes that have no successors.
-Instead, we compare the nodes we can reach from the entry node with the nodes we can
-reach from the exit node.
-We break any loops among these nodes by setting the successor of each join node to the
-illegal node.
-Finally, we can delete any nodes that have no successors.
-
-When we delete a node, we also need to remove any spans that are associated
-with the node.
-Because spans are associated with labels, we also collect the labels that are
-accessible from the entry node.
-Then we remove the unreachable spans.
-I DON'T SEE WHERE UNREACHABLE SPANS ARE EVER REMOVED. 
-CAN THE OLD CODE SIMPLY BE REMOVED?
-<<optimize.ml>>=
+(*x: optimize.ml  *)
 let trim_unreachable_code _ {Proc.cfg = cfg} =
   let module IS = Set.Make (struct type t = int let compare x y = x - y end) in
   let nodes_from_entry =
@@ -116,11 +48,7 @@ let trim_unreachable_code _ (g, proc) =
   let g' = G.postorder_dfs g in
   let changed = List.length g' < Unique.Map.size (G.to_blocks g) in
   (G.of_block_list g', proc), changed
-@
-We find each join point with one predecessor, and if the predecessor is a branch to the
-join point, we eliminate the branch and the join point.
-I THOUGHT A BRANCH CHAIN WAS A BRANCH TO A BRANCH?
-<<optimize.ml>>=
+(*x: optimize.ml  *)
 let collapse_branch_chains _ {Proc.cfg = cfg} =
   let brp node = OG.kind node =*= OG.Branch && OG.kind (OG.pred node) =*= OG.Join in
   let to_collapse =
@@ -141,8 +69,7 @@ let collapse_branch_chains _ {Proc.cfg = cfg} =
   List.iter collapse to_collapse;
   not_null to_collapse
 let collapse_branch_chains _ = Impossible.unimp "new optimizer"
-@
-<<optimize.ml>>=
+(*x: optimize.ml  *)
 type limit = { mutable lim : int }
 let remove_nops _ (g, proc) =
   let changed = ref false in
@@ -169,8 +96,7 @@ let remove_nops _ (g, proc) =
   let g = G.of_blocks (Unique.Map.map block (G.to_blocks g)) in
   let () = if tx.lim < remaining then Tx.decrement "remove_nops" remaining tx.lim in
   (g, proc), !changed
-@ 
-<<optimize.ml>>=
+(*x: optimize.ml  *)
 let badrtl r =
   Printf.eprintf "non-target RTL: %s\n" (RU.ToString.rtl r)
     (* if you want to do the following, extend Target.t with a to_asm function *)
@@ -184,4 +110,5 @@ let validate _ (g, proc) =
   let last l = check (GR.last_instr l) in
   G.iter_nodes first middle last g;
   (g, proc), false
-@
+(*e: optimize.ml  *)
+(*e: optimize.ml *)

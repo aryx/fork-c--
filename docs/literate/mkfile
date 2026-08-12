@@ -207,6 +207,11 @@ SRC_VIEWS= \
  $TOP/layout/vfprewrite.mli\
  $TOP/layout/vfprewrite.ml\
  \
+ $TOP/opti/optimize.mli\
+ $TOP/opti/optimize.ml\
+ $TOP/opti/peephole.mli\
+ $TOP/opti/peephole.ml\
+ \
  $TOP/arch/dummy/dummy.mli\
  $TOP/arch/dummy/dummy.ml\
  $TOP/arch/arm/arm.mli\
