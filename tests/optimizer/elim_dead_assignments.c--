@@ -1,0 +1,19 @@
+target byteorder little;
+
+// Toy example for Optimize.elim_dead_assignments (opti/optimize.ml,
+// wrapping cfg/dataflow/dead.ml's Dead.elim_assignments).
+//
+// "y = x + 1;" is immediately overwritten by "y = x + 2;" before y is ever
+// read, so the first assignment is dead: nothing downstream is live out of
+// it. At -O0 both additions are computed in full (a real "leal" for the
+// first, thrown away, then a second for the one that survives). At -O3
+// elim_dead_assignments' backward liveness pass sees the first assignment
+// has no live-out use and drops it entirely, leaving only the second
+// addition (folded by other -O3 passes into a single "leal 2(%eax), %eax").
+export dead;
+dead(bits32 x) {
+  bits32 y;
+  y = x + 1;
+  y = x + 2;
+  return(y);
+}

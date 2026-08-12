@@ -330,6 +330,13 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
    * Runs before validate so validate checks its output too. *)
   let proc = if opt_level > 0 then run Peephole.subst_forward proc else proc in
   let proc = if opt_level > 0 then run Optimize.validate proc else proc in
+  (* claude: new integration, gated like the rest of opti/ - see
+   * tests/optimizer/elim_dead_assignments.c--. Runs its own backward
+   * liveness computation (Live.live_in) right before instruction
+   * selection's real one (Phases.liveness) so ralloc sees fewer live
+   * ranges - dead assignments instruction selection/widening left behind
+   * are exactly what this cleans up. *)
+  let proc = if opt_level > 0 then run Optimize.elim_dead_assignments proc else proc in
   let proc = run Phases.liveness proc in
   (* Upstream's Backend.x86 used Ralloc.dls (TODO/backend/registers/dls.nw,
    * a DFS linear scan). Flowra is the dataflow-based allocator and is the

@@ -6,14 +6,9 @@ Cmm.ref_to_global_area:
 .section .text
 foo:
 	movl %esp,%eax
-	movl (%eax),%ecx
 	movl (%eax),%eax
 .Linitialize_continuations_l3:
 .Lproc_body_start_l2:
-	movl %esp,%ecx
-	movl $0,%ecx
-	movl %esp,%ecx
-	addl $0,%ecx
 	movl %eax,(%esp)
 	ret
 .section .text

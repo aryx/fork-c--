@@ -10,9 +10,10 @@ target byteorder little;
 // the same gap). At -O0 it is materialized as a real "movl $0,%r; addl
 // %r,%r" pair; at -O3 simplify_exps removes it before instruction
 // selection ever sees it, so the generated code just returns x.
-// Peephole.subst_forward is also on at -O3 (see peephole.c--) and forwards
-// %esp-relative addresses here too, so the -O0/-O3 diff has a little of
-// its noise mixed in, but the vanishing add-with-zero is still the
-// dominant, easy-to-read story.
+// Peephole.subst_forward and Optimize.elim_dead_assignments are also on at
+// -O3 (see peephole.c--/elim_dead_assignments.c--) and clean up a little
+// more of this function's frame setup too, so the -O0/-O3 diff has a
+// little of their noise mixed in, but the vanishing add-with-zero is
+// still the dominant, easy-to-read story.
 export addzero;
 addzero(bits32 x) { bits32 y; y = x + 0; return(y); }

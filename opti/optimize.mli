@@ -9,5 +9,7 @@ val collapse_branch_chains: 'a -> Ast2ir.proc -> Ast2ir.proc * bool
 val remove_nops : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
 (*x: optimize.mli  *)
 val validate : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
+
+val elim_dead_assignments : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
 (*e: optimize.mli  *)
 (*e: optimize.mli *)

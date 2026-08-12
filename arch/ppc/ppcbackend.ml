@@ -178,6 +178,10 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = run Ppc.X.cfg proc in
   dump_cfg "instrsel-cfg" "AFTER instruction selection (ppc):" proc;
   let proc = if opt_level > 0 then run Peephole.subst_forward proc else proc in
+  (* claude: new integration, gated like the rest of opti/ - see
+   * arch/x86/x86backend.ml's optimizer and tests/optimizer/
+   * elim_dead_assignments.c--. *)
+  let proc = if opt_level > 0 then run Optimize.elim_dead_assignments proc else proc in
   let proc = run Phases.liveness proc in
   let proc = run Flowra.ralloc proc in
   let proc = run layout proc in

@@ -22,7 +22,9 @@ target byteorder little;
 //
 // remove_nops.c--/simplify_exps.c--'s -O3 goldens also move slightly
 // once this pass is on (it forwards %esp-relative addresses too, not
-// just this file's arithmetic chain) - their header comments still
-// describe the dominant, clearly-attributable transformation in each.
+// just this file's arithmetic chain), and Optimize.elim_dead_assignments
+// (elim_dead_assignments.c--) moves them further still - their header
+// comments still describe the dominant, clearly-attributable
+// transformation in each.
 export chain;
 chain(bits32 x) { bits32 y; y = x + 1; return(y + 1); }

@@ -8,9 +8,10 @@ target byteorder little;
 // "nop" instructions) and self-stores "l := fetch(l)" (emitted as
 // "movl %r,%r"). There is no arithmetic here for Optimize.simplify_exps to
 // fold, so the nop/self-move removal is remove_nops' effect specifically.
-// Peephole.subst_forward is also on at -O3 (see peephole.c--) and forwards
-// %esp-relative addresses here too, so the -O0/-O3 diff has a little of
-// its noise mixed in, but the nop/self-move removal is still the
-// dominant, easy-to-read story.
+// Peephole.subst_forward and Optimize.elim_dead_assignments are also on at
+// -O3 (see peephole.c--/elim_dead_assignments.c--) and clean up a little
+// more of this function's frame setup too, so the -O0/-O3 diff has a
+// little of their noise mixed in, but the nop/self-move removal is still
+// the dominant, easy-to-read story.
 export foo;
 foo(bits32 x) { return; }
