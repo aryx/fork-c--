@@ -1,15 +1,5 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-% vim: ts=2 sw=2 et: 
-% Grades     ::=    "%%Grades:" Quality Importance Urgency
-% Quality    ::=    A|B|C|D|E
-% Importance ::=    Central|Subsystem|Peripheral
-% Urgency    ::=    Immediate|Soon|Later
-%
-% Example (at beginning of line): %%Grades: B Central Soon
-% 
 
 \section{Peephole Optimization}
-
 
 The idea behind peephole optimization is simple.
 Suppose you have the following program:
@@ -28,12 +18,13 @@ yielding
 With luck, the assignment to~[[t1]] becomes dead, and a later
 dead-assignment elimination will eliminate it.
 Congratulations!  You have a peephole optimizer.
-@
+
 This module implements a forward dataflow pass that does the forward
 substitution.
 It's very pessimistic about available expressions, assuming that they
 are empty at the start of each basic block.
 For cleaning up the output of the generic expander, this is just fine.
+
 <<peephole.mli>>=
 val subst_forward : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
   (* composed; probably should be sequential *)
@@ -44,6 +35,9 @@ val sequential : 'a -> Ast2ir.proc -> Ast2ir.proc * bool
 \subsection{Implementation}
 
 <<peephole.ml>>=
+<<peephole.ml >>
+@
+<<peephole.ml >>=
 module D  = Dataflow.F
 module G  = Zipcfg
 module GR = Zipcfg.Rep
@@ -57,9 +51,9 @@ module SS = Strutil.Set
 module T  = Target
 
 module ToString = RU.ToString
-<<utilities>>
+<<[[Peephole]] utilities>>
 @ 
-<<peephole.ml>>=
+<<peephole.ml >>=
 let peephole = "peephole"  (* avoid allocating again and again... *)
 let () = Debug.register peephole "peephole optimizer"
 let debug = Debug.on peephole
@@ -74,7 +68,8 @@ Two key functions are wrapped for debugging:
 \item
 [[replace]] produces the new version of an RTL
 \end{itemize}
-<<peephole.ml>>=
+
+<<peephole.ml >>=
 let tx (g, proc) =
   let PA.T tgt = proc.P.target in
   let replace =
@@ -220,7 +215,7 @@ let rec search_pairs list succ fail = match list with
 @ 
 These wrapper functions help diagnose failures of the search for
 substitutions. 
-<<utilities>>=
+<<[[Peephole]] utilities>>=
 let () =
   Debug.register "peephole-search"
     "search for a substitutable location in peephole optimizer"
@@ -245,6 +240,7 @@ let wrap2 =
   else
     (fun succ -> succ)
 @ 
+
 It's very often possible to peephole-optimize a copy instruction, but
 it's not clear if it's a good idea.
 This predicate could easily be used to turn off people optimization of
@@ -252,7 +248,8 @@ copy instructions
 (the idea being that the register allocator should take care of them).
 A~possible refinement would be to optimize only copy instructions
 between different register spaces.
-<<utilities>>=
+
+<<[[Peephole]] utilities>>=
 let is_copy rtl = match Dn.rtl rtl with
 | RP.Rtl [(RP.Const (RP.Bool true),
            RP.Store(RP.Reg _, RP.Fetch(RP.Reg _, _), _))] -> true

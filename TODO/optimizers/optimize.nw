@@ -1,12 +1,3 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-% vim: ts=2 sw=2 et: 
-% Grades     ::=    "%%Grades:" Quality Importance Urgency
-% Quality    ::=    A|B|C|D|E
-% Importance ::=    Central|Subsystem|Peripheral
-% Urgency    ::=    Immediate|Soon|Later
-%
-% Example (at beginning of line): %%Grades: B Central Soon
-% 
 
 % ------------------------------------------------------------------ 
 \section{Simple Optimization}
@@ -193,3 +184,4 @@ let validate _ (g, proc) =
   let last l = check (GR.last_instr l) in
   G.iter_nodes first middle last g;
   (g, proc), false
+@
