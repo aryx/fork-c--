@@ -5,7 +5,7 @@ altret2 PASS
 altret3 PASS
 arglist PASS
 bits-bug PASS
-bool FAIL
+bool PASS
 blockcpy PASS
 carry PASS
 cut PASS
@@ -34,7 +34,7 @@ jtab PASS
 ladd PASS
 lit8 PASS
 live_rtd PASS
-multasgn FAIL
+multasgn PASS
 not PASS
 ovrflow PASS
 ralloc-000 PASS
@@ -51,7 +51,7 @@ tadd PASS
 tadd22 PASS
 tadd100- PASS
 tadd11 PASS
-taddov FAIL
+taddov PASS
 tail PASS
 tail_from_c PASS
 tailbug PASS

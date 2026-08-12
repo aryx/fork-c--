@@ -699,6 +699,63 @@ A few refinements that came up reusing this same setup for later bugs
   ahead with ignore, then narrowing with the loop form once corruption
   was confirmed to exist somewhere in that range).
 
+26. Bisecting which -O3 pass causes a bug: sed a pass to a no-op, don't
+    comment it out by hand
+---------------------------------------------------------------------------
+tests/run-native.sh OPT=3 surfaced 5 failures with no suite-level clue
+which of collapse_branch_chains/elim_dead_assignments/Peephole.subst_forward
+(the three passes gated by opt_level in arch/x86/x86backend.ml's optimizer)
+was responsible, or whether it took a combination. Isolating each
+combination by hand-editing the file, rebuilding, testing, and reverting
+for every one of 2^3 subsets would have been slow and error-prone (forgetting
+to revert one is exactly how "make test-all is failing" happened mid-session
+- see below).
+
+The fast version: `cp` the file to /tmp first, then for each pass under
+test, `sed -i` its `let proc = if opt_level > 0 then run X proc else proc in`
+line to `let proc = proc in (* TEMP *)`, rebuild, run just the failing
+tests by name (`OPT=3 ./run-native.sh bool multasgn taddov`, not the whole
+suite), then `cp` the backup back before the next combination. This
+isolated two *independent* bugs hiding behind one "5 failures" symptom
+(entry 16, again) in about ten single-pass/pair-pass experiments:
+collapse_branch_chains + elim_dead_assignments together break tail2/
+tailnot, while Peephole.subst_forward alone (no interaction needed)
+breaks bool/multasgn/taddov.
+
+Once a single file is implicated, QCDEBUG dumps the pipeline already
+defines are enough to see *where* it goes wrong without adding new
+instrumentation - `env QCDEBUG=peephole ./bin/qc -O3 ...` traces every
+substitution peephole considers and applies. But for a gap *between* two
+existing QCDEBUG dump points (here: after Optimize.elim_dead_assignments,
+which has no dump point of its own, and the final .s), the fastest path
+was a *temporary* one-line `Debug.eprintf "instrsel-cfg" ...; Cfgutil.
+print_cfg (fst proc)` spliced in right after the phase in question,
+reusing an *existing* registered QCDEBUG word (instrsel-cfg was already
+registered elsewhere in the same file) rather than adding a new
+`Debug.register` call - one line to add, one line to `git checkout --`
+away when done, no new permanent debug word to remember to remove.
+
+Once the CFG dump pinpointed the bad RTL, reading the *final* assembly
+directly (not the raw dataflow trace) was what actually cracked bool.c--'s
+bug: `andl $1,%eax` computing a boolean test in place, clobbering %eax
+before a later `movl %eax,4(%esp)` that still needed the original value
+for a printf argument. The raw peephole trace (hundreds of "Considering"/
+"Replacing" lines, many duplicated across dataflow fixpoint iterations)
+was technically sufficient but far harder to read by eye than the ~15-line
+final .s once the bug was narrowed to one function.
+
+**The mid-session near-miss worth flagging explicitly**: after finishing
+one isolation experiment, forgetting to restore the file before moving to
+the next left arch/x86/x86backend.ml with several passes hard-disabled -
+invisible until the user ran `make test-all` independently and saw
+failures that had nothing to do with anything committed. `git diff
+--stat`/`git status --short` immediately after every restore (not just
+"I think I copied the backup back") would have caught this before it was
+user-visible. Prefer `git checkout -- <file>` over restoring from a `cp`
+backup when the file started clean (git is the more trustworthy source of
+"clean"), and only reach for a `/tmp` backup when there's uncommitted work
+in the file that a `git checkout` would discard.
+
 
 Tooling traps in this particular working copy
 ----------------------------------------------

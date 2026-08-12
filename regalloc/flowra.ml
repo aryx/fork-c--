@@ -483,7 +483,28 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
                   alloc_to r
                 else fail () in
               let target = if is_def then src else dst in
-              if is_vfp target then fail ()
+              (* claude: neither branch below (is_tmp target's usemap
+               * lookup, or the plain hardware-register "else alloc
+               * target") ever checked lo/li on target itself - alloc's own
+               * "List.for_all (... VM.reg_contents' vm r)" only accounts
+               * for OTHER tmps the allocator has already placed in
+               * target's register, not target's own continued need as
+               * itself. Coalescing t straight into target's register is
+               * only sound if target's current value isn't needed again
+               * later - e.g. unsound here whenever target gets redefined
+               * (a multiple assignment's "new" side, or an incoming
+               * argument register) before some later, independent use of
+               * its "old" value that this move was never meant to
+               * disturb. Reproduced on two shapes: tests/cmm/bool.c--
+               * (target = a hardware argument register, $r[0]/n, fetched
+               * again for a printf argument after Peephole.subst_forward
+               * propagated a direct reference to it) and tests/cmm/
+               * multasgn.c-- (target = a tmp holding "hp", redefined to
+               * hp+8 by the same multiple assignment that "x := hp" is
+               * part of). Mirrors can_use's own lo/li check just above. *)
+              let target_needed_later =
+                (is_def && RS.mem target lo) || (not is_def && RS.mem target li) in
+              if is_vfp target || target_needed_later then fail ()
               else if is_tmp target then
                      try  match (VM.var_locs'' usemap target).VM.reg' with
                           | Some r -> alloc r
