@@ -55,8 +55,8 @@ taddov PASS
 tail PASS
 tail_from_c PASS
 tailbug PASS
-tail2 FAIL
-tailnot FAIL
+tail2 PASS
+tailnot PASS
 test-039 PASS
 test-050 PASS
 tf PASS

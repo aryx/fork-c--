@@ -372,7 +372,7 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
     | None -> () in
   (*e: define code for rewriting spans *)
   (*s: set up dataflow analysis for register allocation *)
-  let allocate reconcile_succs upd_midmap vm
+  let allocate reconcile_succs upd_midmap is_last vm
         ({liveset=li},
          {liveset=lo; dists=(_, (_, dm, um) as maps); prefs = (pmap,_) as prefs})
         rtl (defs, uses) =
@@ -510,6 +510,32 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
                           | Some r -> alloc r
                           | None   -> fail ()
                      with Not_found -> fail ()
+              (* claude: target is precolored (not a tmp, not vfp). For an
+               * ordinary middle instruction that's fine even when target is
+               * a symbolic pseudo-register - the move degenerates to a
+               * harmless self-move, and Optimize.remove_nops deletes it.
+               * But for is_last, target may be a pseudo-register that is
+               * never a real allocation destination at all, like the
+               * control/pc register (Reg('c', pc-index), arch/x86/
+               * x86rec.mlb's "eip : Reg('c', n) [...]") standing for this
+               * very Jump's own target: t6 := ...; $c[0] := t6 (t6's own
+               * USE here has is_def=false, target=dst=$c[0]) coalesced
+               * this way makes the jump's *own* defining move degenerate
+               * into "$c[0] := $c[0]" once both sides share a location -
+               * an unselectable last-node RTL this time (no
+               * remove_nops-style cleanup exists for last nodes, and
+               * arch/x86/x86rec.mlb has no rule for a bare register/self
+               * fetch as a jump target - there isn't supposed to be one).
+               * Restrict only the is_last case to target actually in regs,
+               * the real allocatable set this function is choosing among
+               * everywhere else (try_regs, spill, ...) - restricting the
+               * middle case too regressed ppc's altread/altret/altret2,
+               * which coalesce into some non-regs precolored target
+               * legitimately at -O0, no peephole/dead-elim involved.
+               * Reproduced on tests/cmm/call3.c-- (tail2/tailnot), needing
+               * Peephole.subst_forward and Optimize.elim_dead_assignments
+               * together upstream of here to produce this exact shape. *)
+              else if is_last && not (List.exists (R.eq target) regs) then fail ()
               else alloc target
           | None -> fail () in
         (*e: functions to try a register assignment for coalescing copies *)
@@ -547,7 +573,7 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
     print_vm "defmap: " defmap; print_vm "outmap: " outmap;
     (usemap, midmap, defmap, outmap, spills, moves, reloads) in
   (*x: set up dataflow analysis for register allocation *)
-  let allocate_mid    = allocate (fun x -> x) (fun x -> x) in
+  let allocate_mid    = allocate (fun x -> x) (fun x -> x) false in
   let allocate_last l =
     let reconcile z =
       let add_spill uid (defmap, spills) =
@@ -566,7 +592,7 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
                        with Not_found -> vm in
         VM.fold' (fun _ _ m -> m) rem vm vm
       | _ -> vm in
-    allocate reconcile upd_midmap in
+    allocate reconcile upd_midmap true in
   (*x: set up dataflow analysis for register allocation *)
   let middle_out (live_outs, vm) m =
     if Debug.on "flowra" then (eprintf "\nmiddle: "; C.pr_mid m; eprintf "\n");
