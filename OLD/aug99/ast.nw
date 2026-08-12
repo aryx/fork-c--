@@ -1,6 +1,4 @@
-
 % l2h substitution PAL C--
-
 
 %----------------------------------
 \section{Abstract syntax for C--}
@@ -275,5 +273,3 @@ mangling_info = NoManglingInfo
 
 calling_convention  = (string)
 @
-
-
