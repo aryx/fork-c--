@@ -22,6 +22,26 @@
            (*x: code to precede the labeler *)
            let imports = ref ([] : string list)
 
+           (* claude: GNU as/clang's integrated PowerPC assembler reject
+            * bare register names (e.g. "mr r3,r3" errors as an
+            * "unsupported relocation against r3", since without a
+            * distinguishing prefix "r3" reads as a symbol); they require
+            * "%r3". Mach-O's assembler wants the bare form instead, so
+            * this is a runtime switch rather than a hardcoded string -
+            * set from to_asm's elf argument (see ppcelfasm.ml vs
+            * ppcasm.ml). *)
+           let elf_syntax = ref false
+           let reg_str n = if !elf_syntax then s "%%r%d" n else s "r%d" n
+           let cr0_str () = if !elf_syntax then "%cr0" else "cr0"
+           let r0_str () = reg_str 0
+
+           (* claude: absolute (non-PIC) hi/lo halves of a symbol's
+            * address - GNU as/clang want "sym@ha"/"sym@l"; Mach-O wants
+            * "ha16(sym)"/"lo16(sym)", same as the PIC-relative case below
+            * uses for a symbol difference instead of a bare symbol. *)
+           let abs_ha sym = if !elf_syntax then s "%s@ha" sym else s "ha16(%s)" sym
+           let abs_lo sym = if !elf_syntax then s "%s@l"  sym else s "lo16(%s)" sym
+
            let ind_addr name =
              if List.exists ((=$=) name) (!imports) then "L" ^ name ^ "$stub" else name
 
@@ -122,6 +142,16 @@
     and effect = function
       | RP.Store(RP.Reg(('c',_,_),i,_),r,_)
         when i = SS.indices.SS.pc          -> conGoto (exp r)
+      (* claude: Stack.freeze (shared, non-target-specific) emits raw
+       * "store a location's own fetched value back into itself" RTLs -
+       * seemingly a liveness/"protect across this point" marker rather
+       * than a real computation, since it never goes through
+       * Postexpander.move. ppcrec has no instruction for that shape, so
+       * it fell through to the any[100] catch-all as literal garbage
+       * text; eliding it here is what an assembler-level "mr rN,rN"
+       * would have done anyway, just without wasting an instruction. *)
+      | RP.Store(l, RP.Fetch(l',w'), w)
+        when w =|= w' && RU.Eq.loc l l'    -> conNop ()
       | RP.Store(l,e,w)                    -> conStore (loc l) (exp e) w
       | RP.Kill(l)                         -> conKill (loc l)
 
@@ -140,9 +170,10 @@
       List.iter prerr_string
         [ "recognizer error: "; msg; " on "; RU.ToString.rtl r; "\n" ]
 
-    let to_asm r i =
+    let to_asm ?(elf=false) r i =
       try
         let _ = imports := i in
+        let _ = elf_syntax := elf in
         let plan = rtl (Down.rtl r) in
         plan.inst.Camlburg.action ()
       with 
@@ -201,10 +232,10 @@ cr:   Fetch(crl,  32) {: () :}
 lr:   Fetch(lrl,  32) {: () :}
 sp:   Fetch(spl,  32) {: () :}
 
-regl: Reg('r', n:int) [{: guard (n<>0) :}] {: s "r%d" n :}
+regl: Reg('r', n:int) [{: guard (n<>0) :}] {: reg_str n :}
 reg:  Fetch(regl, 32) {: regl :}
 (*x: rules *)
-addr: const16                 {: s "%s(r0)" const16     :}
+addr: const16                 {: s "%s(%s)" const16 (r0_str ()) :}
 addr: reg                     {: s  "0(%s)" reg         :}
 addr: Add(reg, const16)       {: s "%s(%s)" const16 reg :}
 
@@ -213,6 +244,9 @@ ndx_addr: Add(reg1:reg, reg2:reg) {: s "%s,%s" reg1 reg2 :}
 inst: Store(regl, reg, w:int) {: s "mr %s,%s" regl reg :}
 inst: Store(regl,  lr, w:int) {: s "mflr %s" regl :}
 inst: Store(lrl,  reg, w:int) {: s "mtlr %s" reg  :}
+(* claude: PPC has no direct memory<->lr transfer; mflr/mtlr need a GPR, so saving/restoring lr (Stack.freeze's prologue/epilogue) goes through scratch register r0, the PPC ABI's conventional choice for this *)
+inst: Store(Mem(addr), lr, 32)      {: s "mflr %s\n\tstw %s,%s" (r0_str ()) (r0_str ()) addr :}
+inst: Store(lrl, Fetch(Mem(addr),32), 32) {: s "lwz %s,%s\n\tmtlr %s" (r0_str ()) addr (r0_str ()) :}
 inst: Store(regl,  cr, w:int) {: s "mfcr %s" regl :}
 
 inst: Store(regl, const16, 32) {: s "addi %s,0,%s" regl const16 :}
@@ -242,6 +276,15 @@ inst : Store(regl, Add(reg, Sxlo(pic,16)),32) {: s "addi %s,%s,lo16(%s)" regl re
 inst : Store(regl, Sxlo(pic, 16), 32)         {: s "addi %s,0,lo16(%s)" regl pic :}
 
 ha16: Ha16(pic) {: s "ha16(%s)" pic :}
+
+(* claude: same shape as pic/ha16 above, but for a bare symbol address instead of a PIC-relative symbol difference - needed for e.g. "iptr = my_data;" on a non-PIC (static ELF) target *)
+inst : Store(regl, Add(reg, absha16), 32) {: s "addis %s,%s,%s" regl reg absha16 :}
+inst : Store(regl, absha16, 32)           {: s "addis %s,0,%s" regl absha16 :}
+
+inst : Store(regl, Add(reg, Sxlo(lconst,16)),32) {: s "addi %s,%s,%s" regl reg (abs_lo lconst) :}
+inst : Store(regl, Sxlo(lconst, 16), 32)         {: s "addi %s,0,%s" regl (abs_lo lconst) :}
+
+absha16: Ha16(lconst) {: abs_ha lconst :}
 (*x: rules *)
 inst:  Goto(lconst) {: s "b %s" (ind_addr lconst) :}
 inst:  Goto(lr)     {: "blr"                      :}
@@ -254,9 +297,9 @@ inst:  Par(Goto(lconst), Store(lrl,next,32)) {: s "bl %s" (ind_addr lconst) :}
 (*x: rules *)
 cmp:   Cmp(op:string, x:reg, y:reg)     {: ("",  ppc_op op,x,y) :}
 cmp:   Cmp(op:string, x:reg, y:const16) {: ("i", ppc_op op,x,y) :}
-inst:  Guarded(cmp,Goto(lconst)) 
+inst:  Guarded(cmp,Goto(lconst))
        {: let (i_, (l_, op), x, y) = cmp in
-          s "cmp%sw%s cr0,%s,%s\n\tb%s %s"  l_ i_ x y op lconst
+          s "cmp%sw%s %s,%s,%s\n\tb%s %s"  l_ i_ (cr0_str ()) x y op lconst
        :}
 inst : Guarded(OvSet(Fetch(xerl,32)), Goto(lconst))
        {: s "bo %s" lconst :}
@@ -271,6 +314,8 @@ inst: Store(regl, Binop(opr:string,x:reg,y:reg),32) {: s "%s  %s,%s,%s" opr regl
 inst: Store(regl, Binop(opr:string,x:reg,y:const16), 32)
     {: s "%si %s,%s,%s" opr regl x y :}
 (*x: rules *)
+(* claude: without this, a compile-time-false guard's conNop() fell through to the any[100] catch-all as literal "<nop>" text; mirrors x86rec.mlb *)
+inst : Nop() {: "nop" :}
 inst : any [100] {: s "<%s>" any :}
 
 any : True  () {: "True"  :}

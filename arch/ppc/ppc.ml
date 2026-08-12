@@ -198,7 +198,10 @@ module Post = struct
     zxload dst addr w assn <:>
     tstore dst (RO.sx 8 (twidth dst) (RO.lobits (twidth dst) 8 (tval dst)))
   (*x: ppc postexpander *)
-  let move ~dst ~src = tstore dst (tval src)
+  (* claude: mirrors arch/x86/x86.ml's move, which elides dst=src - without
+   * this, ppcrec.mlb's regl production still fires (it has no guard
+   * against dst=src) and prints a real but pointless "mr rN,rN". *)
+  let move ~dst ~src = if Register.eq dst src then DG.Nop else tstore dst (tval src)
   (*x: ppc postexpander *)
   let lix ~dst exp =
     let {Rewrite.hi = hi; Rewrite.lo = lo} = Rewrite.splits 32 16 exp in

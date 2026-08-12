@@ -116,6 +116,13 @@ let use_interp = ref false
 (* -ppc *)
 let use_ppc = ref false
 
+(* claude: -ppc-elf, a Linux/ELF-targeted sibling of -ppc kept separate
+ * rather than replacing it, since -ppc's Mach-O output is what upstream's
+ * arch/ppc/ppcasm.ml always emitted and is worth keeping (e.g. to target
+ * macOS later); see arch/ppc/ppcelfasm.ml for why Mach-O can't be tested
+ * end-to-end on a non-Mac machine. *)
+let use_ppc_elf = ref false
+
 (* -stop .<ext>. Empty means "go all the way to an executable". *)
 let stop_after = ref ""
 
@@ -139,14 +146,21 @@ let libs = ref []
  * QC_AS/QC_LD environment variables.
  *)
 let default_i386_cc = "clang -target i386-unknown-linux-gnu"
+(* claude: for -ppc-elf; -ppc's Mach-O output is not meant for this cc at
+ * all, so it has no default here (see effective_cc below). *)
+let default_powerpc_elf_cc = "clang -target powerpc-unknown-linux-gnu"
 
 let getenv_or name default =
   match Sys.getenv_opt name with
   | Some s -> s
   | None -> default
 
-let as_cmd = ref (getenv_or "QC_AS" default_i386_cc)
-let ld_cmd = ref (getenv_or "QC_LD" default_i386_cc)
+(* claude: empty means "unset", resolved to a per-backend default by
+ * effective_cc once the backend is known (main_action, after arg
+ * parsing) - as_cmd/ld_cmd used to default to default_i386_cc directly
+ * here, which was wrong for -ppc-elf. *)
+let as_cmd = ref (getenv_or "QC_AS" "")
+let ld_cmd = ref (getenv_or "QC_LD" "")
 
 (* -globals: emit the global-variable area and its signature.
  *
@@ -255,13 +269,32 @@ let dump_nelab caps file =
 type backend =
   | X86
   (* 32-bit big-endian PowerPC, which is what gcc-powerpc-linux-gnu and
-   * qemu-ppc target. *)
+   * qemu-ppc target. Emits Mach-O/Darwin assembly (arch/ppc/ppcasm.ml),
+   * upstream's original target. *)
   | Ppc
+  (* claude: same PowerPC target as Ppc, but Linux/ELF assembly
+   * (arch/ppc/ppcelfasm.ml) instead of Mach-O, so it can actually be
+   * assembled and run (via qemu-ppc) on a non-Mac machine. *)
+  | PpcElf
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
    * See docs/claude_notes/plan_tiger_hello.md.
    *)
   | Interp
+
+(* claude: as_cmd/ld_cmd default to "" (unset); this resolves that to a
+ * per-backend clang cross-assembler/linker invocation, since -ppc-elf's
+ * default cc must differ from X86's. -ppc (Mach-O) has no sensible
+ * default cc on a Linux host, so it requires an explicit -as/-ld. *)
+let effective_cc backend cmd =
+  match !cmd with
+  | "" -> (match backend with
+           | X86 -> default_i386_cc
+           | PpcElf -> default_powerpc_elf_cc
+           | Ppc -> failwith "-ppc: pass -as/-ld (or QC_AS/QC_LD) explicitly \
+                               for the Mach-O assembler/linker to use"
+           | Interp -> failwith "-interp has no assembler/linker step")
+  | s -> s
 
 (* qc--(1) says the default output name is the input with its extension
  * replaced, so hello.c-- gives hello.s (or hello.qs for the interpreter,
@@ -270,7 +303,7 @@ type backend =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 | Ppc -> ".s"
+   | X86 | Ppc | PpcElf -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -285,6 +318,9 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
         X86.target, asm, X86backend.optimizer asm, true
     | Ppc ->
         let asm = Ppcasm.make Cfgutil.emit chan in
+        Ppc.target, asm, Ppcbackend.optimizer asm, true
+    | PpcElf ->
+        let asm = Ppcelfasm.make Cfgutil.emit chan in
         Ppc.target, asm, Ppcbackend.optimizer asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
@@ -464,13 +500,13 @@ let run_external (caps : < Cap.exec; .. >) cmd_string args =
       failwith (spf "%s died with signal %d" (Cmd.to_string cmd) n)
   | Error (`Msg s) -> failwith (spf "could not run %s: %s" (Cmd.to_string cmd) s)
 
-let assemble caps ~src ~dest =
-  run_external caps !as_cmd [ "-c"; src; "-o"; dest ]
+let assemble caps backend ~src ~dest =
+  run_external caps (effective_cc backend as_cmd) [ "-c"; src; "-o"; dest ]
 
-let link caps ~objs ~dest =
+let link caps backend ~objs ~dest =
   let dashl = List_.map (fun l -> "-l" ^ l) (List.rev !libs) in
   let dashL = List_.map (fun d -> "-L" ^ d) (List.rev !libdirs) in
-  run_external caps !ld_cmd (objs @ dashL @ dashl @ [ "-o"; dest ])
+  run_external caps (effective_cc backend ld_cmd) (objs @ dashL @ dashl @ [ "-o"; dest ])
 
 (* Where the driver is told to stop. The man page spells these as
  * "-stop .s" and "-stop .o", the equivalents of cc's -S and -c.
@@ -487,13 +523,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), (X86 | Ppc) -> Assembly
+  | (".s" | "s"), (X86 | Ppc | PpcElf) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), (X86 | Ppc) -> Object
+  | (".o" | "o"), (X86 | Ppc | PpcElf) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, (X86 | Ppc) -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc | PpcElf) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -517,7 +553,10 @@ let classify file =
  *)
 let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
   let backend =
-    if !use_interp then Interp else if !use_ppc then Ppc else X86
+    if !use_interp then Interp
+    else if !use_ppc then Ppc
+    else if !use_ppc_elf then PpcElf
+    else X86
   in
   let stop = stop_at_of_flag backend in
   let files = List_.map Fpath.to_string xs in
@@ -575,7 +614,7 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
             | Some f when stop =*= Object -> f
             | _ -> Filename.remove_extension file ^ ".o"
           in
-          assemble caps ~src:s ~dest;
+          assemble caps backend ~src:s ~dest;
           dest
     in
     let objs = List_.map object_of derived in
@@ -585,7 +624,7 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
       (* everything -> an executable. "If -o is not used, the name of a
        * final executable defaults to a.out" (qc--(1)). *)
       let dest = match !output_file with "" -> "a.out" | f -> f in
-      link caps ~objs ~dest;
+      link caps backend ~objs ~dest;
       Console.print caps (spf "wrote %s" dest);
       Exit.OK
     end
@@ -626,9 +665,11 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " <file> write the output to <file>";
     "-interp", Arg.Set use_interp,
     " generate bytecode for the C-- interpreter instead of x86 assembly";
-    "-ppc", Arg.Set use_ppc,
-    " generate 32-bit big-endian PowerPC assembly instead of x86";
-    "-x86", Arg.Unit (fun () -> use_interp := false; use_ppc := false),
+    "-ppc", Arg.Unit (fun () -> use_ppc := true; use_ppc_elf := false),
+    " generate 32-bit big-endian PowerPC Mach-O assembly instead of x86";
+    "-ppc-elf", Arg.Unit (fun () -> use_ppc_elf := true; use_ppc := false),
+    " generate 32-bit big-endian PowerPC Linux/ELF assembly instead of x86";
+    "-x86", Arg.Unit (fun () -> use_interp := false; use_ppc := false; use_ppc_elf := false),
     " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
@@ -639,9 +680,10 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     "-l", Arg.String (fun l -> libs := l :: !libs),
     " <name> link against library <name>";
     "-as", Arg.Set_string as_cmd,
-    " <cmd> the assembler to drive (default: " ^ default_i386_cc ^ ")";
+    " <cmd> the assembler to drive (default: " ^ default_i386_cc ^
+    " for x86, " ^ default_powerpc_elf_cc ^ " for -ppc-elf)";
     "-ld", Arg.Set_string ld_cmd,
-    " <cmd> the linker to drive (default: " ^ default_i386_cc ^ ")";
+    " <cmd> the linker to drive (same default as -as)";
   ] @
   Arg_.options_of_actions action (all_actions caps) @
   [

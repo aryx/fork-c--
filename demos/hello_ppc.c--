@@ -1,0 +1,36 @@
+/* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
+ *
+ * claude: same program as hello.c--, just byteorder big instead of
+ * little, since that's what the ppc/ppc-elf targets require. Exercises
+ * qc's Linux/ELF PowerPC backend end to end:
+ *
+ *   qc -ppc-elf -globals -stop .s -o hello_ppc.s demos/hello_ppc.c--
+ *   powerpc-linux-gnu-as hello_ppc.s -o hello_ppc.o
+ *   powerpc-linux-gnu-gcc -static hello_ppc.o -o hello_ppc
+ *   qemu-ppc hello_ppc            # prints "hello, world!"
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag.
+ *
+ * Known issue: the printed output is correct, but the process exit code
+ * is not 0 as "return(0)" asks for - something after the call to the
+ * external printf corrupts it, most likely a PowerPC SVR4/ELF stack
+ * ABI conformance gap in arch/ppc/ppcbackend.ml's `layout` (its linkage
+ * area sizing comment cites "Mach-O Runtime Conventions for PowerPC",
+ * not the SVR4 one this target actually needs - e.g. it does not write
+ * the stack back-chain word). Not yet root-caused.
+ */
+
+target byteorder big;
+
+import bits32 printf;
+export main, my_data;
+
+section "data" {
+  my_data: bits8 [] "hello, world!\n\0";
+}
+
+foreign "C" main("unsigned" bits32 iargc, "address" bits32 iargv) {
+  foreign "C" printf("address" my_data);
+  foreign "C" return(0);
+}
