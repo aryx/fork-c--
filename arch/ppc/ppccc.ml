@@ -102,7 +102,20 @@ let c_results =
     ; A.is_any, widen_exact 32 *> useregs [ r 3; r 4 ]
     ]
 
-let c_cutto = widen_exact 32 *> overflow
+(* claude: upstream's own Lua (docs/literate/Cminusminus_extra.nw:34005,
+ * PPC.cc["C"].cutto = { A.widen(32), PPC.overflow }) sends every cutto
+ * argument straight to memory with no register stage at all - so this
+ * port was a faithful translation of a real upstream bug, not a porting
+ * slip. Root-caused via a "cut to k(99)" segfault: with no registers,
+ * the argument got written into the continuation record itself at the
+ * same offset its saved PC is read back from a few instructions later,
+ * so the "return" ended up jumping to address 99. x86's cutto (see
+ * x86cc.ml) reserves a register set for cutto arguments while leaving
+ * some free "for the cut instruction itself" - mirrored here with
+ * r5-r10, leaving r3 (the continuation pointer) and r4/r0 (scratch) free
+ * since that's what this backend's own cut-to sequence already uses
+ * (see ppcrec.mlb's lr rules). *)
+let c_cutto = widen_exact 32 *> useregs [ r 5; r 6; r 7; r 8; r 9; r 10 ] *> overflow
 
 let c = { A.call = c_call; A.results = c_results; A.cutto = c_cutto }
 
