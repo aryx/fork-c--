@@ -207,7 +207,14 @@ module Post = struct
 
   let li ~dst const = lix dst (Up.exp (RP.Const const))
   (*x: ppc postexpander *)
-  let extract ~dst ~lsb ~src = Impossible.unimp "extract"
+  (* claude: machine-independent shift+mask, ported from arch/x86/x86.ml's
+   * extract; ppcrec.mlb already covers shrl and lobits so no new recognizer
+   * pattern is needed. *)
+  let extract ~dst ~lsb ~src =
+    let w = twidth src in
+    let n = twidth dst in
+    let v = if lsb = 0 then tval src else RO.shrl w (tval src) (RO.unsigned w lsb) in
+    tstore dst (if n = w then v else RO.lobits w n v)
   let aggregate ~dst ~src = Impossible.unimp "aggregate"
   (*x: ppc postexpander *)
   let hwset ~dst ~src = Impossible.unimp "setting hardware register"

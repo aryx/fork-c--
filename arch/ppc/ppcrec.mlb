@@ -101,6 +101,11 @@
 
       | RP.App(("lobits", [32;w]), [x]) -> conLobits (exp x) w
 
+      (* claude: PPC has no single-opcode one's-complement; it is synthesized
+       * as nor rD,rA,rA (see the Com grammar rule below), unlike the generic
+       * Unop case which assumes a real one-operand-source instruction. *)
+      | RP.App(("com", [32]), [x])      -> conCom (exp x)
+
       | RP.App((opr, ws), [x])          -> conUnop (rtl2ppc opr) (exp x)
       | RP.App((opr, ws), [x;y])        -> if is_cmp(opr,ws) then conCmp opr (exp x) (exp y)
                                            else conBinop (rtl2ppc opr) (exp x) (exp y)
@@ -260,6 +265,8 @@ inst: Store(regl,  Add(x:reg, y:reg), 32)       {: s "add %s,%s,%s" regl x y :}
 inst: Store(regl,  Add(x:reg, y:const16), 32)   {: s "addi %s,%s,%s" regl x y :}
 
 inst: Store(regl, Unop (opr:string,x:reg),      32) {: s "%s  %s,%s"    opr regl x :}
+(* claude: one's-complement has no single-opcode form on PPC, unlike Unop above *)
+inst: Store(regl, Com(x:reg),                   32) {: s "nor  %s,%s,%s" regl x x :}
 inst: Store(regl, Binop(opr:string,x:reg,y:reg),32) {: s "%s  %s,%s,%s" opr regl x y :}
 inst: Store(regl, Binop(opr:string,x:reg,y:const16), 32)
     {: s "%si %s,%s,%s" opr regl x y :}
@@ -284,6 +291,8 @@ any: Ha16(any) {: s "Ha16(%s)" any :}
 
 
 any : Unop (op:string, x:any)         {: s "Unop(%s,%s)" op x  :}
+(* claude: debug fallback for Com, mirrors the Unop/Binop ones above it *)
+any : Com(x:any)                      {: s "Com(%s)" x  :}
 any : Binop(op:string, x:any, y:any)  {: s "Binop(%s,%s,%s)" op x y  :}
 
 any : Nop () {: "nop" :}

@@ -40,6 +40,7 @@
 
 type
     (
+        't60,
         't59,
         't58,
         't57,
@@ -104,36 +105,37 @@ type
 nonterm
 =
     {
-        _Zx9: ( 't59 ) Camlburg.nt;
-        _Zx7: ( 't58 ) Camlburg.nt;
-        _Zx13: ( 't57 ) Camlburg.nt;
-        _Zx11: ( 't56 ) Camlburg.nt;
-        _Unop32: ( 't55 ) Camlburg.nt;
-        _Sxlo23: ( 't54 ) Camlburg.nt;
-        _Sxlo16: ( 't53 ) Camlburg.nt;
-        _Sxlo15: ( 't52 ) Camlburg.nt;
-        _Sx18: ( 't51 ) Camlburg.nt;
-        _Sx17: ( 't50 ) Camlburg.nt;
-        _Store26: ( 't49 ) Camlburg.nt;
-        _Store25: ( 't48 ) Camlburg.nt;
-        _OvSet28: ( 't47 ) Camlburg.nt;
-        _Mem6: ( 't46 ) Camlburg.nt;
-        _Mem4: ( 't45 ) Camlburg.nt;
-        _Mem1: ( 't44 ) Camlburg.nt;
-        _Lobits20: ( 't43 ) Camlburg.nt;
-        _Lobits19: ( 't42 ) Camlburg.nt;
-        _Goto27: ( 't41 ) Camlburg.nt;
-        _Goto24: ( 't40 ) Camlburg.nt;
-        _Fetch8: ( 't39 ) Camlburg.nt;
-        _Fetch5: ( 't38 ) Camlburg.nt;
-        _Fetch3: ( 't37 ) Camlburg.nt;
-        _Fetch29: ( 't36 ) Camlburg.nt;
-        _Fetch14: ( 't35 ) Camlburg.nt;
-        _Fetch12: ( 't34 ) Camlburg.nt;
-        _Fetch10: ( 't33 ) Camlburg.nt;
-        _Diff2: ( 't32 ) Camlburg.nt;
-        _Binop34: ( 't31 ) Camlburg.nt;
-        _Binop33: ( 't30 ) Camlburg.nt;
+        _Zx9: ( 't60 ) Camlburg.nt;
+        _Zx7: ( 't59 ) Camlburg.nt;
+        _Zx13: ( 't58 ) Camlburg.nt;
+        _Zx11: ( 't57 ) Camlburg.nt;
+        _Unop32: ( 't56 ) Camlburg.nt;
+        _Sxlo23: ( 't55 ) Camlburg.nt;
+        _Sxlo16: ( 't54 ) Camlburg.nt;
+        _Sxlo15: ( 't53 ) Camlburg.nt;
+        _Sx18: ( 't52 ) Camlburg.nt;
+        _Sx17: ( 't51 ) Camlburg.nt;
+        _Store26: ( 't50 ) Camlburg.nt;
+        _Store25: ( 't49 ) Camlburg.nt;
+        _OvSet28: ( 't48 ) Camlburg.nt;
+        _Mem6: ( 't47 ) Camlburg.nt;
+        _Mem4: ( 't46 ) Camlburg.nt;
+        _Mem1: ( 't45 ) Camlburg.nt;
+        _Lobits20: ( 't44 ) Camlburg.nt;
+        _Lobits19: ( 't43 ) Camlburg.nt;
+        _Goto27: ( 't42 ) Camlburg.nt;
+        _Goto24: ( 't41 ) Camlburg.nt;
+        _Fetch8: ( 't40 ) Camlburg.nt;
+        _Fetch5: ( 't39 ) Camlburg.nt;
+        _Fetch3: ( 't38 ) Camlburg.nt;
+        _Fetch29: ( 't37 ) Camlburg.nt;
+        _Fetch14: ( 't36 ) Camlburg.nt;
+        _Fetch12: ( 't35 ) Camlburg.nt;
+        _Fetch10: ( 't34 ) Camlburg.nt;
+        _Diff2: ( 't33 ) Camlburg.nt;
+        _Com33: ( 't32 ) Camlburg.nt;
+        _Binop35: ( 't31 ) Camlburg.nt;
+        _Binop34: ( 't30 ) Camlburg.nt;
         _Add31: ( 't29 ) Camlburg.nt;
         _Add30: ( 't28 ) Camlburg.nt;
         _Add22: ( 't27 ) Camlburg.nt;
@@ -198,8 +200,9 @@ inf =
     ;_Add22 = (Camlburg.infinity)
     ;_Add30 = (Camlburg.infinity)
     ;_Add31 = (Camlburg.infinity)
-    ;_Binop33 = (Camlburg.infinity)
     ;_Binop34 = (Camlburg.infinity)
+    ;_Binop35 = (Camlburg.infinity)
+    ;_Com33 = (Camlburg.infinity)
     ;_Diff2 = (Camlburg.infinity)
     ;_Fetch10 = (Camlburg.infinity)
     ;_Fetch12 = (Camlburg.infinity)
@@ -251,7 +254,7 @@ and update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 267 "ppcrec.mlb"
+# 274 "ppcrec.mlb"
                                 ( s "<%s>" any )
                                 
 # 000 "/dev/stdout"
@@ -290,7 +293,7 @@ and update_const16 =
                             let const16 = x.const16.Camlburg.action ()
                             in
                                 
-# 202 "ppcrec.mlb"
+# 207 "ppcrec.mlb"
                                 ( s "%s(r0)" const16     )
                                 
 # 000 "/dev/stdout"
@@ -401,7 +404,7 @@ and update_reg =
                             let reg = x.reg.Camlburg.action ()
                             in
                                 
-# 203 "ppcrec.mlb"
+# 208 "ppcrec.mlb"
                                 ( s  "0(%s)" reg         )
                                 
 # 000 "/dev/stdout"
@@ -457,18 +460,24 @@ and update__Add31 =
             x
         else
             { x with _Add31 = (nt) }
-and update__Binop33 =
-    fun nt x ->
-        if nt.Camlburg.cost >= x._Binop33.Camlburg.cost then
-            x
-        else
-            { x with _Binop33 = (nt) }
 and update__Binop34 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Binop34.Camlburg.cost then
             x
         else
             { x with _Binop34 = (nt) }
+and update__Binop35 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Binop35.Camlburg.cost then
+            x
+        else
+            { x with _Binop35 = (nt) }
+and update__Com33 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Com33.Camlburg.cost then
+            x
+        else
+            { x with _Com33 = (nt) }
 and update__Diff2 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Diff2.Camlburg.cost then
@@ -650,7 +659,7 @@ conZxlo =
                     and w = arg2
                     in
                         
-# 280 "ppcrec.mlb"
+# 287 "ppcrec.mlb"
                         ( s "Zxlo(%s,%d)" any w )
                         
 # 000 "/dev/stdout"
@@ -698,7 +707,7 @@ and conZx =
                                     let any = arg1.any.Camlburg.action ()
                                     in
                                         
-# 278 "ppcrec.mlb"
+# 285 "ppcrec.mlb"
                                         ( s "Zx(%s)" any  )
                                         
 # 000 "/dev/stdout"
@@ -724,7 +733,7 @@ and conUnop =
                         and x = arg2.any.Camlburg.action ()
                         in
                             
-# 286 "ppcrec.mlb"
+# 293 "ppcrec.mlb"
                             ( s "Unop(%s,%s)" op x  )
                             
 # 000 "/dev/stdout"
@@ -738,7 +747,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 269 "ppcrec.mlb"
+# 276 "ppcrec.mlb"
                     ( "True"  )
                     
 # 000 "/dev/stdout"
@@ -774,7 +783,7 @@ and conSxlo =
                                 and w = arg2
                                 in
                                     
-# 279 "ppcrec.mlb"
+# 286 "ppcrec.mlb"
                                     ( s "Sxlo(%s,%d)" any w )
                                     
 # 000 "/dev/stdout"
@@ -806,7 +815,7 @@ and conSx =
                             let any = arg1.any.Camlburg.action ()
                             in
                                 
-# 277 "ppcrec.mlb"
+# 284 "ppcrec.mlb"
                                 ( s "Sx(%s)" any  )
                                 
 # 000 "/dev/stdout"
@@ -848,7 +857,7 @@ and conStore =
                             and w = arg3
                             in
                                 
-# 299 "ppcrec.mlb"
+# 308 "ppcrec.mlb"
                                 ( s "Store(%s,%s,%d)" dst src w )
                                 
 # 000 "/dev/stdout"
@@ -867,7 +876,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 208 "ppcrec.mlb"
+# 213 "ppcrec.mlb"
                                         ( s "mr %s,%s" regl reg )
                                         
 # 000 "/dev/stdout"
@@ -884,7 +893,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 209 "ppcrec.mlb"
+# 214 "ppcrec.mlb"
                                         ( s "mflr %s" regl )
                                         
 # 000 "/dev/stdout"
@@ -901,7 +910,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 210 "ppcrec.mlb"
+# 215 "ppcrec.mlb"
                                         ( s "mtlr %s" reg  )
                                         
 # 000 "/dev/stdout"
@@ -918,7 +927,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 211 "ppcrec.mlb"
+# 216 "ppcrec.mlb"
                                         ( s "mfcr %s" regl )
                                         
 # 000 "/dev/stdout"
@@ -938,7 +947,7 @@ and conStore =
                                         arg2.const16.Camlburg.action ()
                                     in
                                         
-# 213 "ppcrec.mlb"
+# 218 "ppcrec.mlb"
                                         ( s "addi %s,0,%s" regl const16 )
                                         
 # 000 "/dev/stdout"
@@ -958,7 +967,7 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 215 "ppcrec.mlb"
+# 220 "ppcrec.mlb"
                                             ( s "lwz %s,%s" regl addr  )
                                             
 # 000 "/dev/stdout"
@@ -978,7 +987,7 @@ and conStore =
                                         let ndx_addr = _v1
                                         in
                                             
-# 216 "ppcrec.mlb"
+# 221 "ppcrec.mlb"
                                             ( s "lwzx %s,%s" regl ndx_addr )
                                             
 # 000 "/dev/stdout"
@@ -998,7 +1007,7 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 217 "ppcrec.mlb"
+# 222 "ppcrec.mlb"
                                             ( s "lbz %s,%s" regl addr  )
                                             
 # 000 "/dev/stdout"
@@ -1018,7 +1027,7 @@ and conStore =
                                         let ndx_addr = _v1
                                         in
                                             
-# 218 "ppcrec.mlb"
+# 223 "ppcrec.mlb"
                                             ( s "lbzx %s,%s" regl ndx_addr  )
                                             
 # 000 "/dev/stdout"
@@ -1038,7 +1047,7 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 219 "ppcrec.mlb"
+# 224 "ppcrec.mlb"
                                             ( s "lhz %s,%s" regl addr  )
                                             
 # 000 "/dev/stdout"
@@ -1058,7 +1067,7 @@ and conStore =
                                         let ndx_addr = _v1
                                         in
                                             
-# 220 "ppcrec.mlb"
+# 225 "ppcrec.mlb"
                                             ( s "lhzx %s,%s" regl ndx_addr  )
                                             
 # 000 "/dev/stdout"
@@ -1078,7 +1087,7 @@ and conStore =
                                         let reg = _v1
                                         in
                                             
-# 221 "ppcrec.mlb"
+# 226 "ppcrec.mlb"
                                             ( s "extsb %s,%s" regl reg )
                                             
 # 000 "/dev/stdout"
@@ -1098,7 +1107,7 @@ and conStore =
                                         let reg = _v1
                                         in
                                             
-# 222 "ppcrec.mlb"
+# 227 "ppcrec.mlb"
                                             ( s "extsh %s,%s" regl reg )
                                             
 # 000 "/dev/stdout"
@@ -1118,7 +1127,7 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 223 "ppcrec.mlb"
+# 228 "ppcrec.mlb"
                                             ( s "lha %s,%s" regl addr  )
                                             
 # 000 "/dev/stdout"
@@ -1138,7 +1147,7 @@ and conStore =
                                         let ndx_addr = _v1
                                         in
                                             
-# 224 "ppcrec.mlb"
+# 229 "ppcrec.mlb"
                                             ( s "lhax %s,%s" regl ndx_addr  )
                                             
 # 000 "/dev/stdout"
@@ -1158,7 +1167,7 @@ and conStore =
                                         let addr = _v1
                                         in
                                             
-# 226 "ppcrec.mlb"
+# 231 "ppcrec.mlb"
                                             ( s "stw %s,%s" reg addr  )
                                             
 # 000 "/dev/stdout"
@@ -1178,7 +1187,7 @@ and conStore =
                                         let ndx_addr = _v1
                                         in
                                             
-# 227 "ppcrec.mlb"
+# 232 "ppcrec.mlb"
                                             ( s "stwx %s,%s" reg ndx_addr )
                                             
 # 000 "/dev/stdout"
@@ -1202,7 +1211,7 @@ and conStore =
                                             let addr = _v1
                                             in
                                                 
-# 228 "ppcrec.mlb"
+# 233 "ppcrec.mlb"
                                                 ( s "stb %s,%s" reg addr  )
                                                 
 # 000 "/dev/stdout"
@@ -1226,7 +1235,7 @@ and conStore =
                                             let ndx_addr = _v1
                                             in
                                                 
-# 229 "ppcrec.mlb"
+# 234 "ppcrec.mlb"
                                                 ( s "stbx %s,%s" reg ndx_addr  )
                                                 
 # 000 "/dev/stdout"
@@ -1250,7 +1259,7 @@ and conStore =
                                             let addr = _v1
                                             in
                                                 
-# 230 "ppcrec.mlb"
+# 235 "ppcrec.mlb"
                                                 ( s "sth %s,%s" reg addr  )
                                                 
 # 000 "/dev/stdout"
@@ -1274,7 +1283,7 @@ and conStore =
                                             let ndx_addr = _v1
                                             in
                                                 
-# 231 "ppcrec.mlb"
+# 236 "ppcrec.mlb"
                                                 ( s "sthx %s,%s" reg ndx_addr  )
                                                 
 # 000 "/dev/stdout"
@@ -1294,7 +1303,7 @@ and conStore =
                                         let (reg, ha16) = _v1
                                         in
                                             
-# 233 "ppcrec.mlb"
+# 238 "ppcrec.mlb"
                                             ( s "addis %s,%s,%s" regl reg ha16 )
                                             
 # 000 "/dev/stdout"
@@ -1312,7 +1321,7 @@ and conStore =
                                     and ha16 = arg2.ha16.Camlburg.action ()
                                     in
                                         
-# 234 "ppcrec.mlb"
+# 239 "ppcrec.mlb"
                                         ( s "addis %s,0,%s" regl ha16 )
                                         
 # 000 "/dev/stdout"
@@ -1332,7 +1341,7 @@ and conStore =
                                         let (reg, pic) = _v1
                                         in
                                             
-# 236 "ppcrec.mlb"
+# 241 "ppcrec.mlb"
                                             ( s "addi %s,%s,lo16(%s)" regl reg pic )
                                             
 # 000 "/dev/stdout"
@@ -1352,7 +1361,7 @@ and conStore =
                                         let pic = _v1
                                         in
                                             
-# 237 "ppcrec.mlb"
+# 242 "ppcrec.mlb"
                                             ( s "addi %s,0,lo16(%s)" regl pic )
                                             
 # 000 "/dev/stdout"
@@ -1372,7 +1381,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 259 "ppcrec.mlb"
+# 264 "ppcrec.mlb"
                                             ( s "add %s,%s,%s" regl x y )
                                             
 # 000 "/dev/stdout"
@@ -1392,7 +1401,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 260 "ppcrec.mlb"
+# 265 "ppcrec.mlb"
                                             ( s "addi %s,%s,%s" regl x y )
                                             
 # 000 "/dev/stdout"
@@ -1412,7 +1421,7 @@ and conStore =
                                         let (opr, x) = _v1
                                         in
                                             
-# 262 "ppcrec.mlb"
+# 267 "ppcrec.mlb"
                                             ( s "%s  %s,%s"    opr regl x )
                                             
 # 000 "/dev/stdout"
@@ -1421,21 +1430,19 @@ and conStore =
                             ;{Camlburg.cost =
                                 (arg1.regl.Camlburg.cost
                                 +
-                                arg2._Binop33.Camlburg.cost
+                                arg2._Com33.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg3)
                             ;Camlburg.action =
                                 (fun () ->
                                     let regl = arg1.regl.Camlburg.action ()
-                                    and
-                                        _v1 =
-                                        arg2._Binop33.Camlburg.action ()
+                                    and _v1 = arg2._Com33.Camlburg.action ()
                                     in
-                                        let (opr, x, y) = _v1
+                                        let x = _v1
                                         in
                                             
-# 263 "ppcrec.mlb"
-                                            ( s "%s  %s,%s,%s" opr regl x y )
+# 269 "ppcrec.mlb"
+                                            ( s "nor  %s,%s,%s" regl x x )
                                             
 # 000 "/dev/stdout"
 )
@@ -1456,7 +1463,29 @@ and conStore =
                                         let (opr, x, y) = _v1
                                         in
                                             
-# 265 "ppcrec.mlb"
+# 270 "ppcrec.mlb"
+                                            ( s "%s  %s,%s,%s" opr regl x y )
+                                            
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.regl.Camlburg.cost
+                                +
+                                arg2._Binop35.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let regl = arg1.regl.Camlburg.action ()
+                                    and
+                                        _v1 =
+                                        arg2._Binop35.Camlburg.action ()
+                                    in
+                                        let (opr, x, y) = _v1
+                                        in
+                                            
+# 272 "ppcrec.mlb"
                                             ( s "%si %s,%s,%s" opr regl x y )
                                             
 # 000 "/dev/stdout"
@@ -1474,7 +1503,7 @@ and conSlice =
                     and y = arg3.any.Camlburg.action ()
                     in
                         
-# 294 "ppcrec.mlb"
+# 303 "ppcrec.mlb"
                         ( sprintf "Slice(%d, %d, %s)" w n y )
                         
 # 000 "/dev/stdout"
@@ -1491,7 +1520,7 @@ and conReg =
                     and n = arg2
                     in
                         
-# 297 "ppcrec.mlb"
+# 306 "ppcrec.mlb"
                         ( sprintf "Reg(%s, %d)" (Char.escaped char) n )
                         
 # 000 "/dev/stdout"
@@ -1503,7 +1532,7 @@ and conReg =
                 ;Camlburg.action =
                     (fun () ->
                         
-# 187 "ppcrec.mlb"
+# 192 "ppcrec.mlb"
                         ( () )
                         
 # 000 "/dev/stdout"
@@ -1517,7 +1546,7 @@ and conReg =
                     ;Camlburg.action =
                         (fun () ->
                             
-# 188 "ppcrec.mlb"
+# 193 "ppcrec.mlb"
                             ( () )
                             
 # 000 "/dev/stdout"
@@ -1531,7 +1560,7 @@ and conReg =
                         ;Camlburg.action =
                             (fun () ->
                                 
-# 190 "ppcrec.mlb"
+# 195 "ppcrec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -1545,7 +1574,7 @@ and conReg =
                             ;Camlburg.action =
                                 (fun () ->
                                     
-# 186 "ppcrec.mlb"
+# 191 "ppcrec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1556,7 +1585,7 @@ and conReg =
                                     (let n = arg2
                                     in
                                         
-# 199 "ppcrec.mlb"
+# 204 "ppcrec.mlb"
                                         ( guard (n<>0) )
                                         
 # 000 "/dev/stdout"
@@ -1568,7 +1597,7 @@ and conReg =
                                         let n = arg2
                                         in
                                             
-# 199 "ppcrec.mlb"
+# 204 "ppcrec.mlb"
                                             ( s "r%d" n )
                                             
 # 000 "/dev/stdout"
@@ -1582,7 +1611,7 @@ and conReg =
                                     ;Camlburg.action =
                                         (fun () ->
                                             
-# 191 "ppcrec.mlb"
+# 196 "ppcrec.mlb"
                                             ( () )
                                             
 # 000 "/dev/stdout"
@@ -1596,7 +1625,7 @@ and conReg =
                                         ;Camlburg.action =
                                             (fun () ->
                                                 
-# 189 "ppcrec.mlb"
+# 194 "ppcrec.mlb"
                                                 ( () )
                                                 
 # 000 "/dev/stdout"
@@ -1614,7 +1643,7 @@ and conPar =
                     and r = arg2.any.Camlburg.action ()
                     in
                         
-# 304 "ppcrec.mlb"
+# 313 "ppcrec.mlb"
                         ( s "Par(%s,%s)" l r )
                         
 # 000 "/dev/stdout"
@@ -1636,7 +1665,7 @@ and conPar =
                                     let lr = _v1
                                     in
                                         
-# 244 "ppcrec.mlb"
+# 249 "ppcrec.mlb"
                                         ( sprintf "mr %s, %s; blr" regl reg )
                                         
 # 000 "/dev/stdout"
@@ -1656,7 +1685,7 @@ and conPar =
                                     let lr = _v1
                                     in
                                         
-# 247 "ppcrec.mlb"
+# 252 "ppcrec.mlb"
                                         ( "blrl" )
                                         
 # 000 "/dev/stdout"
@@ -1676,7 +1705,7 @@ and conPar =
                                     let lconst = _v1
                                     in
                                         
-# 248 "ppcrec.mlb"
+# 253 "ppcrec.mlb"
                                         ( s "bl %s" (ind_addr lconst) )
                                         
 # 000 "/dev/stdout"
@@ -1701,7 +1730,7 @@ and conNop =
             ;Camlburg.action =
                 (fun () ->
                     
-# 289 "ppcrec.mlb"
+# 298 "ppcrec.mlb"
                     ( "nop" )
                     
 # 000 "/dev/stdout"
@@ -1739,7 +1768,7 @@ and conMem =
                                 let any = arg1.any.Camlburg.action ()
                                 in
                                     
-# 296 "ppcrec.mlb"
+# 305 "ppcrec.mlb"
                                     ( s "Mem(%s)" any )
                                     
 # 000 "/dev/stdout"
@@ -1768,7 +1797,7 @@ and conLobits =
                             and w = arg2
                             in
                                 
-# 291 "ppcrec.mlb"
+# 300 "ppcrec.mlb"
                                 ( s "Lobits(%s, %d)" any w )
                                 
 # 000 "/dev/stdout"
@@ -1785,7 +1814,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 271 "ppcrec.mlb"
+# 278 "ppcrec.mlb"
                         ( s "Link(%s,%d)" (symbol#mangled_text) w )
                         
 # 000 "/dev/stdout"
@@ -1799,7 +1828,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 182 "ppcrec.mlb"
+# 187 "ppcrec.mlb"
                             ( symbol#mangled_text )
                             
 # 000 "/dev/stdout"
@@ -1815,7 +1844,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 300 "ppcrec.mlb"
+# 309 "ppcrec.mlb"
                         ( s "Kill(%s)" any )
                         
 # 000 "/dev/stdout"
@@ -1831,7 +1860,7 @@ and conHa16 =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 283 "ppcrec.mlb"
+# 290 "ppcrec.mlb"
                         ( s "Ha16(%s)" any )
                         
 # 000 "/dev/stdout"
@@ -1844,7 +1873,7 @@ and conHa16 =
                         let pic = arg1.pic.Camlburg.action ()
                         in
                             
-# 239 "ppcrec.mlb"
+# 244 "ppcrec.mlb"
                             ( s "ha16(%s)" pic )
                             
 # 000 "/dev/stdout"
@@ -1862,7 +1891,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 302 "ppcrec.mlb"
+# 311 "ppcrec.mlb"
                         ( s "Guarded(%s,%s)" guard any )
                         
 # 000 "/dev/stdout"
@@ -1880,7 +1909,7 @@ and conGuarded =
                                 let lconst = _v1
                                 in
                                     
-# 253 "ppcrec.mlb"
+# 258 "ppcrec.mlb"
                                     ( let (i_, (l_, op), x, y) = cmp in
           s "cmp%sw%s cr0,%s,%s\n\tb%s %s"  l_ i_ x y op lconst
        )
@@ -1902,7 +1931,7 @@ and conGuarded =
                                     let xerl = _v1
                                     in
                                         
-# 257 "ppcrec.mlb"
+# 262 "ppcrec.mlb"
                                         ( s "bo %s" lconst )
                                         
 # 000 "/dev/stdout"
@@ -1931,7 +1960,7 @@ and conGoto =
                             let any = arg1.any.Camlburg.action ()
                             in
                                 
-# 305 "ppcrec.mlb"
+# 314 "ppcrec.mlb"
                                 ( s "Goto(%s)" any )
                                 
 # 000 "/dev/stdout"
@@ -1947,7 +1976,7 @@ and conGoto =
                                         arg1.lconst.Camlburg.action ()
                                     in
                                         
-# 241 "ppcrec.mlb"
+# 246 "ppcrec.mlb"
                                         ( s "b %s" (ind_addr lconst) )
                                         
 # 000 "/dev/stdout"
@@ -1959,7 +1988,7 @@ and conGoto =
                                     let lr = arg1.lr.Camlburg.action ()
                                     in
                                         
-# 242 "ppcrec.mlb"
+# 247 "ppcrec.mlb"
                                         ( "blr"                      )
                                         
 # 000 "/dev/stdout"
@@ -2057,7 +2086,7 @@ and conFetch =
                                                 and w = arg2
                                                 in
                                                     
-# 275 "ppcrec.mlb"
+# 282 "ppcrec.mlb"
                                                     ( s "Fetch(%s,%d)" any w )
                                                     
 # 000 "/dev/stdout"
@@ -2076,7 +2105,7 @@ and conFetch =
                                                             ()
                                                     in
                                                         
-# 194 "ppcrec.mlb"
+# 199 "ppcrec.mlb"
                                                         ( () )
                                                         
 # 000 "/dev/stdout"
@@ -2096,7 +2125,7 @@ and conFetch =
                                                                 ()
                                                         in
                                                             
-# 195 "ppcrec.mlb"
+# 200 "ppcrec.mlb"
                                                             ( () )
                                                             
 # 000 "/dev/stdout"
@@ -2116,7 +2145,7 @@ and conFetch =
                                                                     ()
                                                             in
                                                                 
-# 196 "ppcrec.mlb"
+# 201 "ppcrec.mlb"
                                                                 ( () )
                                                                 
 # 000 "/dev/stdout"
@@ -2137,7 +2166,7 @@ and conFetch =
                                                                         ()
                                                                 in
                                                                     
-# 193 "ppcrec.mlb"
+# 198 "ppcrec.mlb"
                                                                     ( () )
                                                                     
 # 000 "/dev/stdout"
@@ -2162,7 +2191,7 @@ and conFetch =
                                                                             _v1
                                                                         in
                                                                             
-# 184 "ppcrec.mlb"
+# 189 "ppcrec.mlb"
                                                                             ( s "%s-%s" c1 c2 )
                                                                             
 # 000 "/dev/stdout"
@@ -2185,7 +2214,7 @@ and conFetch =
                                                                                 ()
                                                                         in
                                                                             
-# 200 "ppcrec.mlb"
+# 205 "ppcrec.mlb"
                                                                             ( regl )
                                                                             
 # 000 "/dev/stdout"
@@ -2208,7 +2237,7 @@ and conFetch =
                                                                                     ()
                                                                             in
                                                                                 
-# 197 "ppcrec.mlb"
+# 202 "ppcrec.mlb"
                                                                                 ( () )
                                                                                 
 # 000 "/dev/stdout"
@@ -2222,7 +2251,7 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 270 "ppcrec.mlb"
+# 277 "ppcrec.mlb"
                     ( "False" )
                     
 # 000 "/dev/stdout"
@@ -2250,7 +2279,7 @@ and conDiff =
                         and c2 = arg2.any.Camlburg.action ()
                         in
                             
-# 272 "ppcrec.mlb"
+# 279 "ppcrec.mlb"
                             ( s "Diff(%s, %s)" c1 c2 )
                             
 # 000 "/dev/stdout"
@@ -2267,13 +2296,34 @@ and conDiff =
                             and c2 = arg2.lconst.Camlburg.action ()
                             in
                                 
-# 183 "ppcrec.mlb"
+# 188 "ppcrec.mlb"
                                 ( s "%s-%s" c1 c2 )
                                 
 # 000 "/dev/stdout"
 )
                     })
                     inf))
+and conCom =
+    fun arg1 ->
+        (update__Com33
+            {Camlburg.cost = (arg1.reg.Camlburg.cost)
+            ;Camlburg.action =
+                (fun () -> let x = arg1.reg.Camlburg.action () in x)
+            })
+            ((update_any
+                {Camlburg.cost = (arg1.any.Camlburg.cost)
+                ;Camlburg.action =
+                    (fun () ->
+                        let x = arg1.any.Camlburg.action ()
+                        in
+                            
+# 295 "ppcrec.mlb"
+                            ( s "Com(%s)" x  )
+                            
+# 000 "/dev/stdout"
+)
+                })
+                inf)
 and conCmp =
     fun arg1 arg2 arg3 ->
         (update_any
@@ -2286,7 +2336,7 @@ and conCmp =
                     and y = arg3.any.Camlburg.action ()
                     in
                         
-# 303 "ppcrec.mlb"
+# 312 "ppcrec.mlb"
                         ( s "Cmp(%s,%s,%s)" op x y )
                         
 # 000 "/dev/stdout"
@@ -2303,7 +2353,7 @@ and conCmp =
                             and y = arg3.reg.Camlburg.action ()
                             in
                                 
-# 250 "ppcrec.mlb"
+# 255 "ppcrec.mlb"
                                 ( ("",  ppc_op op,x,y) )
                                 
 # 000 "/dev/stdout"
@@ -2318,7 +2368,7 @@ and conCmp =
                             and y = arg3.const16.Camlburg.action ()
                             in
                                 
-# 251 "ppcrec.mlb"
+# 256 "ppcrec.mlb"
                                 ( ("i", ppc_op op,x,y) )
                                 
 # 000 "/dev/stdout"
@@ -2334,7 +2384,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 273 "ppcrec.mlb"
+# 280 "ppcrec.mlb"
                         ( sprintf "Bits(%s)" (Bits.to_string bits) )
                         
 # 000 "/dev/stdout"
@@ -2345,7 +2395,7 @@ and conBits =
                     (let bits = arg1
                     in
                         
-# 164 "ppcrec.mlb"
+# 169 "ppcrec.mlb"
                         ( guard (Bits.S.fits 16 bits) )
                         
 # 000 "/dev/stdout"
@@ -2355,7 +2405,7 @@ and conBits =
                         let bits = arg1
                         in
                             
-# 165 "ppcrec.mlb"
+# 170 "ppcrec.mlb"
                             ( Bits.to_decimal_string bits )
                             
 # 000 "/dev/stdout"
@@ -2366,7 +2416,7 @@ and conBits =
                         (let bits = arg1
                         in
                             
-# 168 "ppcrec.mlb"
+# 173 "ppcrec.mlb"
                             ( guard (Bits.width bits > 5 &&
                    Bits.eq bits (Bits.U.of_int 15 (Bits.width bits))) )
                             
@@ -2377,7 +2427,7 @@ and conBits =
                             let bits = arg1
                             in
                                 
-# 170 "ppcrec.mlb"
+# 175 "ppcrec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -2388,7 +2438,7 @@ and conBits =
                             (let bits = arg1
                             in
                                 
-# 173 "ppcrec.mlb"
+# 178 "ppcrec.mlb"
                                 ( guard (Bits.width bits > 5 &&
                    Bits.eq bits (Bits.U.of_int 16 (Bits.width bits))) )
                                 
@@ -2399,7 +2449,7 @@ and conBits =
                                 let bits = arg1
                                 in
                                     
-# 175 "ppcrec.mlb"
+# 180 "ppcrec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -2410,7 +2460,7 @@ and conBits =
                                 (let bits = arg1
                                 in
                                     
-# 178 "ppcrec.mlb"
+# 183 "ppcrec.mlb"
                                     ( guard (Bits.width bits > 5 &&
                    Bits.eq bits (Bits.U.of_int 4 (Bits.width bits))) )
                                     
@@ -2421,7 +2471,7 @@ and conBits =
                                     let bits = arg1
                                     in
                                         
-# 180 "ppcrec.mlb"
+# 185 "ppcrec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -2440,7 +2490,7 @@ and conBitExtract =
                     and n = arg3
                     in
                         
-# 292 "ppcrec.mlb"
+# 301 "ppcrec.mlb"
                         ( sprintf "BitExtract(%s, %s, %d)" lsb y n )
                         
 # 000 "/dev/stdout"
@@ -2449,7 +2499,7 @@ and conBitExtract =
             inf
 and conBinop =
     fun arg1 arg2 arg3 ->
-        (update__Binop33
+        (update__Binop34
             {Camlburg.cost =
                 (arg2.reg.Camlburg.cost + arg3.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -2460,7 +2510,7 @@ and conBinop =
                     in
                         (opr ,x ,y))
             })
-            ((update__Binop34
+            ((update__Binop35
                 {Camlburg.cost =
                     (arg2.reg.Camlburg.cost + arg3.const16.Camlburg.cost)
                 ;Camlburg.action =
@@ -2481,7 +2531,7 @@ and conBinop =
                             and y = arg3.any.Camlburg.action ()
                             in
                                 
-# 287 "ppcrec.mlb"
+# 296 "ppcrec.mlb"
                                 ( s "Binop(%s,%s,%s)" op x y  )
                                 
 # 000 "/dev/stdout"
@@ -2545,7 +2595,7 @@ and conAdd =
                                         arg2.const16.Camlburg.action ()
                                     in
                                         
-# 204 "ppcrec.mlb"
+# 209 "ppcrec.mlb"
                                         ( s "%s(%s)" const16 reg )
                                         
 # 000 "/dev/stdout"
@@ -2562,7 +2612,7 @@ and conAdd =
                                         and y = arg2.any.Camlburg.action ()
                                         in
                                             
-# 281 "ppcrec.mlb"
+# 288 "ppcrec.mlb"
                                             ( s "Add(%s, %s)" x y )
                                             
 # 000 "/dev/stdout"
@@ -2583,7 +2633,7 @@ and conAdd =
                                                 arg2.reg.Camlburg.action ()
                                             in
                                                 
-# 206 "ppcrec.mlb"
+# 211 "ppcrec.mlb"
                                                 ( s "%s,%s" reg1 reg2 )
                                                 
 # 000 "/dev/stdout"
@@ -2606,7 +2656,7 @@ and conAdd =
                                                         ()
                                                 in
                                                     
-# 246 "ppcrec.mlb"
+# 251 "ppcrec.mlb"
                                                     ( () )
                                                     
 # 000 "/dev/stdout"
@@ -2684,6 +2734,11 @@ and conAdd =
       | RP.App(("bitExtract", [_; n]), [lsb; src]) -> conBitExtract (exp lsb) (exp src) n
 
       | RP.App(("lobits", [32;w]), [x]) -> conLobits (exp x) w
+
+      (* claude: PPC has no single-opcode one's-complement; it is synthesized
+       * as nor rD,rA,rA (see the Com grammar rule below), unlike the generic
+       * Unop case which assumes a real one-operand-source instruction. *)
+      | RP.App(("com", [32]), [x])      -> conCom (exp x)
 
       | RP.App((opr, ws), [x])          -> conUnop (rtl2ppc opr) (exp x)
       | RP.App((opr, ws), [x;y])        -> if is_cmp(opr,ws) then conCmp opr (exp x) (exp y)
