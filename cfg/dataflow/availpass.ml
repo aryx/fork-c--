@@ -1,24 +1,4 @@
-% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-
-% Grades     ::=    "%%Grades:" Quality Importance Urgency
-% Quality    ::=    A|B|C|D|E
-% Importance ::=    Central|Subsystem|Peripheral
-% Urgency    ::=    Immediate|Soon|Later
-%
-% Example (at beginning of line): %%Grades: B Central Soon
-@
-\section{Dataflow pass for available expressions}
-
-For dependency reasions, this module has to be split from the
-[[Avail]] module.
-<<availpass.mli>>=
-val analysis : Avail.t Dataflow.F.analysis
-@ 
-
-\subsection{Implementation}
-
-
-<<availpass.ml>>=
+(*s: availpass.ml *)
 module D  = Dataflow
 module G  = Zipcfg
 module GR = Zipcfg.Rep
@@ -71,3 +51,4 @@ let comp = {
 }
 
 let analysis = fact, comp
+(*e: availpass.ml *)

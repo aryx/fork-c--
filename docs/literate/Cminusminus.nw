@@ -2798,6 +2798,78 @@ let program ts =
 \chapter{Elaborating}
 %******************************************************************************
 
+%******************************************************************************
+\chapter{Control-flow Graph}
+%******************************************************************************
+
+% was in availpass.nw
+
+
+\section{Dataflow pass for available expressions}
+
+For dependency reasons, this module has to be split from the
+[[Avail]] module.
+<<availpass.mli>>=
+val analysis : Avail.t Dataflow.F.analysis
+@ 
+
+\subsection{Implementation}
+
+
+<<availpass.ml>>=
+module D  = Dataflow
+module G  = Zipcfg
+module GR = Zipcfg.Rep
+module P  = Property
+let matcher = { P.embed = (fun a -> P.Avail a);
+                P.project = (function P.Avail a -> Some a | _ -> None);
+                P.is = (function P.Avail a -> true | _ -> false);
+              }
+
+let prop = Unique.Prop.prop matcher
+
+let _ = Debug.register "avail-changed" "show avail exps that change"
+
+let debug_smaller ~old ~new' =
+  let b = Avail.smaller ~old ~new' in
+  if b then
+    Printf.eprintf "** Available expressions have changed from %s\n** to new avail%s\n"
+      (Avail.to_string old) (Avail.to_string new');
+  b
+
+let debug_join a a' =
+  let a'' = Avail.join a a' in
+  Printf.eprintf "** Joined avails are %s\n" (Avail.to_string a'');
+  a''
+
+let smaller = if Debug.on "avail-changed" then debug_smaller else Avail.smaller
+let join    = if Debug.on "avail-changed" then debug_join    else Avail.join
+
+let fact = {
+  D.fact_name = "available expressions";
+  D.init_info = Avail.unknown;
+  D.add_info = join;
+  D.changed = smaller;
+  D.prop = prop;
+}
+
+let last_outs in' l set =
+  let out = Avail.forward (GR.last_instr l) in' in
+  let set_edge e =
+    let _out = Avail.invalidate e.G.defs  out in
+    let _out = Avail.invalidate e.G.kills out in
+    let out = Avail.unknown (* paranoia *) in
+    set (fst e.G.node) out in
+  G.iter_outedges l ~noflow:(fun u -> set u out) ~flow:set_edge 
+
+let comp = {
+  D.F.name = "avail";
+  D.F.middle_out = (fun a m -> Avail.forward (GR.mid_instr m) a);
+  D.F.last_outs = last_outs;
+}
+
+let analysis = fact, comp
+@
 
 %******************************************************************************
 \chapter{Liveness}
@@ -2820,6 +2892,7 @@ let program ts =
 % l2h substitution forall forall
 % l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
 
+% was in liveness.nw?
 % ------------------------------------------------------------------ 
 \section{Liveness Analysis}
 % ------------------------------------------------------------------ 
@@ -2987,6 +3060,9 @@ let live_in =
  } 
 @ 
 
+
+
+
 %******************************************************************************
 \chapter{Register Allocation}
 %******************************************************************************
@@ -3045,6 +3121,7 @@ module T   = Target
 module U   = Unique
 module UP  = Unique.Prop
 module VM  = Varmap
+let () = Debug.register "ralloc-cfg" "show the CFG before and after register allocation"
 let eprintf x    = Debug.eprintf "flowra" x
 let print_vm x y = if Debug.on "flowra" then VM.print' x y else ()
 let imposs       = Impossible.impossible
@@ -3152,6 +3229,10 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
   let is_tmp (s,_,_) = T.is_tmp tgt s in
   let is_vfp t       = Vfp.is_vfp (Dn.loc (Rtl.reg t)) in
   if debug then (eprintf "ralloc begin\n"; Cfgutil.print_cfg g);
+  (* claude: QCDEBUG=ralloc-cfg is a quieter before/after showcase of just
+   * the CFG (no per-instruction dataflow trace) - see tests/phases/regalloc/. *)
+  if Debug.on "ralloc-cfg" then
+    (Debug.eprintf "ralloc-cfg" "BEFORE register allocation:\n"; Cfgutil.print_cfg g);
   <<set up the map from temps to spill locations>>
   <<compute distances to uses>>
   <<compute allocation prefs>>
@@ -3162,6 +3243,8 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
   let g, b = F.modify_solved' (F.a_t' analysis tx) ~entry_fact g in
   <<update entry label spans>>
   if debug then (eprintf "ralloc begin\n"; Cfgutil.print_cfg g);
+  if Debug.on "ralloc-cfg" then
+    (Debug.eprintf "ralloc-cfg" "AFTER register allocation:\n"; Cfgutil.print_cfg g);
   (g, proc), b
 @
 
@@ -7309,6 +7392,10 @@ module Up = Rtl.Up
 module SS = Strutil.Set
 module T  = Target
 
+(* claude: Nopoly.(=*=) below needs this open; every other .nw-tangled
+ * .ml in this tree gets it prepended automatically by the (now-dropped)
+ * generator, so it has to be added by hand here. *)
+open Nopoly
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let not_null = function [] -> false | _ :: _ -> true
 @
@@ -7531,15 +7618,24 @@ let tx (g, proc) =
 
 let _ = Debug.register "avail-dataflow" "computation of available expressions"
 
+(* claude: upstream's Backplane.of_dataflow (LUA/lua-cmm-driver/backplane.nw:899)
+ * is just this lift from a graph rewrite to a procedure rewrite. This fork
+ * dropped the rest of Backplane (see arch/x86/x86backend.ml's header
+ * comment on why), so inline the one function actually needed here
+ * instead of porting the whole module. *)
+let of_dataflow graph_rewrite _ (g, proc) =
+  let g, changed = graph_rewrite g in
+  (g, proc), changed
+
 let subst_forward v gproc =
   let pass = D.a_t Availpass.analysis (tx gproc) in
   let pass = if Debug.on "avail-dataflow" then D.debug Avail.to_string pass else pass in
-  Backplane.of_dataflow (D.rewrite pass ~entry_fact:Avail.unknown) v gproc
+  of_dataflow (D.rewrite pass ~entry_fact:Avail.unknown) v gproc
 
 let sequential v (g,proc) =
   let pass = D.a_t Availpass.analysis (tx (g,proc)) in
   D.run_anal Availpass.analysis Avail.unknown g;
-  Backplane.of_dataflow (D.rewrite_solved pass ~entry_fact:Avail.unknown) v (g,proc)
+  of_dataflow (D.rewrite_solved pass ~entry_fact:Avail.unknown) v (g,proc)
 @ 
 In one pass, we simultaneously propagate dataflow information and
 mutate RTLs.

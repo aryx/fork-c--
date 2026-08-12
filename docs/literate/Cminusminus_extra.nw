@@ -20917,9 +20917,15 @@ type 'a nvr = { reg : 'a; tmp : 'a }   (* for callee-saves info *)
 %%Before running the optimizer, we trim away any unreachable code,
 %%as well as spans associated with unreachable code.
 <<definition of [[proc]], which translates one procedure>>=
-  (* pad: *)
-  print_string "TODO: pad reput Optimize.trim_unreachable_code\n";
-  (* let i, _ = Optimize.trim_unreachable_code () i in *)
+  (* claude: upstream called Optimize.trim_unreachable_code right here,
+   * unconditionally, before the backend's optimizer. It can't be called
+   * from this file: opti/optimize.ml's Optimize depends on cmm_front_ir
+   * (this library) for the Ast2ir.proc type its signature names, so
+   * cmm_front_ir depending back on cmm_opti would be a cycle. Instead
+   * it's the first thing X86backend.optimizer/Ppcbackend.optimizer do
+   * (arch/x86/x86backend.ml, arch/ppc/ppcbackend.ml), which sit above
+   * both libraries in the dune graph - same position in the pipeline,
+   * just moved to where the dependency direction allows it. *)
   optimizer i (* runs optimizer, freezes, and assembles proc *)
 @ 
 %%We define an automaton to allocate suitably aligned locations. 
@@ -23516,11 +23522,11 @@ let unimpf  fmt = Printf.kprintf Impossible.unimp fmt
  * implementation on x86 - they're bit patterns "implemented in the
  * simplifier using integer ops" (see Context.ml's comment on NaN) and are
  * only ever meant to reach the postexpander already folded into a Const.
- * That folding normally happens via Optimize.simplify_exps, which isn't
- * wired into the pipeline yet (same gap the extract and %round_* fixes
- * elsewhere in this file work around), so try it locally wherever an
- * unrecognized operator would otherwise crash, rather than depend on that
- * pass being plugged in.
+ * That folding normally happens via Optimize.simplify_exps, which is only
+ * wired in at -O3 (arch/x86/x86backend.ml's ~opt_level; -O0 is the
+ * default, same gap the extract and %round_* fixes elsewhere in this file
+ * work around), so try it locally wherever an unrecognized operator would
+ * otherwise crash, rather than depend on that pass being plugged in.
  *)
 let simplify_folds_to_const e =
   match Dn.exp (Simplify.exp (Up.exp e)) with
@@ -23879,7 +23885,8 @@ match Post.opclass op with
        into a directly narrower fetch at an offset address/index
        (elab/simplify.ml's lobits), so try that first; it's the same
        rewrite Optimize.simplify_exps would have applied earlier if
-       that pass were wired into the pipeline (it isn't yet). *)
+       that pass were enabled (it only runs at -O3; -O0 is the
+       default - see arch/x86/x86backend.ml's ~opt_level). *)
     (match Dn.exp (Simplify.exp (Up.exp orig)) with
      | (RP.Fetch ((RP.Mem _ | RP.Reg _), _)) as simplified ->
          to_temp' room context simplified
