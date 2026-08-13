@@ -16,9 +16,17 @@
   (*x: head *)
   let guard p = if p then 0 else Camlburg.inf_cost
   (*x: head *)
+  (* claude: was Bits.U.to_native (unsigned) - mipsel-linux-gnu-as rejects
+   * an unsigned 32-bit literal like "4294967264" as an addi/lw/sw 16-bit
+   * signed-immediate operand ("operand out of range"), even though it is
+   * bit-for-bit the same value as -32. GAS's imm16 range check looks at
+   * the literal as written, it does not infer a negative interpretation
+   * from a large unsigned decimal. Bits.S.to_native (signed) prints "-32"
+   * instead, which addi/lw/sw's 16-bit field accepts directly, and li/la
+   * (which the same const32 feeds too) don't care either way. *)
   let const32 b =
       assert (Bits.width b = 32);
-      Nativeint.to_string (Bits.U.to_native b)
+      Nativeint.to_string (Bits.S.to_native b)
 
   let const64 b =
       assert (Bits.width b = 64);
