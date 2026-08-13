@@ -224,8 +224,23 @@ SRC_VIEWS= \
  $TOP/arch/dummy/dummy.ml\
  $TOP/arch/dummy/dummyexpander.mlb\
  \
- $TOP/arch/arm/arm.mli\
- $TOP/arch/arm/arm.ml\
+ $TOP/arch/x86/x86.mli\
+ $TOP/arch/x86/x86.ml\
+ $TOP/arch/x86/x86asm.mli\
+ $TOP/arch/x86/x86asm.ml\
+ $TOP/arch/x86/x86call.mli\
+ $TOP/arch/x86/x86call.ml\
+ $TOP/arch/x86/x86rec.mli\
+ $TOP/arch/x86/x86rec.mlb\
+ $TOP/arch/x86/x86regs.mli\
+ $TOP/arch/x86/x86regs.ml\
+ \
+ $TOP/arch/ppc/ppc.mli\
+ $TOP/arch/ppc/ppc.ml\
+ $TOP/arch/ppc/ppcasm.mli\
+ $TOP/arch/ppc/ppcasm.ml\
+ $TOP/arch/ppc/ppcrec.mli\
+ $TOP/arch/ppc/ppcrec.mlb\
  \
  $TOP/arch/mips/mips.mli\
  $TOP/arch/mips/mips.ml\
@@ -238,23 +253,8 @@ SRC_VIEWS= \
  $TOP/arch/mips/mipsregs.mli\
  $TOP/arch/mips/mipsregs.ml\
  \
- $TOP/arch/ppc/ppc.mli\
- $TOP/arch/ppc/ppc.ml\
- $TOP/arch/ppc/ppcasm.mli\
- $TOP/arch/ppc/ppcasm.ml\
- $TOP/arch/ppc/ppcrec.mli\
- $TOP/arch/ppc/ppcrec.mlb\
- \
- $TOP/arch/x86/x86.mli\
- $TOP/arch/x86/x86.ml\
- $TOP/arch/x86/x86asm.mli\
- $TOP/arch/x86/x86asm.ml\
- $TOP/arch/x86/x86call.mli\
- $TOP/arch/x86/x86call.ml\
- $TOP/arch/x86/x86rec.mli\
- $TOP/arch/x86/x86rec.mlb\
- $TOP/arch/x86/x86regs.mli\
- $TOP/arch/x86/x86regs.ml\
+ $TOP/arch/arm/arm.mli\
+ $TOP/arch/arm/arm.ml\
  \
  $TOP/driver/driver.mli\
  $TOP/driver/this.mli\
