@@ -1,4 +1,5 @@
-# The qc-- run-time system, built for 32-bit x86 or 32-bit big-endian ppc.
+# The qc-- run-time system, built for 32-bit x86, 32-bit big-endian ppc, or
+# 32-bit big-endian sparc (V8).
 #
 # Produces build-$(BACKEND)/libqcmm.a, which is what a C-- program links
 # against. Both demos/ and tests/ use this rather than each rebuilding the
@@ -35,8 +36,15 @@ else ifeq ($(BACKEND),ppc)
 CC32    ?= powerpc-linux-gnu-gcc
 CONTOBJ  = $(B)/ppccont.o
 QCFLAG   = -ppc-elf
+else ifeq ($(BACKEND),sparc)
+# claude: Ubuntu ships no plain 32-bit sparc-linux-gnu cross toolchain,
+# only sparc64-linux-gnu, which targets 32-bit SPARC V8 via -m32 (same
+# biarch trick x86_64 hosts use for -m32 i386).
+CC32    ?= sparc64-linux-gnu-gcc -m32
+CONTOBJ  = $(B)/sparccont.o
+QCFLAG   = -sparc
 else
-$(error unknown BACKEND=$(BACKEND) - expected x86 or ppc)
+$(error unknown BACKEND=$(BACKEND) - expected x86, ppc or sparc)
 endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
@@ -97,15 +105,17 @@ $(B)/x86cont.o: x86cont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/ppccont.o: ppccont.s | $(B)
 	$(CC32) -c $< -o $@
+$(B)/sparccont.o: sparccont.s | $(B)
+	$(CC32) -c $< -o $@
 
 # The globals declaration is inserted after the "target byteorder" line so
-# the syncweb markers and everything else are preserved. claude: ppc also
-# needs "byteorder little" flipped to "big" - qc refuses the mismatch
+# the syncweb markers and everything else are preserved. claude: ppc/sparc
+# also need "byteorder little" flipped to "big" - qc refuses the mismatch
 # otherwise ("metrics of source code don't match the target") - done here
 # rather than as a separate step so there is still one .c-- per backend
 # under $(B), not two.
 $(B)/%.c--: %.c-- | $(B)
-ifeq ($(BACKEND),ppc)
+ifeq ($(filter $(BACKEND),ppc sparc),$(BACKEND))
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed 's/byteorder[ ][ ]*little/byteorder big/' > $@
 else
@@ -116,4 +126,4 @@ $(B)/%.o: $(B)/%.c--
 	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B) build-x86 build-ppc
+	rm -rf $(B) build-x86 build-ppc build-sparc

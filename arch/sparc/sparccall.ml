@@ -16,6 +16,32 @@ let dspace = Rg.Spaces.d.Space.space
 let r i = (rspace, i, R.C 1)
 let f i = (fspace, i, R.C 1)
 let x i = (fspace, 8+2*i, R.C 2)
+let oreg i = r (8 + i)   (* %o(i) *)
+
+let ( *> ) = A.( *> )
+
+(* claude: SPARC register windows mean the SAME automaton cannot
+ * correctly serve both directions for integer/pointer results: the
+ * callee produces its own return value via %i0/%i1 (see sparccc.ml's
+ * c_results, used below by `epilog` - correct for that direction), but
+ * the CALLER reads a just-made call's result via %o0/%o1 - same
+ * physical register file, different window-relative name depending on
+ * which side of the `save`/`restore` boundary you're on. Float results
+ * have no such split (there is only one %f bank, not windowed), so only
+ * the integer/pointer branch differs. Mirrors sparccc.ml's c_results
+ * shape but swapped to o-registers; kept local here since it only
+ * matters for this one incoming direction (`call_results` below, not
+ * `epilog`). Root-caused empirically: fork-tiger's runtime.c--'s
+ * "getenv" call read its own %i0 (an unrelated incoming argument
+ * register) instead of the freshly-returned %o0, so a NULL-returning
+ * getenv looked non-NULL and the following atoi(garbage) segfaulted. *)
+let call_results_via_o =
+  A.choice
+    [ A.is_kind "float", A.useregs (List.map f (Auxfuns.from 0 ~upto:7)) false
+    ; A.is_any, A.widen (Auxfuns.round_up_to ~multiple_of:32)
+                *> A.widths [32; 64]
+                *> A.useregs [oreg 0; oreg 1] false
+    ]
 
 let vol_regs    = RS.of_list (List.map r ([1;2;3;4;31] @ Auxfuns.from 16 ~upto:23))
 let nv_regs     = RS.of_list (List.map r [])
@@ -85,12 +111,20 @@ let call_actuals auto =
         ~autosp:(fun r  -> std_sp_location)
         ~postsp:(fun a sp -> std_sp_location)
 (*x: sparccall.ml  *)
+(* claude: unlike epilog below (which reuses auto.A.results, and so picks
+ * up "C--"'s extra overflow_up stage via Sparccc.cmm_results), this
+ * always uses the bare 2-register call_results_via_o with no overflow
+ * stage - a call returning more values than fit in %o0/%o1 isn't
+ * handled yet. Not believed to be exercised by anything simple-program-
+ * shaped (a "C" convention runtime call returns at most one pointer/int
+ * here); flagged rather than solved so a real failure is loud instead of
+ * silently wrong. *)
 let call_results auto =
     let autosp = (fun a -> std_sp_location) in
     C.incoming ~growth:growth ~sp:sp
-        ~mkauto:(mk_automaton "in ovfl results" auto.A.results)
+        ~mkauto:(mk_automaton "in ovfl results" call_results_via_o)
         ~autosp:autosp
-        ~postsp:(fun _ _ -> std_sp_location) 
+        ~postsp:(fun _ _ -> std_sp_location)
         ~insp:(fun a _ _ -> std_sp_location)
 (*x: sparccall.ml  *)
 let also_cuts_to auto =
