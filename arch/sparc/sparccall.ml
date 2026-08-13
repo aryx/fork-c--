@@ -17,6 +17,7 @@ let r i = (rspace, i, R.C 1)
 let f i = (fspace, i, R.C 1)
 let x i = (fspace, 8+2*i, R.C 2)
 let oreg i = r (8 + i)   (* %o(i) *)
+let ireg i = r (24 + i)  (* %i(i) *)
 
 let ( *> ) = A.( *> )
 
@@ -68,6 +69,28 @@ let spval    = R.fetch sp 32
 let sp_align = 16
 let growth   = Memalloc.Down
 let bo       = R.BigEndian
+
+(* claude: the exact same i/o direction split as call_results_via_o
+ * above, but for ARGUMENTS rather than results: Sparccc.c_call's
+ * %o0-%o5 are correct for OUTGOING call args (call_actuals below, i.e.
+ * "I am making a call and placing my arguments"), but wrong for
+ * INCOMING ones (prolog below, i.e. "I am a callee reading my own
+ * parameters") - a procedure's own parameters arrive via %i0-%i5 after
+ * its own `save`, not %o0-%o5 (which are its own, unrelated outgoing
+ * scratch registers for calls it goes on to make). Root-caused
+ * empirically, the same way as call_results_via_o: fork-tiger's
+ * stdlibcmm.c--'s "new_string(bits32 size)" compiled to a bare
+ * "mov %o0,%o0" (a no-op self-move of garbage) instead of
+ * "mov %i0,%o0" when forwarding its own "size" parameter into a
+ * tig_alloc call - main/tig_call_gc's own incoming parameters happened
+ * to never be read for anything, so this exact same bug was already
+ * present (visible as the same suspicious "mov %o0,%o0" in their own
+ * disassembly) without ever being exercised until a parameter's value
+ * actually got used. *)
+let call_via_i =
+  A.widen (Auxfuns.round_up_to ~multiple_of:32)
+  *> A.useregs (List.map ireg (Auxfuns.from 0 ~upto:5)) false
+  *> A.overflow ~growth:Memalloc.Up ~max_alignment:sp_align
 (*x: sparccall.ml  *)
 let wordsize  = 32
 let memsize   = 8
@@ -91,12 +114,12 @@ let c_overflow =
     ; C.result_allocator      = C.Caller
     } 
 (*x: sparccall.ml  *)
-let prolog auto = 
+let prolog auto =
   let autosp a = young_end a.A.overflow in
   C.incoming ~growth:growth ~sp:sp
-    ~mkauto:(mk_automaton "in call parms" auto.A.call)
+    ~mkauto:(mk_automaton "in call parms" call_via_i)
     ~autosp:autosp
-    ~postsp:(fun _ _ -> std_sp_location) 
+    ~postsp:(fun _ _ -> std_sp_location)
     ~insp:(fun a _ _ -> autosp a)
 (*x: sparccall.ml  *)
 let epilog auto =
