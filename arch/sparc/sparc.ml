@@ -1,4 +1,5 @@
 (*s: sparc.ml *)
+(*s: sparc.ml  *)
 module PX = Postexpander
 module S  = Space
 module SS = S.Standard32
@@ -16,12 +17,12 @@ let rtl r = PX.Rtl r
 let (<:>) = PX.(<:>)
 let rstore l r w = rtl (R.store l r w) 
 let astore l r w = rtl (A.store l r w) 
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 let byteorder = R.BigEndian
 let wordsize  = 32
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 module Spaces = Sparcregs.Spaces
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 let pc  = Sparcregs.pc
 let cc  = Sparcregs.cc
 let npc = Sparcregs.npc
@@ -55,7 +56,7 @@ let rounding_model   = Rtl.reg rounding_mode_reg
 *)
 let rounding_mode    = R.fetch rounding_model 2
 let rounding_resultsl = Rtl.reg (dspace, 1, R.C 1)
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 let imposs      = Impossible.impossible
 let unimpf  fmt = Printf.kprintf Impossible.unimp fmt
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
@@ -71,7 +72,7 @@ let at32 = function
   | opr, [32] -> opr
   | opr, [n]  -> unimpf "operator %%%s%d(...)" opr n
   | opr, ws   -> impossf "operator %%%s specialized to %d widths" opr (List.length ws)
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 module F = Mflow.MakeStandard
     (struct
       let pc_lhs    = npc
@@ -79,12 +80,12 @@ module F = Mflow.MakeStandard
       let ra_reg    = R.reg ra
       let ra_offset = 4
     end)
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 let return e =
   let one = RO.signed 32 1 in
   R.par [R.store npc e wordsize;
          R.store (R.reg cwp) (R.app (R.opr "add" [32]) [rfetch cwp; one]) wordsize]
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 module Post = struct
   let byte_order = byteorder
   let wordsize   = wordsize
@@ -456,14 +457,14 @@ module Post = struct
   (*e: SPARC postexpander *)
   include Postexpander.Nostack(Address)
 end
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 module X = Expander.IntFloatAddr(Post)
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 let spill  p t l = (* assert (rwidth t = Rtlutil.Width.loc l); *)
   [A.store l (rfetch t) (rwidth t)]
 let reload p t l = 
   let w = rwidth t in [R.store (R.reg t) (A.fetch l w) w]
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 let ( *> ) = A.( *> )
 let globals base = 
   let width w = if      w <= 8  then 8  
@@ -472,7 +473,7 @@ let globals base =
   let align = function _ -> 8 in
   A.at mspace ~start:base (A.widen width *> A.align_to align *>
   A.overflow ~growth:Memalloc.Up ~max_alignment:16)
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 let target =
     let spaces = [ Spaces.m
                  ; Spaces.r
@@ -626,7 +627,7 @@ let target =
     ; T.data_section        = "data"
     ; T.charset             = "latin1" (* REMOVE THIS FROM TARGET.T *)
     }    
-(*x: sparc.ml *)
+(*x: sparc.ml  *)
 let warning s = Printf.eprintf "backend warning: %s\n" s
 let placevars = 
   let is_float w kind _ = kind =$= "float" in
@@ -638,4 +639,5 @@ let placevars =
       ; A.is_any,                 A.widen (Auxfuns.round_up_to ~multiple_of: 8)
       ] in
   Placevar.mk_automaton ~warn ~vfp:target.T.vfp ~memspace:mspace mk_stage
+(*e: sparc.ml  *)
 (*e: sparc.ml *)

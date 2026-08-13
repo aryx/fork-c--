@@ -242,6 +242,9 @@ SRC_VIEWS= \
  $TOP/arch/ppc/ppcrec.mli\
  $TOP/arch/ppc/ppcrec.mlb\
  \
+ $TOP/arch/sparc/sparc.mli\
+ $TOP/arch/sparc/sparc.ml\
+ \
  $TOP/arch/mips/mips.mli\
  $TOP/arch/mips/mips.ml\
  $TOP/arch/mips/mipsasm.mli\
