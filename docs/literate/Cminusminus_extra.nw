@@ -39054,12 +39054,1553 @@ let fpround = Register.Slice(2, 0, fpctl)
 %******************************************************************************
 
 % was in alpha.nw
+% ------------------------------------------------------------------ 
+\section{Back end for the Alpha}
+% ------------------------------------------------------------------ 
+
+The Alpha is a 64 bit little-endian architecture. For informations about
+he architecture, we consulted the \textit{True64 {\small UNIX} Assembly
+Language Programmer's Guide}, Version 5.1, published by Compaq Computer,
+Houston.
+<<alpha.mli>>=
+module Post : Postexpander.S
+module X    : Expander.S
+
+val target: Ast2ir.tgt
+@
+% ------------------------------------------------------------------ 
+\subsection{Name and storage spaces}
+% ------------------------------------------------------------------ 
+
+<<alpha.ml>>=
+<<alpha.ml >>
+@ 
+<<alpha.ml >>=
+let arch        = "alpha"                    (* architecture *)
+let byteorder   = Rtl.LittleEndian 
+let wordsize    = 64
+@
+We use the standard storage spaces, including the spaces for PC and
+condition codes. 
+<<alpha.ml >>=
+module SS   = Space.Standard64
+module A    = Automaton
+module PX   = Postexpander
+module R    = Rtl
+module RU   = Rtlutil
+module RP   = Rtl.Private
+module Up   = Rtl.Up
+module Dn   = Rtl.Dn
+module SM   = Strutil.Map
+module T    = Target
+
+module Spaces = struct
+    let id = Rtl.Identity
+    let m  = SS.m byteorder [8; 16; 32; 64] (* byte, word, longword, quadword *)
+    let r  = SS.r 32 id [64]
+    let f  = SS.f 32 id [64]    
+    let t  = SS.t    id  64
+    let u  = SS.u    id  64
+    let c  = SS.c  6 id [64]    (* pc, npc, cc, _, fp_mode, fp_fcmp *)
+end
+@
+% ------------------------------------------------------------------ 
+\subsection{Registers}
+% ------------------------------------------------------------------ 
+<<alpha.ml >>=
+let locations   = SS.locations Spaces.c
+let pc          = locations.SS.pc
+let cc          = locations.SS.cc
+let npc         = locations.SS.npc
+let fp_mode     = locations.SS.fp_mode
+let fp_fcmp     = locations.SS.fp_fcmp
+let vfp         = Vfp.mk wordsize
+
+let rspace = Spaces.r.Space.space
+let reg n       = (rspace,n,R.C 1)
+let sp          = reg 30        (* stack pointer    *)
+let ra          = reg 26        (* return address   *)
+let zero        = reg 31        (* always zero      *)
+let gp          = reg 29        (* global pointer   *)
+let pv          = reg 27        (* procedure value  *)
+
+let pv_loc      = R.reg pv
+let rm_reg      = (('d', Rtl.Identity, Cell.of_size 2), 0, Rtl.C 1)
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Utilities}
+% ------------------------------------------------------------------  
+
+<<alpha.ml >>=
+let unimp               = Impossible.unimp
+let impossible          = Impossible.impossible
+
+let (_, _, mcell) as mspace = Spaces.m.Space.space
+let fetch_word l        = R.fetch l   wordsize
+let store_word l e      = R.store l e wordsize
+let mem w addr          = R.mem R.none mspace (Cell.to_count mcell w)  addr
+let reg_width           = Register.width
+@
+% ------------------------------------------------------------------ 
+\subsection{Control-flow {\rtl}s}
+% ------------------------------------------------------------------ 
+
+We generate standard control-flow {\rtl}s. The \module{ast2ir.nw} module
+inserts these into the {\cfg} it builds. 
+
+<<alpha.ml >>=
+let ra_offset = 4                   (* instruction size *)
+module F = Mflow.MakeStandard
+    (struct
+        let pc_lhs    = pc
+        let pc_rhs    = pc
+        let ra_reg    = R.reg ra
+        let ra_offset = ra_offset
+     end)   
+@
+
+<<alpha.ml >>=
+let return e = R.store pc e wordsize
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Postexpander}
+% ------------------------------------------------------------------ 
+
+<<alpha.ml >>=
+let (<:>) = PX.(<:>)
+let rtl r = PX.Rtl r
+module Post = struct
+    <<Alpha postexpander>>
+end
+@ 
+
+<<Alpha postexpander>>=
+let byte_order  = byteorder
+let wordsize    = wordsize
+let exchange_alignment = 8
+
+type temp       = Register.t
+type rtl        = Rtl.rtl
+type width      = Rtl.width
+type assertion  = Rtl.assertion
+type operator   = Rtl.Private.opr
+@
+The postexpander may need to allocate temporaries.
+<<Alpha postexpander>>=
+let talloc = Postexpander.Alloc.temp
+@
+\paragraph{Contexts}
+There is no distinction between an integer and an address.
+<<Alpha postexpander>>=
+let icontext = Context.of_space Spaces.t
+let fcontext = Context.of_space Spaces.u
+let acontext = icontext
+let rcontext = (fun x y -> unimp "Unsupported soft rounding mode"), Register.eq rm_reg
+
+let operators = Context.nonbool icontext fcontext rcontext []
+let arg_contexts, result_context = Context.functions operators
+let constant_context w = icontext
+let itempwidth = 64
+@
+\paragraph{Addressing modes}
+<<Alpha postexpander>>=
+module Address = struct
+    type t    = Rtl.exp
+    let reg r = R.fetch (R.reg r) (Register.width r)
+end
+include Postexpander.Nostack(Address)
+@
+
+% ------------------------------------------------------------------ 
+\subsubsection{Load and Store}
+% ------------------------------------------------------------------ 
+
+For now we assume every temporary is 64 bits wide. However, the alpha
+can handle 32 bit floating point values in its 64 bit floating point
+registers. I belive that one would always spill the 64 bit register.
+
+<<Alpha postexpander>>=
+let twidth = reg_width
+let tloc t = Rtl.reg t
+let tval t = R.fetch (tloc t) (twidth t)
+
+let load ~dst ~addr assn =
+    let w = twidth dst in
+        assert (w = wordsize); 
+        rtl (R.store (tloc dst) (R.fetch (mem w addr) w) w)
+    
+let store ~addr ~src assn =
+    let w = twidth src in
+        assert (w = wordsize); 
+        rtl (R.store (mem w addr) (tval src) w)
+@ 
+
+<<Alpha postexpander>>=
+let block_copy ~dst dassn ~src sassn w =
+  match w with
+  | 64 -> let t = talloc 't' w in load t src sassn <:> store dst t dassn
+  | _  -> Impossible.unimp "general block copies on Alpha"
+@
+
+The Alpha provides sign- and zero-extending load operations for
+loading values smaller than [[wordsize]]. Values are always extended to
+64 bits.
+
+<<Alpha postexpander>>=
+let extend  op n e = R.app (R.opr op       [n; wordsize]) [e]
+let lobits     n e = R.app (R.opr "lobits" [wordsize; n]) [e]
+
+let xload op ~dst ~addr n assn =
+  let w = twidth dst in
+  assert (w = wordsize);
+  assert (Cell.divides mcell n);
+  rtl (R.store (tloc dst)
+         (extend op n (R.fetch (R.mem assn mspace (Cell.to_count mcell n) addr) n)) w)
+
+let sxload = xload "sx"
+let zxload = xload "zx"
+
+let lostore ~addr ~src n assn =
+  assert (reg_width src = wordsize);
+  assert (Cell.divides mcell n);
+  rtl
+    (R.store (R.mem assn mspace (Cell.to_count mcell n) addr) (lobits n (tval src)) n)
+@
+The general move operation only works between temporaries of the same
+width. Load immediate loads a constant into a temporary.
+<<Alpha postexpander>>=
+let move ~dst ~src =
+    assert (reg_width src = reg_width dst);
+    if Register.eq src dst then PX.Nop
+    else rtl (R.store (tloc dst) (tval src) (twidth src))
+@ 
+<<Alpha postexpander>>=
+let extract ~dst ~lsb ~src = Impossible.unimp "extract"
+let aggregate ~dst ~src = Impossible.unimp "aggregate"
+@ 
+<<Alpha postexpander>>=
+let hwset ~dst ~src = Impossible.unimp "setting hardware register"
+let hwget ~dst ~src = Impossible.unimp "getting hardware register"
+@
+Immediate load, and extended immediate load. An extended load-immediate
+can take sums and differences of compile-time constants (including late
+compile-time constants). 
+<<Alpha postexpander>>=
+let li  ~dst const = rtl (R.store (tloc dst) (Up.const const) (twidth dst))
+let lix ~dst e     = rtl (R.store (tloc dst) e                (twidth dst))  
+@
+
+% ------------------------------------------------------------------ 
+\subsubsection{Binary and unary operators}
+% ------------------------------------------------------------------ 
+
+None of the operators below expect or return boolean values. This
+implies, that comparison operators are not expanded here before they are
+used as guards for branches.
+<<Alpha postexpander>>=
+let unop ~dst op x =
+    rtl (R.store (tloc dst) (R.app (Up.opr op) [tval x]) (twidth dst))
+
+let binop ~dst op x y =
+    rtl (R.store (tloc dst) (R.app (Up.opr op) [tval x;tval y]) (twidth dst))
+
+let unrm  ~dst op x rm   = Impossible.unimp "floating point with rounding mode"
+let binrm ~dst op x y rm = Impossible.unimp "floating point with rounding mode"
+let dblop ~dsthi ~dstlo op x y = Unsupported.mulx_and_mulux()
+let wrdop  ~dst op x y z = Unsupported.singlebit ~op:(fst op)
+let wrdrop ~dst op x y z = Unsupported.singlebit ~op:(fst op)
+@
+
+% ------------------------------------------------------------------ 
+\subsubsection{Control Flow}
+% ------------------------------------------------------------------ 
+
+On the Alpha, we can read and write the program counter.
+<<Alpha postexpander>>=
+let pc_lhs = pc         (* PC as assigned by branch *)
+let pc_rhs = pc         (* PC as captured by call   *)
+@
+
+\paragraph{Unconditional Branches}
+<<Alpha postexpander>>=
+let br ~tgt = PX.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
+let b  ~tgt = PX.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
+@
+
+\paragraph{Conditional Branches}
+
+On the Alpha, a conditional branch is not a primitive instruction.
+Instead, a sequence of instructions implements a comparision, whose
+result is written to a register. The branch instruction reads the
+register, interprets it as a boolean, and branches accordingly.
+
+For the results of the comparison instructions we would like to allocate
+new temporaries. However, the Postexpander interface does not allow for
+it. 
+THIS COMMENT IS OBSOLETE---WE CAN ALLOCATE TEMPORARIES NOW.
+We therefore store the result of $x \oplus y$ and $\lnot x$
+in $x$.
+
+Not all comparion operators are provided as primitives on the Alpha. We
+thus have to implement them as an instruction sequence. The rusult is in
+all cases stored in [[x]].
+
+[[com]] complements a temporay bitwise. As above, we could like to
+assign the result to a new temporary, but cannot allocate one. We thus
+mutate the argument.
+<<Alpha postexpander>>=
+let bit = R.opr "bit" [wordsize] 
+let com x =
+  let o = R.opr "com" [wordsize] in
+  rtl (R.store (tloc x) (R.app o [tval x]) wordsize)
+@
+[[relation]] implements a binary relation, where the result is
+stored in [[x]] \emph{as a value}. 
+<<Alpha postexpander>>=
+let relation op x y = 
+  let o = R.opr op [wordsize] in
+  rtl (R.store (tloc x) (R.app bit [R.app o [tval x;tval y]]) wordsize )
+@
+[[cmp]] implements the {\rtl} comparision operators where the result is
+stored in the first argument. 
+THE NEED FOR A COMPLEMENT HERE IS SUSPECT.  MOST MACHINES MAKE IT
+POSSIBLE TO DO A COMPARISON IN THE SAME NUMBER OF INSTRUCTIONS
+REGARDLESS OF THE OPERATOR IN USE.
+<<Alpha postexpander>>=
+let cmp op x y = match op with
+    | "eq"          -> relation "eq"  x y
+    | "ne"          -> relation "eq"  x y <:> com x
+    | "lt"          -> relation "lt"  x y
+    | "gt"          -> relation "lt"  y x
+    | "ge"          -> relation "lt"  x y <:> com x
+    | "ltu"         -> relation "ltu" x y 
+    | "leu"         -> relation "leu" x y
+    | "gtu"         -> relation "ltu" y x
+    | "geu"         -> relation "leu" y x
+    | "feq"         
+    | "fne"         
+    | "flt"         
+    | "fle"         
+    | "fgt"         
+    | "fge"         
+    | "fordered"    
+    | "funordered"  -> unimp "floating-point comparison"
+    | _             -> impossible 
+                      "bad comparison in expanded Alpha conditional branch"
+@
+A conditional branch is a sequence of relational operators, followed by
+a [[cbranch]] on the result. 
+COULD THE SENSE OF COMPARISON BE REVERSED HERE?
+OR PERHAPS THE COMPARISON SHOULD BE RETURNED FROM [[cmp]]?
+<<Alpha postexpander>>=
+let bc x (opr, ws as op) y ~ifso ~ifnot =
+  assert (ws =*= [wordsize]);
+  let bcond = R.app (R.opr "eq" [wordsize]) [tval x; R.bits (Bits.zero 64) 64] in
+  PX.Test (cmp opr x y, (bcond, ifso, ifnot))
+@
+[[bnegate]] inverts the condition in a conditional branch. Since we only
+compare for equality or inequality, this is easy. All the real work is
+done in the relational operators preceding the branch.
+<<Alpha postexpander>>=
+let bnegate r = 
+    let zero   = R.bits (Bits.zero 64) 64 in    
+    let negate = function
+        | "ne" -> "eq"
+        | "eq" -> "ne"
+        | _    -> impossible "ill-formed Alpha conditional branch" in
+    match Dn.rtl r with
+    | RP.Rtl [ RP.App( (("eq"|"ne" as op),[64])
+                     , [RP.Fetch(RP.Reg(x),64);RP.Const(RP.Bits(b))]
+                     ) 
+             , RP.Store (pc, tgt, 64)
+             ] when RU.Eq.loc pc (Dn.loc pc_lhs) && Bits.is_zero b ->
+                 R.guard (R.app (R.opr (negate op) [64]) [tval x; zero]) 
+                (R.store pc_lhs (Up.exp tgt) wordsize)
+    | _ -> Impossible.impossible "ill-formed Alpha conditional branch"
+@
+\paragraph{Calls}\label{alpha:call} 
+
+Calls and returns must follow a protocol to allow a procedure to
+maintain its global pointer: on entry, register \$27 contains the
+procedure's address, on exit \$26 contains the return address. Both
+registers are used to load the global pointer on entry and after a
+return:
+<<example for calling convention>>=
+    ...
+    lda $27, foo
+    jsr $26,($27)       /* ra in $26, foo in $27 */
+    ldgp $gp,0($26)     /* establish gp; $pc = $26 */
+
+
+foo:
+    ldgp $gp,0($27)     /* $27 = foo */
+    ...
+    ret ($26)
+@    
+The call and return instructions in general do not use the conventional
+registers. Here we expand them such that they do. We also add the
+[[ldgp]] instruction after a [[jsr]]. 
+THIS IS PLAYING FAST AND LOOSE WITH THE COMPILER'S INTERNAL
+INVARIANTS.
+YOU'RE LYING TO THE COMPILER ABOUT THE CONTROL FLOW...
+The [[ldgp]] instruction at the
+beginning of a procedure is added by the assembler module
+\module{alphaasm}. The calling convention ensures that the return
+address is in register \$26 and thus the protocal is followed.
+
+The semantics of [[ldgp]] are captured by the target-specfic operator
+[[alpha_gp]]; it takes as an argument the current PC and returns the
+global pointer. [[ldgp_ra]] assumes that the current PC is in register
+\$26. This is the case after a return, when the convention explained
+above was followed.
+
+<<Alpha postexpander>>=
+let alpha_gp = R.opr "alpha_gp" []   (* takes one argument *)
+let ldgp_ra  = R.store (R.reg gp) 
+                       (R.app alpha_gp [fetch_word (R.reg ra)]) wordsize      
+
+let effects = List.map Up.effect
+let do_call ~tgt ~others =
+  rtl (R.store pv_loc tgt wordsize) <:>
+  rtl (R.par (store_word pc_lhs (fetch_word pv_loc) :: effects others)),
+  ldgp_ra  (* FLAGRANT LIE HERE---SHOULD BE PART OF CALLING CONVENTION *)
+    
+let call  ~tgt ~others = do_call (Up.const tgt) others
+let callr ~tgt ~others = do_call (tval tgt) others
+@
+\paragraph{Cut-To}
+<<Alpha postexpander>>=
+let cut_to effs = PX.Nop, R.par (effects effs)
+@
+
+\paragraph{Sacred instructions}
+
+<<Alpha postexpander>>=
+let don't_touch_me es = false
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Expander}
+% ------------------------------------------------------------------ 
+
+<<alpha.ml >>=
+module X = Expander.IntFloatAddr(Post)
+@
+
+
+% ------------------------------------------------------------------ 
+\subsection{Spill and reload}
+% ------------------------------------------------------------------ 
+
+The register allocator needs to spill and reload values; we have to
+provide the instructions.
+
+<<alpha.ml >>=
+let spill  p t l = [A.store l (Post.tval t) (Post.twidth t)]
+let reload p t l = 
+    let w = Post.twidth t in [R.store (Post.tloc t) (Automaton.fetch l w) w]
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Global Variables}
+% ------------------------------------------------------------------ 
+
+When a Global {\PAL} variable names no hardware register to live in, the
+variable is passed through to following automaton to obtain its
+location.
+
+THIS AUTOMATON SEEMS QUITE UNIVERSAL FOR 64 BIT ARCHITECTURES. MOVE IT
+TO Automaton.Standard64?
+
+I am not sure what the best alignments are. Maybe every slot should be
+8-byte aligned.
+
+<<alpha.ml >>=
+let ( *> ) = A.( *> )
+let globals base = 
+  let width w = if      w <= 8  then 8  
+                else if w <= 16 then 16 
+                else if w <= 32 then 32
+                else Auxfuns.round_up_to wordsize w in
+  let align = function _ -> 8 in
+  A.at ~start:base mspace (A.widen width *> A.align_to align *>
+  A.overflow ~growth:Memalloc.Up ~max_alignment:8)
+@
+
+% ------------------------------------------------------------------ 
+\subsection{The target record}
+% ------------------------------------------------------------------ 
+
+<<alpha.ml >>=
+let target =
+    let spaces = [ Spaces.m
+                 ; Spaces.r
+                 ; Spaces.f
+                 ; Spaces.t
+                 ; Spaces.u
+                 ; Spaces.c
+                 ] in
+    { T.name                = "alpha"
+    ; T.memspace            = mspace
+    ; T.max_unaligned_load  = R.C 1
+    ; T.byteorder           = byteorder
+    ; T.wordsize            = wordsize
+    ; T.pointersize         = wordsize
+    ; T.alignment           = 8             (* not sure *)
+    ; T.memsize             = 8
+    ; T.spaces              = spaces
+    ; T.reg_ix_map          = T.mk_reg_ix_map spaces
+    ; T.distinct_addr_sp    = false
+    ; T.float               = Float.ieee754
+    ; T.spill               = spill
+    ; T.reload              = reload
+
+    ; T.vfp                 = vfp
+    ; T.bnegate             = F.bnegate cc
+    ; T.goto                = F.goto
+    ; T.jump                = F.jump
+    ; T.call                = F.call
+    ; T.return              = F.return
+    ; T.branch              = F.branch
+    
+    ; T.cc_specs            = A.init_cc
+    ; T.cc_spec_to_auto     = Alphacall.cconv ~return_to:return
+                                   (F.cutto (Rtl.reg sp))
+
+    ; T.is_instruction      = Alpharec.is_instruction
+    ; T.tx_ast = (fun secs -> secs)
+    ; T.capabilities        = T.incapable
+    ; T.globals             = globals
+    ; T.rounding_mode       = Rtl.reg rm_reg
+    ; T.named_locs          = Strutil.Map.empty
+    ; T.data_section        = "data"
+    ; T.charset             = "latin1" (* REMOVE THIS FROM TARGET.T *)
+    }    
+
+@ 
 
 % was in alphaasm.nw
+% ------------------------------------------------------------------ 
+\section{Alpha Assembler}
+% ------------------------------------------------------------------ 
+
+This assembler emits assembly language for the Alpha platform. It
+implements the [[Asm.assembler]] interface.
+
+<<alphaasm.mli>>=
+type node = Rtl.rtl Cfgx.M.node
+val make : 
+  ('cfg -> (node -> unit) -> (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
+  out_channel -> ('a, 'cfg, 'b, 'c) Proc.t Asm.assembler
+  (* pass Cfgutil.emit or Cfgutil.emit *)
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Name Mangling}
+% ------------------------------------------------------------------ 
+
+<<[[Alphaasm]] name mangler specification>>=
+let spec =
+    let reserved = [] in        (* list reserved words here so we can
+                                   avoid them *)
+    let id = function
+        | 'a'..'z'
+        | '0'..'9'
+        | 'A'..'Z'
+        | '_'      -> true
+        | _        -> false in
+    let replace = function
+        | x when id x -> x
+        | _           -> '_' 
+        in    
+            { Mangle.preprocess = (fun x -> x)  
+            ; Mangle.replace    = replace
+            ; Mangle.reserved   = reserved
+            ; Mangle.avoid      = (fun x -> x ^ "_")
+            }
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Implementation}
+% ------------------------------------------------------------------ 
+
+No suprises here. See the sepecification of the interface in
+\module{asm} for the semantics of the public methods.
+
+<<alphaasm.ml>>=
+module SM = Strutil.Map
+
+type node = Rtl.rtl Cfgx.M.node
+
+let fprintf = Printf.fprintf
+let sprintf = Printf.sprintf
+let unimp   = Impossible.unimp
+let int64   = Bits.U.to_int64 
+
+<<[[Alphaasm]] name mangler specification>>
+
+class ['a, 'b, 'c, 'd] asm emitter fd : [('a, 'b, 'c, 'd) Proc.t] Asm.assembler = 
+object (this)
+    val         _fd       = fd
+    val         _mangle  = (Mangle.mk spec)   
+    val mutable _syms    = SM.empty 
+    val mutable _section = "bogus section"
+    
+    method globals _ = ()
+    method private new_symbol name =
+        let s = Symbol.with_mangler _mangle name in
+            _syms <- SM.add name s _syms;
+            s
+
+    method private print l = List.iter (output_string _fd) l
+
+    <<[[Alphaasm]] assembly methods>>
+end
+let make emitter fd = new asm emitter fd
+@ 
+
+% ------------------------------------------------------------------ 
+\subsection{Public Methods}
+% ------------------------------------------------------------------ 
+
+<<[[Alphaasm]] assembly methods>>=
+method import s = this#new_symbol s
+method local  s = this#new_symbol s
+
+method export s =
+    let sym = this#new_symbol s in
+    Printf.fprintf _fd ".globl %s\n" sym#mangled_text;
+    sym
+
+method label (s: Symbol.t) = 
+    fprintf _fd "%s:\n" s#mangled_text
+
+method section name =
+    _section <- name;
+    fprintf _fd ".%s\n" name
+
+method current  = _section
+method org n    = unimp "no .org in Alpha assembler"
+
+method align  n       = if n <> 1 then fprintf _fd ".align %d\n" n
+method addloc n       = if n <> 0 then fprintf _fd ".space %d\n"  n
+method zeroes (n:int) = fprintf _fd ".space %d, 0\n" n
+
+method value (v:Bits.bits) = match Bits.width v with
+    |  8 -> fprintf _fd ".byte %Ld\n"   (int64 v)
+    | 16 -> fprintf _fd ".word %Ld\n"   (int64 v)
+    | 32 -> fprintf _fd ".long %Ld\n"   (int64 v)
+    | 64 -> fprintf _fd ".quad %Ld\n"   (int64 v)
+    | w ->  unimp (sprintf "unsupprted width %d in Alpha assembler" w)
+
+method addr a =
+  match Reloc.if_bare a with
+  | Some b -> this#value b
+  | None -> let const bits = Printf.sprintf "0x%Lx" (Bits.U.to_int64 bits) in
+            assert (Reloc.width a = 64);
+            fprintf _fd ".quad %s\n" (Asm.reloc_string const a)
+
+method emit = ()
+@
+For alternate returns, we need to know the size of a long jump.
+<<[[Alphaasm]] assembly methods>>=
+method longjmp_size () =
+  Impossible.unimp "longjmp size not set for Alpha -- needed for alternate returns"
+@
+<<[[Alphaasm]] assembly methods>>=
+method comment s = fprintf _fd "/* %s */\n" s
+
+method const (s: Symbol.t) (b:Bits.bits) = 
+    fprintf _fd "%s = %Lx" s#mangled_text (int64 b)
+
+method private instruction rtl =
+    output_string _fd (Alpharec.to_string rtl);
+    output_string _fd "\n"
+
+method private call node =
+  match Cfgx.M.to_executable node with
+  | None   -> ()
+  | Some i -> this#instruction i
+
+method cfg_instr proc  = 
+    let cfg    = proc.Proc.cfg
+    and symbol = proc.Proc.symbol in
+    let label l = this#label (try SM.find l _syms 
+                              with Not_found -> this#local l) in
+    
+    Printf.fprintf _fd ".set noreorder  /* HACK! alphaasm.nw did this */\n";  
+    Printf.fprintf _fd ".arch ev6       /* HACK! alphaasm.nw did this */\n";  
+    this#label symbol;
+    Printf.fprintf _fd "\tldgp $gp,0($27) /* HACK! alphasm.nw did this */\n";
+    (emitter cfg (this#call) (this#instruction) label : unit)
+@
 
 % was in alphacall.nw
+% ------------------------------------------------------------------ 
+\section{Alpha calling conventions}
+% ------------------------------------------------------------------ 
+
+This module implements calling conventions for the Alpha. The
+parameters represent the machine instructions to implement [[return]]
+and [[cut to]].
+
+<<alphacall.mli>>=
+val cconv :
+  return_to:(Rtl.exp -> Rtl.rtl) -> 
+  Mflow.cut_args Target.map -> 
+  string -> Automaton.cc_spec ->
+  Call.t
+@
+
+The implementation is based on \textit{True64 {\small UNIX} Assembly
+Language Programmer's Guide}, Version 5.1, published by Compaq Computer,
+Houston.
+
+It is not clear how to handle the requirements that on entry,
+register~27 is live and holds the address of the called procedure, or
+that on exit, register~26 is live and must hold the return address.
+It's probably easier to manage register~26.
+
+
+% ------------------------------------------------------------------ 
+\subsection{Implementation of Alpha calling conventions}
+% ------------------------------------------------------------------ 
+
+<<alphacall.ml>>=
+<<alphacall.ml >>
+@
+
+<<alphacall.ml >>=
+module A  = Automaton
+module C  = Call
+module R  = Rtl
+module RP = Rtl.Private
+module RS = Register.Set
+module RU = Rtlutil
+module T  = Target
+
+let impossf fmt = Printf.kprintf Impossible.impossible fmt
+let wordsize   = 64
+@
+\paragraph{Registers}
+
+A non-volatile register can be used in a procedure if its initial value
+is restored upon exit. Such a register is also called callee-saved. A
+volatile register can be used without saving and restoring. Registers
+that are neither volatile nor non-volatile are unavailable for register
+allocation.
+
+The return address [[ra]] is volatile.  It can be used for register
+allocation, but the call instruction always writes it (and it is live on
+entry).
+
+<<alphacall.ml >>=
+let byteorder = R.LittleEndian         
+let mspace = ('m', byteorder, Cell.of_size 8)
+let rspace = ('r', byteorder, Cell.of_size 64)
+let fspace = ('f', byteorder, Cell.of_size 64)
+
+let r n     = (rspace, n, R.C 1)
+let f n     = (fspace, n, R.C 1)
+let vfp     = Vfp.mk wordsize
+@
+Calling conventions treat floating point registers specially; therefore
+we have separate lists for them.
+
+Can we use register \$26, \$27 and \$28, \$29? \$27 is used implictly
+for sub-routine calls. If we make the use explicit in our call {\rtl},
+we could use it.
+
+<<alphacall.ml >>=
+let vol_int  = List.map r ((Auxfuns.from 0 ~upto:8)@(Auxfuns.from 16 ~upto:26))
+let nvl_int  = List.map r (Auxfuns.from 9  ~upto:15)
+let vol_fp   = List.map f ([0;1] @ (Auxfuns.from 10  ~upto:30))
+let nvl_fp   = List.map f (Auxfuns.from 2 ~upto:9)
+@
+Non-volatile registers are saved somewhere in the frame. Currently, we
+cannnot provide dedicated locations as they are demanded in \S 6.3.3.5.
+<<alphacall.ml >>=
+let saved_nvr temps =
+    let t = Talloc.Multiple.loc temps 't' in
+    let u = Talloc.Multiple.loc temps 'u' in
+        function
+        | (('r', _, _),_,_) as reg -> t (Register.width reg)
+        | (('f', _, _),_,_) as reg -> u (Register.width reg)
+        | ((s,_,_),i,_) -> impossf "cannot save $%c%d" s i
+@
+\paragraph{Conventions}
+
+The size of the Alpha frame must be a multiple of 16. This cannot be
+specified here.
+<<alphacall.ml >>=
+let ra        = R.reg (r 26)            (* return address *)
+let sp        = R.reg (r 30)            (* stack pointer  *)
+let spval     = R.fetch sp wordsize
+let growth    = Memalloc.Down           (* stack grows down *)
+let sp_align  = 16                      (* SP always 16-byte aligned *)
+
+let std_sp_location = 
+    RU.add wordsize vfp (R.late "minus frame size" wordsize)
+
+let ( *> ) = A.( *> )
+
+let badwidth (msg:string) (w:int) = 
+    impossf "unsupported (rounded) width %d in Alpha: %s" w msg
+
+let fatal _ = 
+    impossf "fatal error in Alpha automaton"
+@
+
+And in Lua:
+
+<<Alpha calling convention automata in Lua>>=
+A               = Automaton
+Alpha           = Alpha           or {}
+Alpha.cc        = Alpha.cc        or {}
+Alpha.cc["C"]   = Alpha.cc["C"]   or {}
+Alpha.cc["cmm"] = Alpha.cc["cmm"] or {}
+
+Alpha.sp_align  = 16
+Alpha.wordsize  = 64
+
+function reg(sp,i) 
+  return {space = sp, index = i, cellsize = Alpha.wordsize, count = 1}
+end
+function f(i) return(reg("f", i)) end
+function r(i) return(reg("r", i)) end
+
+Alpha.vol_fp  = (f(0) .. f(1)) .. (f(10) .. f(30))  -- includes f0-f1, f10-f30
+Alpha.vol_int = (r(0) .. r(8)) .. (r(16) .. r(26))  -- includes r0-f8, r16-f26
+@ 
+
+\paragraph{C~return results}
+
+A C~function returns an integer (up to 64 bits wide) in [[$0]], a
+floating-point result (up to two 64-bit values) in [[$f0]] and [[$f1]].
+
+old comment --
+THIS IS PROBABLY A BUG!  [[useregs]] CREATES MUTABLE STATE, SO IF A
+COMPILATION UNIT HAS MULTIPLE CALL SITES THAT RETURN THE SAME HINT, WE
+SHOULD SEE A FAILURE HERE.
+<<Alpha calling convention automata in Lua>>=
+Alpha.cc["C"].results =
+  { A.widen(64, "multiple")
+  , A.choice { "float" , A.useregs { f(0), f(1) }
+             , A.is_any, A.useregs { r(0) }
+             }
+  }
+@ 
+As an alternative we provide calling convention [[cmm]] that returns
+every result in memory. This is for experiments with custom calling
+conventions.
+<<Alpha calling convention automata in Lua>>=
+Alpha.cc["cmm"].results =
+  { A.widths { 64 }
+  , A.overflow { growth = "up", max_alignment = Alpha.sp_align
+               }
+  }
+@
+
+\paragraph{C~procedure parameters}
+
+Table 6-3 summarizes the calling convention: the location of an argument
+is determined by its position and type:
+
+\begin{quote}
+\begin{tabular}{lll}
+Position & Integer  & Floating-Point \\
+\hline
+1        & [[$16]]  & [[f16]] \\
+2        & [[$17]]  & [[f17]] \\
+3        & [[$18]]  & [[f18]] \\
+4        & [[$19]]  & [[f19]] \\
+5        & [[$20]]  & [[f20]] \\
+6        & [[$21]]  & [[f21]] \\
+7        & stack    & stack   \\
+\dots    & \dots    & \dots   \\
+\end{tabular}
+\end{quote}
+
+The implementation below uses the \emph{position} of a parameter to
+determine the register it is passed in. The [[counter]] stage counts
+the number of bits requested for allocation; the [[regs_by_bits]] stages
+looks at its list of registers, ignores as many registers as are
+needed to account for bits already allocated and then uses any
+remaining register to satisfy the request.
+
+Note that the direction of [[growth]] in the overflow block is
+independent of the stack growth. 
+        
+<<Alpha calling convention automata in Lua>>=
+Alpha.cc["C"].call =
+  { A.widen(64, "multiple")
+  , A.bitcounter("bits")
+  , A.choice { "float",  A.regs_by_bits("bits", f(16) .. f(21))
+             , A.is_any, A.regs_by_bits("bits", r(16) .. r(21))
+             }
+  , A.overflow { growth = "up", max_alignment = Alpha.sp_align }
+  }
+
+Alpha.cc["cmm"].call  = Alpha.cc["C"].call
+@
+
+\paragraph{C~cut-to parameters}
+
+Since this is strictly an internal calling convention, we can use
+whatever we like. We use all volatile registers.
+<<Alpha calling convention automata in Lua>>=
+Alpha.cc["C"].cutto =
+ { A.widen(64, "multiple")
+ , A.choice { "float",  A.useregs(Alpha.vol_fp)
+            , A.is_any, A.useregs(Alpha.vol_int)
+            }
+ , A.overflow { growth = "down", max_alignment = Alpha.sp_align }
+ }
+
+Alpha.cc["cmm"].cutto = Alpha.cc["C"].cutto
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Putting it together} 
+% ------------------------------------------------------------------ 
+
+The Alpha demands (\S 6.3.3.2) that a procedure loads the global pointer
+value ($\$27$) into $\$gp$, if the procedure uses large constants. We
+have to assume that this is always the case. How do we implement this
+requirement? Update: currently there is no appropriate mechanism. For
+the Alpha, work is distributed over the code expander, the assembler,
+and the recognizer.
+
+I don't understand the meaning of [[autosp]] and [[postsp]]. On the
+Alpha, the stack pointer does not move during calls. It is once set in
+the prolog of a procedure and set back before the procedure returns. I
+hope the code below reflects this.
+
+<<[[Alphacall]] transformations>>=
+let autoAt = A.at mspace in
+let prolog =
+  let autosp = (fun _ -> vfp) in
+  C.incoming ~growth ~sp
+    ~mkauto:(fun () -> Block.srelative vfp "in call parms" autoAt spec.A.call)
+    ~autosp
+    ~postsp:(fun _ _ -> std_sp_location)
+      ~insp:(fun a _ _ -> autosp a) in
+
+let epilog =
+  C.outgoing ~growth ~sp
+    ~mkauto:(fun () -> Block.srelative vfp "out ovfl results" autoAt spec.A.results)
+    ~autosp:(fun r -> std_sp_location)
+    ~postsp:(fun _ _ -> vfp) in
+
+let call_actuals =
+  C.outgoing ~growth ~sp
+    ~mkauto:(fun () -> Block.srelative vfp "out call parms" autoAt spec.A.call)
+    ~autosp:(fun r  -> std_sp_location)
+    ~postsp:(fun _ sp -> sp) in  
+
+let call_results =
+  let autosp = (fun r -> std_sp_location) in
+  C.incoming ~growth ~sp
+    ~mkauto:(fun () -> Block.srelative vfp "in ovfl results" autoAt spec.A.results)
+    ~autosp
+    ~postsp:(fun _ _ -> std_sp_location)
+    ~insp:(fun a _ _ -> autosp a) in
+
+
+let also_cuts_to =
+  let autosp = (fun r -> std_sp_location) in
+  C.incoming ~growth ~sp
+    ~mkauto:(fun () -> Block.srelative vfp "in cont parms" autoAt spec.A.cutto)
+    ~autosp
+    ~postsp:(fun _ _ -> std_sp_location)
+      ~insp:(fun a _ _ -> autosp a) in
+
+let cut_actuals base  =
+   C.outgoing ~growth ~sp ~mkauto:(fun () -> autoAt base spec.A.cutto)
+     ~autosp:(fun r -> spval)
+     ~postsp:(fun _ _ -> spval) in
+@ 
+
+<<alphacall.ml >>=
+let rtn return_to k n ~ra =
+    if k = 0 & n = 0 then return_to ra
+    else impossf "alternate return using C calling convention" 
+
+let c ~return_to cut spec = 
+    <<[[Alphacall]] transformations>>
+    { C.name            = "C"
+    ; C.overflow_alloc  = { C.parameter_deallocator = C.Caller
+                          ; C.result_allocator      = C.Caller
+                          }
+    ; C.call_parms      = { C.in' = prolog       ; C.out = call_actuals }
+    ; C.cut_parms       = { C.in' = also_cuts_to ; C.out = cut_actuals  }
+    ; C.results         = { C.in' = call_results ; C.out = epilog       }
+
+    ; C.stack_growth     = growth
+    ; C.stable_sp_loc    = std_sp_location
+    ; C.replace_vfp      = Cfgx.Vfp.replace_with ~sp
+    ; C.sp_align         = sp_align
+    ; C.pre_nvregs       = RS.union (RS.of_list nvl_int) (RS.of_list nvl_fp)
+    ; C.volregs          = RS.union (RS.of_list vol_int) (RS.of_list vol_fp)
+    ; C.saved_nvr        = saved_nvr
+    ; C.cutto            = cut
+    ; C.return           = rtn return_to
+    ; C.ra_on_entry      = (fun _     -> R.fetch ra wordsize)
+    ; C.where_to_save_ra = (fun _ t   -> Talloc.Multiple.loc t 't' wordsize)
+    ; C.ra_on_exit       = (fun _ _ t -> ra)
+    ; C.sp_on_unwind     = (fun e -> RU.store sp e)
+    ; C.sp_on_jump       = (fun _ _ -> Rtl.null)
+    }
+
+@
+
+And in Lua we need only register the defined conventions.
+<<Alpha calling convention automata in Lua>>=
+-- register the new calling conventions!
+A.register_cc(Backend.alpha.target, "C"   , Alpha.cc["C"  ])
+A.register_cc(Backend.alpha.target, "cmm0", Alpha.cc["C"  ])
+A.register_cc(Backend.alpha.target, "cmm1", Alpha.cc["C"  ])
+A.register_cc(Backend.alpha.target, "cmm2", Alpha.cc["C"  ])
+A.register_cc(Backend.alpha.target, "cmm3", Alpha.cc["cmm"])
+@ 
+
+\paragraph{Test of new calling convention specification} Module
+\module{callspec} provides a new interface to build a calling
+convention. The convention returned acts as a template for us; we have
+to provide some small changes to make it fit.  We have to fix the
+location of the return address on exit. It has to be in \$26. Using
+[[SaveToTemp]] also crashes the register allocator.
+
+<<alphacall.ml >>=
+module CS = Callspec
+
+let template = (* conservative spec *)
+        { CS.name           = "cmm"
+        ; CS.stack_growth   = Memalloc.Down
+        ; CS.overflow       = CS.overflow C.Caller C.Caller
+        ; CS.memspace       = mspace
+        ; CS.sp             = r 30
+        ; CS.sp_align       = sp_align
+        ; CS.all_regs       = RS.of_list (List.concat [nvl_int; nvl_fp;
+                                                       vol_int; vol_fp])
+        ; CS.nv_regs        = RS.of_list (nvl_int @ nvl_fp)
+        ; CS.save_nvr       = saved_nvr
+        ; CS.ra             = (ra, CS.ReturnAddress.SaveToTemp 't')
+        }
+@
+
+We build a [[Call.t]] value from a specification and do the final fixup
+for the return address. 
+
+<<alphacall.ml >>=
+let cc auto return_to cut spec =
+    let t = CS.to_call cut (rtn return_to) auto spec in 
+        { t with C.ra_on_exit   = (fun _ _ t -> ra)
+        ;        C.sp_on_unwind = (fun e -> RU.store sp e)
+        }
+@
+
+Most variations we are interested in can be expressed in the
+specification. Here are calling conventions that we derive from our
+template.
+
+<<alphacall.ml >>=
+let cmm0 ~return_to cut ccspec = cc ccspec return_to cut
+    { template with CS.name     = "cmm0"
+                  ; CS.overflow = CS.overflow C.Caller C.Caller 
+    }
+let cmm1 ~return_to cut ccspec = cc ccspec return_to cut
+
+    { template with CS.name     = "cmm1"
+                  ; CS.overflow = CS.overflow C.Caller C.Callee 
+    }
+let cmm2 ~return_to cut ccspec = cc ccspec return_to cut 
+    { template with CS.name     = "cmm2"
+                  ; CS.overflow = CS.overflow C.Callee C.Caller 
+    }
+let cmm3 ~return_to cut ccspec = cc ccspec return_to cut 
+    { template with CS.name     = "cmm3"
+                  ; CS.overflow = CS.overflow C.Callee C.Callee 
+    }
+@
+
+And now the lookup function.
+<<alphacall.ml >>=
+let cconv ~return_to cut ccname spec = 
+  let f =
+    match ccname with
+    | "cmm0" -> cmm0
+    | "cmm1" -> cmm1
+    | "cmm2" -> cmm2
+    | _      -> c
+  in f ~return_to cut spec
+@
 
 % was in alpharec.nw
+% ------------------------------------------------------------------ 
+\section{Alpha Recognizer}
+% ------------------------------------------------------------------ 
+
+This module provides a recognizer for Alpha {\rtl}s. The recognizer
+has two interfaces. The first is a predicate that is true, if an {\rtl}
+is a {\mips} instruction. The second returns an assembly-language string
+representation of the instruction.
+
+<<alpharec.mli>>=
+val is_instruction: Rtl.rtl -> bool
+val to_string:      Rtl.rtl -> string
+@
+
+It is a checked run-time error to pass an {\rtl} to [[to_string]] that
+is not an Alpha instruction.
+
+% ------------------------------------------------------------------ 
+\subsection{Implementation}
+% ------------------------------------------------------------------ 
+
+The recognizer is generated from a {\burg} specification. The [[head]]
+part precedes code generated from [[rules]], the [[tail]] part follows
+it.
+
+<<alpharec.mlb>>=
+%head {: 
+   <<[[Alpharec]] head>> 
+:}
+%tail {: 
+   <<[[Alpharec]] tail>>
+ :}
+%term
+   <<[[Alpharec]] terminal types>>
+%%
+<<[[Alpharec]] rules>>
+@
+
+The usual abbreviations for modules go into the [[head]] clause.
+
+<<[[Alpharec]] head>>=
+module RP = Rtl.Private
+module RU = Rtlutil
+module Up = Rtl.Up
+module Dn = Rtl.Dn
+module SS = Space.Standard64
+@
+
+We report a fatal error with [[error]]. We do not expect to recover from
+such an error; it is something that should not happen and is caused by
+an internal inconsistency.
+
+<<[[Alpharec]] head>>=
+exception Error of string
+let error msg = raise (Error msg)   
+let sprintf   = Printf.sprintf (* useful for formatting msg *)
+@
+
+The [[guard]] function turns a predicate into a cost function that can
+be used in a dynmaic cost expression.
+
+<<[[Alpharec]] head>>=
+let guard p = if p then 0 else Camlburg.inf_cost
+@
+
+Some utilities for building strings.
+
+<<[[Alpharec]] head>>=
+let int64 b =
+    assert (Bits.width b = 64);
+    Int64.to_string (Bits.U.to_int64 b)
+
+let int32 b =
+    assert (Bits.width b = 32);
+    Nativeint.to_string (Bits.U.to_native b)
+
+let cat = String.concat ""
+
+let reg n   = "$"  ^ string_of_int n
+let freg n  = "$f" ^ string_of_int n
+
+let suffix = function
+    | 8  -> "b"      
+    | 16 -> "w"
+    | 32 -> "l"
+    | 64 -> "q"
+    | w  -> error (sprintf "not an Alpha width: %d" w)
+
+let width w = string_of_int w
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Recognizer Rules}
+% ------------------------------------------------------------------ 
+
+Note that the {\mips} assembler provides pseudo instructions that
+translate into multiple machine instructions. If we would emit binary
+instructions we would have to implement these pseudo instructions here.
+
+\iffalse
+\begin{quote}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}lX@{}}
+    \emph{Nonterminal} & \emph{Meaning} \\ 
+    \hline
+    too lazy to keep this up to date\\
+\end{tabularx}
+\end{quote}
+\fi
+
+We use [[x]] as an universal terminal type whenever we need one. 
+
+<<[[Alpharec]] terminal types>>=
+bits n x w
+@
+
+<<[[Alpharec]] rules>>=
+const:      Bits(bits)          {: int64 bits           :}
+zero:       Bits(bits)          [{: guard (Bits.eq bits (Bits.zero 64)) :}] {: () :}
+four:       Bits(bits)          [{: guard (Bits.eq bits (Bits.S.of_int 4 64)) :}] {:():}
+symbol:     Link(x, w:int)      {: x#mangled_text       :}
+@
+
+\paragraph{Registers}
+
+<<[[Alpharec]] rules>>=
+regl:       Reg('r', n:int)  {: reg  n :}
+fregl:      Reg('f', n:int)  {: freg n :}
+
+pcl:        Reg('c',  0) {: () :}
+spl:        Reg('r', 30) {: () :}
+ral:        Reg('r', 26) {: () :}
+pvl:        Reg('r', 27) {: () :}
+gpl:        Reg('r', 29) {: () :}
+
+
+reg:        Fetch(regl,w:int)   {: regl    :}
+freg:       Fetch(fregl,w:int)  {: fregl   :}
+
+pc:         Fetch(pcl,64)       {: () :}
+sp:         Fetch(spl,64)       {: () :}
+ra:         Fetch(ral,64)       {: () :}
+pv:         Fetch(pvl,64)       {: () :}
+gp:         Fetch(gpl,64)       {: () :}
+
+@
+
+\paragraph{Addresses}
+
+<<[[Alpharec]] rules>>=
+meml:       Mem(addr)           {: addr :}
+mem:        Fetch(meml,w:int)   {: meml :}
+
+addr:       reg                 {: sprintf "(%s)" reg       :}
+addr:       imm                 {: imm                      :}
+addr:       Add(imm,reg)        {: sprintf "%s(%s)" imm reg :}
+addr:       Add(reg,imm)        {: sprintf "%s(%s)" imm reg :}
+addr:       symbol              {: symbol                   :}
+@
+
+\paragraph{Constant Expressions}
+
+<<[[Alpharec]] rules>>=
+imm:        const               {: const  :} 
+imm:        symbol              {: symbol :}
+imm:        Add(symbol,imm)     {: sprintf "%s+%s" symbol imm :}
+imm:        Add(imm,symbol)     {: sprintf "%s+%s" symbol imm :}
+@
+
+\paragraph{Data Movement}
+
+Load register from memory. A load of a value smaller than 64 bits
+implies a zero or sign extension.  Todo: add floating-point support.
+
+<<[[Alpharec]] rules>>=
+inst:       Store(regl,imm,64)
+            {: sprintf "lda %s, %s" regl imm :} 
+            
+            
+inst:       Store(regl,const,64)
+            {: sprintf "ldiq %s, %s" regl const :}
+
+
+inst:       Store(regl,mem,64)
+            {: sprintf "ldq %s, %s" regl mem :}
+
+inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
+            {: sprintf "ld%s %s, %s" (suffix w) regl mem :}
+            
+inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int) 
+            {: sprintf "ld%su %s, %s" (suffix w) regl mem :}
+            
+@
+
+Write register to memory. No extension here; the 8, 32, or 64 bits are
+simply written to memory. Floating-point registers use their own load
+and store instructions.
+
+<<[[Alpharec]] rules>>=
+inst:       Store(meml, reg, w:int)
+            {: sprintf "st%s %s, %s" (suffix w) reg meml :}
+
+inst:       Store(meml, freg, w:int)
+            {: sprintf "sts %s, %s" freg meml :}
+@
+
+Moves between registers. I cannot find the instructions to move between
+integer and floating-point registers in the \textit{Assembly Language
+Programmer's Guide}, but they are describes in the \textit{Alpha
+Architecture Handbook}, Sections 4.10.18 and 4.10.19 (according to Glenn
+Holloway).  To make them work, we have to emit [[.arch ev6]];
+
+<<[[Alpharec]] rules>>=
+inst:       Store(regl, reg, 64)
+            {: sprintf "mov %s, %s" reg  regl :}
+
+inst:       Store(fregl, freg, 64)
+            {: sprintf "fmov %s, %s" freg  fregl :}
+
+inst:       Store(fregl, reg, 64)
+            {: sprintf "itoft %s, %s" reg  fregl :}
+
+inst:       Store(regl, freg, 64)
+            {: sprintf "ftoit %s, %s" freg  regl :}
+
+@
+
+\paragraph{Control Flow}
+
+<<[[Alpharec]] rules>>=
+inst:       Goto(symbol)
+            {: sprintf "br %s" symbol :}
+
+inst:       Goto(reg)
+            {: sprintf "jmp (%s)" reg  :}
+@
+
+The [[next]] rule covers storing the address of the next instruction in
+a register. 
+
+<<[[Alpharec]] rules>>=
+next:       Store(regl,Add(pc,four),64)      {: regl :}
+
+inst:       Par(Goto(reg),next)
+            {: sprintf "jsr %s,(%s)" next reg :}
+
+inst:       Store(gpl,GP(reg),64)
+            {: sprintf "ldgp $gp, (%s)" reg :}
+@
+
+Here are conditional branches. The {\rtl} operator names fit the Alpha
+assembly branch op-codes. We cannot inline the [[Cmp]] constructor
+because the [[op]] terminal symbol would be unaccessible. Only top-level
+terminals are in scope for the semantic action.
+
+<<[[Alpharec]] rules>>=
+inst:       Guarded(cmp_zero,Goto(addr)) 
+            {: match cmp_zero with (op,reg) ->
+                sprintf "b%s %s, %s" op reg addr
+            :}   
+@
+
+\paragraph{Comparison}
+
+<<[[Alpharec]] rules>>=
+cmp:        Cmp(op:string,x:reg,y:reg)                      {: (op, x, y) :}
+cmp_zero:   Cmp(op:string,reg,zero)                         {: (op, reg)  :}
+
+inst:       Store(dst:regl,Bit(cmp),64)
+            {: match cmp with (op, x, y) -> 
+                sprintf "cmp%s %s, %s" op x y 
+            :}
+
+inst:       Store(dst:regl,Com(reg),64)
+            {: sprintf "not %s, %s" dst reg :}
+
+@
+
+
+
+\paragraph{Arithmetic}
+
+<<[[Alpharec]] rules>>=
+inst:       Store(dst:regl, Add(x:reg,y:reg), 64)
+            {: sprintf "addq %s, %s, %s" x y dst :}
+     
+inst:       Store(dst:regl, Add(x:reg,y:imm), 64)
+            {: sprintf "addq %s, %s, %s" x y dst :}
+@
+
+\paragraph{Other Instructions}
+
+<<[[Alpharec]] rules>>=
+inst:       Nop() {: "nop" :}
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Debugging Support}
+% ------------------------------------------------------------------ 
+
+Uncomment the next rule to get a printout of the tree burg tries to
+match.
+
+<<[[Alpharec]] rules>>=
+inst: any [100]         {: cat ["<";any;">"] :}
+
+any : True  ()          {: cat [ "True"  ] :}
+any : False ()          {: cat [ "False" ] :}
+any : Link(x, w:int)    {: cat [ "Link(";x#mangled_text;",";width w;")" ] :}
+any : Late(string,w:int){: cat [ "Late(";string;",";width w;")" ] :}
+any : Bits(bits)        {: cat [ "Bits(b)" ] :}
+
+any : Fetch (any, w:int){: cat [ "Fetch(";any;",";width w;")" ] :}
+
+any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
+any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
+any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
+any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
+
+any : Mem(any)          {: cat [ "Mem(";any;")" ] :}
+any : Reg(char, n:int)  {: cat [ "Reg('";Char.escaped char;"',";width n;")" ] :}
+
+any : Store (dst:any, src:any, w:int)
+                        {: cat [ "Store(";dst;",";src;",";width w;")" ] :}
+any : Kill(any)         {: cat [ "Kill(";any;")" ] :}
+
+any : Guarded(guard:any, any) 
+                        {: cat [ "Guarded(";guard;",";any;")" ] :}
+any : Cmp(op:string, x:any, y:any)     
+                        {: cat [ "Cmp(";op;",";x;",";y;")"] :}
+any : GP(any)           {: cat [ "GP(";any;")"] :}
+any : Com(any)          {: cat [ "Com(";any;")"] :}
+any : Bit(any)          {: cat [ "Bit(";any;")"] :}
+any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
+any : Goto(any)         {: cat [ "Goto(";any;")" ] :}
+@
+
+
+% ------------------------------------------------------------------ 
+\subsection{Interfacing {\rtl}s with the Expander}
+% ------------------------------------------------------------------ 
+
+The principle interface is easy: {\rtl} constructors are mapped to
+constructor functions of the same name. Because some transformations are
+difficult to express in {\burg}, several operators and effects are
+matched as special cases in {\ocaml}.
+
+
+<<[[Alpharec]] tail>>=
+let const = function
+    | RP.Bool _                 -> error "boolean found"
+    | RP.Link(s,_,w)            -> conLink s w
+    | RP.Diff _                 -> error "PIC not supported"
+    | RP.Bits(b)                -> conBits b
+    | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
+@ 
+
+<<[[Alpharec]] tail>>=
+<<[[Alpharec]] helpers for [[exp]] and [[loc]]>>
+let rec exp = function
+    | RP.Const(k)               -> const k
+    | RP.Fetch(l,w)             -> conFetch (loc l) w
+    <<[[Alpharec]] special cases for [[App]]>>
+    | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
+
+and loc = function
+    | RP.Reg((sp,_,_),i,_)      -> conReg sp i
+    | RP.Mem(('m',_,_),w,e,ass) -> conMem (exp e) 
+    | RP.Mem((sp,_,_),_,_,_)    -> error (sprintf "mem-space space %c" sp)
+    | RP.Var   (s,i,w)          -> error (sprintf "var %s found" s)
+    | RP.Global(s,i,w)          -> error (sprintf "var %s found" s)
+    | RP.Slice _                -> error "cannot handle slice"
+@
+
+<<[[Alpharec]] tail>>= 
+let effect = function
+    <<[[Alpharec]] special cases for [[Store]]>>
+    | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+    | RP.Kill(l)                -> error "cannot handle kill"
+@ 
+
+<<[[Alpharec]] tail>>=
+let guarded g stmt = match g with
+    | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
+    <<[[Alpharec]] special cases for [[guarded]]>>
+    | _                         -> conGuarded (exp g) (effect stmt)
+
+let rec geffects = function
+    | []                        -> conNop ()
+    | [g, s]                    -> guarded g s
+    | (g, s) :: t               -> conPar (guarded g s) (geffects t) 
+
+let rtl (RP.Rtl es) = geffects es
+@
+
+% ------------------------------------------------------------------ 
+\subsection{Special cases}
+% ------------------------------------------------------------------ 
+
+<<[[Alpharec]] special cases for [[Store]]>>=
+| RP.Store(RP.Reg(('c',_,_),i,_),r,_) when i = SS.indices.SS.pc   -> conGoto (exp r)
+@
+<<[[Alpharec]] helpers for [[exp]] and [[loc]]>>=
+let cmp = Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] 
+@
+<<[[Alpharec]] special cases for [[App]]>>=
+| RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
+| RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
+| RP.App((op, [w]), [x; y])  
+    when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
+| RP.App(("bit", [64]), [x])              -> conBit (exp x)  
+| RP.App(("alpha_gp", []), [x])           -> conGP  (exp x)  
+| RP.App(("com", [64]), [x])              -> conCom  (exp x)  
+@
+
+<<[[Alpharec]] special cases for [[guarded]]>>=
+@
+
+    
+% ------------------------------------------------------------------ 
+\subsection{The exported recognizers}
+% ------------------------------------------------------------------ 
+
+If an error occurs, we emit the error message to [[stderr]] and include
+it in the output. This will lead to errors with the assembler but makes
+debugging easier because we do not abort after the first problem. Revise
+this once the expander is more mature.
+
+<<[[Alpharec]] tail>>=
+let rtl_to_string = RU.ToString.rtl
+
+let dump msg rtl =
+    List.iter prerr_string
+    [ "error in recognizer: "
+    ; msg
+    ; " on "
+    ; rtl_to_string rtl
+    ; "\n"
+    ]
+
+let to_string r =
+    try 
+        let plan = rtl (Dn.rtl r) in
+        sprintf "\t%s" (plan.inst.Camlburg.action ())
+    with
+        | Camlburg.Uncovered -> cat ["not an instruction: "
+                                    ; rtl_to_string r
+                                    ]
+        | Error msg          -> ( dump msg r 
+                                ; sprintf "error: %s" (rtl_to_string r)
+                                )
+
+let is_instruction r =
+    try 
+        let plan = rtl (Dn.rtl r) in
+        plan.inst.Camlburg.cost < 100
+    with
+        | Camlburg.Uncovered -> false
+        | Error msg          -> ( dump msg r 
+                                ; false
+                                )
+@        
 
 % missing?
 % was in alpharegs.nw
@@ -40435,7 +41976,7 @@ let const = function
 let rec exp = function
     | RP.Const(k)               -> const k
     | RP.Fetch(l,w)             -> conFetch (loc l) w
-    <<special cases for [[App]]>>
+    <<[[Mipsrec]] special cases for [[App]]>>
     | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
 
 and loc = function
@@ -40449,7 +41990,7 @@ and loc = function
 %%
 <<tail(mipsrec.nw)>>=
 let effect = function
-    <<special cases for [[Store]]>>
+    <<[[Mipsrec]] special cases for [[Store]]>>
     | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
     | RP.Kill(l)                -> error "cannot handle kill"
 @ 
@@ -40457,7 +41998,7 @@ let effect = function
 <<tail(mipsrec.nw)>>=
 let guarded g stmt = match g with
     | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
-    <<special cases for [[guarded]]>>
+    <<[[Mipsrec]] special cases for [[guarded]]>>
     | _                         -> conGuarded (exp g) (effect stmt)
 
 let rec geffects = function
@@ -40472,7 +42013,7 @@ let rtl (RP.Rtl es) = geffects es
 \subsection{Special cases}
 %%% ------------------------------------------------------------------ 
 %%
-<<special cases for [[Store]]>>=
+<<[[Mipsrec]] special cases for [[Store]]>>=
 | RP.Store(RP.Reg(('c',_,_),i,w),r,_)
   when i = SS.indices.SS.pc   -> conGoto (exp r)
 @
@@ -40482,7 +42023,7 @@ let cmp =
     Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] 
 @ 
 %%
-<<special cases for [[App]]>>=
+<<[[Mipsrec]] special cases for [[App]]>>=
 | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
 | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
 | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x) 
@@ -40491,11 +42032,10 @@ let cmp =
 | RP.App((op, [w]), [x; y]) 
     when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
 @
-%%
-<<special cases for [[guarded]]>>=
+
+<<[[Mipsrec]] special cases for [[guarded]]>>=
 @
-%%
-%%    
+
 %%% ------------------------------------------------------------------ 
 \subsection{The exported recognizers}
 %%% ------------------------------------------------------------------ 

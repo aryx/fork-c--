@@ -64,7 +64,7 @@
   let rec exp = function
       | RP.Const(k)               -> const k
       | RP.Fetch(l,w)             -> conFetch (loc l) w
-      (*s: special cases for [[App]] *)
+      (*s: [[Mipsrec]] special cases for [[App]] *)
       | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
       | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
       | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x) 
@@ -72,7 +72,7 @@
 
       | RP.App((op, [w]), [x; y]) 
           when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
-      (*e: special cases for [[App]] *)
+      (*e: [[Mipsrec]] special cases for [[App]] *)
       | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
 
   and loc = function
@@ -84,17 +84,17 @@
       | RP.Slice _                -> error "cannot handle slice"
   (*x: tail(mipsrec.nw) *)
   let effect = function
-      (*s: special cases for [[Store]] *)
+      (*s: [[Mipsrec]] special cases for [[Store]] *)
       | RP.Store(RP.Reg(('c',_,_),i,w),r,_)
         when i = SS.indices.SS.pc   -> conGoto (exp r)
-      (*e: special cases for [[Store]] *)
+      (*e: [[Mipsrec]] special cases for [[Store]] *)
       | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
       | RP.Kill(l)                -> error "cannot handle kill"
   (*x: tail(mipsrec.nw) *)
   let guarded g stmt = match g with
       | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
-      (*s: special cases for [[guarded]] *)
-      (*e: special cases for [[guarded]] *)
+      (*s: [[Mipsrec]] special cases for [[guarded]] *)
+      (*e: [[Mipsrec]] special cases for [[guarded]] *)
       | _                         -> conGuarded (exp g) (effect stmt)
 
   let rec geffects = function

@@ -1,14 +1,140 @@
 (*s: alpharec.mlb *)
-%head {: <<head>> :}
-%tail {: <<tail>> :}
-%term <<terminal types>>
+%head {: 
+   (*s: [[Alpharec]] head *)
+   module RP = Rtl.Private
+   module RU = Rtlutil
+   module Up = Rtl.Up
+   module Dn = Rtl.Dn
+   module SS = Space.Standard64
+   (*x: [[Alpharec]] head *)
+   exception Error of string
+   let error msg = raise (Error msg)   
+   let sprintf   = Printf.sprintf (* useful for formatting msg *)
+   (*x: [[Alpharec]] head *)
+   let guard p = if p then 0 else Camlburg.inf_cost
+   (*x: [[Alpharec]] head *)
+   let int64 b =
+       assert (Bits.width b = 64);
+       Int64.to_string (Bits.U.to_int64 b)
+
+   let int32 b =
+       assert (Bits.width b = 32);
+       Nativeint.to_string (Bits.U.to_native b)
+
+   let cat = String.concat ""
+
+   let reg n   = "$"  ^ string_of_int n
+   let freg n  = "$f" ^ string_of_int n
+
+   let suffix = function
+       | 8  -> "b"      
+       | 16 -> "w"
+       | 32 -> "l"
+       | 64 -> "q"
+       | w  -> error (sprintf "not an Alpha width: %d" w)
+
+   let width w = string_of_int w
+   (*e: [[Alpharec]] head *)
+:}
+%tail {: 
+   (*s: [[Alpharec]] tail *)
+   let const = function
+       | RP.Bool _                 -> error "boolean found"
+       | RP.Link(s,_,w)            -> conLink s w
+       | RP.Diff _                 -> error "PIC not supported"
+       | RP.Bits(b)                -> conBits b
+       | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
+   (*x: [[Alpharec]] tail *)
+   (*s: [[Alpharec]] helpers for [[exp]] and [[loc]] *)
+   let cmp = Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] 
+   (*e: [[Alpharec]] helpers for [[exp]] and [[loc]] *)
+   let rec exp = function
+       | RP.Const(k)               -> const k
+       | RP.Fetch(l,w)             -> conFetch (loc l) w
+       (*s: [[Alpharec]] special cases for [[App]] *)
+       | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
+       | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
+       | RP.App((op, [w]), [x; y])  
+           when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
+       | RP.App(("bit", [64]), [x])              -> conBit (exp x)  
+       | RP.App(("alpha_gp", []), [x])           -> conGP  (exp x)  
+       | RP.App(("com", [64]), [x])              -> conCom  (exp x)  
+       (*e: [[Alpharec]] special cases for [[App]] *)
+       | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
+
+   and loc = function
+       | RP.Reg((sp,_,_),i,_)      -> conReg sp i
+       | RP.Mem(('m',_,_),w,e,ass) -> conMem (exp e) 
+       | RP.Mem((sp,_,_),_,_,_)    -> error (sprintf "mem-space space %c" sp)
+       | RP.Var   (s,i,w)          -> error (sprintf "var %s found" s)
+       | RP.Global(s,i,w)          -> error (sprintf "var %s found" s)
+       | RP.Slice _                -> error "cannot handle slice"
+   (*x: [[Alpharec]] tail *)
+   let effect = function
+       (*s: [[Alpharec]] special cases for [[Store]] *)
+       | RP.Store(RP.Reg(('c',_,_),i,_),r,_) when i = SS.indices.SS.pc   -> conGoto (exp r)
+       (*e: [[Alpharec]] special cases for [[Store]] *)
+       | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+       | RP.Kill(l)                -> error "cannot handle kill"
+   (*x: [[Alpharec]] tail *)
+   let guarded g stmt = match g with
+       | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
+       (*s: [[Alpharec]] special cases for [[guarded]] *)
+       (*e: [[Alpharec]] special cases for [[guarded]] *)
+       | _                         -> conGuarded (exp g) (effect stmt)
+
+   let rec geffects = function
+       | []                        -> conNop ()
+       | [g, s]                    -> guarded g s
+       | (g, s) :: t               -> conPar (guarded g s) (geffects t) 
+
+   let rtl (RP.Rtl es) = geffects es
+   (*x: [[Alpharec]] tail *)
+   let rtl_to_string = RU.ToString.rtl
+
+   let dump msg rtl =
+       List.iter prerr_string
+       [ "error in recognizer: "
+       ; msg
+       ; " on "
+       ; rtl_to_string rtl
+       ; "\n"
+       ]
+
+   let to_string r =
+       try 
+           let plan = rtl (Dn.rtl r) in
+           sprintf "\t%s" (plan.inst.Camlburg.action ())
+       with
+           | Camlburg.Uncovered -> cat ["not an instruction: "
+                                       ; rtl_to_string r
+                                       ]
+           | Error msg          -> ( dump msg r 
+                                   ; sprintf "error: %s" (rtl_to_string r)
+                                   )
+
+   let is_instruction r =
+       try 
+           let plan = rtl (Dn.rtl r) in
+           plan.inst.Camlburg.cost < 100
+       with
+           | Camlburg.Uncovered -> false
+           | Error msg          -> ( dump msg r 
+                                   ; false
+                                   )
+   (*e: [[Alpharec]] tail *)
+ :}
+%term
+   (*s: [[Alpharec]] terminal types *)
+   bits n x w
+   (*e: [[Alpharec]] terminal types *)
 %%
-(*s: rules *)
+(*s: [[Alpharec]] rules *)
 const:      Bits(bits)          {: int64 bits           :}
 zero:       Bits(bits)          [{: guard (Bits.eq bits (Bits.zero 64)) :}] {: () :}
 four:       Bits(bits)          [{: guard (Bits.eq bits (Bits.S.of_int 4 64)) :}] {:():}
 symbol:     Link(x, w:int)      {: x#mangled_text       :}
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 regl:       Reg('r', n:int)  {: reg  n :}
 fregl:      Reg('f', n:int)  {: freg n :}
 
@@ -28,7 +154,7 @@ ra:         Fetch(ral,64)       {: () :}
 pv:         Fetch(pvl,64)       {: () :}
 gp:         Fetch(gpl,64)       {: () :}
 
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 meml:       Mem(addr)           {: addr :}
 mem:        Fetch(meml,w:int)   {: meml :}
 
@@ -37,12 +163,12 @@ addr:       imm                 {: imm                      :}
 addr:       Add(imm,reg)        {: sprintf "%s(%s)" imm reg :}
 addr:       Add(reg,imm)        {: sprintf "%s(%s)" imm reg :}
 addr:       symbol              {: symbol                   :}
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 imm:        const               {: const  :} 
 imm:        symbol              {: symbol :}
 imm:        Add(symbol,imm)     {: sprintf "%s+%s" symbol imm :}
 imm:        Add(imm,symbol)     {: sprintf "%s+%s" symbol imm :}
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 inst:       Store(regl,imm,64)
             {: sprintf "lda %s, %s" regl imm :} 
             
@@ -60,13 +186,13 @@ inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
 inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int) 
             {: sprintf "ld%su %s, %s" (suffix w) regl mem :}
             
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 inst:       Store(meml, reg, w:int)
             {: sprintf "st%s %s, %s" (suffix w) reg meml :}
 
 inst:       Store(meml, freg, w:int)
             {: sprintf "sts %s, %s" freg meml :}
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 inst:       Store(regl, reg, 64)
             {: sprintf "mov %s, %s" reg  regl :}
 
@@ -79,13 +205,13 @@ inst:       Store(fregl, reg, 64)
 inst:       Store(regl, freg, 64)
             {: sprintf "ftoit %s, %s" freg  regl :}
 
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 inst:       Goto(symbol)
             {: sprintf "br %s" symbol :}
 
 inst:       Goto(reg)
             {: sprintf "jmp (%s)" reg  :}
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 next:       Store(regl,Add(pc,four),64)      {: regl :}
 
 inst:       Par(Goto(reg),next)
@@ -93,12 +219,12 @@ inst:       Par(Goto(reg),next)
 
 inst:       Store(gpl,GP(reg),64)
             {: sprintf "ldgp $gp, (%s)" reg :}
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 inst:       Guarded(cmp_zero,Goto(addr)) 
             {: match cmp_zero with (op,reg) ->
                 sprintf "b%s %s, %s" op reg addr
             :}   
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 cmp:        Cmp(op:string,x:reg,y:reg)                      {: (op, x, y) :}
 cmp_zero:   Cmp(op:string,reg,zero)                         {: (op, reg)  :}
 
@@ -110,15 +236,15 @@ inst:       Store(dst:regl,Bit(cmp),64)
 inst:       Store(dst:regl,Com(reg),64)
             {: sprintf "not %s, %s" dst reg :}
 
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 inst:       Store(dst:regl, Add(x:reg,y:reg), 64)
             {: sprintf "addq %s, %s, %s" x y dst :}
      
 inst:       Store(dst:regl, Add(x:reg,y:imm), 64)
             {: sprintf "addq %s, %s, %s" x y dst :}
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 inst:       Nop() {: "nop" :}
-(*x: rules *)
+(*x: [[Alpharec]] rules *)
 inst: any [100]         {: cat ["<";any;">"] :}
 
 any : True  ()          {: cat [ "True"  ] :}
@@ -151,5 +277,5 @@ any : Com(any)          {: cat [ "Com(";any;")"] :}
 any : Bit(any)          {: cat [ "Bit(";any;")"] :}
 any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
 any : Goto(any)         {: cat [ "Goto(";any;")" ] :}
-(*e: rules *)
+(*e: [[Alpharec]] rules *)
 (*e: alpharec.mlb *)

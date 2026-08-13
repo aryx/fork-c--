@@ -1,8 +1,9 @@
 (*s: alpha.ml *)
+(*s: alpha.ml  *)
 let arch        = "alpha"                    (* architecture *)
 let byteorder   = Rtl.LittleEndian 
 let wordsize    = 64
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 module SS   = Space.Standard64
 module A    = Automaton
 module PX   = Postexpander
@@ -23,7 +24,7 @@ module Spaces = struct
     let u  = SS.u    id  64
     let c  = SS.c  6 id [64]    (* pc, npc, cc, _, fp_mode, fp_fcmp *)
 end
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 let locations   = SS.locations Spaces.c
 let pc          = locations.SS.pc
 let cc          = locations.SS.cc
@@ -42,7 +43,7 @@ let pv          = reg 27        (* procedure value  *)
 
 let pv_loc      = R.reg pv
 let rm_reg      = (('d', Rtl.Identity, Cell.of_size 2), 0, Rtl.C 1)
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 let unimp               = Impossible.unimp
 let impossible          = Impossible.impossible
 
@@ -51,7 +52,7 @@ let fetch_word l        = R.fetch l   wordsize
 let store_word l e      = R.store l e wordsize
 let mem w addr          = R.mem R.none mspace (Cell.to_count mcell w)  addr
 let reg_width           = Register.width
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 let ra_offset = 4                   (* instruction size *)
 module F = Mflow.MakeStandard
     (struct
@@ -60,9 +61,9 @@ module F = Mflow.MakeStandard
         let ra_reg    = R.reg ra
         let ra_offset = ra_offset
      end)   
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 let return e = R.store pc e wordsize
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 let (<:>) = PX.(<:>)
 let rtl r = PX.Rtl r
 module Post = struct
@@ -234,13 +235,13 @@ module Post = struct
     let don't_touch_me es = false
     (*e: Alpha postexpander *)
 end
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 module X = Expander.IntFloatAddr(Post)
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 let spill  p t l = [A.store l (Post.tval t) (Post.twidth t)]
 let reload p t l = 
     let w = Post.twidth t in [R.store (Post.tloc t) (Automaton.fetch l w) w]
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 let ( *> ) = A.( *> )
 let globals base = 
   let width w = if      w <= 8  then 8  
@@ -250,7 +251,7 @@ let globals base =
   let align = function _ -> 8 in
   A.at ~start:base mspace (A.widen width *> A.align_to align *>
   A.overflow ~growth:Memalloc.Up ~max_alignment:8)
-(*x: alpha.ml *)
+(*x: alpha.ml  *)
 let target =
     let spaces = [ Spaces.m
                  ; Spaces.r
@@ -296,4 +297,5 @@ let target =
     ; T.charset             = "latin1" (* REMOVE THIS FROM TARGET.T *)
     }    
 
+(*e: alpha.ml  *)
 (*e: alpha.ml *)

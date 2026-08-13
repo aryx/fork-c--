@@ -1,4 +1,5 @@
 (*s: alphacall.ml *)
+(*s: alphacall.ml  *)
 module A  = Automaton
 module C  = Call
 module R  = Rtl
@@ -9,7 +10,7 @@ module T  = Target
 
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let wordsize   = 64
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 let byteorder = R.LittleEndian         
 let mspace = ('m', byteorder, Cell.of_size 8)
 let rspace = ('r', byteorder, Cell.of_size 64)
@@ -18,12 +19,12 @@ let fspace = ('f', byteorder, Cell.of_size 64)
 let r n     = (rspace, n, R.C 1)
 let f n     = (fspace, n, R.C 1)
 let vfp     = Vfp.mk wordsize
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 let vol_int  = List.map r ((Auxfuns.from 0 ~upto:8)@(Auxfuns.from 16 ~upto:26))
 let nvl_int  = List.map r (Auxfuns.from 9  ~upto:15)
 let vol_fp   = List.map f ([0;1] @ (Auxfuns.from 10  ~upto:30))
 let nvl_fp   = List.map f (Auxfuns.from 2 ~upto:9)
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 let saved_nvr temps =
     let t = Talloc.Multiple.loc temps 't' in
     let u = Talloc.Multiple.loc temps 'u' in
@@ -31,7 +32,7 @@ let saved_nvr temps =
         | (('r', _, _),_,_) as reg -> t (Register.width reg)
         | (('f', _, _),_,_) as reg -> u (Register.width reg)
         | ((s,_,_),i,_) -> impossf "cannot save $%c%d" s i
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 let ra        = R.reg (r 26)            (* return address *)
 let sp        = R.reg (r 30)            (* stack pointer  *)
 let spval     = R.fetch sp wordsize
@@ -48,13 +49,13 @@ let badwidth (msg:string) (w:int) =
 
 let fatal _ = 
     impossf "fatal error in Alpha automaton"
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 let rtn return_to k n ~ra =
     if k = 0 & n = 0 then return_to ra
     else impossf "alternate return using C calling convention" 
 
 let c ~return_to cut spec = 
-    (*s: transformations *)
+    (*s: [[Alphacall]] transformations *)
     let autoAt = A.at mspace in
     let prolog =
       let autosp = (fun _ -> vfp) in
@@ -97,7 +98,7 @@ let c ~return_to cut spec =
        C.outgoing ~growth ~sp ~mkauto:(fun () -> autoAt base spec.A.cutto)
          ~autosp:(fun r -> spval)
          ~postsp:(fun _ _ -> spval) in
-    (*e: transformations *)
+    (*e: [[Alphacall]] transformations *)
     { C.name            = "C"
     ; C.overflow_alloc  = { C.parameter_deallocator = C.Caller
                           ; C.result_allocator      = C.Caller
@@ -122,7 +123,7 @@ let c ~return_to cut spec =
     ; C.sp_on_jump       = (fun _ _ -> Rtl.null)
     }
 
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 module CS = Callspec
 
 let template = (* conservative spec *)
@@ -138,13 +139,13 @@ let template = (* conservative spec *)
         ; CS.save_nvr       = saved_nvr
         ; CS.ra             = (ra, CS.ReturnAddress.SaveToTemp 't')
         }
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 let cc auto return_to cut spec =
     let t = CS.to_call cut (rtn return_to) auto spec in 
         { t with C.ra_on_exit   = (fun _ _ t -> ra)
         ;        C.sp_on_unwind = (fun e -> RU.store sp e)
         }
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 let cmm0 ~return_to cut ccspec = cc ccspec return_to cut
     { template with CS.name     = "cmm0"
                   ; CS.overflow = CS.overflow C.Caller C.Caller 
@@ -162,7 +163,7 @@ let cmm3 ~return_to cut ccspec = cc ccspec return_to cut
     { template with CS.name     = "cmm3"
                   ; CS.overflow = CS.overflow C.Callee C.Callee 
     }
-(*x: alphacall.ml *)
+(*x: alphacall.ml  *)
 let cconv ~return_to cut ccname spec = 
   let f =
     match ccname with
@@ -171,4 +172,5 @@ let cconv ~return_to cut ccname spec =
     | "cmm2" -> cmm2
     | _      -> c
   in f ~return_to cut spec
+(*e: alphacall.ml  *)
 (*e: alphacall.ml *)

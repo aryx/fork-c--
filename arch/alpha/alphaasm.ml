@@ -8,7 +8,7 @@ let sprintf = Printf.sprintf
 let unimp   = Impossible.unimp
 let int64   = Bits.U.to_int64 
 
-(*s: name mangler specification *)
+(*s: [[Alphaasm]] name mangler specification *)
 let spec =
     let reserved = [] in        (* list reserved words here so we can
                                    avoid them *)
@@ -27,7 +27,7 @@ let spec =
             ; Mangle.reserved   = reserved
             ; Mangle.avoid      = (fun x -> x ^ "_")
             }
-(*e: name mangler specification *)
+(*e: [[Alphaasm]] name mangler specification *)
 
 class ['a, 'b, 'c, 'd] asm emitter fd : [('a, 'b, 'c, 'd) Proc.t] Asm.assembler = 
 object (this)
@@ -44,7 +44,7 @@ object (this)
 
     method private print l = List.iter (output_string _fd) l
 
-    (*s: assembly methods *)
+    (*s: [[Alphaasm]] assembly methods *)
     method import s = this#new_symbol s
     method local  s = this#new_symbol s
 
@@ -82,10 +82,10 @@ object (this)
                 fprintf _fd ".quad %s\n" (Asm.reloc_string const a)
 
     method emit = ()
-    (*x: assembly methods *)
+    (*x: [[Alphaasm]] assembly methods *)
     method longjmp_size () =
       Impossible.unimp "longjmp size not set for Alpha -- needed for alternate returns"
-    (*x: assembly methods *)
+    (*x: [[Alphaasm]] assembly methods *)
     method comment s = fprintf _fd "/* %s */\n" s
 
     method const (s: Symbol.t) (b:Bits.bits) = 
@@ -111,7 +111,7 @@ object (this)
         this#label symbol;
         Printf.fprintf _fd "\tldgp $gp,0($27) /* HACK! alphasm.nw did this */\n";
         (emitter cfg (this#call) (this#instruction) label : unit)
-    (*e: assembly methods *)
+    (*e: [[Alphaasm]] assembly methods *)
 end
 let make emitter fd = new asm emitter fd
 (*e: alphaasm.ml *)
