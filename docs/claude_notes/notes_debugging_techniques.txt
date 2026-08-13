@@ -1100,6 +1100,38 @@ makes "the returned value is architecture-dependent garbage" the
 correct - and unfixable at the call site - diagnosis, not a bug to keep
 chasing.
 
+35. On a register-window architecture, check whether the callee under
+    the breakpoint is a leaf function before trusting %iN over %oN (or
+    vice versa)
+---------------------------------------------------------------------------
+Chasing qsort.tig's "array index 0 for array of size 0" (a real GC-
+correctness bug, not yet fixed - see the sparc-backend-status memory
+notes), a breakpoint on SPARC's own libc memset() gave completely
+fabricated argument values: a stack address paired with a stdio-buffer-
+sized length, nowhere near the real call being investigated. Every
+*other* callee examined all session (getenv, atoi, tig_print, tig_gc,
+user-compiled procedures) is a non-leaf function - it executes its own
+`save` on entry, so the caller's outgoing %o0-%o5 become that function's
+own incoming %i0-%i5, and reading %iN at a breakpoint on its entry
+correctly recovers the arguments. memset, compiled as a leaf function to
+avoid the save/restore overhead, does no such thing - confirmed via
+`objdump --start-address=<memset's address>`, whose first real
+instructions (`andcc %o1,...`) operate directly on %o0-%o2. Reading %iN
+there returns whatever was left in the *caller's own* window at some
+earlier, unrelated point - plausible-looking garbage, not an error
+message, so nothing signals the mistake directly.
+
+General shape: before reading %iN to recover "this function's
+arguments" at a breakpoint set on a raw address (not a symbol name, so
+gdb's own prologue-skip heuristic doesn't help), disassemble the first
+few instructions at that address and check for a `save`. No `save` means
+a leaf function - the real arguments are still in %oN, never rotated
+into %iN at all. This is the mirror image of entry 33/34's window-
+aliasing lessons (results and parameters landing in the wrong bank
+across a *real* window boundary) - here there is no window boundary to
+begin with, and assuming there was one is what produced the fabricated
+values.
+
 
 Tooling traps in this particular working copy
 ----------------------------------------------
