@@ -1,13 +1,153 @@
 (*s: mipsrec.mlb *)
-%head {: <<head>> :}
-%tail {: <<tail>> :}
-%term <<terminal types>>
+%head {: 
+  (*s: head *)
+  module RP = Rtl.Private
+  module RU = Rtlutil
+  module Up = Rtl.Up
+  module Dn = Rtl.Dn
+  module SS = Space.Standard32
+  (*x: head *)
+  exception Error of string
+  let error msg = raise (Error msg)   
+  let sprintf   = Printf.sprintf (* useful for formatting msg *)
+  (*x: head *)
+  let guard p = if p then 0 else Camlburg.inf_cost
+  (*x: head *)
+  let const32 b =
+      assert (Bits.width b = 32);
+      Nativeint.to_string (Bits.U.to_native b)
+
+  let const64 b =
+      assert (Bits.width b = 64);
+      Int64.to_string (Bits.U.to_int64 b)     (* signed or unsigned? *)
+
+  let cat     = String.concat ""
+  let printf  = Printf.printf
+  let sprintf = Printf.sprintf
+
+  let reg n   = "$"  ^ string_of_int n
+  let freg n  = "$f" ^ string_of_int n
+
+  let suffix = function
+      | 8  -> "b"      
+      | 16 -> "h"
+      | 32 -> "w"
+      | w  -> error (sprintf "not a MIPS width: %d" w)
+
+  let zx    = "u"  (* to construct op-code *) 
+  let sx    = ""
+  let width = string_of_int
+  (*x: head *)
+  let lo b =
+      assert (Bits.width b = 64);
+      Bits.Ops.lobits 32 b
+
+  let b32 = Bits.U.of_int 32 64
+  let hi b =
+      assert (Bits.width b = 64);
+      Bits.Ops.lobits 32 (Bits.Ops.shrl b b32)
+  (*e: head *)
+:}
+%tail {: 
+  (*s: tail(mipsrec.nw) *)
+  let const = function
+      | RP.Bool _                 -> error "boolean found"
+      | RP.Link(s,_,w)            -> conLink s w
+      | RP.Diff _                 -> error "PIC not supported"
+      | RP.Bits(b)                -> conBits b
+      | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
+  (*x: tail(mipsrec.nw) *)
+  (*s: helpers for [[exp]] and [[loc]] *)
+  let cmp = 
+      Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] 
+  (*e: helpers for [[exp]] and [[loc]] *)
+  let rec exp = function
+      | RP.Const(k)               -> const k
+      | RP.Fetch(l,w)             -> conFetch (loc l) w
+      (*s: special cases for [[App]] *)
+      | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
+      | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
+      | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x) 
+      | RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x) 
+
+      | RP.App((op, [w]), [x; y]) 
+          when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
+      (*e: special cases for [[App]] *)
+      | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
+
+  and loc = function
+      | RP.Reg((sp,_,_),i,w)      -> conReg sp i
+      | RP.Mem(('m',_,_),w,e,ass) -> conMem (exp e)
+      | RP.Mem((sp,_,_),_,_,_)    -> error (sprintf "mem-space space %c" sp)
+      | RP.Var   (s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Global(s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Slice _                -> error "cannot handle slice"
+  (*x: tail(mipsrec.nw) *)
+  let effect = function
+      (*s: special cases for [[Store]] *)
+      | RP.Store(RP.Reg(('c',_,_),i,w),r,_)
+        when i = SS.indices.SS.pc   -> conGoto (exp r)
+      (*e: special cases for [[Store]] *)
+      | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+      | RP.Kill(l)                -> error "cannot handle kill"
+  (*x: tail(mipsrec.nw) *)
+  let guarded g stmt = match g with
+      | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
+      (*s: special cases for [[guarded]] *)
+      (*e: special cases for [[guarded]] *)
+      | _                         -> conGuarded (exp g) (effect stmt)
+
+  let rec geffects = function
+      | []                        -> conNop ()
+      | [g, s]                    -> guarded g s
+      | (g, s) :: t               -> conPar (guarded g s) (geffects t) 
+
+  let rtl (RP.Rtl es) = geffects es
+  (*x: tail(mipsrec.nw) *)
+  let rtl_to_string = RU.ToString.rtl
+
+  let dump msg rtl =
+      List.iter prerr_string
+      [ "error in recognizer: "
+      ; msg
+      ; " on "
+      ; rtl_to_string rtl
+      ; "\n"
+      ]
+
+  let to_string r =
+      try 
+          let plan = rtl (Dn.rtl r) in
+          Printf.sprintf "\t%s" (plan.inst.Camlburg.action ())
+      with
+          | Camlburg.Uncovered -> cat ["not an instruction: "
+                                      ; rtl_to_string r
+                                      ]
+          | Error msg          -> ( dump msg r 
+                                  ; sprintf "error: %s" (rtl_to_string r)
+                                  )
+
+  let is_instruction r =
+      try 
+          let plan = rtl (Dn.rtl r) in
+          plan.inst.Camlburg.cost < 100
+      with
+          | Camlburg.Uncovered -> false
+          | Error msg          -> ( dump msg r 
+                                  ; false
+                                  )
+  (*e: tail(mipsrec.nw) *)
+:}
+%term 
+  (*s: terminal types(mipsrec.nw) *)
+  bits n x w
+  (*e: terminal types(mipsrec.nw) *)
 %%
-(*s: rules *)
+(*s: rules(mipsrec.nw) *)
 const64:    Bits(bits) [{: guard (Bits.width bits = 64)  :}]{:         bits :}
 const:      Bits(bits) [{: guard (Bits.width bits = 32)  :}]{: const32 bits :}
 symbol:     Link(x, w:int)      {: x#mangled_text :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 f:          Reg('f', n:int)  {: n :}
 r:          Reg('r', n:int)  {: n :}
 
@@ -24,7 +164,7 @@ freg:       Fetch(fregl,w:int)  {: fregl  :}
 pc:         Fetch(pcl,32)       {: () :}
 sp:         Fetch(spl,32)       {: () :}
 ra:         Fetch(ral,32)       {: () :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 meml:       Mem(addr)     {: addr :}
 mem:        Fetch(meml,w:int)   {: meml :}
 
@@ -33,12 +173,12 @@ addr:       imm                 {: imm                   :}
 addr:       Add(imm,reg)        {: cat [imm;"(";reg;")"] :}
 addr:       Add(reg,imm)        {: cat [imm;"(";reg;")"] :}
 addr:       symbol              {: symbol                :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 imm:        const               {: const                 :} 
 imm:        symbol              {: symbol                :}
 imm:        Add(symbol,imm)     {: cat [symbol;"+";imm]  :}
 imm:        Add(imm,symbol)     {: cat [symbol;"+";imm]  :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Store(regl,imm,32)
             {: cat ["la"; " "; regl; ","; imm] :}
 
@@ -53,21 +193,21 @@ inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
 
 inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int) 
             {: cat ["l"; suffix w; zx; " "; regl; ","; mem] :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Store(fregl,const,32)
             {: sprintf "li $1, %s; mtc1 $1, %s" const fregl :} 
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Store(f,b:const64,64)
             {: sprintf "li $1, %s; mtc1 $1, %s; li $1 %s; mtc1 $1, %s"
                        (const64 (lo b)) (freg f) (const64 (hi b)) (freg (f+1))
             :}           
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Store(meml, reg, w:int)
             {: cat ["s"; suffix w; " "; reg; ","; meml] :}
 
 inst:       Store(meml, freg, w:int)
             {: cat ["s.s "; freg; ","; meml] :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Store(regl, reg, 32)
             {: cat ["move"; " "; regl; ","; reg] :}
 
@@ -76,7 +216,7 @@ inst:       Store(fregl, freg, 32)
 
 inst:       Store(fregl, freg, 64)
             {: cat ["mov.d"; " "; fregl; ","; freg] :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Store(fregl, reg, 32)
             {: cat ["nop; mtc1"; " "; reg; ","; fregl] :}
 
@@ -84,28 +224,28 @@ inst:       Store(regl, freg, 32)
             {: cat ["nop; mfc1"; " "; regl; ","; freg] :}
 
 
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Goto(symbol)
             {: cat ["j"; " "; symbol] :}
 
 inst:       Goto(reg)
             {: cat ["jr"; " "; reg] :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 next:       Add(pc,const)       {: () :}
 inst:       Par(Goto(addr),Store(ral,next,32))     -- s/addr/symbol/g ? 
             {: cat ["jal"; " "; addr] :} 
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 syscall:    Link(x, w:int) [{: guard (x#mangled_text =$= "syscall") :}] {: () :}
 inst:       Par(Goto(syscall), Store(ral,pc,32))
             {: "syscall" :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 cmp:        Cmp(op:string,x:reg,y:reg)              {: (op,x,y) :}
 cmp:        Cmp(op:string,x:reg,y:const)            {: (op,x,y) :}
 inst:       Guarded(cmp,Goto(addr)) 
             {: match cmp with 
                | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr]
             :}   
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Store(dst:regl, Add(x:reg,y:reg), 32)
             {: cat ["add"; " "; dst; ","; x; ","; y] :}
      
@@ -117,9 +257,9 @@ inst:       Store(dst:fregl, D2S(x:freg), 32)
 
 inst:       Store(dst:fregl, S2D(x:freg), 64)
             {: cat ["cvt.d.s"; " "; dst; ","; x] :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst:       Nop() {: "nop" :}
-(*x: rules *)
+(*x: rules(mipsrec.nw) *)
 inst: any [100]         {: cat ["<";any;">"] :}
 
 any : True  ()          {: cat [ "True"  ] :}
@@ -149,5 +289,5 @@ any : Cmp(op:string, x:any, y:any)
                         {: cat [ "Cmp(";op;",";x;",";y;")" ] :}
 any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
 any : Goto(any)         {: cat [ "Goto(";any;")" ] :}
-(*e: rules *)
+(*e: rules(mipsrec.nw) *)
 (*e: mipsrec.mlb *)

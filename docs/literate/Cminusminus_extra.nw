@@ -32769,50 +32769,54 @@ let cconv ~return_to cut ccname stage =
   in f ~return_to cut stage
 @ 
 \section{[[arch/mips/mipsrec.nw]]}
+
 <<arch/mips/mipsrec.mli>>=
 <<mipsrec.mli>>
 @
 
-%%% vim: ts=8 sw=4 et:
-%%
 %%% ------------------------------------------------------------------ 
 \section{MIPS Recognizer}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module provides a recognizer for {\mips} {\rtl}s. The recognizer
 %%has two interfaces. The first is a predicate that is true, if an {\rtl}
 %%is a {\mips} instruction. The second returns an assembly-language string
 %%representation of the instruction.
-%%
+
 <<mipsrec.mli>>=
 val is_instruction: Rtl.rtl -> bool
 val to_string:      Rtl.rtl -> string
 @
-%%
+
 %%It is a checked run-time error to pass an {\rtl} to [[to_string]] that
 %%is not a {\mips} instruction.
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%The implementation is guided by the book \emph{\textsc{mips} Risc
 %%Architecture} by Gerry Kane, published by Prentice Hall.
-%%
+
 %%The recognizer is generated from a {\burg} specification. The [[head]]
 %%part precedes code generated from [[rules]], the [[tail]] part follows
 %%it.
-%%
+
 <<mipsrec.mlb>>=
-%head {: <<head>> :}
-%tail {: <<tail(mipsrec.nw)>> :}
-%term <<terminal types(mipsrec.nw)>>
+%head {: 
+  <<head>> 
+:}
+%tail {: 
+  <<tail(mipsrec.nw)>> 
+:}
+%term 
+  <<terminal types(mipsrec.nw)>>
 %%
 <<rules(mipsrec.nw)>>
 @
-%%
+
 %%The usual abbreviations for modules go into the [[head]] clause.
-%%
+
 <<head>>=
 module RP = Rtl.Private
 module RU = Rtlutil

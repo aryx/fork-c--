@@ -234,6 +234,7 @@ SRC_VIEWS= \
  $TOP/arch/mips/mipscall.mli\
  $TOP/arch/mips/mipscall.ml\
  $TOP/arch/mips/mipsrec.mli\
+ $TOP/arch/mips/mipsrec.mlb\
  $TOP/arch/mips/mipsregs.mli\
  $TOP/arch/mips/mipsregs.ml\
  \
