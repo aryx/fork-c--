@@ -1,6 +1,6 @@
 (*s: dummyexpander.mlb *)
 %head {: 
- (*s: utilities *)
+ (*s: utilities(dummyexpander.nw) *)
  module R  = Rtl
  module RP = Rtl.Private
  module RU = Rtlutil
@@ -12,18 +12,18 @@
  module W  = Rtlutil.Width 
  module G  = Cfg             (* for expanding all RTLs in a CFG *)
  module GU = Cfgutil
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  exception Error of string
  let error msg = raise (Error msg)
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  type state = R.rtl list * Talloc.Multiple.t
  type 'a m  = state -> ('a * state)
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  let exec  rtl  = fun (rtls,tmp) -> ((), (rtl :: rtls,tmp)) 
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  let return a  = fun s -> (a, s)
  let (>>=) (m: 'a m) (f: 'a -> 'b m) = fun s -> let (a,s) = m s in f a s 
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  let dtmp = function
      | 2 -> fun(rtls, tmp as state) -> (R.reg ('d', 1, 2), state)
      | w  -> Impossible.impossible 
@@ -43,9 +43,9 @@
      | 8  -> fun (rtls,tmp as state) -> (Talloc.Multiple.loc tmp 'u' 32, state)
      | w  -> Impossible.impossible 
                  (Printf.sprintf "unsupported width for float register: %d" w)
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  module StringSet = Set.Make(struct type t = string let compare = compare end)
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  let bool_ops2 = (* boolean valued primitive with non-boolean args *)
      List.fold_right StringSet.add
          ["eq"; "ge"; "geu"; "gt"; "gtu"; "le"; "leu"; "lt"; "ltu"; "ne"]
@@ -53,9 +53,9 @@
 
  let is_bool_op2  op     = StringSet.mem op bool_ops2
  let is_bool_op1  op     = op = "bool"
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  let fetch t = R.fetch t (W.loc t)
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  let bits2 n = R.bits (Bits.U.of_int n 2) 2
 
  let app0 tmp s x =
@@ -94,12 +94,12 @@
      tmp width >>= fun t ->
      exec (R.store t exp width) >>= fun () ->
      return t
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  let mem sp agg width addr ass=
      addr >>= fun a -> return (R.mem (U.assertion ass) sp agg width a)
 
  let reg sp i width = return (R.reg (sp, i, width))
- (*x: utilities *)
+ (*x: utilities(dummyexpander.nw) *)
  let store left right width =
      left >>= fun l -> right >>= fun r -> 
      return (R.store l (R.fetch r width) width)
@@ -107,17 +107,17 @@
  let store' left right width =   (* right is a value, not a location *)
      left >>= fun l -> right >>= fun r -> 
      return (R.store l r width)
- (*e: utilities *)
+ (*e: utilities(dummyexpander.nw) *)
  :}    
-(*s: terminal types *)
+(*s: terminal types(dummyexpander.nw) *)
 %term k width opr exps agg ass index bool bits link late x
-(*e: terminal types *)
+(*e: terminal types(dummyexpander.nw) *)
 %tail {: 
- (*s: tail *)
+ (*s: tail(dummyexpander.nw) *)
  let rec map f = function
      | []                        -> conNil ()
      | x::xs                     -> conCons (f x) (map f xs)
- (*x: tail *)
+ (*x: tail(dummyexpander.nw) *)
  let rec exp = function
      | RP.Const(RP.Bool(true))   -> conTrue()
      | RP.Const(RP.Bool(false))  -> conFalse()
@@ -143,7 +143,7 @@
 
  and rtl = function
      | RP.Rtl(gs)                -> conRtl (map guarded gs)
- (*x: tail *)
+ (*x: tail(dummyexpander.nw) *)
  let expand tmps (r: R.rtl) = 
      let plan = rtl (D.rtl r) in
      try
@@ -157,7 +157,7 @@
                  ]
              ; assert false
              )
- (*x: tail *)
+ (*x: tail(dummyexpander.nw) *)
  let cfg proc =
      let nodes       = GU.fold_bwd proc.Proc.cfg (fun n ns -> n::ns) []
      and tmps        = proc.Proc.temps   (* source for temporaries *)
@@ -175,7 +175,7 @@
          ( List.iter expnd nodes
          ; !modified
          )
- (*x: tail *)
+ (*x: tail(dummyexpander.nw) *)
  module Make (ProcT: Lua.Lib.TYPEVIEW with type 'a t = Proc.t): 
      Lua.Lib.USERCODE with type 'a userdata' = 'a ProcT.combined =
  struct
@@ -193,10 +193,10 @@
   (* FIX -- want proper stage *)
      end (*M*)    
  end (*Make*)            
- (*e: tail *)
+ (*e: tail(dummyexpander.nw) *)
 :}
 %%
-(*s: rules *)
+(*s: rules(dummyexpander.nw) *)
 const:      Const(k)
             {: return (U.exp (RP.Const(k))) :}
 
@@ -223,11 +223,11 @@ freg:       Fetch(mem,width) [1]
                 exec (R.store u (R.fetch m width) width) >>= fun () ->
                 return u
             :}
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 ireg:       Fetch(icell,width) {: icell :}
 freg:       Fetch(fcell,width) {: fcell :}    
 dreg:       Fetch(dcell,width) {: dcell :} 
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 dreg:   App0("float_eq", x)               {: app0 dtmp "float_eq" x :}
 dreg:   App0("float_gt", x)               {: app0 dtmp "float_gt" x :}
 dreg:   App0("float_lt", x)               {: app0 dtmp "float_lt" x :}
@@ -244,7 +244,7 @@ ireg:   App1("lobits",x,r1:ireg)          {: app1 itmp "lobits" x r1 :}
 ireg:   App1("neg",  x, r1:ireg)          {: app1 itmp "neg"  x r1 :}
 ireg:   App1("sx",   x, r1:ireg)          {: app1 itmp "sx"   x r1 :}
 ireg:   App1("zx",   x, r1:ireg)          {: app1 itmp "zx"   x r1 :}
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 ireg:   App2("add",  x, r1:ireg, r2:ireg) {: app2 itmp "add"  x r1 r2 :}
 ireg:   App2("and",  x, r1:ireg, r2:ireg) {: app2 itmp "and"  x r1 r2 :}
 ireg:   App2("div",  x, r1:ireg, r2:ireg) {: app2 itmp "div"  x r1 r2 :}
@@ -274,7 +274,7 @@ freg:   App3("fadd", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fsub" x r1 r2 c:}
 freg:   App3("fsub", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fadd" x r1 r2 c:}
 freg:   App3("fdiv", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fdiv" x r1 r2 c:}
 freg:   App3("fmul", x, r1:freg, r2:freg, c:dreg) {:app3 ftmp "fmul" x r1 r2 c:}
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 --
 -- Floating point comparison results are ALWAYS stored in a hardware
 -- register. This is a hack.
@@ -290,12 +290,12 @@ dreg:      App2("fcmp", x, f1:freg, f2:freg) [1]
                 exec (R.store r exp 2) >>= fun () ->
                 return r
             :}    
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 addr:       ireg  {: ireg >>= fun r -> return (fetch r) :}
 
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 mem:        Mem('m', agg, width, addr, ass)  {: mem 'm' agg width addr ass :}
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 icell:      Reg('r', index, width) {: reg 'r' index width :} 
 icell:      Reg('t', index, width) {: reg 't' index width :} 
 icell:      Reg('g', index, width) {: reg 'g' index width :} 
@@ -310,7 +310,7 @@ error:      Reg(x:char, index, width)
 
 error:      Mem(x:char, agg, width, addr, ass) [10]
             {: error (Printf.sprintf "cell in space '%c'" x) :}    
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 -- t := f
 ireg:       freg [10]    
             {:  
@@ -330,7 +330,7 @@ freg:       ireg [10]
                 exec (R.store u (R.fetch t w) w)    >>= fun () ->
                 return u
             :} 
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 stmt:       Store(mem,   ireg, width)       {: store mem   ireg  width :}
 stmt:       Store(mem,   freg, width)       {: store mem   freg  width :}
 stmt:       Store(icell, ireg, width)       {: store icell ireg  width :}
@@ -339,7 +339,7 @@ stmt:       Store(ccell, ireg, width) [1]   {: store ccell ireg  width :}
 stmt:       Store(dcell, dreg, width)       {: store dcell dreg  width :}
 stmt:       Store(dcell, const, width)      {: store' dcell const width :}
 stmt:       Store(ccell, const,width)       {: store' ccell const width :}
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 guard:      True()  {: return (R.bool true)  :}
 guard:      False() {: return (R.bool false) :}
 
@@ -380,16 +380,16 @@ gstmt:      GStmt(guard,stmt)
 gstmts:     Nil() {:  return [] :}
 gstmts:     Cons(gstmt,gstmts)
             {: gstmt  >>= fun s  -> gstmts >>= fun ss -> return (s::ss) :}
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 rtl:        Rtl(gstmts) [1]
             {:
                 gstmts            >>= fun rtls ->
                 exec (R.par rtls) >>= fun ()  ->
                 return ()
             :}
-(*x: rules *)
+(*x: rules(dummyexpander.nw) *)
 error:      Kill()  {: error "cannot handle Kill" :}
 error:      Var()   {: error "Var constructor" :}
 error:      Slice() {: error "Slice constrictor" :}
-(*e: rules *)
+(*e: rules(dummyexpander.nw) *)
 (*e: dummyexpander.mlb *)

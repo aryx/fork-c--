@@ -222,6 +222,7 @@ SRC_VIEWS= \
  \
  $TOP/arch/dummy/dummy.mli\
  $TOP/arch/dummy/dummy.ml\
+ $TOP/arch/dummy/dummyexpander.mlb\
  \
  $TOP/arch/arm/arm.mli\
  $TOP/arch/arm/arm.ml\
