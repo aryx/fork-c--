@@ -78,10 +78,13 @@
       (*s: [[Mipsrec]] special cases for [[App]] *)
       | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
       | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
-      | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x) 
-      | RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x) 
+      | RP.App(("and", [w]), [x; y])            -> conAnd (exp x) (exp y)
+      | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x)
+      | RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x)
+      (* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store in this backend (see mips.ml's Post.lostore, its only producer) - a MIPS "sb"/"sh" store already truncates its source register to the store's own width, so the narrowing is a free no-op here, not a distinct instruction. Pass the inner value through unchanged rather than erroring "unknown operator lobits" (found via stdlib.c--'s tig_ord, a bits8L[...] := %lobits8(...) store). *)
+      | RP.App(("lobits", [_;_]), [x])                    -> exp x
 
-      | RP.App((op, [w]), [x; y]) 
+      | RP.App((op, [w]), [x; y])
           when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
       (*e: [[Mipsrec]] special cases for [[App]] *)
       | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
@@ -206,7 +209,11 @@ inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int)
             {: cat ["l"; suffix w; zx; " "; regl; ","; mem] :}
 (*x: rules(mipsrec.nw) *)
 inst:       Store(fregl,const,32)
-            {: sprintf "li $1, %s; mtc1 $1, %s" const fregl :} 
+            {: sprintf "li $1, %s; mtc1 $1, %s" const fregl :}
+
+(* claude: Store(meml, freg, w) (float store) already had a rule below ("s.s"); the mirror-image float load never did, so any Store(fregl, mem, 32) - e.g. reloading a spilled non-volatile float register - fell through to the "<...>" catch-all, found via runtime/yield.c-- (its callee-saved $f20-$f30 reload sequence). *)
+inst:       Store(fregl, mem, 32)
+            {: cat ["l.s"; " "; fregl; ","; mem] :}
 (*x: rules(mipsrec.nw) *)
 inst:       Store(f,b:const64,64)
             {: sprintf "li $1, %s; mtc1 $1, %s; li $1 %s; mtc1 $1, %s"
@@ -243,8 +250,16 @@ inst:       Goto(reg)
             {: cat ["jr"; " "; reg] :}
 (*x: rules(mipsrec.nw) *)
 next:       Add(pc,const)       {: () :}
-inst:       Par(Goto(addr),Store(ral,next,32))     -- s/addr/symbol/g ? 
-            {: cat ["jal"; " "; addr] :} 
+(* claude: the original "-- s/addr/symbol/g ?" note was right to be suspicious - addr also matches reg (as "(reg)"), which is not valid jal syntax at all (jal only ever takes a direct label/address, never a register). Tightened to symbol here and added a separate jalr rule below for the register case (an indirect call, e.g. through a function pointer) - found via runtime/thread.c-- emitting "jal ($2)", which mipsel-linux-gnu-as rejected outright. *)
+inst:       Par(Goto(symbol),Store(ral,next,32))
+            {: cat ["jal"; " "; symbol] :}
+
+inst:       Par(Goto(target:reg),Store(ral,next,32))
+            {: cat ["jalr"; " "; target] :}
+(*x: rules(mipsrec.nw) *)
+(* claude: recognizes Mips.Post.cut_to's jump-through-register-while-updating-sp RTL, the shape the tiger runtime's Cmm_CutTo (runtime/cut.c--) compiles to - jr's delay slot is exactly where the sp update belongs. *)
+inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 32))
+            {: sprintf "jr %s\n\tmove $29, %s" target nsp :}
 (*x: rules(mipsrec.nw) *)
 syscall:    Link(x, w:int) [{: guard (x#mangled_text =$= "syscall") :}] {: () :}
 inst:       Par(Goto(syscall), Store(ral,pc,32))
@@ -259,10 +274,18 @@ inst:       Guarded(cmp,Goto(addr))
 (*x: rules(mipsrec.nw) *)
 inst:       Store(dst:regl, Add(x:reg,y:reg), 32)
             {: cat ["add"; " "; dst; ","; x; ","; y] :}
-     
+
 inst:       Store(dst:regl, Add(x:reg,y:imm), 32)
             {: cat ["addi"; " "; dst; ","; x; ","; y] :}
-     
+
+(* claude: the tail's exp function already converts sub to conSub (same as conAdd), but no inst: rule ever matched a Sub(...) tree, so it fell through to the "<...>" catch-all - found via runtime/thread.c-- (msg_end - msg). Only reg-reg is added; add reg-imm too if that shape ever shows up. *)
+inst:       Store(dst:regl, Sub(x:reg,y:reg), 32)
+            {: cat ["sub"; " "; dst; ","; x; ","; y] :}
+
+(* claude: bitwise and, needed by fork-tiger's alloc.c-- (rounding a pointer/size to an alignment via a mask). No reg-imm "andi" form added yet, matching the empirically-driven scope of the other new rules here. *)
+inst:       Store(dst:regl, And(x:reg,y:reg), 32)
+            {: cat ["and"; " "; dst; ","; x; ","; y] :}
+
 inst:       Store(dst:fregl, D2S(x:freg), 32)
             {: cat ["cvt.s.d"; " "; dst; ","; x] :}
 

@@ -1,5 +1,5 @@
-# The qc-- run-time system, built for 32-bit x86, 32-bit big-endian ppc, or
-# 32-bit big-endian sparc (V8).
+# The qc-- run-time system, built for 32-bit x86, 32-bit big-endian ppc,
+# 32-bit big-endian sparc (V8), or 32-bit little-endian mips (mipsel).
 #
 # Produces build-$(BACKEND)/libqcmm.a, which is what a C-- program links
 # against. Both demos/ and tests/ use this rather than each rebuilding the
@@ -43,8 +43,14 @@ else ifeq ($(BACKEND),sparc)
 CC32    ?= sparc64-linux-gnu-gcc -m32
 CONTOBJ  = $(B)/sparccont.o
 QCFLAG   = -sparc
+else ifeq ($(BACKEND),mips)
+# claude: mipsel, little-endian - like x86 (and unlike ppc/sparc's big-
+# endian), so no byteorder flip is needed in the $(B)/%.c-- rule below.
+CC32    ?= mipsel-linux-gnu-gcc
+CONTOBJ  = $(B)/mipscont.o
+QCFLAG   = -mips
 else
-$(error unknown BACKEND=$(BACKEND) - expected x86, ppc or sparc)
+$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc or mips)
 endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
@@ -107,6 +113,8 @@ $(B)/ppccont.o: ppccont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/sparccont.o: sparccont.s | $(B)
 	$(CC32) -c $< -o $@
+$(B)/mipscont.o: mipscont.s | $(B)
+	$(CC32) -c $< -o $@
 
 # The globals declaration is inserted after the "target byteorder" line so
 # the syncweb markers and everything else are preserved. claude: ppc/sparc
@@ -126,4 +134,4 @@ $(B)/%.o: $(B)/%.c--
 	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B) build-x86 build-ppc build-sparc
+	rm -rf $(B) build-x86 build-ppc build-sparc build-mips

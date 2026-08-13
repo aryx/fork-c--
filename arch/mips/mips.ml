@@ -323,6 +323,7 @@ let target =
     ; T.capabilities        = { T.operators = List.map Up.opr
                                    [ "add",     [32]
                                    ; "sub",     [32]
+                                   ; "and",     [32]
                                    ; "eq",      [32]
                                    ; "ne",      [32]
                                    ; "lt",      [32]
@@ -332,6 +333,9 @@ let target =
                                    ; "leu",     [32]
                                    ; "gtu",     [32]
                                    ; "geu",     [32]
+                                   (* claude: %lobits8/%lobits16 feeding a narrow-width memory store (mips.ml's Post.lostore, its only producer) - mipsrec.mlb's exp function passes these through as a no-op onto the plain register-store rule, since a MIPS "sb"/"sh" already truncates its source register to the store's own width. Declared here so Target.capable doesn't warn "No acceptable widths for %lobits". *)
+                                   ; "lobits",  [32;8]
+                                   ; "lobits",  [32;16]
                                    ; "not",     []
                                    ; "bool",    []
                                    ; "disjoin", []
