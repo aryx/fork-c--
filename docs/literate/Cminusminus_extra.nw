@@ -33668,8 +33668,8 @@ let machine_env =
   ; "addc"               ,[32]    (* int,   [n; n; 1] -> n        *)
   ; "add_overflows"      ,[32]    (* bool,  [n; n] -> bool        *)
   ; "and"                ,[32]    (* int,   [n; n] -> n           *)
-  ; "bit"                ,[32]    (* int,   [bool] -> 1           *)
-  ; "bool"               ,[32]    (* bool,  [1] -> bool           *)
+  ; "bit"                ,[  ]    (* int,   [bool] -> 1           *)
+  ; "bool"               ,[  ]    (* bool,  [1] -> bool           *)
   ; "borrow"             ,[32]    (* int,   [n; n; 1] -> 1        *)
   ; "carry"              ,[32]    (* int,   [n; n; 1] -> 1        *)
   ; "com"                ,[32]    (* int,   [n] -> n              *)
@@ -33729,7 +33729,7 @@ let machine_env =
   ; "mzero"              ,[64]    (* float, [] -> n               *)
   ; "ne"                 ,[32]    (* bool,  [n; n] -> bool        *)
   ; "neg"                ,[32]    (* int,   [n] -> n              *)
-  ; "not"                ,[32]    (* bool,  [bool] -> bool        *)
+  ; "not"                ,[  ]    (* bool,  [bool] -> bool        *)
   ; "or"                 ,[32]    (* int,   [n; n] -> n           *)
   ; "pinf"               ,[64]    (* float, [] -> n               *)
   ; "popcnt"             ,[32]    (* int,   [n] -> 1              *)
@@ -33793,6 +33793,14 @@ let binrm ~dst op x y rm = Impossible.unimp "floating point"
 %%Block Copy\ldots
 <<ppc postexpander>>=
 let block_copy ~dst assn1 ~src assn2 width =
+  (* claude: width, like every other width in this signature (e.g.
+   * zxload's), is in bits - the copy loop below is byte-indexed, so it
+   * must be converted once here. Without this, a plain N-bit scalar
+   * memory-to-memory move (e.g. bits32B[dst] := bits32B[src], width=32)
+   * was copying N *bytes* (here, 8 words instead of 1) - x86.ml's
+   * block_copy does this same "n / 8" conversion for its analogous
+   * byte-oriented fallback case. *)
+  let width = width / 8 in
   let tmp = talloc 't' 32 in
   let reg_sl = function
     | 32 -> tloc tmp

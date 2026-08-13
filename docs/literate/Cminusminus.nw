@@ -3430,7 +3430,7 @@ not live out.
 instructions, explained below).
 \end{enumerate}
 <<set up dataflow analysis for register allocation>>=
-let allocate reconcile_succs upd_midmap vm
+let allocate reconcile_succs upd_midmap is_last vm
       ({liveset=li},
        {liveset=lo; dists=(_, (_, dm, um) as maps); prefs = (pmap,_) as prefs})
       rtl (defs, uses) =
@@ -3503,12 +3503,59 @@ let try_copy () =
           alloc_to r
         else fail () in
       let target = if is_def then src else dst in
-      if is_vfp target then fail ()
+      (* claude: neither branch below (is_tmp target's usemap
+       * lookup, or the plain hardware-register "else alloc
+       * target") ever checked lo/li on target itself - alloc's own
+       * "List.for_all (... VM.reg_contents' vm r)" only accounts
+       * for OTHER tmps the allocator has already placed in
+       * target's register, not target's own continued need as
+       * itself. Coalescing t straight into target's register is
+       * only sound if target's current value isn't needed again
+       * later - e.g. unsound here whenever target gets redefined
+       * (a multiple assignment's "new" side, or an incoming
+       * argument register) before some later, independent use of
+       * its "old" value that this move was never meant to
+       * disturb. Reproduced on two shapes: tests/cmm/bool.c--
+       * (target = a hardware argument register, $r[0]/n, fetched
+       * again for a printf argument after Peephole.subst_forward
+       * propagated a direct reference to it) and tests/cmm/
+       * multasgn.c-- (target = a tmp holding "hp", redefined to
+       * hp+8 by the same multiple assignment that "x := hp" is
+       * part of). Mirrors can_use's own lo/li check just above. *)
+      let target_needed_later =
+        (is_def && RS.mem target lo) || (not is_def && RS.mem target li) in
+      if is_vfp target || target_needed_later then fail ()
       else if is_tmp target then
              try  match (VM.var_locs'' usemap target).VM.reg' with
                   | Some r -> alloc r
                   | None   -> fail ()
              with Not_found -> fail ()
+      (* claude: target is precolored (not a tmp, not vfp). For an
+       * ordinary middle instruction that's fine even when target is
+       * a symbolic pseudo-register - the move degenerates to a
+       * harmless self-move, and Optimize.remove_nops deletes it.
+       * But for is_last, target may be a pseudo-register that is
+       * never a real allocation destination at all, like the
+       * control/pc register (Reg('c', pc-index), arch/x86/
+       * x86rec.mlb's "eip : Reg('c', n) [...]") standing for this
+       * very Jump's own target: t6 := ...; $c[0] := t6 (t6's own
+       * USE here has is_def=false, target=dst=$c[0]) coalesced
+       * this way makes the jump's *own* defining move degenerate
+       * into "$c[0] := $c[0]" once both sides share a location -
+       * an unselectable last-node RTL this time (no
+       * remove_nops-style cleanup exists for last nodes, and
+       * arch/x86/x86rec.mlb has no rule for a bare register/self
+       * fetch as a jump target - there isn't supposed to be one).
+       * Restrict only the is_last case to target actually in regs,
+       * the real allocatable set this function is choosing among
+       * everywhere else (try_regs, spill, ...) - restricting the
+       * middle case too regressed ppc's altread/altret/altret2,
+       * which coalesce into some non-regs precolored target
+       * legitimately at -O0, no peephole/dead-elim involved.
+       * Reproduced on tests/cmm/call3.c-- (tail2/tailnot), needing
+       * Peephole.subst_forward and Optimize.elim_dead_assignments
+       * together upstream of here to produce this exact shape. *)
+      else if is_last && not (List.exists (R.eq target) regs) then fail ()
       else alloc target
   | None -> fail () in
 @
@@ -3635,7 +3682,7 @@ single location. So, for each temp allocated to both a register and a stack slot
 drop the stack slot with [[upd_midmap]].
 \end{itemize}
 <<set up dataflow analysis for register allocation>>=
-let allocate_mid    = allocate (fun x -> x) (fun x -> x) in
+let allocate_mid    = allocate (fun x -> x) (fun x -> x) false in
 let allocate_last l =
   let reconcile z =
     let add_spill uid (defmap, spills) =
@@ -3654,7 +3701,7 @@ let allocate_last l =
                      with Not_found -> vm in
       VM.fold' (fun _ _ m -> m) rem vm vm
     | _ -> vm in
-  allocate reconcile upd_midmap in
+  allocate reconcile upd_midmap true in
 @
 
 \section{Framing the allocator as a dataflow analysis}
@@ -4717,11 +4764,30 @@ We also build a map ([[regToItem]]) from a register to a listgroup item.
 
 We also want to map each interference graph node to its register class.
 <<build>>=
+(* claude: [[last]] used to union in only
+ * "add_live_spansl l RSX.empty" (defs/uses/spans local to this
+ * node), but addInterference's own vis_last below computes its
+ * live set as "add_live_spansl last (Live.live_out_last last)"
+ * - the real backward-liveness fact, a strictly bigger set
+ * whenever a register is live out of this block's terminator
+ * without being defined or used anywhere in the whole
+ * procedure (a pure pass-through, e.g. a convention-mandated
+ * live register on a short, flat function with nothing else to
+ * touch it). That gap meant regToItem/regToClass below could
+ * be missing a register addInterference then calls addEdge on,
+ * crashing addToAdjList's "RM.find t2 cg.regToItem" with
+ * Not_found - reproduced on a small 7-argument function with no
+ * branches; the existing native.tests corpus never hit it
+ * because its multi-block programs happen to touch the same
+ * registers elsewhere too. Fixed by mirroring vis_last's own
+ * live expression exactly, so both passes agree on what a
+ * "last" node's registers are. *)
 let get_regs cfg =
   let first  f rst = R.promote_rxset (G.add_live_spansf f RSX.empty) ++ rst in
   let middle m rst = defsm m ++ usesm m ++ rst in
   let last   l rst = defsl l ++ usesl l ++
-                     R.promote_rxset (G.add_live_spansl l RSX.empty) ++ rst in
+                     R.promote_rxset (G.add_live_spansl l (Live.live_out_last l)) ++
+                     rst in
   let block b rst = GR.fold_fwd_block first middle last b rst in
   G.fold_blocks block RS.empty cfg
 
@@ -5128,16 +5194,65 @@ assign colors to these nodes.
 The choice of which node to spill here is an important policy decision.
 
 <<selectSpill>>=
+(* claude: cg.liveRange/numUses (used by cheaper below) are
+ * accumulated by addInterference's single linear backward walk
+ * over each block, seeded from the real (correctly
+ * fixed-pointed) Live.live_out_last - so they're accurate as a
+ * *static* "how many program points is this live across"
+ * count, but that count has no idea a block is inside a loop:
+ * a value carried around a back-edge (e.g. a self-recursive
+ * tail call's own induction variables) gets exactly the same
+ * modest liveRange as any other value that merely spans one
+ * block, even though spilling it costs a reload every runtime
+ * iteration, not once. Confirmed via
+ * docs/claude_notes/notes_debugging_techniques.txt entry 27:
+ * without this, selectSpill kept *preferring* exactly such a
+ * value round after round (their liveRange/degree ratio looks
+ * "cheap"), and each spill's own reload is itself loop-carried
+ * the same way, so it needed spilling next round too -
+ * |get_regs cfg| grew by one forever on tests/cmm/
+ * tail_from_c.c--'s self-recursive sp2_help, never converging.
+ *
+ * Real loop-nesting-depth-weighted cost would need dominator/
+ * natural-loop analysis this file doesn't have (see
+ * TODO/dominator.nw, still unintegrated). Approximating
+ * instead: a block whose last has a successor at or before its
+ * own position in a postorder DFS is a back edge (standard
+ * test - a tree/forward edge always goes to a strictly later
+ * postorder position, since postorder finishes a node only
+ * after all its descendants), and Live.live_out_last of that
+ * *source* block already contains (is a superset of) whatever
+ * is live-in to the loop header on the other end - no need to
+ * separately walk into the target block. Loop-carried
+ * candidates are heavily deprioritized, not excluded: they can
+ * still be chosen as a last resort if nothing else is on the
+ * worklist, so this cannot itself get selectSpill stuck with
+ * nothing to pick. *)
+let loop_carried_regs cfg =
+  let order = G.postorder_dfs cfg in
+  let (_, posnum) =
+    List.fold_left (fun (i, m) b -> (i + 1, UM.add (GR.id b) i m))
+      (0, UM.empty) order in
+  let pos u = try UM.find u posnum with Not_found -> -1 in
+  G.fold_blocks (fun b regs ->
+    let (_, last) = GR.goto_end (GR.unzip b) in
+    let bpos = pos (GR.id b) in
+    if List.exists (fun s -> pos s >= bpos) (GR.succs last)
+    then R.promote_rxset (Live.live_out_last last) ++ regs
+    else regs)
+    RS.empty cfg
 let selectSpill cg (cfg, proc) =
   Debug.eprintf "color" "color::selectSpill()\n"; flush stderr;
   let lst = !(cg.tempLG SpillWorklist) in
   match lst with
   | None   -> ((cfg, proc), false)
   | Some t ->
+    let loop_carried = loop_carried_regs cfg in
     let cheaper ({v = v} as t) (cost, _ as best) =
       let i2f = float_of_int in
       let cost' = (i2f (RM.find v cg.numUses)) /.
                   (i2f (RM.find v cg.liveRange) *. i2f (RM.find v cg.degreeMap)) in
+      let cost' = if RS.mem v loop_carried then cost' *. 1000. else cost' in
       if cost' <. cost then (cost', t) else best in
     let (_, spillee) = ilg_fold cheaper lst (infinity, t) in
     if RS.mem spillee.v cg.spills then
@@ -5425,7 +5540,7 @@ let updateInstr map_rtl instr spillee
                 (node, loads, spillMap, spills, newTemps as accum) =
   let spillee = spillee.v in
   let reads, writes = reads_writes instr spillee in
-  if reads || writes then 
+  if reads || writes then
     let (mem, spill_regs) = RM.find spillee spillMap in
     let tmp   = Talloc.Multiple.reg_like proc.Proc.temps spillee in
     let subst = fun x -> if Register.eq x spillee then tmp else x in 
@@ -5439,7 +5554,74 @@ let updateInstr map_rtl instr spillee
     (map_rtl map, loads, spillMap, spills, newTemps)
   else accum in
 
+(* claude: a Call/Cut/Jump/Return's uses of real registers are
+ * not always expressed in its own RTL (GR.last_instr):
+ * - Call carries a separate cal_uses field; Cut/Jump/Return
+ *   their own positional uses:regs (zipcfg.ml's
+ *   add_inedge_uses, which build()/addInterference already
+ *   read through usesl/defsl, folds these in).
+ * - Call/Cut's continuation edges (cal_contedges / Cut's own
+ *   edgelist) each carry their own defs:regs and kills:regs
+ *   (zipcfg.ml's union_over_outedges, which defsl also reads)
+ *   - registers considered defined/killed across that edge,
+ *   independent of cal_i's own RTL.
+ * reads_writes/updateInstr above only inspect the RTL, and
+ * Zipcfg.map_rtll (used below to rewrite cal_i) only touches
+ * a contedge's assertion field, never its defs/kills. So a
+ * spillee referenced *only* via one of these extra fields was
+ * never substituted: the old register survived the rewrite
+ * untouched, so the very next build() saw it as still
+ * needing a color and picked it right back out of the spill
+ * worklist - forever (reproduced on tests/cmm/add.c--, a
+ * trivial one-call function: selectSpill chose the same temp
+ * every single round; resetProgram's "already spilled" check
+ * never caught it because that check only tracks the
+ * *replacement* temps from past rounds, not the original -
+ * confirmed the spilled temp appeared in a continuation
+ * edge's kills/defs, not cal_uses, by tracing every
+ * candidate field by hand). Fixed by also substituting
+ * spillee for a fresh reload temp inside all of these
+ * fields directly, mirroring what updateInstr already does
+ * for the RTL itself. *)
+let contedges_of = function
+  | GR.Call c -> c.GR.cal_contedges
+  | GR.Cut (_, es, _) -> es
+  | _ -> [] in
+let last_extra_uses last =
+  let ce_regs =
+    List.fold_left
+      (fun r (ce : G.contedge) -> RSX.union r (RSX.union ce.G.defs ce.G.kills))
+      RSX.empty (contedges_of last) in
+  let own_uses = match last with
+    | GR.Call c -> c.GR.cal_uses
+    | GR.Cut (_, _, u) | GR.Jump (_, u, _) | GR.Return (_, _, u) -> u
+    | _ -> RSX.empty in
+  RSX.union own_uses ce_regs in
+let subst_last_extra_uses spillee tmp last =
+  let subst_elt = function
+    | R.Reg r when Register.eq r spillee -> R.Reg tmp
+    | R.Slice (w, i, r) when Register.eq r spillee -> R.Slice (w, i, tmp)
+    | x -> x in
+  let subst_ce (ce : G.contedge) =
+    { ce with G.defs  = RSX.map subst_elt ce.G.defs
+            ; G.kills = RSX.map subst_elt ce.G.kills } in
+  match last with
+  | GR.Call c -> GR.Call { c with GR.cal_uses = RSX.map subst_elt c.GR.cal_uses
+                                ; GR.cal_contedges = List.map subst_ce c.GR.cal_contedges }
+  | GR.Cut (r, es, u)   -> GR.Cut (r, List.map subst_ce es, RSX.map subst_elt u)
+  | GR.Jump (r, u, tg)  -> GR.Jump (r, RSX.map subst_elt u, tg)
+  | GR.Return (i, r, u) -> GR.Return (i, r, RSX.map subst_elt u)
+  | _ -> last in
 let updateLast spillee (last, loads, spillMap, spills, newTemps) =
+  let spillee_v = spillee.v in
+  let last, loads, spillMap, newTemps =
+    if RSX.mem (R.Reg spillee_v) (last_extra_uses last) then
+      let (mem, spill_regs) = RM.find spillee_v spillMap in
+      let tmp = Talloc.Multiple.reg_like proc.Proc.temps spillee_v in
+      let loads = tgt.T.machine.T.reload proc mem tmp :: loads in
+      let spillMap = RM.add tmp (mem, tmp :: spill_regs) spillMap in
+      (subst_last_extra_uses spillee_v tmp last, loads, spillMap, tmp :: newTemps)
+    else (last, loads, spillMap, newTemps) in
   match updateInstr (fun map -> G.map_rtll map map last) (GR.last_instr last) spillee
                     (last, loads, spillMap, [], newTemps) with
   | (_, _, _, [], _) as x -> x
@@ -5560,8 +5742,13 @@ module RM  = Register.Map
 module RS  = Register.Set
 module RSX = Register.SetX
 module RU  = Rtlutil
-let ( ++ ) = RS.union 
-let ( -- ) = RS.diff 
+
+(* claude: Nopoly.(=*=) below needs this open; every other .nw-tangled
+ * .ml in this tree gets it prepended automatically by the (now-dropped)
+ * generator, so it has to be added by hand here. *)
+open Nopoly
+let ( ++ ) = RS.union
+let ( -- ) = RS.diff
 let imposs = Impossible.impossible
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 
@@ -5690,8 +5877,15 @@ module PreMake (Color : COLOR) = struct
    * spills - rewrite the program to materialize them and start over from
    * build; otherwise remove the now-redundant coalesced moves and rewrite
    * every temp to its assigned color. *)
+  (* claude: "ralloc-cfg" is already Debug.register'd by regalloc/flowra.ml
+   * - both link into the same qc binary, and Debug.register errors on a
+   * second registration of the same word - so this reuses it via
+   * Debug.on/Debug.eprintf only, matching Flowra.ralloc's own before/after
+   * dump exactly. *)
   let ralloc _ (cfg, proc) =
     let cg = cgInfo in
+    if Debug.on "ralloc-cfg" then
+      (Debug.eprintf "ralloc-cfg" "BEFORE register allocation:\n"; Cfgutil.print_cfg cfg);
     let rec fixpoint (cfg, proc) =
       let (cfg, proc), changed = simplify cg (cfg, proc) in
       if changed then fixpoint (cfg, proc) else
@@ -5703,6 +5897,27 @@ module PreMake (Color : COLOR) = struct
       if changed then fixpoint (cfg, proc) else
       (cfg, proc) in
     let rec main (cfg, proc) =
+      (* claude: build()/get_regs below calls Live.live_out_last directly,
+       * which only *reads* a uid-keyed property table (Unique.Prop) - it
+       * does not compute liveness itself. That table is populated once,
+       * before ralloc even runs (arch/x86/x86backend.ml's Phases.liveness),
+       * and nothing in this retry loop ever re-solves it, even though
+       * resetProgram rewrites the cfg every round (inserting spill/reload
+       * code). So build() on round 2+ was reading round-0's liveness
+       * facts against a structurally different cfg: a temp whose every
+       * real reference had already been correctly rewritten away by the
+       * spill insertion could still show up as "live" per the stale
+       * table, so selectSpill kept re-picking the exact same temp every
+       * round with no way to ever converge - reproduced as a genuine
+       * infinite loop on tests/cmm/add.c--, a trivial one-call function
+       * (confirmed by ruling out every other place a spilled register
+       * could still be referenced - RTL, cal_uses/cut/jump/return uses,
+       * continuation-edge defs/kills, spans - all correctly cleared by
+       * the spill rewrite; only the separately-cached liveness fact
+       * survived). Re-solving fresh here, every round (round 1 included,
+       * for consistency, even though it happens to already be fresh from
+       * Phases.liveness), is what actually fixes it. *)
+      let cfg, _ = Dataflow.B.rewrite (Dataflow.B.anal Live.live_in) cfg in
       let (cfg, proc), _ = clearCGInfo cg (cfg, proc) in
       let (cfg, proc), _ = build cg (cfg, proc) in
       let (cfg, proc), _ = makeWorklist cg (cfg, proc) in
@@ -5715,7 +5930,10 @@ module PreMake (Color : COLOR) = struct
       else
         let (cfg, proc), _ = updateProgram cg (cfg, proc) in
         applyColors cg (cfg, proc) in
-    main (cfg, proc)
+    let (cfg, proc), changed as result = main (cfg, proc) in
+    if Debug.on "ralloc-cfg" then
+      (Debug.eprintf "ralloc-cfg" "AFTER register allocation:\n"; Cfgutil.print_cfg cfg);
+    result
 end
 
 module XXX = PreMake(RegColor)
