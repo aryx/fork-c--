@@ -42358,6 +42358,10 @@ inst:       Par(Goto(target:reg),Store(ral,next,32))
 %%SPIM is not called like a procedure, but simply by [[syscall]].
 %%
 <<rules(mipsrec.nw)>>=
+(* claude: recognizes Mips.Post.cut_to's jump-through-register-while-updating-sp RTL, the shape the tiger runtime's Cmm_CutTo (runtime/cut.c--) compiles to - jr's delay slot is exactly where the sp update belongs. *)
+inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 32))
+            {: sprintf "jr %s\n\tmove $29, %s" target nsp :}
+
 syscall:    Link(x, w:int) [{: guard (x#mangled_text =$= "syscall") :}] {: () :}
 inst:       Par(Goto(syscall), Store(ral,pc,32))
             {: "syscall" :}
@@ -42381,9 +42385,25 @@ inst:       Guarded(cmp,Goto(addr))
 %%\paragraph{Arithmetic}
 %%
 <<rules(mipsrec.nw)>>=
-(* claude: recognizes Mips.Post.cut_to's jump-through-register-while-updating-sp RTL, the shape the tiger runtime's Cmm_CutTo (runtime/cut.c--) compiles to - jr's delay slot is exactly where the sp update belongs. *)
-inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 32))
-            {: sprintf "jr %s\n\tmove $29, %s" target nsp :}
+inst:       Store(dst:regl, Add(x:reg,y:reg), 32)
+            {: cat ["add"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:regl, Add(x:reg,y:imm), 32)
+            {: cat ["addi"; " "; dst; ","; x; ","; y] :}
+
+(* claude: the tail's exp function already converts sub to conSub (same as conAdd), but no inst: rule ever matched a Sub(...) tree, so it fell through to the "<...>" catch-all - found via runtime/thread.c-- (msg_end - msg). Only reg-reg is added; add reg-imm too if that shape ever shows up. *)
+inst:       Store(dst:regl, Sub(x:reg,y:reg), 32)
+            {: cat ["sub"; " "; dst; ","; x; ","; y] :}
+
+(* claude: bitwise and, needed by fork-tiger's alloc.c-- (rounding a pointer/size to an alignment via a mask). No reg-imm "andi" form added yet, matching the empirically-driven scope of the other new rules here. *)
+inst:       Store(dst:regl, And(x:reg,y:reg), 32)
+            {: cat ["and"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:fregl, D2S(x:freg), 32)
+            {: cat ["cvt.s.d"; " "; dst; ","; x] :}
+
+inst:       Store(dst:fregl, S2D(x:freg), 64)
+            {: cat ["cvt.d.s"; " "; dst; ","; x] :}
 @
 %%\paragraph{Other Instructions}
 %%

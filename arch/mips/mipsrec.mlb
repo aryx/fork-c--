@@ -260,7 +260,7 @@ inst:       Par(Goto(target:reg),Store(ral,next,32))
 (* claude: recognizes Mips.Post.cut_to's jump-through-register-while-updating-sp RTL, the shape the tiger runtime's Cmm_CutTo (runtime/cut.c--) compiles to - jr's delay slot is exactly where the sp update belongs. *)
 inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 32))
             {: sprintf "jr %s\n\tmove $29, %s" target nsp :}
-(*x: rules(mipsrec.nw) *)
+
 syscall:    Link(x, w:int) [{: guard (x#mangled_text =$= "syscall") :}] {: () :}
 inst:       Par(Goto(syscall), Store(ral,pc,32))
             {: "syscall" :}
