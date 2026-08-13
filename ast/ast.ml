@@ -91,16 +91,14 @@
       | MemDecl of (ty * memsize * init option)
   
   and cformal = (region * hint option * name * aligned option)
-  and flow =
-        Fl of (flow * region)
+  and flow = Fl of (flow * region)
       | CutsTo of (name list)
       | UnwindsTo of (name list)
       | ReturnsTo of (name list)
       | NeverReturns
       | Aborts
   
-  and mem =
-        Al of (mem * region)
+  and mem = Al of (mem * region)
       | Reads of (name list)
       | Writes of (name list)
   
@@ -114,12 +112,10 @@
       | Range of (expr * expr)
   
   and guarded = (expr option * expr)
-  and arm =
-        ArmAt of (arm * region)
+  and arm = ArmAt of (arm * region)
       | Case of (range list * body list)
   
-  and stmt =
-        S of (stmt * region)
+  and stmt = S of (stmt * region)
       | IfStmt of (expr * body list * body list)
       | SwitchStmt of (range option * expr * arm list)
       | LabelStmt of (name)
@@ -145,22 +141,20 @@
       | CommentStmt of (StdPrims.std_string)
       | LimitcheckStmt of (expr * expr option)
   
-  and body =
-        B of (body * region)
+  and body = B of (body * region)
       | DeclBody of (decl)
       | StmtBody of (stmt)
       | DataBody of (datum list)
   
   and proc = (conv option * name * formal list * body list * region)
-  and section =
-        Sec of (section * region)
+
+  and section = Sec of (section * region)
       | Decl of (decl)
       | Procedure of (proc)
       | Datum of (datum)
       | SSpan of (expr * expr * section list)
   
-  and toplevel =
-        Top of (toplevel * region)
+  and toplevel = Top of (toplevel * region)
       | Section of (name * section list)
       | TopDecl of (decl)
       | TopProcedure of (proc)
