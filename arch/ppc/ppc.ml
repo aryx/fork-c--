@@ -358,6 +358,14 @@ module Post = struct
   let binrm ~dst op x y rm = Impossible.unimp "floating point"
   (*x: ppc postexpander *)
   let block_copy ~dst assn1 ~src assn2 width =
+    (* claude: width, like every other width in this signature (e.g.
+     * zxload's), is in bits - the copy loop below is byte-indexed, so it
+     * must be converted once here. Without this, a plain N-bit scalar
+     * memory-to-memory move (e.g. bits32B[dst] := bits32B[src], width=32)
+     * was copying N *bytes* (here, 8 words instead of 1) - x86.ml's
+     * block_copy does this same "n / 8" conversion for its analogous
+     * byte-oriented fallback case. *)
+    let width = width / 8 in
     let tmp = talloc 't' 32 in
     let reg_sl = function
       | 32 -> tloc tmp
