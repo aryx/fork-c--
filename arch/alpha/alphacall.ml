@@ -189,9 +189,14 @@ let c ~return_to cut spec =
  *     }
  *)
 (*x: alphacall.ml  *)
-let cconv ~return_to cut ccname spec =
+let cconv ~return_to cut ccname spec = 
   let f =
     match ccname with
+(*
+    | "cmm0" -> cmm0
+    | "cmm1" -> cmm1
+    | "cmm2" -> cmm2
+*)
     | _      -> c
   in f ~return_to cut spec
 (*e: alphacall.ml  *)

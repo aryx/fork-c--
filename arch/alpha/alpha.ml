@@ -298,7 +298,6 @@ module Post = struct
       DG.Nop, R.par [R.store pc_lhs pc' wordsize; R.store (R.reg sp) sp' wordsize]
     (*x: Alpha postexpander *)
     let don't_touch_me es = false
-    (*x: Alpha postexpander *)
     (* claude: return/forbidden are required by Postexpander.S but had no
      * definition here (same gap sparc.ml had). Alpha has no register
      * windows, so - unlike sparc's return, which also has to bump cwp -
