@@ -1,11 +1,11 @@
 (*s: sparcasm.ml *)
 module G  = Cfgx.M
 module SM = Strutil.Map
-(*s: utilities *)
+(*s: [[Sparcasm]] utilities *)
 let fprintf = Printf.fprintf
 let unimpf  fmt = Printf.kprintf Impossible.unimp fmt
-(*e: utilities *)
-(*s: definitions *)
+(*e: [[Sparcasm]] utilities *)
+(*s: [[Sparcasm]] definitions *)
 (*s: definition of [[manglespec]] (for the name mangler) *)
 let spec =
     let reserved = [] in        (* list reserved words here so we can avoid them *)
@@ -43,9 +43,9 @@ object (this)
     (*e: private assembly state *)
     method private print l = List.iter (output_string _fd) l
 
-    (*s: assembly methods *)
+    (*s: [[Sparcasm]] assembly methods *)
     method import s = this#new_symbol s
-    (*x: assembly methods *)
+    (*x: [[Sparcasm]] assembly methods *)
     method export s =
       let sym = this#new_symbol s in
       Printf.fprintf _fd ".global %s\n" sym#mangled_text;
@@ -66,7 +66,7 @@ object (this)
     method zeroes (n:int) =
       fprintf _fd ".skip %d\n" n;
       _a <- Alignment.add n _a
-    (*x: assembly methods *)
+    (*x: [[Sparcasm]] assembly methods *)
     method value (v:Bits.bits) = 
       let altfmt = Bits.to_hex_or_decimal_string ~declimit:256 in
       let w      = Bits.width v in
@@ -86,26 +86,26 @@ object (this)
           (this#value (Bits.Ops.lobits 32 (Bits.Ops.shrl v (Bits.U.of_int (w - 32) w)));
            this#value (Bits.Ops.lobits (w - 32) v))
     *)
-    (*x: assembly methods *)
+    (*x: [[Sparcasm]] assembly methods *)
     method addr a =
       match Reloc.if_bare a with
       | Some b -> this#value b
       | None -> let const bits = Printf.sprintf "0x%Lx" (Bits.U.to_int64 bits) in
                 assert (Reloc.width a = 32);
                 fprintf _fd ".word %s\n" (Asm.reloc_string const a)
-    (*x: assembly methods *)
+    (*x: [[Sparcasm]] assembly methods *)
     method emit = ()
-    (*x: assembly methods *)
+    (*x: [[Sparcasm]] assembly methods *)
     method comment s = fprintf _fd "! %s\n" s
 
     method const (s: Symbol.t) (b:Bits.bits) = 
       Impossible.unimp "Don't know how to make a constant for SPARC"
-    (*x: assembly methods *)
+    (*x: [[Sparcasm]] assembly methods *)
     method longjmp_size () = 8
     (*
       Impossible.unimp "longjmp size not set for SPARC -- needed for alternate returns"
     *)
-    (*x: assembly methods *)
+    (*x: [[Sparcasm]] assembly methods *)
     method private instruction rtl =
       output_string _fd "\t";
       output_string _fd (Sparcrec.to_asm rtl);
@@ -132,9 +132,9 @@ object (this)
       let numargs = List.length (proc.Proc.formals) in
         this#label symbol;    
         (emitter cfg (this#call) (this#instruction) label : unit)
-    (*e: assembly methods *)
+    (*e: [[Sparcasm]] assembly methods *)
 end
-(*e: definitions *)
+(*e: [[Sparcasm]] definitions *)
 type node = Rtl.rtl Cfgx.M.node
 let make emitter fd = new asm emitter fd
 (*e: sparcasm.ml *)
