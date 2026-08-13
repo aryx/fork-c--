@@ -903,6 +903,39 @@ right (off-by-one in a sort order, a space classified differently than
 expected) fails silently rather than loudly.
 
 
+31. A gdb watchpoint expression is re-evaluated live - don't watch through
+    a register that gets reused
+---------------------------------------------------------------------------
+Chasing colmajor.c--'s NULL-array-pointer crash (see entry 30's block_copy
+bug), the first attempt to find *what* zeroed a specific outer-frame stack
+slot was `watch *(int*)($r3+32)`, set right at a function's entry where r3
+happened to hold the address of interest. It triggered - but on a value
+and a call frame that made no sense, because r3 is an ordinary scratch/
+argument register, reassigned dozens of times over the next few hundred
+instructions. gdb re-evaluates a watchpoint's *expression* before every
+check, not just its value at the moment `watch` was typed - so `$r3+32`
+tracked wherever r3 pointed *at each instant*, not the fixed address it
+happened to equal when the watchpoint was created.
+
+The fix was mechanical: read the target address once as a concrete number
+($1 = 0x407ff640), then `watch *(int*)0x407ff660` (arithmetic already
+applied, no register in the expression at all). That immediately gave the
+right instruction and the right backtrace.
+
+Also needed along the way: `set can-use-hw-watchpoints 0` before `watch` -
+qemu-ppc's gdbstub only offers so many hardware watchpoint slots, and this
+session had already burned them on an earlier (bogus, register-based)
+watchpoint left over from a prior attempt. A software watchpoint is slower
+(gdb single-steps to check it) but has no such limit, and for a
+single-shot investigation like this one the slowdown never mattered.
+
+General shape: when a watchpoint result looks nonsensical (wrong frame,
+wrong value, "this can't be where it changed"), suspect the *expression*
+before the *hypothesis* - a watchpoint on `*(EXPR)` is only pinned to a
+fixed address if EXPR itself is already a constant. Compute the address
+once, watch the literal.
+
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
