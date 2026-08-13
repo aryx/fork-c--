@@ -18,6 +18,7 @@ import bits32 "tig_bounds_check" as bounds_check;
 import bits32 "tig_set_handler" as set_handler;
 import bits32 "tig_raise" as raise;
 import bits32 "tig_unwind" as unwind;
+import bits32 "tig_spawn" as spawn;
 export tiger_main;
 
 bits32 alloc_ptr;
@@ -25,12 +26,12 @@ import space_end;
 
 section "data" { align 4;
  Lgbl_39: bits32 { 4 }; bits8[] "bye\n\000";
- Lgbl_76: bits32 { 18 }; bits8[] "out of ex block 2\n\000";
+ Lgbl_45: bits32 { 12 }; bits8[] "exception 1\n\000";
  Lgbl_56: bits32 { 18 }; bits8[] "out of ex block 1\n\000";
  Lgbl_60: bits32 { 12 }; bits8[] "exception 3\n\000";
+ Lgbl_76: bits32 { 18 }; bits8[] "out of ex block 2\n\000";
  Lgbl_36: bits32 { 6 }; bits8[] "hello\n\000";
  Lgbl_42: bits32 { 12 }; bits8[] "exception 2\n\000";
- Lgbl_45: bits32 { 12 }; bits8[] "exception 1\n\000";
 }
 
 throws_int_25(bits32 pfp,bits32 i) {
@@ -42,7 +43,8 @@ throws_int_25(bits32 pfp,bits32 i) {
   bits32 temp_29;
   if(%gt(bits32[%add(fp, 4)], 0)) {goto LifTrue_30;} else {goto LifFalse_31;}
   LifTrue_30:
-  temp_29 =  unwind(20) also aborts ;
+   raise(5) also aborts ;
+  temp_29 = 0;
   goto LifEnd_32;
   LifFalse_31:
   temp_29 = 0;
@@ -78,6 +80,7 @@ tiger_main(bits32 pfp) {
   bits32 temp_79;
   bits32 temp_78;
   bits32 temp_77;
+  bits32 temp_69;
   bits32 temp_68;
   bits32 temp_66;
   bits32 temp_65;
@@ -87,6 +90,7 @@ tiger_main(bits32 pfp) {
   bits32 temp_61;
   bits32 temp_58;
   bits32 temp_57;
+  bits32 temp_50;
   bits32 temp_49;
   bits32 temp_47;
   bits32 temp_46;
@@ -97,19 +101,22 @@ tiger_main(bits32 pfp) {
   bits32 temp_38;
   bits32 temp_37;
   span 2 1 { /* Lexn_35 */
+  temp_50 =  set_handler(Lexn_35) also aborts ;
   temp_37 = alloc_ptr;
-  temp_38 = foreign "C"  print(Lgbl_36) also aborts also unwinds to Lexn_35;
+  temp_38 = foreign "C"  print(Lgbl_36) also aborts also cuts to Lexn_35;
   alloc_ptr = temp_37;
   /* eliminated: temp_38 */
-   f_26(fp,%sub(0, 1)) also aborts also unwinds to Lexn_35;
+   f_26(fp,%sub(0, 1)) also aborts also cuts to Lexn_35;
   temp_40 = alloc_ptr;
-  temp_41 = foreign "C"  print(Lgbl_39) also aborts also unwinds to Lexn_35;
+  temp_41 = foreign "C"  print(Lgbl_39) also aborts also cuts to Lexn_35;
   alloc_ptr = temp_40;
   temp_49 = temp_41;
+   set_handler(temp_50) also aborts ;
   } /* end Lexn_35 */
   goto Ltry_end_48;
   continuation Lexn_35(temp_49):
-  if(%eq(temp_49, 21)) {goto Lhandle_52;} else {goto Lskip_53;}
+   set_handler(temp_50) also aborts ;
+  if(%eq(temp_49, 6)) {goto Lhandle_52;} else {goto Lskip_53;}
   Lhandle_52:
   temp_43 = alloc_ptr;
   temp_44 = foreign "C"  print(Lgbl_42) also aborts ;
@@ -117,7 +124,7 @@ tiger_main(bits32 pfp) {
   /* eliminated: temp_44 */
   goto Ltry_end_48;
   Lskip_53:
-  if(%eq(temp_49, 20)) {goto Lhandle_54;} else {goto Lskip_55;}
+  if(%eq(temp_49, 5)) {goto Lhandle_54;} else {goto Lskip_55;}
   Lhandle_54:
   temp_46 = alloc_ptr;
   temp_47 = foreign "C"  print(Lgbl_45) also aborts ;
@@ -132,11 +139,14 @@ tiger_main(bits32 pfp) {
   alloc_ptr = temp_57;
   /* eliminated: temp_58 */
   span 2 1 { /* Lexn_59 */
-  temp_68 =  f_26(fp,1) also aborts also unwinds to Lexn_59;
+  temp_69 =  set_handler(Lexn_59) also aborts ;
+  temp_68 =  f_26(fp,1) also aborts also cuts to Lexn_59;
+   set_handler(temp_69) also aborts ;
   } /* end Lexn_59 */
   goto Ltry_end_67;
   continuation Lexn_59(temp_68):
-  if(%eq(temp_68, 22)) {goto Lhandle_70;} else {goto Lskip_71;}
+   set_handler(temp_69) also aborts ;
+  if(%eq(temp_68, 7)) {goto Lhandle_70;} else {goto Lskip_71;}
   Lhandle_70:
   temp_61 = alloc_ptr;
   temp_62 = foreign "C"  print(Lgbl_60) also aborts ;
@@ -144,7 +154,7 @@ tiger_main(bits32 pfp) {
   /* eliminated: temp_62 */
   goto Ltry_end_67;
   Lskip_71:
-  if(%eq(temp_68, 21)) {goto Lhandle_72;} else {goto Lskip_73;}
+  if(%eq(temp_68, 6)) {goto Lhandle_72;} else {goto Lskip_73;}
   Lhandle_72:
   temp_63 = alloc_ptr;
   temp_64 = foreign "C"  print(Lgbl_42) also aborts ;
@@ -152,7 +162,7 @@ tiger_main(bits32 pfp) {
   /* eliminated: temp_64 */
   goto Ltry_end_67;
   Lskip_73:
-  if(%eq(temp_68, 20)) {goto Lhandle_74;} else {goto Lskip_75;}
+  if(%eq(temp_68, 5)) {goto Lhandle_74;} else {goto Lskip_75;}
   Lhandle_74:
   temp_65 = alloc_ptr;
   temp_66 = foreign "C"  print(Lgbl_45) also aborts ;
@@ -171,6 +181,6 @@ tiger_main(bits32 pfp) {
 section "data" {
  tiger_main_gc_data:
    bits32[] { 1,1 };
-   bits32[] { 22,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+   bits32[] { 24,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 }
 

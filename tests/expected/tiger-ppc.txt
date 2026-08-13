@@ -1,6 +1,6 @@
 arrays PASS
 colmajor PASS
-exceptions FAIL
+exceptions PASS
 forloop PASS
 funcall PASS
 hello PASS
