@@ -470,10 +470,25 @@ module Post = struct
    * Postexpander.S's call/callr no longer take it (see ppc.ml's call/
    * callr, also just ~tgt); nothing in the Expander machinery calling
    * these generically could have supplied it anyway. *)
+  (* claude: "call ~tgt = DG.Nop, R.store pc_lhs ... wordsize" (just a
+   * Goto, no return-address save) is the exact same bug found and fixed
+   * in ppc.ml's call: every call silently became a tail branch, so
+   * nothing ever returned to its actual caller. sparcrec.mlb's real
+   * "call" mnemonic is only matched by "Par(Goto(target), next)" where
+   * "next: Store(regl, Add(pc, four), w)" (line ~487-489) - i.e. the
+   * RTL must ALSO store pc+4 into some register (real hardware writes
+   * %o7 as a side effect of the CALL instruction; ra=r31=%i7 is what
+   * this register becomes once the callee's own `save` rotates the
+   * window). Mirrors ppc.ml's call/x86.ml's call (Goto first, ra-store
+   * second - Par's constructor argument order matters for the grammar
+   * match). callr uses the same fix via the "Par(Goto(reg), next)" rule
+   * one line below the plain-symbol one. *)
   let call  ~tgt =
-    DG.Nop, R.store pc_lhs (Up.const tgt) wordsize
+    DG.Nop, R.par [ R.store pc_lhs (Up.const tgt) wordsize
+                   ; R.store (R.reg ra) (RU.addk wordsize (R.fetch pc wordsize) 4) wordsize ]
   let callr ~tgt =
-    DG.Nop, R.store pc_lhs (rfetch tgt)   wordsize
+    DG.Nop, R.par [ R.store pc_lhs (rfetch tgt) wordsize
+                   ; R.store (R.reg ra) (RU.addk wordsize (R.fetch pc wordsize) 4) wordsize ]
   (*x: SPARC postexpander *)
   (* claude: adapted from the old effect-list-based signature to the
    * current Mflow.cut_args record ({new_sp; new_pc}), same semantics:
@@ -549,7 +564,7 @@ let target =
      * x86.ml. *)
     ; T.machine             = X.machine
 
-    ; T.cc_specs            = A.init_cc
+    ; T.cc_specs            = Sparccc.cc_specs
     ; T.cc_spec_to_auto     = Sparccall.cconv ~return_to:return
                                    { T.embed   = fmach.T.cutto.T.embed
                                    ; T.project = fmach.T.cutto.T.project }

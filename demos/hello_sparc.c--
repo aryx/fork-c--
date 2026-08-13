@@ -1,0 +1,32 @@
+/* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
+ *
+ * claude: same program as hello.c--, just byteorder big instead of
+ * little, since that's what the sparc target requires. Exercises qc's
+ * SPARC V8 backend end to end:
+ *
+ *   qc -sparc -globals -stop .s -o hello_sparc.s demos/hello_sparc.c--
+ *   sparc64-linux-gnu-as -32 hello_sparc.s -o hello_sparc.o
+ *   sparc64-linux-gnu-gcc -m32 -static hello_sparc.o -o hello_sparc
+ *   qemu-sparc hello_sparc        # prints "hello, world!", exits 0
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag. sparc64-linux-gnu-*
+ * is this fork's SPARC cross toolchain (Ubuntu ships no plain 32-bit
+ * sparc-linux-gnu cross compiler, only sparc64, which targets 32-bit
+ * SPARC V8 via -m32/-32 - same biarch trick as x86_64 hosts use for -m32
+ * i386; see demos/hello_ppc.c-- for the ppc-elf equivalent).
+ */
+
+target byteorder big;
+
+import bits32 printf;
+export main, my_data;
+
+section "data" {
+  my_data: bits8 [] "hello, world!\n\0";
+}
+
+foreign "C" main("unsigned" bits32 iargc, "address" bits32 iargv) {
+  foreign "C" printf("address" my_data);
+  foreign "C" return(0);
+}

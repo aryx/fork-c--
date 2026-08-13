@@ -1,5 +1,9 @@
 (*s: sparcasm.ml *)
-module G  = Cfgx.M
+(* claude: was Cfgx.M (the older Cfg representation); Cfgutil.emit (the
+ * only real caller, see sparcasm.mli) has since moved to Zipcfg/
+ * Zipcfg.Rep, same as arch/ppc/ppcasm.ml already uses. *)
+module G  = Zipcfg
+module GR = Zipcfg.Rep
 module SM = Strutil.Map
 (*s: [[Sparcasm]] utilities *)
 let fprintf = Printf.fprintf
@@ -26,7 +30,8 @@ let spec =
             ; Mangle.avoid      = (fun x -> x ^ "_")
             }
 (*e: definition of [[manglespec]] (for the name mangler) *)
-class ['a, 'b, 'c, 'd] asm emitter fd : [('a, 'b, 'c, 'd) Proc.t] Asm.assembler = 
+class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
+  : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler =
 object (this)
     val         _fd       = fd
     val         _mangle  = (Mangle.mk spec)   
@@ -111,30 +116,33 @@ object (this)
       output_string _fd (Sparcrec.to_asm rtl);
       output_string _fd "\n"
 
-    method private call node =
-      let longjmp node = fprintf _fd "\tba %s\n\tnop\n" (_mangle (G.label node)) in
-      let output_altret_jmps n =
-        let rec loop i =
-          if i > n then ()
-          else (longjmp (G.join_leading_to (G.succ_n node i)); loop (i+1)) in
-        loop 1 in
-      match Cfgx.M.to_executable node with
-      | None   -> ()
-      | Some i -> this#instruction i; output_altret_jmps (G.altrets node)
+    (* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
+     * cal_altrets/cal_contedges) - see arch/ppc/ppcasm.ml's own `call`
+     * method, same shape. The "ba ...\n\tnop" longjmp idiom (branch
+     * always, with its mandatory delay-slot nop) is SPARC-specific,
+     * kept from the original. *)
+    method private call (node : GR.call) =
+      let longjmp edge = fprintf _fd "\tba %s\n\tnop\n" (_mangle (snd edge.G.node)) in
+      let rec output_altret_jumps n edges =
+        if n > 0 then
+          match edges with
+          | edge :: edges -> (longjmp edge; output_altret_jumps (n-1) edges)
+          | [] -> Impossible.impossible "contedge count" in
+      begin
+        this#instruction node.GR.cal_i;
+        output_altret_jumps node.GR.cal_altrets (List.tl node.GR.cal_contedges)
+      end
 
     (* this better be only used for printing out functions... *)
-    method cfg_instr proc  = 
-      (* We have to emit a label for the procedure's 
+    method cfg_instr (cfg, proc) =
+      (* We have to emit a label for the procedure's
          entry point. This is what symbol is for. Simply use this#label?  *)
-      let cfg    = proc.Proc.cfg
-      and symbol = proc.Proc.symbol in
+      let symbol = proc.Proc.symbol in
       let label l = this#label (try SM.find l _syms with Not_found -> this#local l) in
-      let numargs = List.length (proc.Proc.formals) in
-        this#label symbol;    
-        (emitter cfg (this#call) (this#instruction) label : unit)
+        this#label symbol;
+        (emitter proc cfg (this#call) (this#instruction) label : unit)
     (*e: [[Sparcasm]] assembly methods *)
 end
 (*e: [[Sparcasm]] definitions *)
-type node = Rtl.rtl Cfgx.M.node
 let make emitter fd = new asm emitter fd
 (*e: sparcasm.ml *)

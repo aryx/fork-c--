@@ -123,6 +123,12 @@ let use_ppc = ref false
  * end-to-end on a non-Mac machine. *)
 let use_ppc_elf = ref false
 
+(* claude: -sparc, 32-bit big-endian SPARC V8 (see arch/sparc/sparc.ml -
+ * the register choices there already match the real hardware windowed
+ * ABI, unlike -ppc's Mach-O default this needed no separate ELF sibling
+ * since arch/sparc/sparcasm.ml already emits GNU-as-compatible syntax). *)
+let use_sparc = ref false
+
 (* -stop .<ext>. Empty means "go all the way to an executable". *)
 let stop_after = ref ""
 
@@ -149,6 +155,15 @@ let default_i386_cc = "clang -target i386-unknown-linux-gnu"
 (* claude: for -ppc-elf; -ppc's Mach-O output is not meant for this cc at
  * all, so it has no default here (see effective_cc below). *)
 let default_powerpc_elf_cc = "clang -target powerpc-unknown-linux-gnu"
+(* claude: for -sparc. Same caveat as default_powerpc_elf_cc: clang cross-
+ * assembles fine but has no sparc sysroot on this machine, so real static
+ * linking against glibc needs an explicit -as/-ld (or QC_AS/QC_LD)
+ * pointing at "sparc64-linux-gnu-gcc -m32" instead - Ubuntu ships no
+ * plain 32-bit sparc-linux-gnu cross toolchain, only sparc64, which can
+ * target 32-bit SPARC V8 via -m32 (paired with the libc6-dev-sparc-
+ * sparc64-cross 32-bit cross libs), the same biarch trick x86_64 hosts
+ * use for -m32 i386. *)
+let default_sparc_cc = "clang -target sparc-unknown-linux-gnu"
 
 let getenv_or name default =
   match Sys.getenv_opt name with
@@ -288,6 +303,11 @@ type backend =
    * (arch/ppc/ppcelfasm.ml) instead of Mach-O, so it can actually be
    * assembled and run (via qemu-ppc) on a non-Mac machine. *)
   | PpcElf
+  (* claude: 32-bit big-endian SPARC V8, what qemu-sparc targets. Emits
+   * GNU-as-compatible ELF/Linux assembly directly (arch/sparc/sparcasm.ml
+   * already used that syntax, unlike ppc's Mach-O default - no separate
+   * "-sparc-elf" sibling was needed). *)
+  | Sparc
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
    *)
@@ -302,6 +322,7 @@ let effective_cc backend cmd =
   | "" -> (match backend with
            | X86 -> default_i386_cc
            | PpcElf -> default_powerpc_elf_cc
+           | Sparc -> default_sparc_cc
            | Ppc -> failwith "-ppc: pass -as/-ld (or QC_AS/QC_LD) explicitly \
                                for the Mach-O assembler/linker to use"
            | Interp -> failwith "-interp has no assembler/linker step")
@@ -314,7 +335,7 @@ let effective_cc backend cmd =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 | Ppc | PpcElf -> ".s"
+   | X86 | Ppc | PpcElf | Sparc -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -333,6 +354,9 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     | PpcElf ->
         let asm = Ppcelfasm.make Cfgutil.emit chan in
         Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level asm, true
+    | Sparc ->
+        let asm = Sparcasm.make Cfgutil.emit chan in
+        Sparc.target, asm, Sparcbackend.optimizer ~opt_level:!opt_level asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
          * see TODO/lua/lualink.ml:234 *)
@@ -534,13 +558,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), (X86 | Ppc | PpcElf) -> Assembly
+  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), (X86 | Ppc | PpcElf) -> Object
+  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, (X86 | Ppc | PpcElf) -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc | PpcElf | Sparc) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -569,6 +593,7 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     if !use_interp then Interp
     else if !use_ppc then Ppc
     else if !use_ppc_elf then PpcElf
+    else if !use_sparc then Sparc
     else X86
   in
   let stop = stop_at_of_flag backend in
@@ -688,7 +713,10 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " generate 32-bit big-endian PowerPC Mach-O assembly instead of x86";
     "-ppc-elf", Arg.Unit (fun () -> use_ppc_elf := true; use_ppc := false),
     " generate 32-bit big-endian PowerPC Linux/ELF assembly instead of x86";
-    "-x86", Arg.Unit (fun () -> use_interp := false; use_ppc := false; use_ppc_elf := false),
+    "-sparc", Arg.Unit (fun () -> use_sparc := true),
+    " generate 32-bit big-endian SPARC V8 Linux/ELF assembly instead of x86";
+    "-x86", Arg.Unit (fun () ->
+      use_interp := false; use_ppc := false; use_ppc_elf := false; use_sparc := false),
     " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
