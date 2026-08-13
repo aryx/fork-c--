@@ -180,5 +180,14 @@ let cconv ~return_to cut ccname stage =
     match ccname with
     | _    -> c
   in f ~return_to cut stage
+(*x: mipscall.ml *)
+(*
+let cconv ~return_to cut ccname stage = 
+  let f =
+    match ccname with
+    | "C'" -> c'
+    | _    -> c
+  in f ~return_to cut stage
+*)
 (*e: mipscall.ml *)
 (*e: arch/mips/mipscall.ml *)

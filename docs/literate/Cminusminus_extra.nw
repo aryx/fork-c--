@@ -40903,6 +40903,9 @@ val placevars : Ast2ir.proc -> Automaton.t
 %%assume little endianness but expect to functorize the implementation
 %%later.
 <<mips.ml>>=
+(* claude: =*= / =$= (list-of-widths / string equality) live in Nopoly, not
+ * the default Stdlib polymorphic (=) - same fix sparc.ml/alpha.ml needed. *)
+open Nopoly
 let arch        = "mips"                    (* architecture *)
 let wordsize    = 32
 @
@@ -40913,6 +40916,7 @@ let wordsize    = 32
 <<mips.ml>>=
 module A  = Automaton
 module PX = Postexpander
+module DG = Dag
 module R  = Rtl
 module Rg = Mipsregs
 module RP = Rtl.Private
@@ -40924,8 +40928,11 @@ module SS = Space.Standard32
 module SM = Strutil.Map
 module T  = Target
 
-let rtl r = PX.Rtl r
-let (<:>) = PX.(<:>)
+(* claude: PX.(<:>)/PX.Rtl don't exist - Nop/Rtl/Test/(<:>) live in Dag
+ * (aliased DG above), not Postexpander; same stale-interface fix already
+ * applied to sparc.ml/ppc.ml/alpha.ml. *)
+let rtl r = DG.Rtl r
+let (<:>) = DG.(<:>)
 @
 %%
 %%% ------------------------------------------------------------------ 
@@ -40964,18 +40971,27 @@ let mem w addr          = R.mem R.none mspace (mcount w) addr
 %%We generate standard control-flow {\rtl}s. The \module{ast2ir.nw} module
 %%inserts these into the {\cfg} it builds. 
 <<mips.ml>>=
+let ra_offset = 4                   (* size of call instruction *)
 module F = Mflow.MakeStandard
     (struct
         let pc_lhs    = Rg.pc  (* should be PC, but recognizer is broken! *)
         let pc_rhs    = Rg.pc
         let ra_reg    = R.reg ra
-        let ra_offset = 4               (* size of call instruction *)
-     end)   
+        let ra_offset = ra_offset
+     end)
+(* claude: needed for T.cc_spec_to_auto's cutto embed/project pair below -
+ * same role as sparc.ml's/alpha.ml's own fmach. *)
+let fmach = F.machine (R.reg sp)
 @
 %%Module [[F]] does not provide a return instruction. A return is simply a
 %%jump.
 <<mips.ml>>=
-let return = R.store Rg.pc (fetch_word (R.reg ra))
+(* claude: R.store is loc -> exp -> width -> rtl (curried) - the original
+ * was missing the trailing `wordsize` argument, so `return` was a
+ * `width -> rtl` function value hiding under a generic inferred type,
+ * never applied since nothing referenced it before Post.return needed a
+ * plain Rtl.rtl below. *)
+let return = R.store Rg.pc (fetch_word (R.reg ra)) wordsize
 @
 %%% ------------------------------------------------------------------ 
 \subsection{Postexpander}
@@ -41073,7 +41089,7 @@ let lostore ~addr ~src n assn =
 <<MIPS postexpander>>=
 let move ~dst ~src =
   assert (Register.width src = Register.width dst);
-  if Register.eq src dst then PX.Nop
+  if Register.eq src dst then DG.Nop
   else rtl (R.store (tloc dst) (tval src) (twidth src))
 @ 
 <<MIPS postexpander>>=
@@ -41120,8 +41136,8 @@ let pc_rhs = Rg.pc         (* PC as captured by call   *)
 @
 %%\paragraph{Unconditional Branches}
 <<MIPS postexpander>>=
-let br ~tgt = PX.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
-let b  ~tgt = PX.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
+let br ~tgt = DG.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
+let b  ~tgt = DG.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
 @
 %%\paragraph{Conditional Branches}
 %%
@@ -41159,9 +41175,20 @@ let negate = function
 %%condition codes, and we let the assembler hide the occasional need for
 %%a temporary register.
 <<MIPS postexpander>>=
-let bc x (opr, ws as op) y ~ifso ~ifnot =
+(* claude: split from the old single `bc` into bc_guard/bc_of_guard, the
+ * shape Postexpander.S now requires (see sparc.ml/ppc.ml/alpha.ml's own
+ * bc_guard/bc_of_guard for the same split). Unlike alpha's ISA (which
+ * has no direct register-vs-register conditional branch, only
+ * reg-vs-zero), MIPS's "Guarded(cmp,Goto(addr))" grammar rule
+ * recognizes a direct two-register comparison as the branch guard
+ * itself, so no separate compare-instruction setup is needed - setup
+ * stays DG.Nop, same as ppc.ml's own no-condition-register case. *)
+let bc_guard x (opr, ws as op) y =
   assert (ws =*= [wordsize]);
-  PX.Test (PX.Nop, (R.app (Up.opr op) [tval x; tval y], ifso, ifnot))
+  DG.Nop, R.app (Up.opr op) [tval x; tval y]
+let bc_of_guard (setup, guard) ~ifso ~ifnot =
+  let brtl cond tgt = R.guard cond (R.store pc_lhs tgt wordsize) in
+  DG.Test (setup, (brtl guard, ifso, ifnot))
 @
 %%[[bnegate]] inverts the condition in a conditional branch.
 <<MIPS postexpander>>=
@@ -41176,18 +41203,43 @@ let bnegate r = match Dn.rtl r with
 %%parameter. 
 <<MIPS postexpander>>=
 let effects = List.map Up.effect
-let call  ~tgt ~others = 
-  PX.Nop, R.par (R.store pc_lhs (Up.const tgt) wordsize :: effects others)
-let callr ~tgt ~others = 
-  PX.Nop, R.par (R.store pc_lhs (tval tgt) wordsize :: effects others)
+(* claude: original call/callr took an extra ~others param (dropped:
+ * Postexpander.S's call/callr are just ~tgt now, see sparc.ml's/
+ * alpha.ml's identical fix) and only ever stored pc_lhs, never storing
+ * ra - so a "call" would jump but never leave a usable return address,
+ * i.e. it could never actually return (same class of bug alpha.ml's
+ * do_call had, though there the branch half held no jump at all rather
+ * than no ra-store). mipsrec.mlb's grammar only recognizes a call as
+ * "Par(Goto(addr),Store(ral,next,32))" ("jal"), where next=Add(pc,const)
+ * is the return address, so both stores must land in the single Par
+ * the recognizer sees - hence do_call below, mirroring alpha.ml's
+ * restructured do_call/call/callr. No separate setup step is needed
+ * (unlike alpha's pv-register indirection): MIPS has no pv/gp
+ * machinery in this backend, so the block half stays DG.Nop and the
+ * whole call sequence lives in the branch half. *)
+let do_call tgt =
+  DG.Nop,
+  R.par [ R.store pc_lhs tgt wordsize
+        ; R.store (R.reg ra) (RU.addk wordsize (R.fetch pc_rhs wordsize) ra_offset) wordsize
+        ]
+let call  ~tgt = do_call (Up.const tgt)
+let callr ~tgt = do_call (tval tgt)
 @
 %%\paragraph{Cut-To}
 <<MIPS postexpander>>=
-let cut_to effs = PX.Nop, R.par (effects effs)
+(* claude: adapted from the old effect-list signature to the current
+ * Mflow.cut_args record ({new_sp; new_pc}) - same fix as sparc.ml's/
+ * alpha.ml's cut_to. *)
+let cut_to {Mflow.new_sp = sp'; Mflow.new_pc = pc'} =
+  DG.Nop, R.par [R.store pc_lhs pc' wordsize; R.store (R.reg sp) sp' wordsize]
 @
 %%\paragraph{No sacred instructions}
 <<MIPS postexpander>>=
 let don't_touch_me es = false
+(* claude: return/forbidden are required by Postexpander.S but had no
+ * definition here (same gap sparc.ml/alpha.ml had). *)
+let return = return
+let forbidden = Rtl.par [] (* BOGUS: NEEDS TO BE A REAL FAULTING INSTRUCTION *)
 @
 %%
 %%% ------------------------------------------------------------------ 
@@ -41257,6 +41309,10 @@ let target =
                  ; Rg.Spaces.u
                  ; Rg.Spaces.c
                  ] in
+    (* claude: Ast2ir.tgt = Preast2ir.tgt = T of (...) Target.t - a wrapped
+     * variant, not the bare record (see sparc.ml/ppc.ml/alpha.ml's own
+     * PA.T{...}/Preast2ir.T{...}). *)
+    Preast2ir.T
     { T.name                = "mips"
     ; T.memspace            = mspace
     ; T.max_unaligned_load  = R.C 1
@@ -41269,24 +41325,59 @@ let target =
     ; T.reg_ix_map          = T.mk_reg_ix_map spaces
     ; T.distinct_addr_sp    = false
     ; T.float               = Float.ieee754
-    ; T.spill               = spill
-    ; T.reload              = reload
 
     ; T.vfp                 = vfp
-    ; T.bnegate             = F.bnegate Rg.cc
-    ; T.goto                = F.goto
-    ; T.jump                = F.jump
-    ; T.call                = F.call
-    ; T.return              = F.return
-    ; T.branch              = F.branch
-    
-    ; T.cc_specs            = A.init_cc
-    ; T.cc_spec_to_auto     = Mipscall.cconv 
+    (* claude: T.spill/T.reload/T.bnegate/T.goto/T.jump/T.call/T.return/
+     * T.branch aren't Target.t fields anymore (see target.mli) - they now
+     * live inside the single T.machine record, built by the
+     * Expander.IntFloatAddr functor from Post above, same as sparc.ml/
+     * ppc.ml/alpha.ml/x86.ml. *)
+    ; T.machine             = X.machine
+
+    ; T.cc_specs            = Mipscc.cc_specs
+    ; T.cc_spec_to_auto     = Mipscall.cconv
                                 ~return_to:(fun ra -> (R.store Rg.pc ra wordsize))
-                                (F.cutto (Rtl.reg sp))
+                                { T.embed   = fmach.T.cutto.T.embed
+                                ; T.project = fmach.T.cutto.T.project }
     ; T.is_instruction      = Mipsrec.is_instruction
     ; T.tx_ast = (fun secs -> secs)
-    ; T.capabilities        = T.incapable
+    (* claude: T.incapable (empty operator/literal/memory lists) would
+     * reject every operator this backend actually implements - see
+     * mipsrec.mlb's grammar (only add/sub + the eq/ne/lt/gt/ge/ltu/leu/
+     * gtu/geu comparisons are recognized as real instructions; everything
+     * else falls through to the "<...>" catch-all/error path) and
+     * mips.ml's own Post (no mul/div/and/or/xor/shift, no float compute -
+     * unrm/binrm/dblop/wrdop/wrdrop are all Impossible.unimp/Unsupported
+     * so far). Scoped to exactly that subset, at this target's one integer
+     * width (32) - same rationale as alpha.ml's own hand-written operator
+     * list. Widen this list (and mipsrec.mlb) together as more operators
+     * get real camlburg rules. *)
+    ; T.capabilities        = { T.operators = List.map Up.opr
+                                   [ "add",     [32]
+                                   ; "sub",     [32]
+                                   ; "eq",      [32]
+                                   ; "ne",      [32]
+                                   ; "lt",      [32]
+                                   ; "gt",      [32]
+                                   ; "ge",      [32]
+                                   ; "ltu",     [32]
+                                   ; "leu",     [32]
+                                   ; "gtu",     [32]
+                                   ; "geu",     [32]
+                                   ; "not",     []
+                                   ; "bool",    []
+                                   ; "disjoin", []
+                                   ; "conjoin", []
+                                   ]
+                              ; T.litops     = []
+                              ; T.literals   = [32]
+                              ; T.memory     = [8; 16; 32]
+                              ; T.block_copy = true
+                              ; T.itemps     = [32]
+                              ; T.ftemps     = []
+                              ; T.iwiden     = false
+                              ; T.fwiden     = false
+                              }
     ; T.globals             = globals
     ; T.rounding_mode       = Rtl.reg rm_reg
     ; T.named_locs          = Strutil.assoc2map
@@ -41319,11 +41410,16 @@ let target =
 %%that implements spilling.
 %%
 <<mipsasm.mli>>=
-type node = Rtl.rtl Cfgx.M.node
-val make : 
-  ('cfg -> (node -> unit) -> (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
-  out_channel -> ('a, 'cfg, 'b, 'c) Proc.t Asm.assembler
-  (* pass Cfgutil.emit or Cfgutil.emit *)
+(* claude: was built on the older Cfgx.M representation (Rtl.rtl
+ * Cfgx.M.node); Cfgutil.emit (the only real caller) has since moved to
+ * the newer Zipcfg.Rep-based "call" node, same shape arch/sparc/
+ * sparcasm.mli/arch/alpha/alphaasm.mli use - see mipsasm.ml's #call/
+ * #cfg_instr for the corresponding implementation fix. *)
+val make :
+  (('a, 'b, 'c, 'd) Proc.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
+            (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
+  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Proc.t) Asm.assembler
+  (* pass Cfgutil.emit *)
 @
 %%
 %%% ------------------------------------------------------------------ 
@@ -41359,9 +41455,15 @@ let spec =
 %%\module{asm.nw} for the semantics of the public methods.
 %%
 <<mipsasm.ml>>=
+(* claude: was "type node = Rtl.rtl Cfgx.M.node" (the older Cfg
+ * representation) plus a #call/#cfg_instr pair built around it -
+ * Cfgutil.emit (the only real caller, see mipsasm.mli) has since moved
+ * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcelfasm.ml/arch/sparc/
+ * sparcasm.ml/arch/alpha/alphaasm.ml - see this file's #call/#cfg_instr
+ * below for the corresponding fix. *)
+module G  = Zipcfg
+module GR = Zipcfg.Rep
 module SM = Strutil.Map
-
-type node = Rtl.rtl Cfgx.M.node
 
 let fprintf = Printf.fprintf
 let sprintf = Printf.sprintf
@@ -41370,7 +41472,12 @@ let int64   = Bits.U.to_int64
 
 <<name mangler specification>>
 
-class ['a, 'b, 'c, 'd] asm emitter fd : [('a, 'b, 'c, 'd) Proc.t] Asm.assembler = 
+(* claude: 'cfg * (...) Proc.t, not just (...) Proc.t - same fix as
+ * ppcelfasm.ml/sparcasm.ml/alphaasm.ml's class type (Asm.assembler's type
+ * param now pairs the Zipcfg.graph alongside the Proc.t record; see
+ * #cfg_instr below, which receives that pair). *)
+class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
+  : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler =
 object (this)
     val         _fd       = fd
     val         _mangle  = (Mangle.mk spec)   
@@ -41408,12 +41515,34 @@ method label (s: Symbol.t) =
 
 method section name =
     _section <- name;
-    fprintf _fd ".%s\n" name
+    (* claude: pcmap/pcmap_data must carry the ALLOC flag or the
+     * runtime data lands outside every PT_LOAD segment and
+     * Cmm_lookup_entry always reads zeroes - same fix/reasoning as
+     * arch/x86/x86asm.ml's, arch/ppc/ppcelfasm.ml's, arch/sparc/
+     * sparcasm.ml's, and arch/alpha/alphaasm.ml's #section (GNU as
+     * only gives default flags to the standard section names).
+     * Applied proactively here (not rediscovered via a crash) since
+     * it is now a known, recurring pattern across every ELF-targeting
+     * backend in this fork. *)
+    (match name with
+     | "pcmap" | "pcmap_data" ->
+         fprintf _fd ".section \".%s\",\"a\",@progbits\n" name
+     | _ ->
+         fprintf _fd ".%s\n" name)
 
 method current  = _section
 method org n    = unimp "no .org in mips assembler"
 
-method align  n       = if n <> 1 then fprintf _fd ".align %d\n" n
+(* claude: GNU as's .align on MIPS ELF (like PowerPC/SPARC/Alpha) is a
+ * power-of-two exponent, not a byte count - same convention
+ * ppcelfasm.ml's/alphaasm.ml's #align uses. *)
+method align  n       =
+  let rec lg = function
+    | 0 -> 0
+    | 1 -> 0
+    | n -> 1 + (lg (n/2))
+  in
+  if n <> 1 then fprintf _fd ".align %d\n" (lg n)
 method addloc n       = if n <> 0 then fprintf _fd ".space %d\n"  n
 method zeroes (n:int) = fprintf _fd ".space %d, 0\n" n
 
@@ -41436,9 +41565,12 @@ method emit = ()
 %%\textit{as}(1) assembler on IRIX uses the C~convention. To be on the
 %%save side I disable comments for the moment.
 <<assembly methods(mipsasm.nw)>>=
+(* claude: this method used to be defined three times in a row (a plain
+ * OCaml error, "this method is defined several times" - not just a
+ * shadowing warning) - dropped the two later redefinitions, kept the
+ * "#"-style comment since mips-linux-gnu-as (this ELF/Linux toolchain,
+ * like ppcelfasm.ml's own "# %s") uses "#" for line comments. *)
 method comment s = fprintf _fd "#  %s   \n" s
-method comment s = fprintf _fd "/* %s */\n" s
-method comment s = ()
 
 method const (s: Symbol.t) (b:Bits.bits) = 
     fprintf _fd "%s = %Lx" s#mangled_text (int64 b)
@@ -41450,22 +41582,39 @@ method private instruction rtl =
     output_string _fd (Mipsrec.to_string rtl);
     output_string _fd "\n"
 
-method private call node =
-  match Cfgx.M.to_executable node with
-  | None   -> ()
-  | Some i -> this#instruction i
+(* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
+ * cal_altrets/cal_contedges) - see arch/ppc/ppcelfasm.ml's/arch/sparc/
+ * sparcasm.ml's/arch/alpha/alphaasm.ml's own #call, same shape. MIPS
+ * has a branch-delay slot (like SPARC, unlike Alpha/PPC), so a
+ * longjmp needs an explicit trailing nop, same as sparcasm.ml's
+ * "ba ...\n\tnop\n". *)
+method private call (node : GR.call) =
+  let longjmp edge = fprintf _fd "\tj %s\n\tnop\n" (_mangle (snd edge.G.node)) in
+  let rec output_altret_jumps n edges =
+    if n > 0 then
+      match edges with
+      | edge :: edges -> (longjmp edge; output_altret_jumps (n-1) edges)
+      | [] -> Impossible.impossible "contedge count" in
+  begin
+    this#instruction node.GR.cal_i;
+    output_altret_jumps node.GR.cal_altrets (List.tl node.GR.cal_contedges)
+  end
 
-
-method cfg_instr proc  = 
-    let cfg    = proc.Proc.cfg
-    and symbol = proc.Proc.symbol in
-    let label l = this#label (try SM.find l _syms 
+(* claude: (cfg, proc) pair + emitter called as "emitter proc cfg ..."
+ * - Cfgutil.emit's actual signature (see mipsasm.mli) - not the bare
+ * "proc" + "emitter cfg ..." this took before, which is a leftover
+ * from the older Cfgx.M-based Asm.assembler shape (see this file's
+ * #call above and the class type declaration for the rest of that
+ * fix). *)
+method cfg_instr (cfg, proc) =
+    let symbol = proc.Proc.symbol in
+    let label l = this#label (try SM.find l _syms
                               with Not_found -> this#local l) in
-    Printf.fprintf _fd ".set noreorder  /* HACK! mipsasm.nw did this */\n";  
+    Printf.fprintf _fd ".set noreorder  /* HACK! mipsasm.nw did this */\n";
     Printf.fprintf _fd ".abicalls       /* HACK! NetBSD needs this */\n";
     this#label symbol;
     Printf.fprintf _fd ".cpload $25     /* HACK! NetBSD needs this */\n";
-    (emitter cfg (this#call) (this#instruction) label : unit)
+    (emitter proc cfg (this#call) (this#instruction) label : unit)
 @
 %$
 %%
@@ -41498,7 +41647,7 @@ method cfg_instr proc  =
 <<mipscall.mli>>=
 val cconv :
   return_to:(Rtl.exp -> Rtl.rtl) ->
-  Mflow.cut_args Target.map ->
+  (unit, Mflow.cut_args) Target.map ->
   string -> Automaton.cc_spec ->
   Call.t
 @
@@ -41755,12 +41904,22 @@ let c ~return_to cut stage =
 
     ; C.stack_growth    = growth
     ; C.stable_sp_loc   = std_sp_location
-    ; C.replace_vfp     = Cfgx.Vfp.replace_with ~sp
+    (* claude: Cfgx.Vfp -> Vfprewrite rename, same fix as sparccall.ml/
+     * alphacall.ml. *)
+    ; C.replace_vfp     = Vfprewrite.replace_with ~sp
     ; C.sp_align        = sp_align
     ; C.pre_nvregs      = RS.union (RS.of_list nvl_int) (RS.of_list nvl_fp)
     ; C.volregs         = RS.union (RS.of_list vol_int) (RS.of_list vol_fp)
     ; C.saved_nvr       = saved_nvr
-    ; C.cutto           = cut
+    (* claude: C.cutto (the newpc/newsp embed/project map) isn't a Call.t
+     * field anymore - see call.mli, same drop as sparccall.ml/alphacall.ml
+     * ("C.cutto = cut" removed; the `cut` param is now threaded through
+     * purely for Mipscall.cconv's/mips.ml's interface shape, unused here).
+     * C.jump_tgt_reg is new: a hardware register reserved for indirect
+     * jumps, since spilling a temp after the sp has already moved would
+     * be unsafe. $1/at is MIPS's own reserved assembler-temp register,
+     * same role as alphacall.ml's pick of Alpha's $28/at. *)
+    ; C.jump_tgt_reg    = R.reg (r 1)
     ; C.return          = return
     ; C.ra_on_entry      = (fun _     -> R.fetch ra 32)
     ; C.where_to_save_ra = (fun _ t   -> Talloc.Multiple.loc t 't' 32)
@@ -41779,11 +41938,44 @@ A.register_cc(Backend.mips.target, "C--", Mips.cc["C"])
 \subsection{Implementation using [[Callspec]]}
 %%
 <<mipscall.ml>>=
-module CS = Callspec
-
-let rtn return_to k n ~ra =
-    if k = 0 & n = 0 then return_to ra
-    else impossf "alternate return using C calling convention" 
+(* claude: Callspec (module CS) isn't wired into this fork's build yet - it
+ * still sits, untouched, in TODO/arch/callspec.{ml,mli}. Nothing in
+ * Mipscc.cc_specs (written to fix T.cc_specs = A.init_cc's empty-table bug,
+ * same as sparccc.ml/alphacc.ml) dispatches to the "C'" name this
+ * Callspec-backed c' would have handled - Mipscc.cc_specs only registers
+ * "C"/"C--"/"notail"/"C-- thread", all landing on the plain `c` convention
+ * above via cconv's own "_ -> c" fallback just below. So this was already
+ * dead code before Callspec went missing from the link line - not a
+ * functional loss to comment out. Kept here in case Callspec is integrated
+ * later and this is worth reviving as-is:
+ *
+ * module CS = Callspec
+ *
+ * let rtn return_to k n ~ra =
+ *     if k = 0 & n = 0 then return_to ra
+ *     else impossf "alternate return using C calling convention"
+ *
+ * let c' ~return_to cut auto =
+ *     let spec =
+ *             { CS.name           = "C'"
+ *             ; CS.stack_growth   = Memalloc.Down
+ *             ; CS.overflow       = CS.overflow C.Caller C.Caller
+ *             ; CS.sp             = r 29
+ *             ; CS.sp_align       = sp_align
+ *             ; CS.memspace       = Rg.mspace
+ *             ; CS.all_regs       = RS.of_list (List.concat [nvl_int; nvl_fp;
+ *                                                            vol_int; vol_fp])
+ *             ; CS.nv_regs        = RS.of_list (nvl_int @ nvl_fp)
+ *             ; CS.save_nvr       = saved_nvr
+ *             ; CS.ra             = (ra, CS.ReturnAddress.SaveToTemp 't')
+ *             }
+ *     in
+ *     let t = CS.to_call cut (rtn return_to) auto spec in
+ *         { t with (* fix what callspec got wrong *)
+ *             C.ra_on_exit   = (fun _ _ t -> ra)
+ *         ;   C.sp_on_unwind = (fun e -> RU.store sp e)
+ *         }
+ *)
 @
 <<callspec specification>>=
 let spec = 
@@ -41801,23 +41993,24 @@ let spec =
         }
 @
 <<mipscall.ml>>=
-let c' ~return_to cut auto =
-    <<callspec specification>>
-    in
-    let t = CS.to_call cut (rtn return_to) auto spec in
-        { t with (* fix what callspec got wrong *)
-            C.ra_on_exit   = (fun _ _ t -> ra)
-        ;   C.sp_on_unwind = (fun e -> RU.store sp e)
-        }
+(*
+let cconv ~return_to cut ccname stage =
+  let f =
+    match ccname with
+    | _    -> c
+  in f ~return_to cut stage
+*)
 @
 %%And finally our lookup function.
 <<mipscall.ml>>=
+(*
 let cconv ~return_to cut ccname stage = 
   let f =
     match ccname with
     | "C'" -> c'
     | _    -> c
   in f ~return_to cut stage
+*)
 @ 
 \section{[[arch/mips/mipsrec.nw]]}
 
@@ -41869,6 +42062,9 @@ val to_string:      Rtl.rtl -> string
 %%The usual abbreviations for modules go into the [[head]] clause.
 
 <<head>>=
+(* claude: =$= (string equality) lives in Nopoly, not the default Stdlib
+ * polymorphic (=) - needed below by the "syscall" mangled-name guard. *)
+open Nopoly
 module RP = Rtl.Private
 module RU = Rtlutil
 module Up = Rtl.Up
