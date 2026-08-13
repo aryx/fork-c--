@@ -3,9 +3,22 @@
 #define QCMM_RUNTIME_H
 
 /*s: machine-dependent macro definitions for the public interface */
+#ifdef __powerpc__
+/* claude: ppc's flat register-index numbering (target/target.ml's
+ * mk_reg_ix_map, applied to arch/ppc/ppc.ml's Spaces module) runs the
+ * control space 'c' (7 registers -> indices 0-7), then 'f' (32 float
+ * registers -> indices 8-40), then 'r' (32 int registers -> indices
+ * 41-73) - confirmed empirically via gdb (a running program's own
+ * pcmap entries), not just by reading the space declarations. The
+ * x86-sized array below silently overflowed for every ppc register
+ * above index 11 (i.e. almost all of them), corrupting whatever
+ * memory follows a Cmm_Activation on the stack. 96 leaves headroom. */
+#define NUM_REGS 96
+#else
 /*s: machine-dependent macro definitions for the public interface ((x86-linux)) */
 #define NUM_REGS 12
 /*e: machine-dependent macro definitions for the public interface ((x86-linux)) */
+#endif
 /*e: machine-dependent macro definitions for the public interface */
 
 /*s: data structures */

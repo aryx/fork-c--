@@ -805,6 +805,104 @@ fixes, and guessing wrong wastes exactly the kind of time this entry is
 trying to save.
 
 
+28. Rebuild a stripped-of-debug-info library with -g just for the session
+---------------------------------------------------------------------------
+runtime/Makefile's CFLAGS32 never passes -g (entry 25 already notes "no
+debug info in these objects, so you get symbol names and registers but
+not source lines or locals"). That was a real limit chasing the ppc EBP
+crash: gdb could name the frame (Cmm_init_c_frame) but not print `*a` or
+`calleedata->num_registers` - exactly the values needed to tell "the
+metadata table is empty" from "the metadata table has entries at
+indices we're not checking."
+
+    make BACKEND=ppc QC=.../bin/qc CFLAGS32="-g -w -fcommon -I ." clean
+    make BACKEND=ppc QC=.../bin/qc CFLAGS32="-g -w -fcommon -I ."
+
+is a one-line override, no Makefile edit needed since CFLAGS32 is already
+a variable. Relink the specific failing test's .o against the resulting
+build-ppc/libqcmm.a by hand (same objects run-tiger-ppc.sh would link,
+just with -g added to the gcc invocation) rather than adding -g to the
+whole test suite's build. Revert (rebuild without CFLAGS32) once done -
+entry 25's advice to remove instrumentation before measuring applies to
+compiler flags too, not just printfs.
+
+
+29. A struct-layout change needs every prebuilt consumer regenerated, not
+    just the definer
+---------------------------------------------------------------------------
+Fixing qc--runtime.h's NUM_REGS (see entry 30) traded one crash for a
+different one - "*** stack smashing detected ***" - which looked like a
+*new*, worse bug. It was actually the *same* fix, half-applied: fork-tiger's
+gc.c calls Cmm_YoungestActivation/Cmm_ChangeActivation directly, so it
+must agree with runtime.c on the byte layout of `struct cmm_activation`.
+tests/tiger/stdlib-ppc.a is a *checked-in prebuilt archive* (see
+regenerate-ppc.sh's own header comment for why), built the last time
+someone ran regenerate-ppc.sh against whatever qc--runtime.h existed then
+- so after edit ing NUM_REGS, runtime.o (rebuilt fresh) and gc.o (still the
+old archive) disagreed about sizeof(struct cmm_activation), and every
+write through the new, bigger layout overran a stack-local Cmm_Activation
+sized by the old one.
+
+The fix was simply running the regeneration script that already existed
+for exactly this (`tests/tiger/regenerate-ppc.sh`, which needs a
+fork-tiger checkout - see its own comment for why the result is checked in
+rather than rebuilt every test run) and confirming with `git status`
+that stdlib-ppc.a actually changed.
+
+General shape: when a shared struct/ABI type changes, grep for *every*
+prebuilt artifact (archives, .o files, anything checked in rather than
+built from the current source tree) that embeds assumptions about its
+layout, not just the one file you edited - and watch the *failure mode*
+(entry 8) for the tell: a struct-size mismatch often manifests as
+corruption *downstream* of the real bug (here, a stack canary in a
+totally different function) rather than anywhere near the type
+definition itself.
+
+
+30. Print the compiler's own internal numbering from a live process,
+    don't just hand-derive it from source
+---------------------------------------------------------------------------
+gcc-linux.c hardcodes `#define EBP 9 /* r[5] */` - x86's activation-index
+for the register the C-frame-walker trusts. Porting this to ppc required
+knowing what index the *same* mechanism assigns to *some* ppc register,
+and target/target.ml's mk_reg_ix_map (the code that assigns these
+indices) is legible enough to hand-derive: sort register spaces
+alphabetically by space character, concatenate each space's registers in
+ascending order, number sequentially. Doing the arithmetic by hand
+(c-space 8 entries -> 0-7, f-space 33 -> 8-40, r-space 33 -> 41-73, so
+r31 -> 72) is exactly the kind of derivation entry 21 warns can go
+subtly wrong under time pressure.
+
+The check that actually mattered was empirical, not arithmetic: break at
+Cmm_init_c_frame (needs entry 28's -g rebuild) and print the *data the
+compiler itself emitted* for the specific procedure in question -
+
+    (gdb) up
+    (gdb) print calleedata->num_registers
+    $1 = 18
+    (gdb) print ((struct reg*)calleedata->data)[0]
+    $2 = {index = 72, saved = {l = 4294967220}}
+    ... (17 more, indices 55-72)
+
+18 entries for indices 55-72 confirms both the hand-derived formula (r31
+= 72, and ppc's nvregs really are r14-r31, 18 registers) *and*, more
+importantly, that the mechanism (main unconditionally preserves every
+nonvolatile register, regardless of whether its own body touches it -
+ast2ir.ml's `RS.diff proc_cc.C.pre_nvregs proc_in'.C.regs`) actually
+fires for this specific procedure. Reading the source answers "what
+should happen"; printing the live pcmap entry answers "did it," and for
+a hardcoded magic-number port like this one, only the second question
+matters.
+
+General shape: when hardcoding a value derived from a numbering scheme
+the compiler itself assigns (register indices, layout offsets, hashes),
+prefer dumping that scheme's *actual output* for a concrete case over
+re-implementing its derivation by reading the assigning code - the
+running program is always the ground truth, and a formula that's *nearly*
+right (off-by-one in a sort order, a space classified differently than
+expected) fails silently rather than loudly.
+
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
@@ -829,3 +927,28 @@ Tooling traps in this particular working copy
   minutes. Check the underlying command's own exit status (a separate
   variable, or restructure so grep isn't last) instead of trusting $? after
   a filter pipe.
+
+- /home/pad/github/fork-c-- and /home/pad/c-- are the *same* checkout
+  (bind-mounted or equivalent - `stat -c '%i'` on the same file from both
+  paths returns the same inode). A shell cd drifting to one instead of the
+  other mid-session looks alarming ("did I just build/test the wrong
+  repo?") but isn't - `git log`/`git status` from either path show
+  identical state. Worth an inode check before assuming contamination,
+  rather than redoing work out of caution.
+
+- Backgrounding a long-lived process with "(cmd &)" then immediately
+  checking on it in the *same* multi-line Bash call sometimes silently
+  loses the process (no error, but `ps` finds nothing and log files are
+  never created) - looked at first like a qemu/gdb-specific flakiness.
+  Root cause was upstream of qemu: an earlier command in the same call
+  returning nonzero (a `pkill` with nothing to kill, a `grep -v` with
+  nothing left after filtering - see the trap above) combined with the
+  harness's Bash tool aborting the rest of the script on the first
+  nonzero exit status, so lines after it - including the backgrounding
+  itself - simply never ran. Symptom was misleading because the *reported*
+  failure was the last command in the block (gdb, or a `cat` of a file
+  that consequently never got created), not the real culprit near the
+  top. Fix: `cmd || true` on anything expected to sometimes legitimately
+  return nonzero (pkill matching no process, grep matching nothing), or
+  split suspect steps into separate tool calls so a silent abort is
+  immediately visible instead of hiding inside a multi-line block.
