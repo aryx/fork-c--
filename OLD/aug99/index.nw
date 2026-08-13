@@ -1,5 +1,3 @@
-% l2h substitution PAL C--
-
 \providecommand\PAL{C$--$}
 
 \makeatletter
@@ -193,10 +191,3 @@ The recognizer will be generated from a $\lambda$-RTL description, and
 the instruction emitter from a SLED description.
 \end{enumerate}
 We have machine code.
-
-
-
-
-
-
-
