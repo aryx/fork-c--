@@ -243,6 +243,7 @@ SRC_VIEWS= \
  $TOP/arch/ppc/ppcasm.mli\
  $TOP/arch/ppc/ppcasm.ml\
  $TOP/arch/ppc/ppcrec.mli\
+ $TOP/arch/ppc/ppcrec.mlb\
  \
  $TOP/arch/x86/x86.mli\
  $TOP/arch/x86/x86.ml\
