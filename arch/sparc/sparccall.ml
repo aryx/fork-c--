@@ -1,4 +1,5 @@
 (*s: sparccall.ml *)
+(*s: sparccall.ml  *)
 module R  = Rtl
 module RU = Rtlutil
 module RS = Register.Set
@@ -7,7 +8,7 @@ module A  = Automaton
 module C  = Call
 let sprintf = Printf.sprintf
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let rspace = Rg.Spaces.r.Space.space
 let fspace = Rg.Spaces.f.Space.space
 let dspace = Rg.Spaces.d.Space.space
@@ -33,7 +34,7 @@ let saved_nvr temps =
       let bad () = impossf "cannot save $%c%d" sp i in
       let w = Register.width reg in
       (match sp with 'r' -> t | 'f' -> u | 'x' -> q | _ -> bad()) w
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let ra       = R.reg (r 31)
 let spr      = r 14
 let sp       = R.reg spr
@@ -41,7 +42,7 @@ let spval    = R.fetch sp 32
 let sp_align = 16
 let growth   = Memalloc.Down
 let bo       = R.BigEndian
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let wordsize  = 32
 let memsize   = 8
 let byteorder = bo
@@ -53,7 +54,7 @@ let mk_automaton block_name automaton () =
 
 let old_end   block = RU.addk wordsize (Block.base block) (Block.size block)
 let young_end block = Block.base block
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let tail_overflow = 
     { C.parameter_deallocator = C.Callee
     ; C.result_allocator      = C.Caller
@@ -63,7 +64,7 @@ let c_overflow =
     { C.parameter_deallocator = C.Caller
     ; C.result_allocator      = C.Caller
     } 
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let prolog auto = 
   let autosp a = young_end a.A.overflow in
   C.incoming ~growth:growth ~sp:sp
@@ -71,19 +72,19 @@ let prolog auto =
     ~autosp:autosp
     ~postsp:(fun _ _ -> std_sp_location) 
     ~insp:(fun a _ _ -> autosp a)
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let epilog auto =
     C.outgoing ~growth:growth ~sp:sp
         ~mkauto:(mk_automaton "out ovfl results" auto.A.results)
         ~autosp:(fun r -> std_sp_location)
         ~postsp:(fun _ _ -> vfp)
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let call_actuals auto =
     C.outgoing ~growth:growth ~sp:sp
         ~mkauto:(mk_automaton "out call parms" auto.A.call)
         ~autosp:(fun r  -> std_sp_location)
         ~postsp:(fun a sp -> std_sp_location)
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let call_results auto =
     let autosp = (fun a -> std_sp_location) in
     C.incoming ~growth:growth ~sp:sp
@@ -91,7 +92,7 @@ let call_results auto =
         ~autosp:autosp
         ~postsp:(fun _ _ -> std_sp_location) 
         ~insp:(fun a _ _ -> std_sp_location)
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let also_cuts_to auto =
     let autosp = (fun r   -> std_sp_location) in
     C.incoming ~growth:growth ~sp:sp
@@ -105,11 +106,11 @@ let cut_actuals auto base =
         ~mkauto:(fun ()   -> A.at mspace ~start:base auto.A.cutto)
         ~autosp:(fun r    -> std_sp_location)
         ~postsp:(fun a sp -> std_sp_location)
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let ra_on_entry block = R.fetch ra wordsize
 let where_to_save_ra ra_on_entry temp = Talloc.Multiple.loc temp 't' 32
 (* ra *)
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let rtn ccname return_to k n ~ra =
   if k > n then impossf "Return <k/n> has k:%d > n:%d\n" k n
   else return_to ra
@@ -117,17 +118,17 @@ let rtn ccname return_to k n ~ra =
     if k = 0 && n = 0 then return_to ra
     else Impossible.impossible ("alternate return using "^ccname^" calling convention")
 *)
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 (* Really inteded for the C convention *)
 let to_call ~cutto ~return_to ~altret ccname auto =
-    (*s: it's impossible for the stack pointer to be a useful register too *)
+    (*s: [[Sparccall]] it's impossible for the stack pointer to be a useful register too *)
     if Register.Set.mem spr all_regs then
       Impossible.impossible
         (Printf.sprintf "In convention \"%s\", stack pointer is also an ordinary register"
            ccname)
     else
       ()
-    (*e: it's impossible for the stack pointer to be a useful register too *)
+    (*e: [[Sparccall]] it's impossible for the stack pointer to be a useful register too *)
     ;
     let return k n ~ra =
       if altret then rtn ccname return_to k n ~ra
@@ -155,7 +156,7 @@ let to_call ~cutto ~return_to ~altret ccname auto =
     ; C.cutto            = cutto
     ; C.return           = return
     }
-(*x: sparccall.ml *)
+(*x: sparccall.ml  *)
 let c ~altret ~return_to cut ccname auto =
   to_call ~altret ~cutto:cut ~return_to ccname auto (* postprocess auto *)
 
@@ -168,4 +169,5 @@ let cconv ~return_to cut ccname stage =
     | "C-- thread" -> c ~altret:false (* damn lies *)
     | _            -> Impossible.unimp ccname
   in f ~return_to cut ccname stage
+(*e: sparccall.ml  *)
 (*e: sparccall.ml *)
