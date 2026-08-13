@@ -252,6 +252,7 @@ SRC_VIEWS= \
  $TOP/arch/x86/x86call.mli\
  $TOP/arch/x86/x86call.ml\
  $TOP/arch/x86/x86rec.mli\
+ $TOP/arch/x86/x86rec.mlb\
  $TOP/arch/x86/x86regs.mli\
  $TOP/arch/x86/x86regs.ml\
  \
