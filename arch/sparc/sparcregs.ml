@@ -1,4 +1,5 @@
 (*s: sparcregs.ml *)
+(*s: sparcregs.ml  *)
 open Nopoly
 
 module R  = Rtl
@@ -76,14 +77,15 @@ module Spaces = struct
                       }
   (*e: SPARC spaces *)
 end
-(*x: sparcregs.ml *)
+(*x: sparcregs.ml  *)
 let locations = SS.locations Spaces.c
 let pc        = locations.SS.pc
 let cc        = locations.SS.cc
 let npc       = locations.SS.npc
-(*x: sparcregs.ml *)
+(*x: sparcregs.ml  *)
 let cwp     = (Spaces.k.Space.space, 0, R.C 1)
 let y       = (Spaces.y.Space.space, 0, R.C 1)
 let fpctl   = (Spaces.c.Space.space, 4, R.C 1)
 let fpround = Register.Slice(2, 0, fpctl)
+(*e: sparcregs.ml  *)
 (*e: sparcregs.ml *)
