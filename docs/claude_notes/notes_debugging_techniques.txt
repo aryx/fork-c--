@@ -940,7 +940,14 @@ Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
   "diff -q" and "sed -i" both fail with confusing messages. Scripts here
-  stick to plain "diff a b >/dev/null" and avoid sed -i.
+  stick to plain "diff a b >/dev/null" and avoid sed -i. Bit the user
+  directly once too: fork-tiger's own runtime/stdlib Makefiles use plain
+  "sed 's/byteorder little/byteorder big/' src > $(B)/src" (no -i) to
+  flip byteorder for ppc builds, and with goken9cc's bin ahead of GNU's on
+  PATH this produced `make test-ppc` failures that looked like real qc--
+  regressions - resolved by fixing PATH, not by touching any Makefile or
+  source. `which sed` (and diff/tail/cat) is worth checking early whenever
+  a ppc build/test failure doesn't match what a clean rebuild predicts.
 
 - sort(1) collates by locale, so a recorded baseline's line order differs
   between a developer shell and a container. Force LC_ALL=C.
