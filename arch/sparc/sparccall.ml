@@ -143,7 +143,12 @@ let to_call ~cutto ~return_to ~altret ccname auto =
     
     ; C.stack_growth     = growth
     ; C.stable_sp_loc    = std_sp_location
-    ; C.replace_vfp      = Cfgx.Vfp.replace_with ~sp:sp
+    (* claude: reserved for indirect jumps (ast2ir.ml stores the target here
+     * before jumping through it); r5 is otherwise unused by this backend -
+     * not zero/sp/fp/ra, not in vol_regs/nv_regs. Mirrors ppc.ml's rreg 7
+     * and x86call.ml's edx, both similarly arbitrary volatile picks. *)
+    ; C.jump_tgt_reg     = R.reg (r 5)
+    ; C.replace_vfp      = Vfprewrite.replace_with ~sp:sp
     ; C.sp_align         = sp_align
     ; C.ra_on_entry      = ra_on_entry
     ; C.where_to_save_ra = where_to_save_ra
@@ -153,7 +158,6 @@ let to_call ~cutto ~return_to ~altret ccname auto =
     ; C.pre_nvregs       = nv_regs
     ; C.volregs          = Register.Set.diff all_regs nv_regs
     ; C.saved_nvr        = saved_nvr
-    ; C.cutto            = cutto
     ; C.return           = return
     }
 (*x: sparccall.ml  *)

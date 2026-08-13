@@ -1,6 +1,8 @@
 (*s: sparc.ml *)
 (*s: sparc.ml  *)
+open Nopoly
 module PX = Postexpander
+module DG = Dag
 module S  = Space
 module SS = S.Standard32
 module R  = Rtl
@@ -13,8 +15,8 @@ module SM = Strutil.Map
 module A  = Automaton
 module T  = Target
 
-let rtl r = PX.Rtl r
-let (<:>) = PX.(<:>)
+let rtl r = DG.Rtl r
+let (<:>) = DG.(<:>)
 let rstore l r w = rtl (R.store l r w) 
 let astore l r w = rtl (A.store l r w) 
 (*x: sparc.ml  *)
@@ -80,6 +82,10 @@ module F = Mflow.MakeStandard
       let ra_reg    = R.reg ra
       let ra_offset = 4
     end)
+(* claude: needed both for Post.return (the generic Mflow-provided
+ * default, same as ppc.ml's `fmach.Mflow.return`) and for the cutto
+ * embed/project pair threaded into Sparccall.cconv below. *)
+let fmach = F.machine (R.reg sp)
 (*x: sparc.ml  *)
 let return e =
   let one = RO.signed 32 1 in
@@ -201,7 +207,7 @@ module Post = struct
           (fun d' s' -> block_copy ~dst:(rfetch d') dassn ~src:(rfetch s') sassn (w - x))
     in
     match w with
-    | 0 -> PX.Nop
+    | 0 -> DG.Nop
     | 8 | 16 ->
         let t = talloc 't' 32 in
         zxload t src w sassn <:> lostore dst t w dassn
@@ -213,19 +219,32 @@ module Post = struct
     | 64 ->
         let q = talloc 'q' 64 in
         load ~dst:q ~addr:src sassn <:> store ~addr:dst ~src:q dassn
+    (* claude: was a runtime While-loop copying 64 bits at a time via
+     * PX.cond, but Postexpander.cond isn't part of the current interface
+     * (commented out in postexpander.mli - Dag.cond exists but at the
+     * wrong representation level for a brtl block here). Left as a stub
+     * like the catchall below rather than guessing at a replacement for
+     * an already-obscure, seemingly untested path (block copies over 64
+     * bits whose width isn't itself a multiple of 64). Original code,
+     * kept in case it's worth reviving once a real cond/While path
+     * exists again:
+     *
+     * | w when w > 64 && (w mod 64) mod 8 = 0 ->
+     *     let wmod64 = w mod 64 in
+     *     let f d' s' =
+     *       let t       = talloc 't' 32 in
+     *       let i       = RO.unsigned 32 (64 / 8) in
+     *       let n64cpys = RO.unsigned 32 ((w - wmod64) / 8) in
+     *       rtl (R.store (R.reg t) (RO.add 32 (rfetch d') n64cpys) 32) <:>
+     *       DG.While(PX.cond (RO.eq 32 (rfetch d') (rfetch t)),
+     *                block_copy ~dst:(rfetch d') dassn ~src:(rfetch s') sassn 64 <:>
+     *                rtl (R.store (R.reg d') (RO.add 32 (rfetch d') i) 32) <:>
+     *                rtl (R.store (R.reg s') (RO.add 32 (rfetch s') i) 32))
+     *     in
+     *     decompose_f dst dassn src sassn wmod64 w f
+     *)
     | w when w > 64 && (w mod 64) mod 8 = 0 ->
-        let wmod64 = w mod 64 in
-        let f d' s' =
-          let t       = talloc 't' 32 in
-          let i       = RO.unsigned 32 (64 / 8) in
-          let n64cpys = RO.unsigned 32 ((w - wmod64) / 8) in
-          rtl (R.store (R.reg t) (RO.add 32 (rfetch d') n64cpys) 32) <:>
-          PX.While(PX.cond (RO.eq 32 (rfetch d') (rfetch t)),
-                   block_copy ~dst:(rfetch d') dassn ~src:(rfetch s') sassn 64 <:>
-                   rtl (R.store (R.reg d') (RO.add 32 (rfetch d') i) 32) <:>
-                   rtl (R.store (R.reg s') (RO.add 32 (rfetch s') i) 32))
-        in
-        decompose_f dst dassn src sassn wmod64 w f
+        unimpf "Block copy of %i bits on SPARC (>64, not a multiple of 64)" w
     | _  -> unimpf "Block copy of %i bits on SPARC" w
   (*x: SPARC postexpander *)
   let is_int   = snd icontext
@@ -238,7 +257,7 @@ module Post = struct
       let slot = salloc w 8 in
       rtl (A.store slot (rfetch src) w) <:> rtl (R.store (R.reg dst) (A.fetch slot w) w)
     else if Register.eq src dst then
-      PX.Nop
+      DG.Nop
     else
       rtl (R.store (R.reg dst) (rfetch src) w)
   (*x: SPARC postexpander *)
@@ -264,8 +283,8 @@ module Post = struct
   let aggregate ~dst ~src = Impossible.unimp "aggregate"
   (*x: SPARC postexpander *)
   let weird_tmp tmp z = match z with
-  | PX.WTemp (Register.Reg t)             -> t, PX.Nop
-  | PX.WTemp (Register.Slice (w, 0, t))   -> t, PX.Nop
+  | PX.WTemp (Register.Reg t)             -> t, DG.Nop
+  | PX.WTemp (Register.Slice (w, 0, t))   -> t, DG.Nop
   | PX.WTemp (Register.Slice (w, lsb, t)) -> 
       tmp, move tmp t <:> rtl (tstore tmp (RO.shrl 32 (rfetch tmp) (RO.unsigned 32 lsb)))
   | PX.WBits b -> tmp, rtl (tstore tmp (R.bits (Bits.Ops.zx 32 b) 32))
@@ -383,7 +402,7 @@ module Post = struct
     rtl (R.store (R.reg t) zero 32) <:>
     rtl (R.store (R.reg dt) (RO.addc 32 (rfetch t) (rfetch t) carrybit) 32) <:>
     (match fill with
-     | PX.HighAny -> PX.Nop
+     | PX.HighAny -> DG.Nop
      | PX.HighZ   -> shift dt RO.shl 31 <:> shift dt RO.shrl 31  (* zxlo *)
      | PX.HighS   -> shift dt RO.shl 31 <:> shift dt RO.shra 31  (* sxlo *))
   (*x: SPARC postexpander *)
@@ -413,14 +432,20 @@ module Post = struct
   let pc_lhs = npc        (* PC as assigned by branch *)
   let pc_rhs = pc         (* PC as captured by call   *)
   (*x: SPARC postexpander *)
-  let br ~tgt = PX.Nop, R.store pc_lhs (rfetch tgt)   wordsize  (* branch reg *)
-  let b  ~tgt = PX.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
+  let br ~tgt = DG.Nop, R.store pc_lhs (rfetch tgt)   wordsize  (* branch reg *)
+  let b  ~tgt = DG.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
   (*x: SPARC postexpander *)
-  let bc x (opr, ws as op) y ~ifso ~ifnot =
+  (* claude: split from the old single `bc` (kept in spirit, same RTLs)
+   * into bc_guard/bc_of_guard, the shape Postexpander.S now requires -
+   * see ppc.ml's bc_guard/bc_of_guard for the same split applied there. *)
+  let bc_guard x (opr, ws as op) y =
     (* Might be a 64-bit float *)
     assert (ws =*= [wordsize] || ws =*= [wordsize*2]);
-    PX.Test (rstore cc (R.app (R.opr "sparc_subcc" ws) [rfetch x; rfetch y]) 32,
-             (R.app (R.opr ("sparc_"^opr) ws) [R.fetch cc 32], ifso, ifnot))
+    (rstore cc (R.app (R.opr "sparc_subcc" ws) [rfetch x; rfetch y]) 32,
+     R.app (R.opr ("sparc_"^opr) ws) [R.fetch cc 32])
+  let bc_of_guard (setup, guard) ~ifso ~ifnot =
+    let brtl cond tgt = R.guard cond (R.store pc_lhs tgt 32) in
+    DG.Test (setup, (brtl guard, ifso, ifnot))
   (*x: SPARC postexpander *)
   let bnegate r = 
       let zero   = RO.signed 32 0 in
@@ -441,15 +466,30 @@ module Post = struct
       | _ -> imposs "ill-formed SPARC conditional branch"
   (*x: SPARC postexpander *)
   let effects = List.map Up.effect
-  let call  ~tgt ~others =
-    PX.Nop, R.par (R.store pc_lhs (Up.const tgt) wordsize :: effects others)
-  let callr ~tgt ~others =
-    PX.Nop, R.par (R.store pc_lhs (rfetch tgt)   wordsize :: effects others)
+  (* claude: dropped ~others (extra live-in effects at the call site) -
+   * Postexpander.S's call/callr no longer take it (see ppc.ml's call/
+   * callr, also just ~tgt); nothing in the Expander machinery calling
+   * these generically could have supplied it anyway. *)
+  let call  ~tgt =
+    DG.Nop, R.store pc_lhs (Up.const tgt) wordsize
+  let callr ~tgt =
+    DG.Nop, R.store pc_lhs (rfetch tgt)   wordsize
   (*x: SPARC postexpander *)
-  let cut_to effs = PX.Rtl (R.store (R.reg cwp) (RO.signed 32 0) 32),
-                    R.par (effects effs)
+  (* claude: adapted from the old effect-list-based signature to the
+   * current Mflow.cut_args record ({new_sp; new_pc}), same semantics:
+   * reset the register-window pointer (cwp) then jump to the new pc with
+   * sp set to the new sp. *)
+  let cut_to {Mflow.new_sp = sp'; Mflow.new_pc = pc'} =
+    DG.Rtl (R.store (R.reg cwp) (RO.signed 32 0) 32),
+    R.par [R.store pc_lhs pc' wordsize; R.store (R.reg sp) sp' wordsize]
+  (* claude: return/forbidden are required by Postexpander.S but had no
+   * definition here; return mirrors ppc.ml's `fmach.Mflow.return`
+   * (the generic Mflow-provided default), forbidden mirrors ppc.ml's
+   * placeholder (not a real trapping instruction). *)
+  let return = fmach.Mflow.return
+  let forbidden = Rtl.par [] (* BOGUS: NEEDS TO BE A REAL FAULTING INSTRUCTION *)
   (*x: SPARC postexpander *)
-  let don't_touch_me _ =
+  let don't_touch_me =
     let stores_to_cwp = function
       | RP.Store (RP.Reg maybe_cwp, _, _) when Register.eq maybe_cwp cwp -> true
       | _                                                                -> false in
@@ -484,6 +524,10 @@ let target =
                  ; Spaces.c
                  ; Spaces.k
                  ] in
+    (* claude: Ast2ir.tgt = Preast2ir.tgt = T of (...) Target.t - a
+     * wrapped variant, not the bare record (see ppc.ml's `PA.T {...}`,
+     * PA = Preast2ir). *)
+    Preast2ir.T
     { T.name                = "sparc"
     ; T.memspace            = mspace
     ; T.max_unaligned_load  = R.C 1
@@ -496,20 +540,19 @@ let target =
     ; T.reg_ix_map          = T.mk_reg_ix_map spaces
     ; T.distinct_addr_sp    = false
     ; T.float               = Float.ieee754
-    ; T.spill               = spill
-    ; T.reload              = reload
 
     ; T.vfp                 = vfp
-    ; T.bnegate             = F.bnegate cc
-    ; T.goto                = F.goto
-    ; T.jump                = F.jump
-    ; T.call                = F.call
-    ; T.return              = F.return
-    ; T.branch              = F.branch
-    
+    (* claude: T.spill/T.reload/T.bnegate/T.goto/T.jump/T.call/T.return/
+     * T.branch aren't Target.t fields anymore (see target.mli) - they now
+     * live inside the single T.machine record, built by the
+     * Expander.IntFloatAddr functor from Post below, same as ppc.ml/
+     * x86.ml. *)
+    ; T.machine             = X.machine
+
     ; T.cc_specs            = A.init_cc
     ; T.cc_spec_to_auto     = Sparccall.cconv ~return_to:return
-                                   (F.cutto (Rtl.reg sp))
+                                   { T.embed   = fmach.T.cutto.T.embed
+                                   ; T.project = fmach.T.cutto.T.project }
 
     ; T.is_instruction      = Sparcrec.is_instruction
     ; T.tx_ast = (fun secs -> secs)
@@ -638,6 +681,6 @@ let placevars =
       ; (fun w h _ -> w <= 32),   A.widen (fun _ -> 32) *> temps 't'
       ; A.is_any,                 A.widen (Auxfuns.round_up_to ~multiple_of: 8)
       ] in
-  Placevar.mk_automaton ~warn ~vfp:target.T.vfp ~memspace:mspace mk_stage
+  Placevar.mk_automaton ~warn ~vfp ~memspace:mspace mk_stage
 (*e: sparc.ml  *)
 (*e: sparc.ml *)
