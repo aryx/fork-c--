@@ -474,7 +474,7 @@ update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 593 "sparcrec.mlb"
+# 595 "sparcrec.mlb"
                                 ( s "<%s>" any )
                                 
 # 000 "/dev/stdout"
@@ -1421,7 +1421,7 @@ and conZx =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 627 "sparcrec.mlb"
+# 629 "sparcrec.mlb"
                         ( s "Zx(%s)" any )
                         
 # 000 "/dev/stdout"
@@ -1461,7 +1461,7 @@ and conXor =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 606 "sparcrec.mlb"
+# 608 "sparcrec.mlb"
                                 ( s "Xor(%s, %s)" x y )
                                 
 # 000 "/dev/stdout"
@@ -1475,7 +1475,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 595 "sparcrec.mlb"
+# 597 "sparcrec.mlb"
                     ( "True"  )
                     
 # 000 "/dev/stdout"
@@ -1507,7 +1507,7 @@ and conSx =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 626 "sparcrec.mlb"
+# 628 "sparcrec.mlb"
                         ( s "Sx(%s)" any )
                         
 # 000 "/dev/stdout"
@@ -1685,7 +1685,7 @@ and conStore =
                                                     and w = arg3
                                                     in
                                                         
-# 636 "sparcrec.mlb"
+# 638 "sparcrec.mlb"
                                                         ( s "Store(%s,%s,%d)" dst src w )
                                                         
 # 000 "/dev/stdout"
@@ -3513,6 +3513,29 @@ and conStore =
                                                                     
 # 000 "/dev/stdout"
 )
+                                                    }
+                                                    ;{Camlburg.cost =
+                                                        (arg1.yregl.Camlburg.cost
+                                                        +
+                                                        arg2.yreg.Camlburg.cost)
+                                                    ;Camlburg.action =
+                                                        (fun () ->
+                                                            let
+                                                                yregl =
+                                                                arg1.yregl.Camlburg.action
+                                                                    ()
+                                                            and
+                                                                yreg =
+                                                                arg2.yreg.Camlburg.action
+                                                                    ()
+                                                            and w = arg3
+                                                            in
+                                                                
+# 594 "sparcrec.mlb"
+                                                                ( "! y register self-store (no-op)" )
+                                                                
+# 000 "/dev/stdout"
+)
                                                     }]))
                                                 ((update_next
                                                     {Camlburg.cost =
@@ -3824,7 +3847,7 @@ and conSlice =
                     and y = arg3.any.Camlburg.action ()
                     in
                         
-# 624 "sparcrec.mlb"
+# 626 "sparcrec.mlb"
                         ( sprintf "Slice(%d, %d, %s)" n lsb y )
                         
 # 000 "/dev/stdout"
@@ -3943,7 +3966,7 @@ and conRegPair =
                     and n = arg2
                     in
                         
-# 634 "sparcrec.mlb"
+# 636 "sparcrec.mlb"
                         ( sprintf "RegPair(%s, %d)" (Char.escaped char) n )
                         
 # 000 "/dev/stdout"
@@ -3994,7 +4017,7 @@ and conReg =
                             and n = arg2
                             in
                                 
-# 633 "sparcrec.mlb"
+# 635 "sparcrec.mlb"
                                 ( sprintf "Reg(%s, %d)" (Char.escaped char) n )
                                 
 # 000 "/dev/stdout"
@@ -4246,7 +4269,7 @@ and conPar =
                     and r = arg2.any.Camlburg.action ()
                     in
                         
-# 640 "sparcrec.mlb"
+# 642 "sparcrec.mlb"
                         ( s "Par(%s,%s)" l r )
                         
 # 000 "/dev/stdout"
@@ -4442,7 +4465,7 @@ and conOr =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 605 "sparcrec.mlb"
+# 607 "sparcrec.mlb"
                                 ( s "Or(%s, %s)" x y )
                                 
 # 000 "/dev/stdout"
@@ -4504,7 +4527,7 @@ and conMul =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 611 "sparcrec.mlb"
+# 613 "sparcrec.mlb"
                                 ( s "Mul(%s, %s)" x y )
                                 
 # 000 "/dev/stdout"
@@ -4530,7 +4553,7 @@ and conMem =
                         and w = arg2
                         in
                             
-# 632 "sparcrec.mlb"
+# 634 "sparcrec.mlb"
                             ( s "Mem(%s)" any )
                             
 # 000 "/dev/stdout"
@@ -4560,7 +4583,7 @@ and conLoword =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 620 "sparcrec.mlb"
+# 622 "sparcrec.mlb"
                         ( sprintf "Loword(%s)" any )
                         
 # 000 "/dev/stdout"
@@ -4593,7 +4616,7 @@ and conLobits =
                     and w = arg2
                     in
                         
-# 631 "sparcrec.mlb"
+# 633 "sparcrec.mlb"
                         ( s "Lobits(%s, %d)" any w )
                         
 # 000 "/dev/stdout"
@@ -4610,7 +4633,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 597 "sparcrec.mlb"
+# 599 "sparcrec.mlb"
                         ( s "Link(%s,%d)" (symbol#mangled_text) w )
                         
 # 000 "/dev/stdout"
@@ -4641,7 +4664,7 @@ and conLate =
                     and w = arg2
                     in
                         
-# 598 "sparcrec.mlb"
+# 600 "sparcrec.mlb"
                         ( s "Late(%s,%d)" string w )
                         
 # 000 "/dev/stdout"
@@ -4657,7 +4680,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 637 "sparcrec.mlb"
+# 639 "sparcrec.mlb"
                         ( s "Kill(%s)" any )
                         
 # 000 "/dev/stdout"
@@ -4683,7 +4706,7 @@ and conI2f =
                     and any = arg3.any.Camlburg.action ()
                     in
                         
-# 630 "sparcrec.mlb"
+# 632 "sparcrec.mlb"
                         ( sprintf "I2f(%d, %d, %s)" n w any )
                         
 # 000 "/dev/stdout"
@@ -4701,7 +4724,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 639 "sparcrec.mlb"
+# 641 "sparcrec.mlb"
                         ( s "Guarded(%s,%s)" guard any )
                         
 # 000 "/dev/stdout"
@@ -5055,7 +5078,7 @@ and conGoto =
                                 let any = arg1.any.Camlburg.action ()
                                 in
                                     
-# 641 "sparcrec.mlb"
+# 643 "sparcrec.mlb"
                                     ( s "Goto(%s)" any )
                                     
 # 000 "/dev/stdout"
@@ -5147,7 +5170,7 @@ and conFsub =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 613 "sparcrec.mlb"
+# 615 "sparcrec.mlb"
                                 ( sprintf "Fsub(%s, %s)" x y )
                                 
 # 000 "/dev/stdout"
@@ -5173,7 +5196,7 @@ and conFneg =
                             let any = arg1.any.Camlburg.action ()
                             in
                                 
-# 617 "sparcrec.mlb"
+# 619 "sparcrec.mlb"
                                 ( sprintf "Fneg(%s)" any )
                                 
 # 000 "/dev/stdout"
@@ -5211,7 +5234,7 @@ and conFmul =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 614 "sparcrec.mlb"
+# 616 "sparcrec.mlb"
                                 ( sprintf "Fmul(%s, %s)" x y )
                                 
 # 000 "/dev/stdout"
@@ -5237,7 +5260,7 @@ and conFetch =
                         and w = arg2
                         in
                             
-# 602 "sparcrec.mlb"
+# 604 "sparcrec.mlb"
                             ( s "Fetch(%s,%d)" any w )
                             
 # 000 "/dev/stdout"
@@ -5533,7 +5556,7 @@ and conFdiv =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 615 "sparcrec.mlb"
+# 617 "sparcrec.mlb"
                                 ( sprintf "Fdiv(%s, %s)" x y )
                                 
 # 000 "/dev/stdout"
@@ -5547,7 +5570,7 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 596 "sparcrec.mlb"
+# 598 "sparcrec.mlb"
                     ( "False" )
                     
 # 000 "/dev/stdout"
@@ -5585,7 +5608,7 @@ and conFadd =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 612 "sparcrec.mlb"
+# 614 "sparcrec.mlb"
                                 ( sprintf "Fadd(%s, %s)" x y )
                                 
 # 000 "/dev/stdout"
@@ -5601,7 +5624,7 @@ and conFabs =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 618 "sparcrec.mlb"
+# 620 "sparcrec.mlb"
                         ( sprintf "Fabs(%s)" any )
                         
 # 000 "/dev/stdout"
@@ -5619,7 +5642,7 @@ and conF2i =
                     and any = arg3.any.Camlburg.action ()
                     in
                         
-# 629 "sparcrec.mlb"
+# 631 "sparcrec.mlb"
                         ( sprintf "F2i(%d, %d, %s)" n w any )
                         
 # 000 "/dev/stdout"
@@ -5637,7 +5660,7 @@ and conF2f =
                     and any = arg3.any.Camlburg.action ()
                     in
                         
-# 628 "sparcrec.mlb"
+# 630 "sparcrec.mlb"
                         ( sprintf "F2f(%d, %d, %s)" n w any )
                         
 # 000 "/dev/stdout"
@@ -5668,7 +5691,7 @@ and conDiff =
                     and c2 = arg2.any.Camlburg.action ()
                     in
                         
-# 599 "sparcrec.mlb"
+# 601 "sparcrec.mlb"
                         ( s "Diff(%s,%s)" c1 c2 )
                         
 # 000 "/dev/stdout"
@@ -5689,7 +5712,7 @@ and conCom =
                         let x = arg1.any.Camlburg.action ()
                         in
                             
-# 607 "sparcrec.mlb"
+# 609 "sparcrec.mlb"
                             ( s "Com(%s)" x )
                             
 # 000 "/dev/stdout"
@@ -5705,7 +5728,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 600 "sparcrec.mlb"
+# 602 "sparcrec.mlb"
                         ( sprintf "Bits(%s)" (Bits.to_string bits) )
                         
 # 000 "/dev/stdout"
@@ -5873,7 +5896,7 @@ and conBitInsert =
                     and z = arg3.any.Camlburg.action ()
                     in
                         
-# 622 "sparcrec.mlb"
+# 624 "sparcrec.mlb"
                         ( sprintf "BitInsert(%s, %s, %s)" x y z )
                         
 # 000 "/dev/stdout"
@@ -5892,7 +5915,7 @@ and conBitExtract =
                     and n = arg3
                     in
                         
-# 623 "sparcrec.mlb"
+# 625 "sparcrec.mlb"
                         ( sprintf "BitExtract(%s, %s, %d)" lsb y n )
                         
 # 000 "/dev/stdout"
@@ -5932,7 +5955,7 @@ and conAnd =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 604 "sparcrec.mlb"
+# 606 "sparcrec.mlb"
                                 ( s "And(%s, %s)" x y )
                                 
 # 000 "/dev/stdout"
@@ -6024,7 +6047,7 @@ and conAdd =
                                         and y = arg2.any.Camlburg.action ()
                                         in
                                             
-# 610 "sparcrec.mlb"
+# 612 "sparcrec.mlb"
                                             ( s "Add(%s, %s)" x y )
                                             
 # 000 "/dev/stdout"

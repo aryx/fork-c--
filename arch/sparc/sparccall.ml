@@ -188,7 +188,19 @@ let to_call ~cutto ~return_to ~altret ccname auto =
     ; C.where_to_save_ra = where_to_save_ra
     ; C.ra_on_exit       = (fun _ _ t -> ra)
     ; C.sp_on_unwind     = (fun e -> RU.store sp e)
-    ; C.sp_on_jump       = (fun _ _ -> Rtl.null)
+    (* claude: was "fun _ _ -> Rtl.null" - a genuine no-op, same bug
+     * ppc.ml's sp_on_jump had (see its own comment): a tail call
+     * ("jump") never restored sp before re-entering the target's own
+     * prologue, which unconditionally does its own "save %sp,-N,%sp".
+     * Every tail-recursive iteration would therefore shrink sp by
+     * another frame instead of reusing the current one. Mirrors
+     * ppc.ml's fix (RU.store sp (addk (Block.base b) (-24)), its own
+     * linkage-area constant) using this backend's -96 reserved
+     * register-window-save + minimum-outgoing-arg area (see
+     * arch/sparc/sparcbackend.ml's window_and_arg_area_size - not
+     * referenced directly to avoid a backwards dependency, but must
+     * stay in sync with it). *)
+    ; C.sp_on_jump       = (fun b _ -> RU.store sp (RU.addk wordsize (Block.base b) (-96)))
     ; C.pre_nvregs       = nv_regs
     ; C.volregs          = Register.Set.diff all_regs nv_regs
     ; C.saved_nvr        = saved_nvr

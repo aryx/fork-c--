@@ -44,6 +44,7 @@
 #   ./run-native.sh --update       re-record the baseline (review the diff!)
 #   ./run-native.sh add hello      run only those, report but do not compare
 #   BACKEND=ppc ./run-native.sh    same, for the ppc-elf backend
+#   BACKEND=sparc ./run-native.sh  same, for the sparc backend
 #   OPT=3 ./run-native.sh          same, compiled at -O3 instead of the
 #                                  default -O0 - its own $B/baseline, same
 #                                  reasoning as BACKEND (see claude's note
@@ -70,9 +71,19 @@ BACKEND=${BACKEND:-x86}
 OPT=${OPT:-0}
 
 case "$BACKEND" in
-  x86) CC32_DEFAULT=i686-linux-gnu-gcc;    RUN32_DEFAULT=qemu-i386; QCFLAG= ;;
-  ppc) CC32_DEFAULT=powerpc-linux-gnu-gcc; RUN32_DEFAULT=qemu-ppc;  QCFLAG=-ppc-elf ;;
-  *)   echo "run-native.sh: unknown BACKEND=$BACKEND" >&2; exit 2 ;;
+  x86)   CC32_DEFAULT=i686-linux-gnu-gcc;    RUN32_DEFAULT=qemu-i386;      QCFLAG= ;;
+  ppc)   CC32_DEFAULT=powerpc-linux-gnu-gcc; RUN32_DEFAULT=qemu-ppc;       QCFLAG=-ppc-elf ;;
+  # claude: Ubuntu ships no plain 32-bit sparc-linux-gnu cross toolchain,
+  # only sparc64-linux-gnu, which targets 32-bit SPARC V8 via -m32 (same
+  # biarch trick x86_64 hosts use for -m32 i386) - so CC32_DEFAULT is
+  # deliberately two words here, unlike the other two backends; every use
+  # of $CC32 below is left unquoted so the shell word-splits it back into
+  # "cmd -m32". qemu-sparc32plus, not plain qemu-sparc: this toolchain's
+  # -m32 output is SPARC32PLUS-flagged (v8plus) even though the
+  # instructions used are plain v8, and qemu-sparc (v8) rejects it
+  # outright ("Invalid ELF image for this architecture").
+  sparc) CC32_DEFAULT="sparc64-linux-gnu-gcc -m32"; RUN32_DEFAULT=qemu-sparc32plus; QCFLAG=-sparc ;;
+  *)     echo "run-native.sh: unknown BACKEND=$BACKEND" >&2; exit 2 ;;
 esac
 case "$OPT" in
   0) ;;
@@ -104,11 +115,14 @@ if [ ! -x "$QC" ]; then
   echo "run-native.sh: no qc at $QC (run 'dune build' first)" >&2
   exit 2
 fi
-if ! command -v "$CC32" >/dev/null 2>&1; then
-  echo "run-native.sh: no $CC32 for BACKEND=$BACKEND" >&2
+if ! command -v "${CC32%% *}" >/dev/null 2>&1; then
+  echo "run-native.sh: no ${CC32%% *} for BACKEND=$BACKEND" >&2
   case "$BACKEND" in
-    x86) echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2 ;;
-    ppc) echo "  sudo apt install gcc-powerpc-linux-gnu libc6-dev-powerpc-cross" >&2 ;;
+    x86)   echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2 ;;
+    ppc)   echo "  sudo apt install gcc-powerpc-linux-gnu libc6-dev-powerpc-cross" >&2 ;;
+    sparc) echo "  sudo apt install gcc-sparc64-linux-gnu binutils-sparc64-linux-gnu \\" >&2
+           echo "    libc6-dev-sparc64-cross libc6-dev-sparc-sparc64-cross \\" >&2
+           echo "    gcc-multilib-sparc64-linux-gnu" >&2 ;;
   esac
   exit 2
 fi
@@ -143,7 +157,7 @@ while IFS='|' read -r name srcs other rc stdin_file argv; do
     IFS=$oldifs
     obj="$B/$name.$(basename "$src" .c--).o"
     srcpath="cmm/$src"
-    if [ "$BACKEND" = ppc ]; then
+    if [ "$BACKEND" = ppc ] || [ "$BACKEND" = sparc ]; then
       mkdir -p "$B/src"
       sed 's/byteorder[ ][ ]*little/byteorder big/' "cmm/$src" > "$B/src/$src"
       srcpath="$B/src/$src"
@@ -163,14 +177,14 @@ while IFS='|' read -r name srcs other rc stdin_file argv; do
   fi
 
   if [ "$other" != "-" ]; then
-    if ! "$CC32" -w -fcommon -I ../runtime -c "$other" -o "$B/$name.other.o" \
+    if ! $CC32 -w -fcommon -I ../runtime -c "$other" -o "$B/$name.other.o" \
          2>"$B/$name.ccerr"; then
       echo "FAIL $name (compile other)"; echo "$name FAIL" >> "$B/actual.txt"; continue
     fi
     objs="$objs $B/$name.other.o"
   fi
 
-  if ! "$CC32" -static $objs -o "$B/$name" 2>"$B/$name.lderr"; then
+  if ! $CC32 -static $objs -o "$B/$name" 2>"$B/$name.lderr"; then
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
 

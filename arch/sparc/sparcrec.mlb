@@ -590,6 +590,8 @@ inst: Guarded(Sparcflt(cc), Goto(target))
 (*x: [[Sparcrec]] rules *)
 inst : Nop() {: "! Why do you think there should be a nop? " :}
 (*x: [[Sparcrec]] rules *)
+(* claude: fetch %y then store it right back into itself - marks %y live/defined without moving it; a true no-op on real hardware. Was falling through to the "any" catch-all below (printed verbatim as garbage, only failing later at the real assembler) - see notes_debugging_techniques.txt / sparc-backend-status memory for how this was found (fixed carry/altread/round/spdemo/test-039/divmod/jtab in tests/run-native.sh BACKEND=sparc). *)
+inst: Store(yregl, yreg, w) {: "! y register self-store (no-op)" :}
 inst: any [1000] {: s "<%s>" any :}
 
 any : True  () {: "True"  :}
