@@ -4016,11 +4016,11 @@ value uint64_of_string(value s)          /* ML */
 \section{[[error/debug.nw]]}
 
 %TODO: replace with Logs.debug or Log.debug and per-subsystem logs
+% diff with commons2/verbose.ml?
 
 <<error/debug.ml>>=
 <<debug.ml>>
 @
-
 <<error/debug.mli>>=
 <<debug.mli>>
 @
@@ -4032,13 +4032,11 @@ value uint64_of_string(value s)          /* ML */
 <<error/error.ml>>=
 <<error.ml>>
 @
-
 <<error/error.mli>>=
 <<error.mli>>
 @
 
 % Now in Main.nw
-
 
 \section{[[error/impossible.nw]]}
 
@@ -4076,7 +4074,6 @@ value uint64_of_string(value s)          /* ML */
 <<error/srcmap.ml>>=
 <<srcmap.ml>>
 @
-
 <<error/srcmap.mli>>=
 <<srcmap.mli>>
 @
@@ -4089,7 +4086,6 @@ value uint64_of_string(value s)          /* ML */
 %%
 %%\input{../config/macros.tex}
 
-
 \section{[[error/unsupported.nw]]}
 
 <<error/unsupported.ml>>=
@@ -4100,14 +4096,13 @@ value uint64_of_string(value s)          /* ML */
 @
 
 
-
 %******************************************************************************
 \chapter{[[parsing]]}
 %******************************************************************************
 
 \section{[[parsing/ast.nw]]}
 
-% Now in Main.nw
+% Now in Main.nw, but actually ast.asdl and not ast.ml
 
 \section{[[parsing/astpp.nw]]}
 
@@ -4119,7 +4114,6 @@ value uint64_of_string(value s)          /* ML */
 @
 
 % Now in Main.nw
-
 
 \section{[[parsing/parser.nw]]}
 
@@ -4136,11 +4130,11 @@ value uint64_of_string(value s)          /* ML */
 \chapter{[[front_rtl]]}
 %******************************************************************************
 
-\section{[[front_rtl/register.nw]]}
+\section{[[ir/register.nw]]}
+
 <<front_rtl/register.ml>>=
 <<register.ml content>>
 @
-
 <<front_rtl/register.mli>>=
 <<register.mli content>>
 @
@@ -4148,7 +4142,7 @@ value uint64_of_string(value s)          /* ML */
 %%% ------------------------------------------------------------------ 
 \section{Register}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%A [[Register.t]] describes a register-like location.
 %%Such a location includes hardware-registers or temporaries, but not
 %%spill locations.  The distinguishing feature of a register is a fixed
@@ -4264,12 +4258,11 @@ module RT (C : Lua.Lib.CORE) : sig
 	val map : t C.V.map
 end
 @
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{Implementation of registers}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%We can't use the built-in [[compare]] because it is not safe to
 %%[[compare]] values of type [[Cell.t]].
 %%In any case,
@@ -4440,7 +4433,7 @@ function Register.range(r1, r2)
   return l
 end
 @ 
-%%
+
 <<register.ml content>>=
 let width ((_, _, ms), _, c) = Cell.to_width ms c
 let widthx = function
