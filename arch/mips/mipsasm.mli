@@ -1,9 +1,14 @@
 (*s: arch/mips/mipsasm.mli *)
 (*s: mipsasm.mli *)
-type node = Rtl.rtl Cfgx.M.node
-val make : 
-  ('cfg -> (node -> unit) -> (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
-  out_channel -> ('a, 'cfg, 'b, 'c) Proc.t Asm.assembler
-  (* pass Cfgutil.emit or Cfgutil.emit *)
+(* claude: was built on the older Cfgx.M representation (Rtl.rtl
+ * Cfgx.M.node); Cfgutil.emit (the only real caller) has since moved to
+ * the newer Zipcfg.Rep-based "call" node, same shape arch/sparc/
+ * sparcasm.mli/arch/alpha/alphaasm.mli use - see mipsasm.ml's #call/
+ * #cfg_instr for the corresponding implementation fix. *)
+val make :
+  (('a, 'b, 'c, 'd) Proc.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
+            (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
+  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Proc.t) Asm.assembler
+  (* pass Cfgutil.emit *)
 (*e: mipsasm.mli *)
 (*e: arch/mips/mipsasm.mli *)

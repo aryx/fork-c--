@@ -1,10 +1,14 @@
 (*s: arch/mips/mips.ml *)
 (*s: mips.ml *)
+(* claude: =*= / =$= (list-of-widths / string equality) live in Nopoly, not
+ * the default Stdlib polymorphic (=) - same fix sparc.ml/alpha.ml needed. *)
+open Nopoly
 let arch        = "mips"                    (* architecture *)
 let wordsize    = 32
 (*x: mips.ml *)
 module A  = Automaton
 module PX = Postexpander
+module DG = Dag
 module R  = Rtl
 module Rg = Mipsregs
 module RP = Rtl.Private
@@ -16,8 +20,11 @@ module SS = Space.Standard32
 module SM = Strutil.Map
 module T  = Target
 
-let rtl r = PX.Rtl r
-let (<:>) = PX.(<:>)
+(* claude: PX.(<:>)/PX.Rtl don't exist - Nop/Rtl/Test/(<:>) live in Dag
+ * (aliased DG above), not Postexpander; same stale-interface fix already
+ * applied to sparc.ml/ppc.ml/alpha.ml. *)
+let rtl r = DG.Rtl r
+let (<:>) = DG.(<:>)
 (*x: mips.ml *)
 let vfp         = Vfp.mk wordsize
 
@@ -37,15 +44,24 @@ let (_, byteorder, mcell) as mspace = Rg.mspace
 let mcount = Cell.to_count mcell
 let mem w addr          = R.mem R.none mspace (mcount w) addr
 (*x: mips.ml *)
+let ra_offset = 4                   (* size of call instruction *)
 module F = Mflow.MakeStandard
     (struct
         let pc_lhs    = Rg.pc  (* should be PC, but recognizer is broken! *)
         let pc_rhs    = Rg.pc
         let ra_reg    = R.reg ra
-        let ra_offset = 4               (* size of call instruction *)
-     end)   
+        let ra_offset = ra_offset
+     end)
+(* claude: needed for T.cc_spec_to_auto's cutto embed/project pair below -
+ * same role as sparc.ml's/alpha.ml's own fmach. *)
+let fmach = F.machine (R.reg sp)
 (*x: mips.ml *)
-let return = R.store Rg.pc (fetch_word (R.reg ra))
+(* claude: R.store is loc -> exp -> width -> rtl (curried) - the original
+ * was missing the trailing `wordsize` argument, so `return` was a
+ * `width -> rtl` function value hiding under a generic inferred type,
+ * never applied since nothing referenced it before Post.return needed a
+ * plain Rtl.rtl below. *)
+let return = R.store Rg.pc (fetch_word (R.reg ra)) wordsize
 (*x: mips.ml *)
 module Post = struct
     (*s: MIPS postexpander *)
@@ -114,7 +130,7 @@ module Post = struct
     (*x: MIPS postexpander *)
     let move ~dst ~src =
       assert (Register.width src = Register.width dst);
-      if Register.eq src dst then PX.Nop
+      if Register.eq src dst then DG.Nop
       else rtl (R.store (tloc dst) (tval src) (twidth src))
     (*x: MIPS postexpander *)
     let extract ~dst ~lsb ~src = Impossible.unimp "extract"
@@ -141,8 +157,8 @@ module Post = struct
     let pc_lhs = Rg.pc         (* PC as assigned by branch *)
     let pc_rhs = Rg.pc         (* PC as captured by call   *)
     (*x: MIPS postexpander *)
-    let br ~tgt = PX.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
-    let b  ~tgt = PX.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
+    let br ~tgt = DG.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
+    let b  ~tgt = DG.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
     (*x: MIPS postexpander *)
     let negate = function
       | "ne"            -> "eq"
@@ -166,9 +182,20 @@ module Post = struct
       | _               -> impossible 
                             "bad comparison in expanded MIPS conditional branch"
     (*x: MIPS postexpander *)
-    let bc x (opr, ws as op) y ~ifso ~ifnot =
+    (* claude: split from the old single `bc` into bc_guard/bc_of_guard, the
+     * shape Postexpander.S now requires (see sparc.ml/ppc.ml/alpha.ml's own
+     * bc_guard/bc_of_guard for the same split). Unlike alpha's ISA (which
+     * has no direct register-vs-register conditional branch, only
+     * reg-vs-zero), MIPS's "Guarded(cmp,Goto(addr))" grammar rule
+     * recognizes a direct two-register comparison as the branch guard
+     * itself, so no separate compare-instruction setup is needed - setup
+     * stays DG.Nop, same as ppc.ml's own no-condition-register case. *)
+    let bc_guard x (opr, ws as op) y =
       assert (ws =*= [wordsize]);
-      PX.Test (PX.Nop, (R.app (Up.opr op) [tval x; tval y], ifso, ifnot))
+      DG.Nop, R.app (Up.opr op) [tval x; tval y]
+    let bc_of_guard (setup, guard) ~ifso ~ifnot =
+      let brtl cond tgt = R.guard cond (R.store pc_lhs tgt wordsize) in
+      DG.Test (setup, (brtl guard, ifso, ifnot))
     (*x: MIPS postexpander *)
     let bnegate r = match Dn.rtl r with
         |           RP.Rtl [ RP.App( (op,       [32]), [x; y]), RP.Store (pc, tgt, 32)]
@@ -177,14 +204,39 @@ module Post = struct
         | _ -> impossible "ill-formed MIPS conditional branch"
     (*x: MIPS postexpander *)
     let effects = List.map Up.effect
-    let call  ~tgt ~others = 
-      PX.Nop, R.par (R.store pc_lhs (Up.const tgt) wordsize :: effects others)
-    let callr ~tgt ~others = 
-      PX.Nop, R.par (R.store pc_lhs (tval tgt) wordsize :: effects others)
+    (* claude: original call/callr took an extra ~others param (dropped:
+     * Postexpander.S's call/callr are just ~tgt now, see sparc.ml's/
+     * alpha.ml's identical fix) and only ever stored pc_lhs, never storing
+     * ra - so a "call" would jump but never leave a usable return address,
+     * i.e. it could never actually return (same class of bug alpha.ml's
+     * do_call had, though there the branch half held no jump at all rather
+     * than no ra-store). mipsrec.mlb's grammar only recognizes a call as
+     * "Par(Goto(addr),Store(ral,next,32))" ("jal"), where next=Add(pc,const)
+     * is the return address, so both stores must land in the single Par
+     * the recognizer sees - hence do_call below, mirroring alpha.ml's
+     * restructured do_call/call/callr. No separate setup step is needed
+     * (unlike alpha's pv-register indirection): MIPS has no pv/gp
+     * machinery in this backend, so the block half stays DG.Nop and the
+     * whole call sequence lives in the branch half. *)
+    let do_call tgt =
+      DG.Nop,
+      R.par [ R.store pc_lhs tgt wordsize
+            ; R.store (R.reg ra) (RU.addk wordsize (R.fetch pc_rhs wordsize) ra_offset) wordsize
+            ]
+    let call  ~tgt = do_call (Up.const tgt)
+    let callr ~tgt = do_call (tval tgt)
     (*x: MIPS postexpander *)
-    let cut_to effs = PX.Nop, R.par (effects effs)
+    (* claude: adapted from the old effect-list signature to the current
+     * Mflow.cut_args record ({new_sp; new_pc}) - same fix as sparc.ml's/
+     * alpha.ml's cut_to. *)
+    let cut_to {Mflow.new_sp = sp'; Mflow.new_pc = pc'} =
+      DG.Nop, R.par [R.store pc_lhs pc' wordsize; R.store (R.reg sp) sp' wordsize]
     (*x: MIPS postexpander *)
     let don't_touch_me es = false
+    (* claude: return/forbidden are required by Postexpander.S but had no
+     * definition here (same gap sparc.ml/alpha.ml had). *)
+    let return = return
+    let forbidden = Rtl.par [] (* BOGUS: NEEDS TO BE A REAL FAULTING INSTRUCTION *)
     (*e: MIPS postexpander *)
 end
 (*x: mips.ml *)
@@ -225,6 +277,10 @@ let target =
                  ; Rg.Spaces.u
                  ; Rg.Spaces.c
                  ] in
+    (* claude: Ast2ir.tgt = Preast2ir.tgt = T of (...) Target.t - a wrapped
+     * variant, not the bare record (see sparc.ml/ppc.ml/alpha.ml's own
+     * PA.T{...}/Preast2ir.T{...}). *)
+    Preast2ir.T
     { T.name                = "mips"
     ; T.memspace            = mspace
     ; T.max_unaligned_load  = R.C 1
@@ -237,24 +293,59 @@ let target =
     ; T.reg_ix_map          = T.mk_reg_ix_map spaces
     ; T.distinct_addr_sp    = false
     ; T.float               = Float.ieee754
-    ; T.spill               = spill
-    ; T.reload              = reload
 
     ; T.vfp                 = vfp
-    ; T.bnegate             = F.bnegate Rg.cc
-    ; T.goto                = F.goto
-    ; T.jump                = F.jump
-    ; T.call                = F.call
-    ; T.return              = F.return
-    ; T.branch              = F.branch
-    
-    ; T.cc_specs            = A.init_cc
-    ; T.cc_spec_to_auto     = Mipscall.cconv 
+    (* claude: T.spill/T.reload/T.bnegate/T.goto/T.jump/T.call/T.return/
+     * T.branch aren't Target.t fields anymore (see target.mli) - they now
+     * live inside the single T.machine record, built by the
+     * Expander.IntFloatAddr functor from Post above, same as sparc.ml/
+     * ppc.ml/alpha.ml/x86.ml. *)
+    ; T.machine             = X.machine
+
+    ; T.cc_specs            = Mipscc.cc_specs
+    ; T.cc_spec_to_auto     = Mipscall.cconv
                                 ~return_to:(fun ra -> (R.store Rg.pc ra wordsize))
-                                (F.cutto (Rtl.reg sp))
+                                { T.embed   = fmach.T.cutto.T.embed
+                                ; T.project = fmach.T.cutto.T.project }
     ; T.is_instruction      = Mipsrec.is_instruction
     ; T.tx_ast = (fun secs -> secs)
-    ; T.capabilities        = T.incapable
+    (* claude: T.incapable (empty operator/literal/memory lists) would
+     * reject every operator this backend actually implements - see
+     * mipsrec.mlb's grammar (only add/sub + the eq/ne/lt/gt/ge/ltu/leu/
+     * gtu/geu comparisons are recognized as real instructions; everything
+     * else falls through to the "<...>" catch-all/error path) and
+     * mips.ml's own Post (no mul/div/and/or/xor/shift, no float compute -
+     * unrm/binrm/dblop/wrdop/wrdrop are all Impossible.unimp/Unsupported
+     * so far). Scoped to exactly that subset, at this target's one integer
+     * width (32) - same rationale as alpha.ml's own hand-written operator
+     * list. Widen this list (and mipsrec.mlb) together as more operators
+     * get real camlburg rules. *)
+    ; T.capabilities        = { T.operators = List.map Up.opr
+                                   [ "add",     [32]
+                                   ; "sub",     [32]
+                                   ; "eq",      [32]
+                                   ; "ne",      [32]
+                                   ; "lt",      [32]
+                                   ; "gt",      [32]
+                                   ; "ge",      [32]
+                                   ; "ltu",     [32]
+                                   ; "leu",     [32]
+                                   ; "gtu",     [32]
+                                   ; "geu",     [32]
+                                   ; "not",     []
+                                   ; "bool",    []
+                                   ; "disjoin", []
+                                   ; "conjoin", []
+                                   ]
+                              ; T.litops     = []
+                              ; T.literals   = [32]
+                              ; T.memory     = [8; 16; 32]
+                              ; T.block_copy = true
+                              ; T.itemps     = [32]
+                              ; T.ftemps     = []
+                              ; T.iwiden     = false
+                              ; T.fwiden     = false
+                              }
     ; T.globals             = globals
     ; T.rounding_mode       = Rtl.reg rm_reg
     ; T.named_locs          = Strutil.assoc2map

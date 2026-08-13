@@ -1,6 +1,9 @@
 (*s: mipsrec.mlb *)
 %head {: 
   (*s: head *)
+  (* claude: =$= (string equality) lives in Nopoly, not the default Stdlib
+   * polymorphic (=) - needed below by the "syscall" mangled-name guard. *)
+  open Nopoly
   module RP = Rtl.Private
   module RU = Rtlutil
   module Up = Rtl.Up
