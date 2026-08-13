@@ -994,6 +994,113 @@ convention machinery lives, when a return/call-adjacent bug appears
 target-specific but the target-specific-looking code all looks correct.
 
 
+33. SIGBUS (not SIGSEGV) is a strong hint to check alignment first,
+    especially on a strict-alignment target you're bringing up for the
+    first time
+---------------------------------------------------------------------------
+Investigating why 14 of tests/tiger/*.c--'s 15 tests crashed on SPARC
+(only "hello" failed cleanly, with a wrong exit code but no crash - see
+entry 34), the very first data point was the shell's own signal report:
+"timeout: the monitored command dumped core" / "Bus error" - qemu-
+sparc32plus's own equivalent of "uncaught target signal 11" from entry 25,
+but SIGBUS (10) instead of SIGSEGV (11). That distinction is worth
+treating as a real, separate diagnostic signal, not just cosmetic: SIGBUS
+on SPARC (and other strict-alignment RISC targets - not x86, which never
+traps on misaligned access at all) overwhelmingly means "the CPU tried to
+load/store a multi-byte value at an address that isn't naturally aligned
+for its width," a narrower and more specific hypothesis than SIGSEGV's
+much wider "dereferenced something bad." Jumping straight to "which
+32-bit load or store in the crashing function might be misaligned" (via
+gdb-over-qemu-gdbserver, same setup as entry 25) skipped a whole category
+of wrong guesses (bad pointer, corrupted register, stack overflow) that
+SIGSEGV would have left open.
+
+The actual misaligned symbol (`curr_exn`, a `bits32` global declared
+right after a variable-length string literal in fork-tiger's
+stdlibcmm.c--) was confirmed - and, critically, its root cause narrowed
+to "the source is missing an `align 4;` directive" rather than "qc--'s
+SPARC backend mis-emits alignment directives" - by comparing `nm`'s
+address for that one symbol across *multiple differently-linked test
+binaries* (`sparc64-linux-gnu-nm build/tiger-sparc/hello | grep
+curr_exn` vs the same for `forloop`, etc.). It landed on a different
+offset in each binary (sometimes a multiple of 4, sometimes not),
+tracking whatever total length happened to precede it in that
+particular link - the signature of an offset that is *never
+deliberately aligned*, just accidentally so or not depending on what's
+linked in, rather than a backend consistently getting alignment wrong
+in one specific way. That one comparison across binaries was worth more
+than any amount of staring at a single .s file's `.align` directives.
+
+Once the hypothesis narrowed to "the source relies on accidental
+alignment," confirming *where in the compiler* alignment is actually
+decided (rather than guessing and risking a fix in the wrong, possibly
+shared, layer) was handed to a research subagent with an explicit
+"research only, do not modify files, cite file:line" brief - the
+pipeline here is five stages deep (parser -> Nast -> Nelab -> ast2ir ->
+Asm backend) and tracing a single semantic question (does anything ever
+insert alignment padding based on a declaration's own width, or is it
+100% explicit-directive-driven) through all five without derailing into
+"just fix something that looks plausible" was exactly the kind of
+narrow, answerable, citation-backed question that's worth delegating
+rather than doing inline. The answer (explicit-directive-driven at every
+stage, confirmed via parsing/parse.mly, elab/nast.ml, elab/nelab.ml,
+codegen/ast2ir.ml's `datum` function, and ir/asm.ml's `#align` method)
+meant the real fix belonged in fork-tiger's own source, not in this
+repo - the same "not a qc-- bug, a fork-tiger source issue" shape
+[[ppc-backend-status]] already hit twice (a stale `exceptions.c--`, a
+genuinely wrong recorded exit code for `merge`). Confirmed by testing
+the fix in a scratch copy first (compiled it, grepped the resulting .s
+for the `.align 4` landing in the right place) before touching
+fork-tiger's actual checkout.
+
+34. A "leftover register" red herring: reading a just-returned call
+    result before confirming the callee's C signature actually sets it
+---------------------------------------------------------------------------
+Before the SIGBUS root cause above, tests/tiger/hello's own bug looked
+superficially similar: it ran to completion and printed correct output,
+but exited with the wrong code (152 instead of 14). gdb-over-qemu-
+gdbserver (same setup as entries 25/32) traced the value back to a
+register read immediately after "call tig_print" - and tig_print's
+signature, checked in fork-tiger's stdlib.c, is `void tig_print(string
+*s)`. A void C function has no reason to leave anything meaningful in
+its ABI return-value register; whatever's there afterward is leftover
+state, not a real value - and on x86 (arguments passed on the stack,
+nothing else touches %eax between printf's own return and tig_print's
+own "ret") that leftover happens to equal printf's real return value
+(the byte count), which is what the calling C-- code actually wants,
+even though tig_print itself never puts it there deliberately. On SPARC,
+disassembling tig_print's real body (`sparc64-linux-gnu-objdump
+--disassemble=tig_print` on the linked binary - always check the REAL
+callee's generated code when a "just call it and read the result" step
+looks wrong, not just the caller's side) showed its *own* incoming
+argument (the string pointer) written once to a stack slot at entry and
+never touched again - meaning that register's content, unlike x86,
+survives to tig_print's own return as the *argument*, not the printf
+call's result, because SPARC's register windows alias the same physical
+register slot across the call/return boundary regardless of what either
+side used it for last. Confirmed by checking the observed garbage
+value's address against `nm`'s address for the format string constant -
+an exact match.
+
+This carried two costs before being recognized as a dead end for the
+*other* 14 tests' crash: it cost real investigation time (worth it once,
+as a genuine SPARC-windowing insight, but not a lead worth chasing
+further once the value's provenance was explained), and it was, in
+hindsight, the *less* consequential of the two bugs in this session -
+it affects only programs whose exit code is computed from a void
+foreign call's "return value," while the alignment bug above was
+blocking 14 of 15 tests outright. When multiple failures are visible at
+once, a crash that reproduces instantly and blocks nearly everything
+(the alignment SIGBUS) is worth chasing before a subtler wrong-value bug
+that only affects the one test already fully explained. General lesson:
+before spending time explaining *why* a "leftover" value differs across
+architectures, check whether the callee is even supposed to set that
+register at all (its real C/C-- signature) - a void-returning callee
+makes "the returned value is architecture-dependent garbage" the
+correct - and unfixable at the call site - diagnosis, not a bug to keep
+chasing.
+
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
