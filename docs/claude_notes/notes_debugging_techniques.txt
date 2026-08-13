@@ -936,6 +936,64 @@ fixed address if EXPR itself is already a constant. Compute the address
 once, watch the literal.
 
 
+32. Scripted `stepi` with a `$pc` watchpoint to catch "control jumps
+    somewhere nonsensical", when you don't know the faulting address
+    up front
+---------------------------------------------------------------------------
+Bringing up the SPARC backend from scratch (no working upstream
+reference to compare against, unlike ppc), demos/hello_sparc.c-- linked
+and ran under qemu-sparc32plus but segfaulted with no output at all - not
+even "hello, world!" - and the crashing PC read back as bare `0x0`, which
+rules out a bad-but-plausible address (a wild pointer, an off-by-N) and
+instead means control transferred through a register or memory slot that
+held zero, i.e. something never got initialized or got overwritten with
+zero at some point before the jump. There was no single address to
+`break` on - the question was "where in the instruction stream does PC
+become 0", not "what happens at a known bad instruction".
+
+Same gdb-over-qemu-gdbserver setup as entry 25 (`qemu-sparc32plus -g 1234
+./binary`, `gdb-multiarch ... target remote :1234`), but instead of
+`continue` to a breakpoint, break once at a point already known to be
+reached correctly (here, the callee's own entry - confirmed by checking
+its arguments were sane first), then hand a Python loop to `-ex "python
+<<script>>"`: `gdb.execute('stepi')` a few thousand times, reading
+`$pc` after each step, and stop as soon as it equals 0 (or whatever the
+known-bad value is), printing the step count and full register state
+right there. This turns "single-step by hand and eyeball each line" -
+impractical for anything past a dozen instructions - into an automated
+scan that still gives an exact instruction-by-instruction trail, not just
+the final crash site. The step count itself was also informative here:
+it landed inside `__libc_start_call_main`, i.e. *after* the callee had
+already returned once - which is what pointed at the return sequence,
+not the call, as the actual bug (see below).
+
+The underlying bug this found generalizes beyond SPARC: any target with
+branch delay slots (SPARC, MIPS, and others) has TWO real conventions
+that must agree with each other - (1) what value a `call`-class
+instruction actually writes into the return-address register (SPARC
+hardware writes the call instruction's *own* address, not the delay
+slot's), and (2) what offset the `return`-class instruction adds back on
+the way out (SPARC's real `ret`/`return` pseudo-ops add +8, precisely to
+skip both the call and its delay slot). A backend's RTL model is free to
+represent the stored value as `pc+4` instead of `pc` for uniformity with
+non-delay-slot targets (matching how every other backend's generic "pc"
+already means "address of the next sequential instruction") - but every
+consumer of that value then has to agree on the same convention, and
+there can be more than one consumer. Here, `Sparccall.ml`'s calling-
+convention-specific return path (`Call.t.return`) and
+`codegen/expander.ml`'s generic `GR.Return` CFG-node path
+(`Mflow.machine.return`, wired from `Postexpander.S.return`) are two
+*independent* return-emission sites for what looks like the same "return
+from a function" construct - one had been given a target-specific,
+correct implementation, the other was left as a generic architecture-
+agnostic default (copied from another backend where the default happened
+to also be correct) that silently did neither the delay-slot skip nor
+the register-window `restore`. Grep for every place a Postexpander.S/
+Mflow.machine field is *set*, not just where the "obvious" calling-
+convention machinery lives, when a return/call-adjacent bug appears
+target-specific but the target-specific-looking code all looks correct.
+
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
