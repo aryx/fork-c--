@@ -32804,10 +32804,10 @@ val to_string:      Rtl.rtl -> string
 
 <<mipsrec.mlb>>=
 %head {: 
-  <<head>> 
+  <<head>>
 :}
 %tail {: 
-  <<tail(mipsrec.nw)>> 
+  <<tail(mipsrec.nw)>>
 :}
 %term 
   <<terminal types(mipsrec.nw)>>
@@ -34672,6 +34672,26 @@ let guard b = if b then 0 else infinity
 <<code to precede the labeler(ppcrec.nw)>>=
 let imports = ref ([] : string list)
 
+(* claude: GNU as/clang's integrated PowerPC assembler reject
+ * bare register names (e.g. "mr r3,r3" errors as an
+ * "unsupported relocation against r3", since without a
+ * distinguishing prefix "r3" reads as a symbol); they require
+ * "%r3". Mach-O's assembler wants the bare form instead, so
+ * this is a runtime switch rather than a hardcoded string -
+ * set from to_asm's elf argument (see ppcelfasm.ml vs
+ * ppcasm.ml). *)
+let elf_syntax = ref false
+let reg_str n = if !elf_syntax then s "%%r%d" n else s "r%d" n
+let cr0_str () = if !elf_syntax then "%cr0" else "cr0"
+let r0_str () = reg_str 0
+
+(* claude: absolute (non-PIC) hi/lo halves of a symbol's
+ * address - GNU as/clang want "sym@ha"/"sym@l"; Mach-O wants
+ * "ha16(sym)"/"lo16(sym)", same as the PIC-relative case below
+ * uses for a symbol difference instead of a bare symbol. *)
+let abs_ha sym = if !elf_syntax then s "%s@ha" sym else s "ha16(%s)" sym
+let abs_lo sym = if !elf_syntax then s "%s@l"  sym else s "lo16(%s)" sym
+
 let ind_addr name =
   if List.exists ((=$=) name) (!imports) then "L" ^ name ^ "$stub" else name
 
@@ -34736,12 +34756,12 @@ cr:   Fetch(crl,  32) {: () :}
 lr:   Fetch(lrl,  32) {: () :}
 sp:   Fetch(spl,  32) {: () :}
 
-regl: Reg('r', n:int) [{: guard (n<>0) :}] {: s "r%d" n :}
+regl: Reg('r', n:int) [{: guard (n<>0) :}] {: reg_str n :}
 reg:  Fetch(regl, 32) {: regl :}
 @
 %%\paragraph{Addresses}
 <<rules(ppcrec.nw)>>=
-addr: const16                 {: s "%s(r0)" const16     :}
+addr: const16                 {: s "%s(%s)" const16 (r0_str ()) :}
 addr: reg                     {: s  "0(%s)" reg         :}
 addr: Add(reg, const16)       {: s "%s(%s)" const16 reg :}
 
@@ -34752,9 +34772,27 @@ ndx_addr: Add(reg1:reg, reg2:reg) {: s "%s,%s" reg1 reg2 :}
 inst: Store(regl, reg, w:int) {: s "mr %s,%s" regl reg :}
 inst: Store(regl,  lr, w:int) {: s "mflr %s" regl :}
 inst: Store(lrl,  reg, w:int) {: s "mtlr %s" reg  :}
+(* claude: PPC has no direct memory<->lr transfer; mflr/mtlr need a GPR, so saving/restoring lr (Stack.freeze's prologue/epilogue) goes through scratch register r0, the PPC ABI's conventional choice for this *)
+inst: Store(Mem(addr), lr, 32)      {: s "mflr %s\n\tstw %s,%s" (r0_str ()) (r0_str ()) addr :}
+inst: Store(lrl, Fetch(Mem(addr),32), 32) {: s "lwz %s,%s\n\tmtlr %s" (r0_str ()) addr (r0_str ()) :}
+(* claude: cut/alternate-return continuation adjustment adds an offset to lr directly; same r0-mediated two-instruction idiom as the memory<->lr rules above *)
+inst: Store(lrl, Add(lr, x:reg), 32) {: s "mflr %s\n\tadd %s,%s,%s\n\tmtlr %s" (r0_str ()) (r0_str ()) (r0_str ()) x (r0_str ()) :}
 inst: Store(regl,  cr, w:int) {: s "mfcr %s" regl :}
 
 inst: Store(regl, const16, 32) {: s "addi %s,0,%s" regl const16 :}
+
+(* claude: a 32-bit constant too wide for const16, reaching the recognizer unsplit (e.g. via the generic move path, fine for x86's one-instruction movl but not ppc) - addis+ori avoids addi's sign-extension rounding *)
+const32: Bits(bits)
+    [{: guard (not (Bits.S.fits 16 bits)) :}]
+    {: let i64 = Bits.U.to_int64 bits in
+       ( Int64.to_int (Int64.logand (Int64.shift_right_logical i64 16) 0xffffL)
+       , Int64.to_int (Int64.logand i64 0xffffL) )
+    :}
+
+inst : Store(regl, const32, 32)
+    {: let (hi, lo) = const32 in
+       s "addis %s,0,0x%x\n\tori %s,%s,0x%x" regl hi regl regl lo
+    :}
 
 inst: Store (regl, Fetch(Mem(addr    ),32), 32)     {: s "lwz %s,%s" regl addr  :}
 inst: Store (regl, Fetch(Mem(ndx_addr),32), 32)     {: s "lwzx %s,%s" regl ndx_addr :}
@@ -34783,6 +34821,15 @@ inst : Store(regl, Add(reg, Sxlo(pic,16)),32) {: s "addi %s,%s,lo16(%s)" regl re
 inst : Store(regl, Sxlo(pic, 16), 32)         {: s "addi %s,0,lo16(%s)" regl pic :}
 
 ha16: Ha16(pic) {: s "ha16(%s)" pic :}
+
+(* claude: same shape as pic/ha16 above, but for a bare symbol address instead of a PIC-relative symbol difference - needed for e.g. "iptr = my_data;" on a non-PIC (static ELF) target *)
+inst : Store(regl, Add(reg, absha16), 32) {: s "addis %s,%s,%s" regl reg absha16 :}
+inst : Store(regl, absha16, 32)           {: s "addis %s,0,%s" regl absha16 :}
+
+inst : Store(regl, Add(reg, Sxlo(lconst,16)),32) {: s "addi %s,%s,%s" regl reg (abs_lo lconst) :}
+inst : Store(regl, Sxlo(lconst, 16), 32)         {: s "addi %s,0,%s" regl (abs_lo lconst) :}
+
+absha16: Ha16(lconst) {: abs_ha lconst :}
 @
 %%\paragraph{Control Flow}
 <<rules(ppcrec.nw)>>=
@@ -34808,9 +34855,9 @@ inst:  Par(Goto(lconst), Store(lrl,next,32)) {: s "bl %s" (ind_addr lconst) :}
 <<rules(ppcrec.nw)>>=
 cmp:   Cmp(op:string, x:reg, y:reg)     {: ("",  ppc_op op,x,y) :}
 cmp:   Cmp(op:string, x:reg, y:const16) {: ("i", ppc_op op,x,y) :}
-inst:  Guarded(cmp,Goto(lconst)) 
+inst:  Guarded(cmp,Goto(lconst))
        {: let (i_, (l_, op), x, y) = cmp in
-          s "cmp%sw%s cr0,%s,%s\n\tb%s %s"  l_ i_ x y op lconst
+          s "cmp%sw%s %s,%s,%s\n\tb%s %s"  l_ i_ (cr0_str ()) x y op lconst
        :}
 inst : Guarded(OvSet(Fetch(xerl,32)), Goto(lconst))
        {: s "bo %s" lconst :}
@@ -34821,6 +34868,8 @@ inst: Store(regl,  Add(x:reg, y:reg), 32)       {: s "add %s,%s,%s" regl x y :}
 inst: Store(regl,  Add(x:reg, y:const16), 32)   {: s "addi %s,%s,%s" regl x y :}
 
 inst: Store(regl, Unop (opr:string,x:reg),      32) {: s "%s  %s,%s"    opr regl x :}
+(* claude: one's-complement has no single-opcode form on PPC, unlike Unop above *)
+inst: Store(regl, Com(x:reg),                   32) {: s "nor  %s,%s,%s" regl x x :}
 inst: Store(regl, Binop(opr:string,x:reg,y:reg),32) {: s "%s  %s,%s,%s" opr regl x y :}
 inst: Store(regl, Binop(opr:string,x:reg,y:const16), 32)
     {: s "%si %s,%s,%s" opr regl x y :}
@@ -34830,6 +34879,8 @@ inst: Store(regl, Binop(opr:string,x:reg,y:const16), 32)
 %%and get a printout of exactly how that RTL is represented using {\burg}
 %%constructors. 
 <<rules(ppcrec.nw)>>=
+(* claude: without this, a compile-time-false guard's conNop() fell through to the any[100] catch-all as literal "<nop>" text; mirrors x86rec.mlb *)
+inst : Nop() {: "nop" :}
 inst : any [100] {: s "<%s>" any :}
 
 any : True  () {: "True"  :}
@@ -34850,6 +34901,8 @@ any: Ha16(any) {: s "Ha16(%s)" any :}
 
 
 any : Unop (op:string, x:any)         {: s "Unop(%s,%s)" op x  :}
+(* claude: debug fallback for Com, mirrors the Unop/Binop ones above it *)
+any : Com(x:any)                      {: s "Com(%s)" x  :}
 any : Binop(op:string, x:any, y:any)  {: s "Binop(%s,%s,%s)" op x y  :}
 
 any : Nop () {: "nop" :}
@@ -34903,6 +34956,7 @@ let rtl2ppc = function
   | "neg"  -> "neg"
   | "or"   -> "or"
   | "shl"  -> "slw"
+  | "shra" -> "sraw"
   | "shrl" -> "srw"
   | "sub"  -> "sub"
   | "xor"  -> "xor"
@@ -34926,6 +34980,11 @@ let rec exp = function
   | RP.App(("bitExtract", [_; n]), [lsb; src]) -> conBitExtract (exp lsb) (exp src) n
 
   | RP.App(("lobits", [32;w]), [x]) -> conLobits (exp x) w
+
+  (* claude: PPC has no single-opcode one's-complement; it is synthesized
+   * as nor rD,rA,rA (see the Com grammar rule below), unlike the generic
+   * Unop case which assumes a real one-operand-source instruction. *)
+  | RP.App(("com", [32]), [x])      -> conCom (exp x)
 
   | RP.App((opr, ws), [x])          -> conUnop (rtl2ppc opr) (exp x)
   | RP.App((opr, ws), [x;y])        -> if is_cmp(opr,ws) then conCmp opr (exp x) (exp y)
@@ -34969,6 +35028,16 @@ and loc l = match l with
 and effect = function
   | RP.Store(RP.Reg(('c',_,_),i,_),r,_)
     when i = SS.indices.SS.pc          -> conGoto (exp r)
+  (* claude: Stack.freeze (shared, non-target-specific) emits raw
+   * "store a location's own fetched value back into itself" RTLs -
+   * seemingly a liveness/"protect across this point" marker rather
+   * than a real computation, since it never goes through
+   * Postexpander.move. ppcrec has no instruction for that shape, so
+   * it fell through to the any[100] catch-all as literal garbage
+   * text; eliding it here is what an assembler-level "mr rN,rN"
+   * would have done anyway, just without wasting an instruction. *)
+  | RP.Store(l, RP.Fetch(l',w'), w)
+    when w =|= w' && RU.Eq.loc l l'    -> conNop ()
   | RP.Store(l,e,w)                    -> conStore (loc l) (exp e) w
   | RP.Kill(l)                         -> conKill (loc l)
 
@@ -34995,9 +35064,10 @@ let errmsg r msg =
   List.iter prerr_string
     [ "recognizer error: "; msg; " on "; RU.ToString.rtl r; "\n" ]
 
-let to_asm r i =
+let to_asm ?(elf=false) r i =
   try
     let _ = imports := i in
+    let _ = elf_syntax := elf in
     let plan = rtl (Down.rtl r) in
     plan.inst.Camlburg.action ()
   with 

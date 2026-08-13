@@ -1,6 +1,6 @@
 (*s: ppcrec.mlb *)
 %head {: 
-    (*s: modules *)
+    (*s: modules(ppcrec.nw) *)
     open Nopoly
     module BO   = Bits.Ops
     module RP   = Rtl.Private
@@ -12,14 +12,14 @@
     exception Error of string
     let error msg = raise (Error msg)
     let sprintf = Printf.sprintf
-    (*e: modules *)
+    (*e: modules(ppcrec.nw) *)
          module M = struct
-           (*s: code to precede the labeler *)
+           (*s: code to precede the labeler(ppcrec.nw) *)
            let s = Printf.sprintf
-           (*x: code to precede the labeler *)
+           (*x: code to precede the labeler(ppcrec.nw) *)
            let infinity = Camlburg.inf_cost
            let guard b = if b then 0 else infinity
-           (*x: code to precede the labeler *)
+           (*x: code to precede the labeler(ppcrec.nw) *)
            let imports = ref ([] : string list)
 
            (* claude: GNU as/clang's integrated PowerPC assembler reject
@@ -51,10 +51,10 @@
              | "gtu" -> ("l", "gt")
              | "geu" -> ("l", "ge")
              | op    -> ("" , op  )
-           (*e: code to precede the labeler *)
+           (*e: code to precede the labeler(ppcrec.nw) *)
       :}
 %tail {:   
-    (*s: code to follow the labeler *)
+    (*s: code to follow the labeler(ppcrec.nw) *)
     let rec const = function
       | RP.Bool(true)             -> conTrue  ()
       | RP.Bool(false)            -> conFalse ()
@@ -62,7 +62,7 @@
       | RP.Diff(c1,c2)            -> conDiff (const c1) (const c2)
       | RP.Late(s,w)              -> Impossible.impossible "Late constant in recognizer"
       | RP.Bits(b)                -> conBits(b)
-    (*x: code to follow the labeler *)
+    (*x: code to follow the labeler(ppcrec.nw) *)
     let is_cmp (opr,ws) =
       let cmp = ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] in
       if not (List.mem opr cmp) then false
@@ -89,11 +89,11 @@
       | RP.Fetch(l,w)                -> conFetch (loc l) w
       (*s: case for [[ha16(e)]] *)
       | RP.App (("shl", [32]), [
-         (*s: pic_hi16 + pic_15 *)
+         (*s: [[pic_hi16]] + [[pic_15]] *)
          RP.App(("add", [32]), [
-           (*s: pic_hi16 *)
+           (*s: [[pic_hi16]] *)
            RP.App(("shrl", [32]), [e; RP.Const (RP.Bits k16')])
-           (*e: pic_hi16 *)
+           (*e: [[pic_hi16]] *)
            ; 
            (*s: pic15 *)
            RP.App(("zx", [1;32]),
@@ -101,7 +101,7 @@
                            [RP.App(("shrl", [32]), [e'; RP.Const (RP.Bits k15)])])])
            (*e: pic15 *)
            ])
-         (*e: pic_hi16 + pic_15 *)
+         (*e: [[pic_hi16]] + [[pic_15]] *)
          ; RP.Const (RP.Bits k16)]) 
          when Bits.eq k16 (Bits.U.of_int 16 32) && Bits.eq k16' (Bits.U.of_int 16 32)
            && Bits.eq k15 (Bits.U.of_int 15 32) && RU.Eq.exp e e' ->
@@ -132,7 +132,7 @@
                                            else conBinop (rtl2ppc opr) (exp x) (exp y)
 
       | RP.App((o,_),_) -> error (sprintf "unknown operator %s" o)
-    (*x: code to follow the labeler *)
+    (*x: code to follow the labeler(ppcrec.nw) *)
     and loc l = match l with
       | RP.Mem(('m',_,_), Rtl.C c, e, ass) -> conMem (exp e)
       | RP.Reg((sp, _,_), i, w)            -> conReg sp i 
@@ -166,7 +166,7 @@
         | [g, s]      -> guarded g s
         | (g, s) :: t -> conPar (guarded g s) (geffects t)
     and rtl (RP.Rtl es) = geffects es
-    (*x: code to follow the labeler *)
+    (*x: code to follow the labeler(ppcrec.nw) *)
     let errmsg r msg =
       List.iter prerr_string
         [ "recognizer error: "; msg; " on "; RU.ToString.rtl r; "\n" ]
@@ -188,16 +188,16 @@
       with
       | Camlburg.Uncovered -> false
       | Error msg -> (errmsg r msg; false)
-    (*e: code to follow the labeler *)
+    (*e: code to follow the labeler(ppcrec.nw) *)
          end (* of M *) 
       :}
 
 %term 
-  (*s: names of types of terminals *)
+  (*s: names of types of terminals(ppcrec.nw) *)
   n w bits symbol
-  (*e: names of types of terminals *)
+  (*e: names of types of terminals(ppcrec.nw) *)
 %%
-(*s: rules *)
+(*s: rules(ppcrec.nw) *)
 const16:  Bits(bits) [{: guard (Bits.S.fits 16 bits) :}]
                      {: Bits.to_decimal_string bits :}
 
@@ -219,7 +219,7 @@ k4 : Bits(bits)
 lconst: Link(symbol, w:int)        {: symbol#mangled_text :}
 pic:    Diff(c1:lconst, c2:lconst) {: s "%s-%s" c1 c2 :}
 pic:    Fetch(Mem(Diff(c1:lconst, c2:lconst)), w2:int) {: s "%s-%s" c1 c2 :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 pcl:  Reg('c', 0) {: () :}
 cial: Reg('c', 1) {: () :}
 crl:  Reg('c', 2) {: () :}
@@ -235,13 +235,13 @@ sp:   Fetch(spl,  32) {: () :}
 
 regl: Reg('r', n:int) [{: guard (n<>0) :}] {: reg_str n :}
 reg:  Fetch(regl, 32) {: regl :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 addr: const16                 {: s "%s(%s)" const16 (r0_str ()) :}
 addr: reg                     {: s  "0(%s)" reg         :}
 addr: Add(reg, const16)       {: s "%s(%s)" const16 reg :}
 
 ndx_addr: Add(reg1:reg, reg2:reg) {: s "%s,%s" reg1 reg2 :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 inst: Store(regl, reg, w:int) {: s "mr %s,%s" regl reg :}
 inst: Store(regl,  lr, w:int) {: s "mflr %s" regl :}
 inst: Store(lrl,  reg, w:int) {: s "mtlr %s" reg  :}
@@ -284,7 +284,7 @@ inst: Store (Mem(addr    ), Lobits(reg, 8), 8) {: s "stb %s,%s" reg addr  :}
 inst: Store (Mem(ndx_addr), Lobits(reg, 8), 8) {: s "stbx %s,%s" reg ndx_addr  :}
 inst: Store (Mem(addr    ), Lobits(reg,16),16) {: s "sth %s,%s" reg addr  :}
 inst: Store (Mem(ndx_addr), Lobits(reg,16),16) {: s "sthx %s,%s" reg ndx_addr  :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 inst : Store(regl, Add(reg, ha16), 32) {: s "addis %s,%s,%s" regl reg ha16 :}
 inst : Store(regl, ha16, 32)           {: s "addis %s,0,%s" regl ha16 :}
 
@@ -301,16 +301,16 @@ inst : Store(regl, Add(reg, Sxlo(lconst,16)),32) {: s "addi %s,%s,%s" regl reg (
 inst : Store(regl, Sxlo(lconst, 16), 32)         {: s "addi %s,0,%s" regl (abs_lo lconst) :}
 
 absha16: Ha16(lconst) {: abs_ha lconst :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 inst:  Goto(lconst) {: s "b %s" (ind_addr lconst) :}
 inst:  Goto(lr)     {: "blr"                      :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 inst : Par(Goto(lr),Store(regl,reg,w:int)) {: sprintf "mr %s, %s; blr" regl reg :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 next:  Add(cia,k4) {: () :}
 inst:  Par(Goto(lr    ), Store(lrl,next,32)) {: "blrl" :}
 inst:  Par(Goto(lconst), Store(lrl,next,32)) {: s "bl %s" (ind_addr lconst) :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 cmp:   Cmp(op:string, x:reg, y:reg)     {: ("",  ppc_op op,x,y) :}
 cmp:   Cmp(op:string, x:reg, y:const16) {: ("i", ppc_op op,x,y) :}
 inst:  Guarded(cmp,Goto(lconst))
@@ -319,7 +319,7 @@ inst:  Guarded(cmp,Goto(lconst))
        :}
 inst : Guarded(OvSet(Fetch(xerl,32)), Goto(lconst))
        {: s "bo %s" lconst :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 inst: Store(regl,  Add(x:reg, y:reg), 32)       {: s "add %s,%s,%s" regl x y :}
 inst: Store(regl,  Add(x:reg, y:const16), 32)   {: s "addi %s,%s,%s" regl x y :}
 
@@ -329,7 +329,7 @@ inst: Store(regl, Com(x:reg),                   32) {: s "nor  %s,%s,%s" regl x 
 inst: Store(regl, Binop(opr:string,x:reg,y:reg),32) {: s "%s  %s,%s,%s" opr regl x y :}
 inst: Store(regl, Binop(opr:string,x:reg,y:const16), 32)
     {: s "%si %s,%s,%s" opr regl x y :}
-(*x: rules *)
+(*x: rules(ppcrec.nw) *)
 (* claude: without this, a compile-time-false guard's conNop() fell through to the any[100] catch-all as literal "<nop>" text; mirrors x86rec.mlb *)
 inst : Nop() {: "nop" :}
 inst : any [100] {: s "<%s>" any :}
@@ -373,5 +373,5 @@ any : Guarded(guard:any, any) {: s "Guarded(%s,%s)" guard any :}
 any : Cmp(op:string, x:any, y:any) {: s "Cmp(%s,%s,%s)" op x y :}
 any : Par(l:any, r:any) {: s "Par(%s,%s)" l r :}
 any : Goto(any) {: s "Goto(%s)" any :}
-(*e: rules *)
+(*e: rules(ppcrec.nw) *)
 (*e: ppcrec.mlb *)
