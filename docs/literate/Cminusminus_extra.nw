@@ -16,7 +16,6 @@
 <<commons2/auxfuns.ml>>=
 <<auxfuns.ml>>
 @
-
 <<commons2/auxfuns.mli>>=
 <<auxfuns.mli>>
 @
@@ -170,7 +169,6 @@ end
 <<commons2/lc.ml>>=
 <<lc.ml>>
 @
-
 <<commons2/lc.mli>>=
 <<lc.mli>>
 @
@@ -471,7 +469,6 @@ let scan str lexer          = lexer str 0 []
 <<commons2/pc.ml>>=
 <<pc.ml>>
 @
-
 <<commons2/pc.mli>>=
 <<pc.mli>>
 @
@@ -787,7 +784,6 @@ let some p =
 <<commons2/pc2.ml>>=
 <<pc2.ml>>
 @
-
 <<commons2/pc2.mli>>=
 <<pc2.mli>>
 @
@@ -998,10 +994,10 @@ let some p =
 %$
 
 \section{[[commons2/pp.nw]]}
+
 <<commons2/pp.ml>>=
 <<pp.ml>>
 @
-
 <<commons2/pp.mli>>=
 <<pp.mli>>
 @
@@ -1836,7 +1832,6 @@ and string = parse
 <<commons2/rx.ml>>=
 <<rx.ml>>
 @
-
 <<commons2/rx.mli>>=
 <<rx.mli>>
 @
@@ -2006,10 +2001,10 @@ let e2 = sym 'a' *** opt (sym 'b') *** some (sym 'a')
 @
 
 \section{[[commons2/strutil.nw]]}
+
 <<commons2/strutil.ml>>=
 <<strutil.ml>>
 @
-
 <<commons2/strutil.mli>>=
 <<strutil.mli>>
 @
@@ -2096,7 +2091,6 @@ let from_list xs = List.fold_left (fun set x -> Set.add x set) Set.empty xs
 <<commons2/verbose.ml>>=
 <<verbose.ml>>
 @
-
 <<commons2/verbose.mli>>=
 <<verbose.mli>>
 @
@@ -2125,10 +2119,10 @@ let eprintf k = if verbosity >= k then Printf.eprintf else ign
 %******************************************************************************
 
 \section{[[commons3/alignment.nw]]}
+
 <<commons3/alignment.ml>>=
 <<alignment.ml>>
 @
-
 <<commons3/alignment.mli>>=
 <<alignment.mli>>
 @
@@ -2175,7 +2169,6 @@ let alignment (n, k) = gcd n k
 <<commons3/bits.ml>>=
 <<bits.ml>>
 @
-
 <<commons3/bits.mli>>=
 <<bits.mli>>
 @
@@ -2740,15 +2733,14 @@ let to_native (i,w) =
 
 let to_int64 (i,w) = i
 @
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Unsigned Interpretation}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%The [[mask]] operation returns the [[w]] least significant bits of an
 %%[[int64]] value.
-%%
+
 <<implementation U>>=
 let mask i w =
     if w < 64 then 
@@ -2835,10 +2827,10 @@ let to_int64 (i,w) =
 %%% ------------------------------------------------------------------ 
 %%\subsubsection{Strings}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%A number in string representation is unsigned. We parse the string and
 %%return a 64-bit vector for the value.  
-%%
+
 %%First, we have to find out whether the string at hand denotes a
 %%character, integer, or floating point number. A character starts with an
 %%single quote, a floating-point number includes either a dot, an [[e]],
@@ -2924,11 +2916,11 @@ let char str w =
         else                   I.of_int (Char.code str.[0])
     with Failure s -> impossf "caml function '%s' failed on literal %s" s str
 @    
-%%    
+
 %%% ================================================================== 
 \section{Residualizing instantiation}
 %%% ================================================================== 
-%%
+
 %%\emph{I don't know what to do with this. -- CL}
 %%
 %%This section is written just as a copy-and-pase of the code above. We
@@ -3222,18 +3214,19 @@ let zero w =
     ; mkBitsINT w 0
     )
 @
-%%
+
+
 \section{[[commons3/bitset64.nw]]}
+
 <<commons3/bitset64.ml>>=
 <<bitset64.ml>>
 @
-
 <<commons3/bitset64.mli>>=
 <<bitset64.mli>>
 @
 
 \section{Small sets of bits}
-%%
+
 %%We track the liveness of each individual bit in a register.
 %%This module defines an efficient implementation of sets of bits,
 %%provided the bits are numbered 0~through~63.
@@ -3261,7 +3254,7 @@ val eq: t -> t -> bool
 val overlap: t -> t -> bool (* nonempty intersection *)
 @ 
 \section{Implementation}
-%%
+
 %%Bit vectors!
 <<bitset64.ml>>=
 module B  = Bits
@@ -3300,17 +3293,18 @@ let remove_range ~lsb ~width s = diff s (single_range ~lsb ~width)
 let eq = B.eq
 let subset s s' = B.eq (inter s s') s
 @ 
+
 \section{[[commons3/cell.nw]]}
+
 <<commons3/cell.ml>>=
 <<cell.ml>>
 @
-
 <<commons3/cell.mli>>=
 <<cell.mli>>
 @
 
 \section{Cells}
-%%
+
 %%We describe a cell size and provide conversions between widths in bits
 %%and a cell count.
 %%For common widths, these conversions may be more efficient than the
@@ -3361,10 +3355,10 @@ let of_size n = match n with
 |  _ -> (n, (fun (C c) -> n * c), (fun w -> C (w / n)), (fun w -> w mod n = 0))
 @ 
 \section{[[commons3/ctypes.nw]]}
+
 <<commons3/ctypes.ml>>=
 <<ctypes.ml>>
 @
-
 <<commons3/ctypes.mli>>=
 <<ctypes.mli>>
 @
@@ -3487,23 +3481,23 @@ let ctypes_vararg_enum ct =
   Printf.sprintf "{ %s }" (String.concat ", " str_lst)
 let enum_int h = snd (fetch_ct enum_ct h)
 @
+
 \section{[[commons3/idcode.nw]]}
+
 <<commons3/idcode.ml>>=
 <<idcode.ml>>
 @
-
 <<commons3/idcode.mli>>=
 <<idcode.mli>>
 @
 
-%%
 \section{Code arbitrary string as an identifier}
-%%
+
 %%The idea is stolen from the old \texttt{btoa} program of fond memory.
 %%We code each five-bit group as a character; this enables us to code a
 %%128-bit MD5 digest in 26 characters, which is short enough for the
 %%linker.
-%%
+
 <<idcode.mli>>=
 val encode : string -> string
 @ 
@@ -3529,26 +3523,22 @@ let encode s =
     Buffer.contents b
   end
 @ 
+
 \section{[[commons3/idgen.nw]]}
+
 <<commons3/idgen.ml>>=
 <<idgen.ml>>
 @
-
 <<commons3/idgen.mli>>=
 <<idgen.mli>>
 @
 
-%%
-%%% Please add grades for this module below. The line must start with % "%%".
-%%% 
-%%
 %%%%Grades: B Peripheral Later
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{Name Generator}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%For labels, temporary variables, and similar objects generated by the
 %%compiler we need an infinite supply of unique names.  In order to
 %%avoid collisions with existing names in a {\PAL} program these names
@@ -3565,11 +3555,11 @@ let encode s =
 %%at hand.  This happens usually in a compiler phase later than the one
 %%where names are introduced.  See module \module{mangle} for the
 %%connection between {\PAL} and assembly names.
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Interface}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%The interface provides functions to generate unique names derived from
 %%an existing legal {\PAL} name.  A generator permit to supply a string
 %%that becomes part of the generated name.  The supplied name \emph{must}
@@ -3640,18 +3630,19 @@ module ContEntry = struct
 end
 (* add more here as needed *)
 @
+
 \section{[[commons3/reinit.nw]]}
+
 <<commons3/reinit.ml>>=
 <<reinit.ml>>
 @
-
 <<commons3/reinit.mli>>=
 <<reinit.mli>>
 @
 
-%%
+
 \section{Reinitialization}
-%%
+
 %%If multiple files are compiled in a single pass, we do not want to
 %%output to depend on the sequence in which the files are processed.
 %%Calling [[Reinit.reset]] will reset any mutable state that can effect the
@@ -3678,16 +3669,17 @@ let ref x =
   at (fun () -> r := x);
   r
 @ 
+
 \section{[[commons3/tx.nw]]}
+
 <<commons3/tx.ml>>=
 <<tx.ml>>
 @
-
 <<commons3/tx.mli>>=
 <<tx.mli>>
 @
 
-%%
+
 <<tx.mli>>=
 val decrement : name:string -> from:int -> to':int -> unit
 val remaining : unit -> int
@@ -3723,10 +3715,10 @@ let last _ = ts.last
 
 @
 \section{[[commons3/uint64.nw]]}
+
 <<commons3/uint64.ml>>=
 <<uint64.ml>>
 @
-
 <<commons3/uint64.mli>>=
 <<uint64.mli>>
 @
@@ -3736,19 +3728,19 @@ let last _ = ts.last
 %%% l2h substitution asdl ASDL
 %%% l2h substitution ocaml OCaml
 %%% l2h substitution forall forall
-%%
+
 %%% ------------------------------------------------------------------ 
 \section{UInt64 -- unsigned operations on \texttt{int64}}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%This module provides unsigned operations on {\ocaml} [[int64]] values
 %%and some conversions. The operations just add a new interpretation to
 %%values of type [[int64]] but no new type is introduced.
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Interface}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%Values of [[int64]] can be converted into [[float]] values by
 %%re-interpreting the bit patterns of the [[int64]] value. This is a much
 %%different operation than provided by the [[Int64]] module which
@@ -3860,7 +3852,7 @@ let ge  x y =    not (lt x y)
 let shl n x =    I.shift_left x n
 let shr n x =    I.shift_right_logical x n  
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{C implementation of the primitives}
 %%% ------------------------------------------------------------------ 
