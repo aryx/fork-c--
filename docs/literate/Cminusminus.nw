@@ -14,7 +14,6 @@
 % for widen.nw
 %\usepackage[leqno,centertags]{amsmath}
 %\usepackage{latexsym}
-%\usepackage{mathpartir}
 \input{widenmacros}
 
 %******************************************************************************
@@ -107,13 +106,23 @@ you fully understand how things work under the hood.
 Here are other candidates that were considered but ultimately discarded:
 \begin{itemize}
 
-\item MLRISC
-% ?
+%cs-history:
+% - UNCOL?
 
 \item GNU RTL
 % in gcc
 
 \item LLVM IR
+% didn't exist when C-- started. won, industrial strength,
+%  more backends, more opti. Better? C++ definitely not better than OCaml
+%  for implem. But for the rest?
+
+\item ML-RISC
+% ? was actually used in 1st proto of c--.
+
+%other:
+% - VPO
+
 
 \end{itemize}
 
@@ -145,7 +154,7 @@ License.
 
 \section{Input [[C--]] language}
 
-\section{Output assembly language}
+\section{Output assembly language(s)}
 %\section{ARM}
 
 \section{Code organization}
@@ -158,6 +167,7 @@ License.
 \chapter{Core Data Structures}
 %******************************************************************************
 
+% was in srcmap.nw
 %%% ------------------------------------------------------------------  
 \section{Source Code Locations}\label{srcmap}
 %%% ------------------------------------------------------------------  
@@ -579,6 +589,7 @@ end
 @
 %$
 
+% was in ast.nw
 %%% ------------------------------------------------------------------  
 \section{Abstract Syntax Definition}\label{sec:ast}
 %%% ------------------------------------------------------------------  
@@ -823,6 +834,7 @@ expr        = ExprAt        (expr, region)
 %%them. 
 
 
+% was in nast.nw
 \section{Normalized Abstract-Syntax Tree}
 
 %%This is an AST, except we sort and organize everything.
@@ -960,14 +972,16 @@ val program : Ast.toplevel list -> t
 
 \section{Nelab}
 
-
 \section{Target}
+
+\section{Astm}
 
 
 %******************************************************************************
 \chapter{[[main()]]}
 %******************************************************************************
 
+% was in driver.nw?
 %%% ------------------------------------------------------------------ 
 \section{Driver}
 %%% ------------------------------------------------------------------ 
@@ -1186,6 +1200,7 @@ let compile (PA.T target) opt ~exportglobals ~src ~asm ~validate ~swap =
 \chapter{Parsing}
 %******************************************************************************
 
+% was in parser.nw
 %%% ------------------------------------------------------------------  
 \section{Lexical Analysis}\label{sec:scanner}
 %%% ------------------------------------------------------------------  
@@ -1942,6 +1957,7 @@ and line = parse
 } (* end of epilog *)
 @
 
+% was also in parser.nw
 %%% ------------------------------------------------------------------  
 \section{Grammatical Analysis}\label{sec:parser}
 %%% ------------------------------------------------------------------  
@@ -2520,6 +2536,7 @@ string16    :   UNICODE LPAREN STR RPAREN      { $3 }
 \chapter{Normalizing}
 %******************************************************************************
 
+% was in nast.nw
 \section{Implementation}
 
 %%One abbreviation, types, and a very important constant.
@@ -2797,17 +2814,17 @@ let program ts =
 %******************************************************************************
 %\chapter{Naming}
 %******************************************************************************
+
 %******************************************************************************
 \chapter{Elaborating}
 %******************************************************************************
+
 
 %******************************************************************************
 \chapter{Control-flow Graph}
 %******************************************************************************
 
 % was in availpass.nw
-
-
 \section{Dataflow pass for available expressions}
 
 For dependency reasons, this module has to be split from the
@@ -2895,7 +2912,7 @@ let analysis = fact, comp
 % l2h substitution forall forall
 % l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
 
-% was in liveness.nw?
+% was in live.nw (different from liveness.nw or live.nw)
 % ------------------------------------------------------------------ 
 \section{Liveness Analysis}
 % ------------------------------------------------------------------ 
@@ -3064,7 +3081,7 @@ let live_in =
 @ 
 
 
-% was in dead.nw
+% was in dead.nw (different from odead.nw)
 %%Grades: A Peripheral Later
 \section{Dead-assignment elimination}
 
@@ -3160,7 +3177,7 @@ let all_regs_assigned rtl succ fail =
 \chapter{Register Allocation}
 %******************************************************************************
 
-
+% was in flowra.nw
 \section{A register allocator written as a dataflow algorithm}
 
 The basic idea is to write a register allocator as a pass in our dataflow framework.
@@ -4141,9 +4158,8 @@ let (g, _) = Dataflow.B.rewrite' allocPrefs g in
 Early spilling if the spill will happen in a frequently executed block?
 
 
-% was in colorgraph.nw
-
-
+% was in colorgraph.nw, unfortunately no proof is better than flowra.nw
+%  on the few tests claude did
 %-------------------------------------------------------------------
 \section{Graph Coloring Register Allocation}
 %-------------------------------------------------------------------
@@ -6590,1576 +6606,6 @@ let () = Debug.register "registerclass" "generalized register classes"
 
 
 %******************************************************************************
-\chapter{Runtime}
-%******************************************************************************
-
-%was runtime.nw
-% ---------------------------------------------------------------------------
-\section{{\PAL} Run-time Interface}
-% ---------------------------------------------------------------------------
-
-This is essentially the interface in the specification, except we
-don't provide access to global variables.
-<<qc--runtime.h>>=
-#ifndef QCMM_RUNTIME_H
-#define QCMM_RUNTIME_H
-
-<<machine-dependent macro definitions for the public interface>>
-
-<<data structures>>
-<<exposed private data structures>>
-<<public functions>>
-<<exposed private functions>>
-#endif /* QCMM_RUNTIME_H */
-@
-The definitions of the basic {\PAL}  types are public.
-<<data structures>>=
-typedef unsigned  Cmm_Word;
-typedef void*     Cmm_Dataptr;
-typedef void    (*Cmm_Codeptr)();
-@ 
-The layouts of continuations and activations are considered private.
-<<data structures>>=
-typedef struct cmm_cont Cmm_Cont;
-typedef struct cmm_activation Cmm_Activation;
-@
-Because
-we wish for a client to be able to allocate an activation on the
-stack as a local variable, the representation  of an activation is
-actually exposed below.
-It is nevertheless an \emph{unchecked} run-time error to depend in any
-way on the definition of [[struct cmm_activation]].
-Similarly, accidents of implemention require us to
- expose [[struct cmm_cont]], but again, it is an \emph{unchecked}
- run-time error to depend in any way on its definition.
- 
-We provide a function to help debug the run-time system.
-<<public functions>>=
-extern void Cmm_show_activation(const Cmm_Activation *a); /* for debugging */
-@ 
-Functions for walking the stack.
-
-<<public functions>>=
-Cmm_Activation Cmm_YoungestActivation (const Cmm_Cont *t);
-int            Cmm_isOldestActivation (const Cmm_Activation *a);
-Cmm_Activation Cmm_NextActivation     (const Cmm_Activation *a);
-int            Cmm_ChangeActivation   (Cmm_Activation *a);
-Cmm_Cont*      Cmm_MakeUnwindCont     (Cmm_Activation *a, Cmm_Word index, ...);
-@
-<<public functions>>=
-Cmm_Dataptr Cmm_GetDescriptor(const Cmm_Activation *a, Cmm_Word token);
-@ 
-Functions for finding local variables.
-<<public functions>>=
-void      Cmm_LocalVarWritten  (const Cmm_Activation *a, unsigned n);
-unsigned  Cmm_LocalVarCount    (const Cmm_Activation *a);
-void*     Cmm_FindLocalVar     (const Cmm_Activation *a, unsigned n);
-void*     Cmm_FindDeadLocalVar (const Cmm_Activation *a, unsigned n);
-void*     Cmm_FindStackLabel   (const Cmm_Activation *a, unsigned n);
-@ 
-Convenience.
-<<public functions>>=
-void      Cmm_CutTo            (const Cmm_Cont *k);
-@ 
-Thread creation.
-<<public functions>>=
-Cmm_Cont* Cmm_CreateThread     (Cmm_Codeptr f, Cmm_Dataptr x, void *s, unsigned n);
-void Cmm_Yield (Cmm_Cont *k, Cmm_Cont *kold);
-@ 
-These functions are currently unimplemented.
-<<unimplemented public functions>>=
-void*     Cmm_FindGlobalVar    (int n);
-@ 
-\section{Implementation}
-
-First, the machine-dependent register information.
-<<machine-dependent macro definitions for the public interface ((x86-linux))>>=
-#define NUM_REGS 12
-@
-<<machine-dependent macro definitions for the implementation ((x86-linux))>>=
-#define ESP 8 /* r[4] */
-#define PC  0 /* c[0] */
-@
-
-%pad: Choice
-<<machine-dependent macro definitions for the public interface>>=
-#ifdef __powerpc__
-/* claude: ppc's flat register-index numbering (target/target.ml's
- * mk_reg_ix_map, applied to arch/ppc/ppc.ml's Spaces module) runs the
- * control space 'c' (7 registers -> indices 0-7), then 'f' (32 float
- * registers -> indices 8-40), then 'r' (32 int registers -> indices
- * 41-73) - confirmed empirically via gdb (a running program's own
- * pcmap entries), not just by reading the space declarations. The
- * x86-sized array below silently overflowed for every ppc register
- * above index 11 (i.e. almost all of them), corrupting whatever
- * memory follows a Cmm_Activation on the stack. 96 leaves headroom. */
-#define NUM_REGS 96
-#else
-<<machine-dependent macro definitions for the public interface ((x86-linux))>>
-#endif
-@
-
-<<machine-dependent macro definitions for the implementation>>=
-<<machine-dependent macro definitions for the implementation ((x86-linux))>>
-@
-
-
-<<machine-dependent macro definitions for the public interface ((x86-cygwin))>>=
-#define NUM_REGS 12
-@
-<<machine-dependent macro definitions for the implementation ((x86-cygwin))>>=
-#define ESP 8 /* r[4] */
-#define PC  0 /* c[0] */
-@ 
-
-% ---------------------------------------------------------------------------
-\subsection{Walking the stack}
-% ---------------------------------------------------------------------------
-This implementation assumes that a {\PAL} thread can only be
-suspended at a continuation. Particularly, this means we do not expect
-that the runtime system will be entered in response to an interrupt or
-some other method that preempts the {\PAL} thread at an arbitrary
-point.
-(At some future time, it may be worthwhile for the run-time system to
-be able to capture a Unix signal context and synthesize a suitable
-{\PAL} continuation.)
-
-Walking the stack always begins at a continuation. A {\PAL}
-continuation contains the program counter and stack pointer at the
-point of return to the continuation. From this an initial virtual
-frame pointer (vfp) can be derived. The process of walking the stack
-involves computing the vfp of each caller, and tracking the locations
-of all saved registers along the way.
-
-In order to compute the virtual frame pointer for an activation, the
-runtime system needs to know how it relates to the stack pointer at
-each call site and 
-continuation in the {\PAL} program. 
-In addition, the run-time system
-needs to know the locations of caller- and callee-saved registers.
-Happily, for {\PAL} functions, all of this information is emitted by
-the {\PAL} compiler as part of the run-time data. 
-For  non-{\PAL} functions, including C~functions, we must rely on the
-target-specific ABI to skip over unknown areas of the
-stack.\footnote
-{If the ABI does not specify the locations in which registers
-are saved, we make pessimistic assumptions.}
-
-\subsubsection{Stack-walking data structures and internal interfaces}
-
-We dispatch between generic {\PAL} code and target-specific code using
-function pointers.
-At present, there is only one function pointer, which implements
-[[ChangeActivation]]. 
-At a future point, to make things more efficient, we may add an
-implementation of [[IsOldestActivation]].
-<<definitions of private data structures>>=
-struct cmm_activation_methods {
-  int (*change)(Cmm_Activation *a);
-};
-@ 
-The activation contains a pointer to the method suite, a virtual frame
-pointer, and a pointer to the run-time sytem's data.
-It also contains a pointer to each machine register; if the value of a
-register is not known, the corresponding pointer is [[NULL]].
-<<exposed private data structures>>=
-<<definition of [[struct cmm_cont]]>>
-struct cmm_activation {
-  struct cmm_activation_methods *methods;
-  char *vfp;   /* declared char* so that arithmetic works on addresses */
-  struct cmm_pc_map_entry *rtdata;  
-  Cmm_Word* regs[NUM_REGS];
-  <<other fields of an activation>>
-};
-@
-
-In addition to the fields above, an activation also holds a program
-counter [[pc]] (used only for debugging), plus space for specialized run-time
-system functions.
-\begin{itemize} 
-\item
-For an activation built from a continuation, the [[pc]] is the program
-counter of that continuation.
-For an activation suspended at a call site, it is the normal return address.
-\item 
-The space is stored in a union~[[u]]; 
-the [[unwind]] field is used by the interface function
-[[MakeUnwindContinuation]], and the 
-[[cwalk]] field contains a counter that may be useful to some
-target-specific stack walkers.
-\end{itemize}
-<<other fields of an activation>>=
-Cmm_Codeptr pc;   /* used only for debugging */
-union {  /* following fields are temporary space to avoid allocation */
-  struct {
-    Cmm_Cont   k;
-  } unwind;
-  struct {
-    unsigned tries;
-  } cwalk;
-} u;
-@
-The target-specific stack-walking code must export these two functions:
-<<external functions>>=
-extern int Cmm_c_change_activation(Cmm_Activation *a);
-extern void Cmm_init_c_frame(Cmm_Activation *a, char *young_in_overflow);
-@
-
-The function [[Cmm_c_change_activation]] is the 
-[[change]] method (i.e., it implements [[ChangeActivation]]) for an
-activation suspended at a call site in a 
-C~function.
-The function [[Cmm_init_c_frame]]
-is used to initialize a frame for such an activation.
-For such a frame, the [[regs]] field is as accurate as we can make it,
-and the [[pc]] field is initialized to the return address.
-The [[methods]] and [[rtdata]] fields are initialized appropriately.
-The pointer [[young_in_overflow]] points to the young end of the
-callee's incoming overflow parameters.
-N.B.~in an activation representing a target-specific frame, the
-meaning of the [[vfp]] field is target-dependent.
-
-The implementations of  [[Cmm_c_change_activation]] and
-[[Cmm_init_c_frame]] live in target-specific files---one for each
-compiler-machine combination that we support. 
-The rest of the stack-walking code lives here, in this file.
-
-Here are the methods that are used by the stack walker.
-A~pointer to the {\PAL} method suite is exported to target-specific code.
-
-<<definitions of method suites>>=
-static int change_nothing(Cmm_Activation *a) { return 0; }
-static struct cmm_activation_methods cmm_methods    = { normal_change           };
-static struct cmm_activation_methods c_methods      = { Cmm_c_change_activation }; 
-static struct cmm_activation_methods oldest_methods = { change_nothing          }; 
-struct cmm_activation_methods *Cmm_cmm_frame_methods = &cmm_methods;
-@ 
-
-Both generic and target-specific code need to be able to identify a
-thread-start frame, because it does 
-not actually appear on the (virtual) stack.
-
-<<external functions>>=
-int Cmm_is_thread_start_frame(struct cmm_pc_map_entry *rtdata, Cmm_Codeptr pc);
-@ 
-
-\subsubsection{Initializing and walking a stack}
-
-The run-time system can begin walking a call stack only at a {\PAL}
-continuation. The youngest activation is constructed by looking up the
-run-time data associated with the given continuation. 
-The initial activation record is returned by value,
-which forces the caller to allocate space for it.
-
-Almost every continuation can be dealt with simply by looking up the
-appropriate entry in the PC~map.
-The exception is a continuation that represents a freshly created
-thread.
-Such a continuation points to [[Cmm_start_thread_helper]], which is a
-procedure, not a call site or a {\PAL} continuation, and therefore is
-\emph{not} in the PC~map.
-We treat that case specially, as required by the {\PAL}~specification.
-There are two bits of magic: methods that treat it as the oldest
-activation, and a special, hand-written PC-map entry that makes the
-two parameters visible.
-<<implementations of public functions>>=
-Cmm_Activation Cmm_YoungestActivation(const Cmm_Cont* k) {
-  int i;
-  Cmm_Activation a;
-
-  if (k->pc == Cmm_start_thread_helper) {
-    a.methods = &oldest_methods;
-    a.vfp     = (char *)k->sp;
-    a.pc      = k->pc;
-    if (Cmm_stack_growth > 0)
-      a.rtdata = Cmm_thread_start_up_pcmap_entry;
-    else
-      a.rtdata = Cmm_thread_start_dn_pcmap_entry;
-  } else {
-    pc_map_entry* entry = Cmm_lookup_entry(k->pc);
-    assert(entry);
-    a.methods = &cmm_methods;
-    a.vfp     = (char *)k->sp - Cmm_as_offset(entry->outalloc);
-    a.pc      = k->pc;
-    a.rtdata  = entry;
-  }
-  for (i = 0; i < NUM_REGS; i++)
-    a.regs[i] = NULL;
-  return a;
-}
-@ 
-The function for walking past a {\PAL} frame is [[normal_change]].
-<<declarations of private functions>>=
-static int normal_change(Cmm_Activation *a);
-@ 
-The reasoning required to get from one [[vfp]] to another is slightly
-involved.
-The key idea is that in the presence of tail calls, the only thing we
-can count on is the location of the \emph{deallocation point}.
-This point marks the location on the stack below which it is the
-callee's responsibility to deallocate, whether on a return or on a
-tail call.
-The PC-map entry for a call site stores the incoming deallocation point of its
-procedure, as well as the outgoing deallocation point of the call
-site.
-The caller's outgoing point is the callee's incoming point, and by
-solving the equation, we can compute the caller's [[vfp]] from the
-callee's [[vfp]].
-<<private functions>>=
-static int normal_change(Cmm_Activation *a) {
-  char *vfp;
-  pc_map_entry* calleedata, *callerdata;
-
-  assert(a && a->vfp);
-  calleedata = a->rtdata;
-
-  vfp = a->vfp;
-  a->pc      = *(Cmm_Codeptr*)locptr(a, calleedata->return_addressp);
-  update_saved_regs(a, a);
-  <<possibly shout about caller's EBP>>
-  callerdata = Cmm_lookup_entry(a->pc);
-  a->rtdata  = callerdata;
-
-  if (callerdata) {
-    if (Cmm_is_thread_start_frame(callerdata, a->pc))
-      return 0;
-    /* deallocpt = vfp       + calleedata->inalloc
-       deallocpt = callervfp + callerdata->outalloc
-
-       therefore callerfvp = vfp + calleedata->inalloc - callerdata->outalloc 
-    */
-    a->vfp = vfp + Cmm_as_offset(calleedata->inalloc)
-                 - Cmm_as_offset(callerdata->outalloc);
-  } else {
-    a->methods = &c_methods;
-    a->rtdata = Cmm_empty_pcmap_entry;
-    Cmm_init_c_frame(a, vfp + Cmm_as_offset(calleedata->inalloc));
-  }
-  return 1;
-}
-@ 
-<<possibly shout about caller's EBP>>=
-#define NOISY 0
-#if NOISY
-  fprintf(stderr, "leaving C-- activation; caller's EBP == 0x%08x\n",
-          a->regs[9] ? (unsigned)*a->regs[9] : 0xdeadbeef);
-#endif
-@ 
-\subsubsection{Tracking register contents}
-
-As new activations are created during a walk of the stack, the
-locations of saved registers are recorded within the activations. The
-locations of all saved registers for an activation can be computed
-using information in the pc map table along with the previous
-activation.
-
-<<declarations of private functions>>=
-void update_saved_regs(Cmm_Activation* new, const Cmm_Activation* prev);
-@
-<<private functions>>=
-void update_saved_regs(Cmm_Activation* new, const Cmm_Activation* prev) {
-  int i;
-  int r = prev->rtdata->num_registers;
-  struct reg* regs = registers(prev->rtdata);
-
-  for (i = 0; i < NUM_REGS; i++) 
-    new->regs[i] = prev->regs[i];
-  
-  for (i = 0; i < r; i++)
-    new->regs[regs[i].index] = (Cmm_Word*)(prev->vfp + Cmm_as_offset(regs[i].saved));
-}
-@
-
-This code will fail loudly if a register is ever saved in another
-register (instead of on the stack).
-This is as it should be, since a worse problem would be for the code
-to fail silently in the presence of a cycle among registers (e.g.,
-register~5 is saved in register~7 and vice versa).
-
-\subsubsection{Exported stack-walking functions}
-
-At present, all the exported functions are built on top of the
-[[change]] method.
-The efficient path is [[ChangeActivation]].
-As long as we don't have a very mixed stack, branch-prediction
-hardware should do well with the indirect call.
-<<implementations of public functions>>=
-int Cmm_ChangeActivation(Cmm_Activation *a) {
-  return a->methods->change(a);
-}
-@ 
-[[NextActivation]] is not too bad, as most of the copying is
-necessary. 
-<<implementations of public functions>>=
-Cmm_Activation Cmm_NextActivation(const Cmm_Activation *a) {
-  Cmm_Activation na = *a;
-  int rc = na.methods->change(&na);
-  assert(rc);
-  return na;
-}
-@ 
-[[isOldestActivation]] is wildly inefficient---in the common case, we
-copy the activation, mutate it, and then throw all that work away.
-<<implementations of public functions>>=
-int Cmm_isOldestActivation(const Cmm_Activation *a) {
-  Cmm_Activation na = *a;
-  return (!na.methods->change(&na));
-}
-@ 
-\subsection{Unwinding to a continuation}
-
-To unwind to a continuation, we pass an activation to some assembly
-code that restores the registers from the contents of the activation.
-We do this by synthesizing the continuation [[a->u.unwind.k]], in
-which the PC points to the assembly code and the SP points to the
-relevant part of the activation.
-Although this assembly code is nothing like a C~function, we import it
-as such.
-<<implementations of public functions>>=
-extern void Cmm_unwindcont_pc();  /* assembly code; not a C function */
-Cmm_Cont* Cmm_MakeUnwindCont(Cmm_Activation *a, Cmm_Word index, ...) {
-  int i;
-  struct conts *conts;
-  struct contblock *block;
-
-  assert(a->rtdata);
-  conts = continuations(a->rtdata);
-  if (index >= conts->num_entries)
-    die("C-- run-time error: index %d out of bounds in Cmm_MakeUnwindCont", index);
-  block = (struct contblock *) ((Cmm_Word *) conts + conts->entries[index]);
-  <<write variadic parameters into [[block->vars]]>>
-
-  /* We initialize unknown registers to a bogus (but clearly live) address:
-     that of the activation.  Otherwise, assembly code dereferences 0. */
-  for (i = 0; i < NUM_REGS; i++)
-    if (a->regs[i] == NULL)
-      a->regs[i] = (Cmm_Word *)a;
-
-  /* This activation can't be passed into this interface again, so it 
-     is safe to overwrite the PC and ESP registers with the values that
-     belong to the unwind continuation */
-
-  a->regs[PC]      = (Cmm_Word *) block->pc;
-  a->regs[ESP]     = (Cmm_Word *) (a->vfp + Cmm_as_offset(block->sp));
-  a->u.unwind.k.pc = Cmm_unwindcont_pc;
-  a->u.unwind.k.sp = (Cmm_Word *) a->regs;
-
-  return(&a->u.unwind.k);
-}
-@ 
-This part of the interface is unsafe, but it can't be helped.
-<<write variadic parameters into [[block->vars]]>>=
-{
-  va_list ap;
-  va_start(ap, index);
-  for (i = 0; i < block->num_vars; i++) {
-    <<assign [[block->vars[i]]] from [[ap]]>>
-    Cmm_LocalVarWritten(a, block->vars[i].localnum);
-  }
-  va_end(ap);
-}
-@
-Because passing to a varargs function involves implicit promotions, we
-do the promotions that are needed.
-The [[L]] argument is the type used internally; the [[R]]~version is
-the same type as promoted for passing to a varargs function.
-Because somebody might generate code in which a formal parameter of a
-continuation is not used, we have to consider the possibility that 
-the variable being assigned to is dead.
-In that case, we consume the actual parameter but make no assignment.
-<<assign [[block->vars[i]]] from [[ap]]>>=
-#define ASSIGN(L,R) \
-  { L *formalp = (L*) Cmm_FindLocalVar(a, block->vars[i].localnum); \
-    R actual   = va_arg(ap, R); \
-    if (formalp) *formalp = (L) actual; \
-  } 
-switch(block->vars[i].ctype) {
-  case CHAR:             ASSIGN (char,               int);                break;
-  case DOUBLE:           ASSIGN (double,             double);             break;
-  case FLOAT:            ASSIGN (float,              double);             break;
-  case INT:              ASSIGN (int,                int);                break;
-  case LONGDOUBLE:       ASSIGN (long double,        long double);        break;
-  case LONGINT:          ASSIGN (long int,           long int);           break;
-  case LONGLONGINT:      ASSIGN (long long           int, long long int); break;
-  case SHORT:            ASSIGN (short,              int);                break;
-  case SIGNEDCHAR:       ASSIGN (signed char,        int);                break;
-  case UNSIGNEDCHAR:     ASSIGN (unsigned char,      int);                break;
-  case UNSIGNEDLONG:     ASSIGN (unsigned long,      unsigned long);      break;
-  case UNSIGNEDSHORT:    ASSIGN (unsigned short,     int);                break;
-  case UNSIGNEDINT:      ASSIGN (unsigned int,       unsigned int);       break;
-  case UNSIGNEDLONGLONG: ASSIGN (unsigned long long, unsigned long long); break;
-  case ADDRESS:          ASSIGN (void *,             void *);             break;
-  default: assert(0);
-}
-@
-% ---------------------------------------------------------------------------
-\subsection{Span Data}
-% ---------------------------------------------------------------------------
-For any activation, the client may ask for the innermost enclosing
-span associated with a given token. 
-The user spans are contained in the
-run-time data emitted by the compiler. 
-Tokens must be integers greater
-than or equal to zero. A table of descriptors is stored in the pc map
-entry immediately following the locals data. Using the activation
-record, the table of descriptors is looked up, and the appropriate
-entry returned.
-<<implementations of public functions>>=
-Cmm_Dataptr Cmm_GetDescriptor(const Cmm_Activation *a, Cmm_Word token) {
-  unsigned num_spans;
-  Cmm_Word* descs;
-  pc_map_entry* entry = a->rtdata;
-  if (!entry)
-    return 0;
-
-  num_spans = entry->num_spans;
-  if ((unsigned) token < num_spans) {
-    descs = spans(entry);
-    return (Cmm_Dataptr)descs[token];
-  } else {
-    return 0;
-  }
-}
-@
-% ---------------------------------------------------------------------------
-\subsection{Accessing Local Variables}
-% ---------------------------------------------------------------------------
-Local variables for an activation can can be found either on the
-stack, or in registers. The location of parameters is computed using
-information generated by the {\PAL} compiler. Each {\PAL} call site
-has associated with it the number of locals, and an array containing
-information about each local. If a local lives on the stack, an offset
-from the frame pointer is given. If a local is in a register, then the
-register number is given. The number of registers, and their indexes
-are architecture dependent.
-
-In addition to information about locals, each call site has
-information about saved registers at the time of the call. If a
-register has been saved on the stack, then the offset from the frame
-pointer is given. Otherwise, a zero indicates that the register has
-not been saved by this activation.
- 
-Clients of the runtime system must report when a local variable is written.
-<<implementations of public functions>>=
-void Cmm_LocalVarWritten(const Cmm_Activation *a, unsigned n) {
-  return;
-}
-@
-Clients of the runtime system can ask for the number of locals for a
-given activation. This information is stored in the activation
-structure.
-<<implementations of public functions>>=
-unsigned Cmm_LocalVarCount(const Cmm_Activation *a) {
-  assert(a);
-  if (a->rtdata)
-    return a->rtdata->num_locals;
-  else
-    return 0;
-}
-@ 
-Local variables are asked for by index. A pointer is returned to the
-local by looking it up in the array of locals for this
-activation. 
-<<implementations of public functions>>=
-void* Cmm_FindLocalVar(const Cmm_Activation *a, unsigned n) {
-  pc_map_entry* entry = a->rtdata;
-  assert(entry);
-  if (n >= entry->num_locals)
-    die("local var index %d out of range", n);
-  return locptr(a, locals(entry)[n]);
-}
-@
-If a location is in a register, a pointer into the saved
-register is returned. Otherwise, a pointer into the stack where the
-register is saved is returned.
-
-<<declarations of private functions>>=
-static Cmm_Word *locptr(const Cmm_Activation *a, location l);
-@
-<<private functions>>=
-static Cmm_Word *locptr(const Cmm_Activation *a, location l) {
-  int reg;
-  switch (Cmm_loctype(l)) {
-    case REGISTER:
-      reg = Cmm_as_register(l);
-      assert(a);
-      assert(a->regs);
-      if (a->regs[reg] == NULL) 
-        die("Tried to find a value in an unrecoverable register.\n"
-            "Probable cause: calling C without using the \"paranoid C\" convention.");
-      return a->regs[reg];
-    case DEAD:
-      return NULL;
-    case OFFSET:
-      return (Cmm_Word *)(a->vfp + Cmm_as_offset(l));
-    default:
-      die("this can't happen --- badly coded location");
-      return 0;
-  }
-}
-@ 
-In the current implementation it is not possible to find the location
-of a dead variable.
-<<implementations of public functions>>=
-void* Cmm_FindDeadLocalVar(const Cmm_Activation *a, unsigned n) {
-  return Cmm_FindLocalVar(a, n);
-}
-@
-Stack data is stored in a table per procedure. Each PC map entry links
-to the correct stack data table.
-<<implementations of public functions>>=
-void* Cmm_FindStackLabel(const Cmm_Activation *a, unsigned n) {
-  pc_map_entry* entry = a->rtdata;
-  struct sd *sdt = entry->stackdata_table;
-  assert(sdt);
-  if (n >= sdt->num_entries)
-     die("Stack data index %d out of range [0..%d)\n", n, sdt->num_entries);
-  return locptr(a, sdt->entries[n]);
-}
-@ 
-\subsection{Run-time functions written in {\PAL}}
-
-Function [[Cmm_CutTo]] is a convenience; it is easy to write in~{\PAL}.
-<<cut.c-->>=
-target byteorder little;
-export Cmm_CutTo;
-foreign "C" Cmm_CutTo(bits32 k) {
-  cut to k();
-}
-@ 
-<<yield.c-->>=
-target byteorder little;
-export Cmm_Yield;
-foreign "C" Cmm_Yield(bits32 k,bits32 kold) {
-  bits32[kold] = bits32[knew];
-  bits32[kold+4] = bits32[knew+4];
-  cut to k() also cuts to knew also aborts;
-  continuation knew(): foreign "C" return ;
-}
-@ 
-\subsection{Threads}
-
-<<external functions>>=
-extern void Cmm_start_thread_helper();
-extern void Cmm_thread_helper_fence();
-extern int Cmm_stack_growth; /* generated by qc-- -globals */
-@
-<<implementations of public functions>>=
-int Cmm_is_thread_start_frame(struct cmm_pc_map_entry *rtdata, Cmm_Codeptr pc) {
-  return spans(rtdata)[0] == 0xeffaced &&
-         (unsigned) Cmm_start_thread_helper <= (unsigned) pc &&
-         (unsigned) pc <= (unsigned) Cmm_thread_helper_fence;
-}
-@
-Because the run-time system is split across multiple C~files, this
-function needs to be exposed---but it is private to the {\PAL}
-run-time system, and it is an unchecked run-time error for client code
-to call this function.
-<<exposed private functions>>=
-int Cmm_is_thread_start_frame(struct cmm_pc_map_entry *rtdata, Cmm_Codeptr pc);
-@
-<<implementations of public functions>>=
-Cmm_Cont* Cmm_CreateThread(Cmm_Codeptr f, Cmm_Dataptr x, void *s, unsigned n) {
-  char *stack = s;
-  char *young, *old, *vfp;
-  Cmm_Cont *k;
-  if (Cmm_stack_growth < 0) {
-    <<set up stack for growth downward>>
-    return k;
-  } else {
-    <<set up stack for growth upward>>
-    return k;
-  }
-}
-@ 
-Here is the layout of a thread with a down-going stack:
-\begin{center}
-\unitlength=15pt
-\def\~{\hspace*{15pt}}
-\begin{picture}(22,8)(-14,-5)
-  \put(-5,1.5){\framebox(13,1.5)[l]{\~[[k->pc = Cmm_start_thread_helper]]}}
-  \put(-5,0){\framebox(13,1.5)[l]{\~[[k->sp = vfp]]}}
-  \put(-5,-1.5){\framebox(13,1.5)[l]{\~[[x]]}}
-  \put(-5,-3.0){\framebox(13,1.5)[l]{\~[[f]]}}
-  \put(-5,-2.7){\makebox(0,0)[r]{[[vfp]]\raisebox{0.5ex}{\vector(1,0){1}}}}
-  \put(-5,0.3){\makebox(0,0)[r]{result of [[Cmm_CreateThread]]\raisebox{0.5ex}{\vector(1,0){1}}}}
-  \put(-5,-4.5){\makebox(13,2.0)[l]{\vrule\hfill$\vdots$\hfill\vrule}}
-\end{picture}
-\end{center}
-I set up the stack pointer to point to the first empty word.
-
-<<set up stack for growth downward>>=
-young = stack;
-old   = stack + n;
-k = (Cmm_Cont *) old;
-k--;
-k->sp = (Cmm_Word*) (vfp = old - sizeof(*k) - sizeof(f) - sizeof(x));
-k->pc = Cmm_start_thread_helper;
-*(Cmm_Codeptr*)vfp = f;
-vfp += sizeof(f);
-*(Cmm_Dataptr*)vfp = x;
-@
-<<set up stack for growth upward>>=
-old   = stack;
-young = stack + n;
-k = (Cmm_Cont *) old;
-k++;
-k->sp = (Cmm_Word*) (vfp = old + sizeof(*k) + sizeof(f) + sizeof(x));
-k->pc = Cmm_start_thread_helper;
-*(Cmm_Codeptr*)vfp = f;
-vfp -= sizeof(f);
-*(Cmm_Dataptr*)vfp = x;
-@
-<<thread.c-->>=
-target byteorder little;
-export Cmm_start_thread_helper, Cmm_thread_helper_fence;
-import write, abort;
-section "text" {
-  span 0 0xeffaced {
-    foreign "C-- thread" Cmm_start_thread_helper(bits32 f, bits32 x) {  
-      f(x) also aborts;
-      foreign "C" write(2, "address" msg, msg_end - msg);
-      foreign "C" abort() never returns;
-    }
-  }
-  Cmm_thread_helper_fence:
-}
-section "data" {
-  msg: bits8[] "fatal C-- error: function passed to Cmm_CreateStack returned!\n";
-  msg_end:
-}
-@ 
-
-<<implementations of public functions>>=
-static void show_span(unsigned key, void *value, void *closure) {
-  if (value)
-    printf("    span %d == %p\n", key, value);
-}
-
-void Cmm_show_activation(const Cmm_Activation *a) {
-  printf("activation @ %p = {\n", (void*)a);
-  printf("  methods = ");
-  if (a->methods == Cmm_cmm_frame_methods)
-    printf("C-- methods,\n");
-  else if (a->methods == &c_methods) 
-    printf("C methods,\n");
-  else
-    printf("unknown methods at %p,\n", (void*)a->methods);
-  printf("  vfp = %p, pc = %p,\n", a->vfp, (void *)a->pc);
-  <<print registers in activation [[a]]>>
-  printf("  entry = {\n");
-  Cmm_show_map_entry(a->rtdata, -1, a->pc, show_span, NULL);
-  printf("  }\n}\n");
-}
-@
-<<print registers in activation [[a]]>>=
-{ int any, i;
-  char *pfx;
-  any = 0;
-  for (i = 0; i < NUM_REGS; i++)
-    if (a->regs[i]) {
-      any = 1;
-      break;
-    }
-  if (any) {
-    printf("  regs = { ");
-    pfx = "";
-    for (i = 0; i < NUM_REGS; i++)
-      if (a->regs[i]) {
-        printf("%sREG %d @ %p", pfx, i, (void*)a->regs[i]);
-        pfx = ", ";
-      }
-    printf(" },\n");
-  } else {
-    printf("  regs = (no registers recoverable),\n");
-  }
-}
-@
-
-<<definition of [[struct cmm_cont]]>>=
-struct cmm_cont {
-  Cmm_Codeptr pc;
-  Cmm_Word*   sp;
-};
-@ 
-\subsection{Putting it together}
-
-<<runtime.c>>=
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-
-#include "qc--runtime.h"
-#include "pcmap.h"
-
-<<machine-dependent macro definitions for the implementation>>
-<<external functions>>
-<<definitions of private data structures>>
-<<declarations of private functions>>
-<<definitions of method suites>>
-<<private functions>>
-<<implementations of public functions>>
-@
- 
-<<declarations of private functions>>=
-static void die(char *msg,...);
-@
-<<private functions>>=
-static void die(char *msg,...) {   /* see K&R 2nd ed, page 174 */
-  va_list args;
-  va_start(args,msg);
-  fprintf(stderr, "C-- run-time error: ");
-  vfprintf(stderr, msg, args);
-  fprintf(stderr,"\n");
-  va_end(args);
-  abort();
-}
-@
-
-
-
-
-%was pcmap.nw
-% ---------------------------------------------------------------------------
-\section{PC Map}
-% ---------------------------------------------------------------------------
-
-This file provides an interface to the run-time data emitted by the
-compiler. 
-<<pcmap.h>>=
-#ifndef PC_MAP_H
-#define PC_MAP_H
-
-<<exported type, procedure, and macro declarations>>
-
-#endif /* PC_MAP_H */
-@ 
-Locations are coded as described in [[src/runtimedata.nw]].
-A~location has one of three types: dead, register, or offset.
-To get the register number of a location with register type, pass the
-location to [[as_register]]; similarly with [[as_offset]].
-To use one of these functions with a location of the wrong type is a
-checked run-time error.
-<<exported type, procedure, and macro declarations>>=
-typedef struct coded_location { Cmm_Word l; } location;
-typedef enum { DEAD=0, REGISTER=1, OFFSET=2 } loctype; 
-loctype  Cmm_loctype(location l);
-unsigned Cmm_as_register(location l);
-int      Cmm_as_offset  (location l);
-#define isdead(LOC) ((LOC).l == 0)
-@ 
-
-The [[pc_map_index]] and [[pc_map_entry]] structs below are used to
-access the PC map table and run-time data entries emitted by the
-compiler. A more detailed description of the layout and contents of
-the emitted data can be found in the file [[src/runtimedata.nw]].
-N.B. although the [[pc_map_index]] definition is exact, the
-[[pc_map_entry]] is only an approximation.
-The actual data structure has fields of varying size; hence the
-[[num_*]] fields and the macros.
-The documentation of the fields needs work.
-
-<<exported type, procedure, and macro declarations>>=
-typedef struct {
-  Cmm_Codeptr ra;
-  struct cmm_pc_map_entry* entry;
-} pc_map_index;
-
-typedef struct cmm_pc_map_entry pc_map_entry;
-struct cmm_pc_map_entry {
-  location   inalloc;          /* incoming dealloc point on stack (always offset) */
-  location   outalloc;         /* outgoing dealloc point on stack (always offset) */
-  location   return_addressp;  /* where return address is saved */
-  struct sd *stackdata_table;
-  Cmm_Word   num_registers;
-  Cmm_Word   num_locals;
-  Cmm_Word   num_spans;
-  Cmm_Word   cont_block_size;
-  location   data[2]; /* registers, locals, continuations, spans */
-};
-@ 
-
-Here are the individual pieces.
-The stack-data array stores the location of each [[stackdata]] label.
-<<exported type, procedure, and macro declarations>>=
-struct sd {
-  unsigned num_entries;
-  location entries[1];  /* variable length */
-};
-@ 
-Information about callee-saved registers gives the index of a register
-and the location in which the value of the register is saved.
-<<exported type, procedure, and macro declarations>>=
-struct reg {
-  unsigned index;               /* machine-specific index */
-  location saved;               /* where saved (or dead) */
-};
-@ 
-The structure for [[also unwinds to]] continuations is more
-complicated.
-Each call site contains a list of entries.  
-A~single entry is represented by a [[contblock]], which is of variable
-size because each continuation may take a different number of
-parameters. 
-<<exported type, procedure, and macro declarations>>=
-struct conts {
-  unsigned num_entries;
-  int entries[1]; /* variable length (offset of contblock) */
-};
-
-struct contblock {
-  unsigned num_vars;
-  Cmm_Codeptr pc;
-  location sp;
-  struct contarg {
-    Cmm_Word localnum;
-    Cmm_Word ctype;
-  } vars[1]; /* variable length */
-};
-@ 
-The compiler and run-time system must agree on the representation of
-C~types.
-The [[ctype]] field above would be declared [[enum ctypes]] except
-that we can't rely on a C~compiler to give an enum a predictable size
-and alignemnt.
-<<exported type, procedure, and macro declarations>>=
-enum ctypes { CHAR = 0, DOUBLE = 1, FLOAT = 2, INT = 3, LONGDOUBLE = 4, LONGINT = 5
-            , LONGLONGINT = 6, SHORT = 7, SIGNEDCHAR = 8, UNSIGNEDCHAR = 9
-            , UNSIGNEDLONG = 10, UNSIGNEDSHORT = 11, UNSIGNEDINT = 12
-            , UNSIGNEDLONGLONG = 13, ADDRESS = 14 
-            };
-@ 
-Here is the address arithmetic that provides access to different parts
-of an entry.
-We do the address arithmetic using macros whose names end in~[[A]].
-We then provide a second set of macros that contain suitable casts.
-Using macros is a bit dodgy, but NR was worried about procedure-call
-overhead for the arithmetic.
-
-<<exported type, procedure, and macro declarations>>=
-#define registersA(e)     ((e)->data)
-#define localsA(e)        (registersA(e)     + 2 * (e)->num_registers)
-#define continuationsA(e) (localsA(e)        +     (e)->num_locals)
-#define spansA(e)         (continuationsA(e) +     (e)->cont_block_size)
-
-#define registers(e)      ((struct reg*)registersA(e))
-#define locals(e)         ((location *)localsA(e))
-#define continuations(e)  ((struct conts *)continuationsA(e))
-#define spans(e)          ((Cmm_Word*)spansA(e))
-@
-Finally, here is where we get entries: we can look them up by PC, or
-we have special entries for unknown procedures (the empty entry) and
-for start-of-thread activations.
-
-<<exported type, procedure, and macro declarations>>=
-pc_map_entry* Cmm_lookup_entry(const Cmm_Codeptr caller);
-pc_map_entry* Cmm_empty_pcmap_entry;
-pc_map_entry* Cmm_thread_start_up_pcmap_entry;
-pc_map_entry* Cmm_thread_start_dn_pcmap_entry;
-@ 
-
-We provide some functions for debugging.
-If not [[NULL]], the ``span shower'' is called for each user span.
-
-<<exported type, procedure, and macro declarations>>=
-typedef void (*Cmm_span_shower)(unsigned key, void *value, void *closure);
-void Cmm_show_map(Cmm_span_shower, void *); /* for debugging */
-void Cmm_show_map_entry(pc_map_entry *entry, int index, Cmm_Codeptr ra,
-                        Cmm_span_shower show_span, void *closure);
-@ 
-
-\subsection{Implementation}
-
-<<pcmap.c>>=
-<<pcmap.c >>
-@
-
-<<pcmap.c >>=
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#include "qc--runtime.h"
-#include "pcmap.h"
-@ 
-
-\subsubsection{Hand-written map entries}
-
-Here are the hand-written map entries, together with some support for
-creating locations.
-
-
-<<pcmap.c >>=
-#define MKOFFSET(N) { (1 << (sizeof(location)*8 - 1)) | (N) }
-#define MKDEAD      { 0 }
-static struct sd nostackdata = { 0, { MKDEAD } };
-@ 
-An unknown functions has no stackdata, registers, locals, spans, or
-continuations, 
-and we don't know any relations on allocation points.
-<<pcmap.c >>=
-static struct cmm_pc_map_entry empty = {
-  MKOFFSET(0),
-  MKOFFSET(0),
-  MKOFFSET(0),
-  &nostackdata,
-  0, 0, 0, 0, { MKDEAD }
-};
-pc_map_entry* Cmm_empty_pcmap_entry = &empty;
-@ 
-A thread-start activation contains two locals, whose locations depend
-on the direction of stack growth.
-Because such a frame is never walked (it has a special, trivial
-[[change]] method), we don't store anything about deallocation points.
-<<pcmap.c >>=
-static struct cmm_pc_map_entry startdn = {
-  MKOFFSET(0),
-  MKOFFSET(0),
-  MKDEAD,
-  &nostackdata,
-  0, 2, 0, 0, { MKOFFSET(0), MKOFFSET(sizeof(Cmm_Word)) }
-};
-static struct cmm_pc_map_entry startup = {
-  MKOFFSET(0),
-  MKOFFSET(0),
-  MKDEAD,
-  &nostackdata,
-  0, 2, 0, 0, { MKOFFSET(0), MKOFFSET(-sizeof(Cmm_Word)) }
-};
-pc_map_entry* Cmm_thread_start_up_pcmap_entry = &startup;
-pc_map_entry* Cmm_thread_start_dn_pcmap_entry = &startdn;
-@ 
-\subsubsection{Entry lookup by~PC}
-
-The labels [[Cmm_pc_map]] and [[Cmm_pc_map_limit]] are inserted by the
-linker script in chunk [[<<pcmap.ld>>]].
-<<pcmap.c >>=
-extern pc_map_index Cmm_pc_map[];
-extern pc_map_index Cmm_pc_map_limit[];
-#define pc_map_size (Cmm_pc_map_limit - Cmm_pc_map)
-@ 
-If we could rely on the compiler to sort the entries by PC, then the
-lookup function could always do binary search.
-But there have been bugs, so we have to check, and if entries are not
-sorted, we use linear search.
-
-Here's where we check for sorting.
-Two adjacent entries with \emph{equal} PCs are considered OK.
-This can happen if a call site annotated with [[never returns]] is
-followed immediately by a continuation, for example.
-<<pcmap.c >>=
-static int is_sorted(void) {
-  pc_map_index *p;
-  for (p = Cmm_pc_map+1; p < Cmm_pc_map_limit; p++)
-    if ((unsigned)p[-1].ra > (unsigned)p[0].ra) {  
-      <<conditionally spray information about the [[pc_map]] array>>
-      return 0;
-    }
-  <<conditionally announce that [[pc_map]] is sorted>>
-  return 1;
-}
-@ 
-Here's the binary search for the sorted case.
-<<pcmap.c >>=
-static int compare(const void *x, const void *y) {
-  const pc_map_index *p = y;
-  return (unsigned) x - (unsigned) p->ra;
-}
-
-static pc_map_entry *binlookup(const Cmm_Codeptr caller) {
-  pc_map_index *p;
-  p = bsearch((void*)caller, Cmm_pc_map, pc_map_size, sizeof(Cmm_pc_map[0]), compare);
-  if (p)
-    return p->entry;
-  else
-    return NULL;
-}
-@ 
-Here's the linear search for the unsorted case.
-<<pcmap.c >>=
-static pc_map_entry* linlookup(const Cmm_Codeptr caller) {
-  unsigned i = 0;
-  for(i = 0; i < pc_map_size; ++i)
-    if (Cmm_pc_map[i].ra == caller)
-      return Cmm_pc_map[i].entry;
-  return NULL;
-}
-@ 
-We cache the search function in [[lookup]].
-<<pcmap.c >>=
-pc_map_entry* Cmm_lookup_entry(const Cmm_Codeptr caller)
-{
-  static pc_map_entry *(*lookup)(const Cmm_Codeptr caller) = NULL;
-  if (lookup == NULL)
-    lookup = is_sorted() ? binlookup : linlookup;
-  return lookup(caller);
-}
-@ 
-And this is for debugging!
-<<conditionally spray information about the [[pc_map]] array>>=
-#define SHOW_UNSORTED 1
-{ char *debug = getenv("QCDEBUG");
-  if (SHOW_UNSORTED || (debug && strstr(debug, "pcmap"))) {
-    fprintf(stderr, "C-- Surprise! PCMAP array is unsorted!\n");
-    for (p = Cmm_pc_map; p < Cmm_pc_map_limit; p++) {
-      fprintf(stderr, "  ra = %8p", (void*)p->ra);
-      if (p > Cmm_pc_map && (unsigned)p[-1].ra > (unsigned)p[0].ra)
-        fprintf(stderr, " *");
-      fprintf(stderr, "\n");
-    }
-  }
-}
-@
-<<conditionally announce that [[pc_map]] is sorted>>=
-{ char *debug = getenv("QCDEBUG");
-  if (debug && strstr(debug, "pcmap"))
-    fprintf(stderr, "C-- info: PCMAP array is sorted, as expected\n");
-}
-@ 
-\subsubsection{Locations}
-
-The compiler encodes the type in the top two bits. Registers are given
-the encoding [[01]], dead variables are given [[00]], and offsets are
-prefixed with 1. See [[emit_data]] in [[src/runtimedata.nw]] for more
-details.
-<<pcmap.c >>=
-#define GOODBITS (sizeof(local)*8 - 2)
-
-loctype Cmm_loctype(location l) {
-  int local = l.l;
-  local = local >> GOODBITS;
-  if (local & 2)
-    return OFFSET;
-  else
-    return (loctype) local;
-}
-@ 
-<<pcmap.c >>=
-unsigned Cmm_as_register(location l) {
-  int local = l.l;
-  int mask   = GOODBITS / 2;
-  int slice  = (local & ((1 << GOODBITS) - 1))
-            >> mask;
-  int offset =  local & ((1 << mask    ) - 1);
-  assert(Cmm_loctype(l) == REGISTER);
-
-  if (slice) {
-    fprintf(stderr, "register slices not supported.\n");
-    assert(0);
-  }
-  return offset;
-}
-@ 
-<<pcmap.c >>=
-signed Cmm_as_offset(location l) {
-  int local = l.l;
-  return (local << 1)
-      >> 1;
-}
-@ 
-\subsubsection{Debugging support}
-
-[[show_map]] dumps out all of the run-time data. It is only useful for
-debugging the [[qc--]] run-time system.
-<<pcmap.c >>=
-static void printloc(location loc) {
-  switch (Cmm_loctype(loc)) {
-    case REGISTER:
-      printf ("REG %d", Cmm_as_register(loc));
-      break;
-    case DEAD:
-      printf ("DEAD");
-      break;
-    case OFFSET:
-      printf ("OFFSET %d", Cmm_as_offset(loc));
-      break;
-    default:
-      printf ("<MALFORMED %X>", loc.l);
-      break;
-  }
-}
-@
-<<pcmap.c >>=
-<<private show functions>>
-
-void Cmm_show_map(Cmm_span_shower show_span, void *closure) {
-  pc_map_index *idx;
-  printf("pc_map_size %d\n", pc_map_size);
-  for (idx = Cmm_pc_map; idx < Cmm_pc_map_limit; idx++) {
-    Cmm_show_map_entry(idx->entry, idx - Cmm_pc_map, idx->ra, show_span, closure);
-  }
-}
-@
-<<pcmap.c >>=
-void Cmm_show_map_entry(pc_map_entry *entry, int index, Cmm_Codeptr ra,
-                        Cmm_span_shower show_span, void *closure)
-{
-  struct sd *sdt;
-  char *indent = index < 0 ? "    " : "";
-  if (index >= 0) 
-    printf("%sentry%3d @ %p (ra = %p):\n", indent, index, (void *)entry, (void *) ra);
-  else
-    printf("%sentry @ %p (ra = %p):\n", indent, (void *)entry, (void *) ra);
-  printf("%s  inalloc = %d (coded %X), outalloc = %d (coded %X)\n"
-         "%s  num_regs = %d, num_locals = %d, num_spans = %d,"
-         " size of cont block = %d\n",
-         indent,
-         Cmm_as_offset(entry->inalloc),
-         entry->inalloc.l,
-         Cmm_as_offset(entry->outalloc),
-         entry->outalloc.l,
-         indent,
-         entry->num_registers,
-         entry->num_locals,
-         entry->num_spans,
-         entry->cont_block_size);
-  printf("%s  return address at ", indent);
-  printloc(entry->return_addressp);
-  printf("\n");
-  sdt = entry->stackdata_table;
-  <<show locals>>
-  <<show registers>>
-  <<show continuations>>
-  <<show stack-data table [[sdt]]>>
-  <<show spans>>
-}
-@ 
-<<show stack-data table [[sdt]]>>=
-assert(sdt);
-if (sdt->num_entries == 0) {
-  printf ("%s    (no stackdata)\n", indent);
-} else {
-  int i;
-  for (i = 0; i < sdt->num_entries; i++) {
-    printf("%s    stacklabel%3d = ", indent, i);
-    printloc(sdt->entries[i]);
-    printf("\n");
-  }
-}
-@ 
-<<show registers>>=
-{
-  int r = entry->num_registers;
-  int i;
-  struct reg* regs = registers(entry);
-  for (i = 0; i < r; i++) {
-    printf("%s      pair %2d: caller register %d at ", indent, i, regs[i].index);
-    printloc(regs[i].saved);
-    printf("\n");
-  }
-}
-@
-<<show locals>>=
-{
-  int n = entry->num_locals;
-  if (n == 0) {
-    printf("%s    (no locals)\n", indent);
-  } else {
-    int i;
-    for (i = 0; i < n; i++) {
-      printf("%s    local%3d at ", indent, i);
-      printloc((locals(entry))[i]);
-      printf("\n");
-    }
-  }
-}
-@ 
-<<show continuations>>=
-{
-  int i;
-  struct conts *conts;
-  conts = continuations(entry);
-
-  if (conts->num_entries == 0) {
-    printf("%s    (no continuations)\n", indent);
-  } else {
-    for (i = 0; i < conts->num_entries; i++)
-      show_cont(conts, i, indent);
-  }
-}
-@ 
-<<show spans>>=
-{ unsigned i;
-  Cmm_Word *descs = spans(entry);
-  for (i = 0; i < entry->num_spans; i++)
-    show_span(i, (void *)descs[i], closure);
-}
-@ 
-<<private show functions>>=
-const char *typestring(enum ctypes t) {
-#define xx(T) case T: return #T;
-  switch(t) {
-    xx(CHAR) xx(DOUBLE) xx(FLOAT) xx(INT) xx(LONGDOUBLE) xx(LONGINT)
-    xx(LONGLONGINT) xx(SHORT) xx(SIGNEDCHAR) xx(UNSIGNEDCHAR)
-    xx(UNSIGNEDLONG) xx(UNSIGNEDSHORT) xx(UNSIGNEDINT)
-    xx(UNSIGNEDLONGLONG) xx(ADDRESS) 
-    default: return "unknown-type";
-  }
-}
-@
-<<private show functions>>=
-static void show_cont(struct conts *conts, int contnum, const char *indent) {
-  struct contblock *block;
-  int i;
-
-  printf("%s    unwind cont%2d (", indent, contnum);
-  block = (struct contblock *) ((Cmm_Word *) conts + conts->entries[contnum]);
-  for (i = 0; i < block->num_vars; i++) {
-    printf("%s%s local%d", i > 0 ? ", " : "", typestring(block->vars[i].ctype),
-           block->vars[i].localnum);
-  }
-  printf(") = <pc=%p, sp=", (void*)block->pc);
-  printloc(block->sp);
-  printf(">\n");
-}
-@ 
-\subsection{Linker script}
-
-The run-time data is in a table indexed by PC. For each call
-site and continuation, there is an entry in the [[pcmap]] section
-which points to the run-time data. The actual run-time data is placed in
-the [[pcmap_data]] section. Both of these are collected up
-and placed in the a data section by the system linker. Below is an
-example linker script for x86 Linux that makes the PC~map available to
-the run-time system.
-
-<<pcmap.ld>>=
-SECTIONS {
- .rodata : {
-   . =  (. + 3) & ~ 3;
-   Cmm_pc_map = .;
-   *(.pcmap)
-   Cmm_pc_map_limit = .;
-   *(.pcmap_data)
- }
-}
-@
-
-If the compiler is careful to sort PC-map entries within each
-compilation unit, this linker script will ensure they are sorted
-overall.
-
-
-% was gcc-linux.nw
-% ---------------------------------------------------------------------------
-\section{Walking GCC-Linux Stack Frames}
-% ---------------------------------------------------------------------------
-This version of the gcc stack walker is based on the System~V ABI for
-the i386 platform.
-We assume that a frame pointer is
-being used (no [[--fomit-frame-pointer]]). Every function stores the frame
-pointer in [[EBP]], and this register is saved at the top of each
-stack frame on entry.
-<<gcc-linux.c>>=
-<<gcc-linux.c >>
-@
-
-<<gcc-linux.c >>=
-#include "qc--runtime.h"
-#include "pcmap.h"
-#include <assert.h>
-#include <stdio.h>
-
-/* claude: FP_REG is the activation-index of whichever callee-saved
- * register real gcc-compiled C code (compiled -fno-omit-frame-pointer,
- * see runtime/regenerate-ppc.sh) uses as its own frame-pointer chain -
- * this is what lets the walk below continue from our outermost C--
- * frame into genuine C frames above it (main's caller, libc, ...).
- * x86: %ebp (index 9, see qc--runtime.h's NUM_REGS comment for how
- * ppc's own numbering was derived). ppc: r31 (index 72) - confirmed by
- * compiling a probe with powerpc-linux-gnu-gcc -fno-omit-frame-pointer
- * and seeing "mr 31,1" in the prologue, gcc's ppc equivalent of x86's
- * "push %ebp; mov %esp,%ebp". */
-#ifdef __powerpc__
-#define FP_REG 72 /* r31 */
-#else
-#define FP_REG 9 /* %ebp, r[5] */
-#endif
-@
-On initialization, the [[young_in_overflow]] pointer is the callee's
-deallocation point.    Because the x86 uses a frame pointer, we don't
-actually need this information.
-<<gcc-linux.c >>=
-void Cmm_init_c_frame(Cmm_Activation *a, char *young_in_overflow) {
-  Cmm_Word fp;
-  assert(a->regs[FP_REG]);
-  fp = *a->regs[FP_REG];
-  /* claude: main (a foreign "C" C-- procedure) blanket-preserves FP_REG
-   * like any other callee-saved register, with no notion that it is
-   * "the" frame pointer - so what we recover here is genuinely just
-   * whatever FP_REG held when something called main, which is only a
-   * valid frame pointer if that something was ALSO compiled with frame
-   * pointers on (see Cmm_c_change_activation's big comment below for
-   * the precedent: modern glibc/crt usually is not). The x86 case
-   * happened to produce an obviously-wrong value (1, unaligned); on
-   * ppc it produced a plausible-looking one (r31 left holding main's
-   * own code address by whatever loaded it before the call) - aligned
-   * and non-null, so alignment alone doesn't catch it. A real caller
-   * frame has to live at or above our own frame's stack extent
-   * (stacks grow down), so bound-check against that instead. Treat
-   * "not a frame pointer" the same as "nothing more to walk": a->vfp=0
-   * makes the very next Cmm_c_change_activation call return 0 via its
-   * own existing guard. */
-  if (fp < (Cmm_Word) young_in_overflow) {
-    a->vfp = 0;
-  } else {
-    a->vfp = (char *) fp;
-  }
-  a->u.cwalk.tries = 0;   /* logging only */
-}
-extern struct cmm_activation_methods *Cmm_cmm_frame_methods;
-@
-
-The most important information in the ABI is in Chapter~3, ``C~Stack
-Frame,'' page~3-42, Figure~3-47.
-(This information is slightly different in both placement and content
-from the draft ABI on the web.)
-
-The ABI says that the caller's EDI, ESI, and EBX must be saved, and it
-even says where to look for them on the stack, but there is no
-specified way to determine whether they have actually been saved on
-the stack or simply left untouched.
-In any case, it is crystal clear that \texttt{gcc} does not conform to
-this part of the specification.
-For this reason, we can restore only EBP---not the other registers.
-If it needs access to variables held in registers, a {\PAL} program
-will need to kill all registers, e.g., by using the [["paranoid C"]]
-convention to call into the run-time system.
-
-We identify the oldest activation by seeing a ``caller's EBP'' equal
-to zero.
-(This as claimed by the ``Process Stack and Registers'' part of the
-``Process Initialization'' section of the 
-``Operating-System Interface'' chapter of the ABI, pages 3-28 and 3-29.)
-<<gcc-linux.c >>=
-#define NOISY 0
-
-int Cmm_c_change_activation(Cmm_Activation *a) {
-  Cmm_Word callerfp;
-  Cmm_Codeptr ra;
-  pc_map_entry *entry;
-  int i;
-
-  /* claude: this must come before the assert below, and must accept 0.
-   *
-   * a->vfp here is a frame-pointer value recovered from a C frame (see
-   * FP_REG above), and the whole C walk assumes it chains: word 0 of the
-   * frame is the caller's own frame pointer, ending in 0. That held when
-   * this was written for x86, but modern glibc and crt are built with
-   * -fomit-frame-pointer and use %ebp as an ordinary register, so whatever
-   * it holds when main is called is not a frame pointer. What that is
-   * varies by libc: 0x1 on this machine's glibc 2.39, 0 on the 2.35 in the
-   * Docker image - and 0 tripped the assert, which is why the suite passed
-   * here and failed there. (ppc's r31, by contrast, is the ABI's own
-   * back-chain register whenever -fno-omit-frame-pointer is on - see
-   * runtime/regenerate-ppc.sh - so this degenerate case shouldn't arise
-   * there, but the same guard costs nothing to keep for both.)
-   *
-   * There is no way to walk a C stack that has no frame pointers, so an
-   * implausible one ends the walk instead. A real frame pointer is a
-   * non-null word-aligned stack address.
-   *
-   * For a C-- program called from main this loses nothing: the frames above
-   * the outermost C-- one belong to crt and libc and hold no C-- data.
-   */
-  if (a->vfp == 0 || ((Cmm_Word)a->vfp & (sizeof(Cmm_Word) - 1)) != 0)
-    return 0;
-
-  assert(a->vfp != 0);   /* protect against an unexpected error */
-  <<possibly shout about our departure, showing arguments>>
-  callerfp = *(Cmm_Word *)a->vfp;
-  <<possibly announce caller's ebp>>
-  if (callerfp == 0) {
-    <<possibly shout about finishing tries>>
-    return 0;
-  }
-  for(i = 0; i < NUM_REGS; i++)  /* registers cannot be restored */
-    a->regs[i] = NULL;
-  a->regs[FP_REG] = (Cmm_Word*)a->vfp;  /* point to location of caller's fp */
-
-  ra = ((Cmm_Codeptr *)a->vfp)[1];
-  entry = Cmm_lookup_entry(ra);
-  if (entry) { /* next frame is a C-- frame */
-    if (Cmm_is_thread_start_frame(entry, ra))
-      return 0;  /* such a frame must not be seen */
-    a->rtdata = entry;
-    /* deallocation point = vfp + 8         (because caller deallocates args)
-       deallocation point = callervfp + entry->outalloc
-
-       so  callervfp = vfp + 8 - entry-outalloc  */
-    a->vfp += 8 - Cmm_as_offset(entry->outalloc);
-    a->pc = ra;  /* for debugging only */
-    a->methods = Cmm_cmm_frame_methods;
-  } else {
-    a->vfp = (char *)callerfp;
-    a->pc  = ra;  /* for debugging only */
-  }
-  return 1;
-}
-@
-<<possibly shout about our departure, showing arguments>>=
-#if NOISY
- {
-  Cmm_Word *myfp = (Cmm_Word*) a->vfp;
-  fprintf(stderr, "Leaving C activation; my fp = %p, ra = %p, caller's fp = %p\n",
-          (void*)myfp, (void*)myfp[1], (void*)myfp[0]);
-  for (i = 0; i < 3; i++) fprintf(stderr, "  arg[%d] = 0x%08x\n", i, myfp[i+2]);
- }
-#endif
-@
-<<possibly announce caller's ebp>>=
-#if 0
-  fprintf(stderr, "walked to caller fp == 0x%08x\n", callerfp);
-#endif
-@
-<<possibly shout about finishing tries>>=
-#if NOISY
-    fprintf(stderr, "finished C walk with callerfp = 0x%08x, tries = %d\n",
-            (unsigned)callerfp, a->u.cwalk.tries);
-#endif
-@
-
-% was in x86cont.nw
-
-\section{x86cont}
-
-For [[Cmm_MakeUnwindContinuation]], we need a continuation that
-restores the callee-saves 
-registers and cuts to the unwind-target.
-The precondition here is that the SP points to an array of pointers
-to register values.
-There is one exception---the slot for the SP holds the SP value
-directly, not a pointer to that value.
-
-<<x86cont.s>>=
-.globl Cmm_unwindcont_pc
-.section .data
-__cmm_unwind_pc:
-.long 0
-.section .text
-Cmm_unwindcont_pc:
-  movl 0(%esp), %eax  # grab the unwind pc
-  movl %eax, __cmm_unwind_pc # move it to a well-known location (not thread-safe!)
-  movl 16(%esp), %eax; movl (%eax), %eax  # restore the registers (skipping %esp)
-  movl 20(%esp), %ecx; movl (%ecx), %ecx 
-  movl 24(%esp), %edx; movl (%edx), %edx 
-  movl 28(%esp), %ebx; movl (%ebx), %ebx 
-  movl 36(%esp), %ebp; movl (%ebp), %ebp 
-  movl 40(%esp), %esi; movl (%esi), %esi 
-  movl 44(%esp), %edi; movl (%edi), %edi 
-  movl 32(%esp), %esp  # restore %esp
-  jmp *__cmm_unwind_pc
-@ 
-N.B. The code above is not thread-safe.  The right solution is to
-pick a designated register as a scratch register for unwind
-continuations.  This register should be used to hold the program
-counter.  The compiler should mark the flow edge (from the call site
-to the unwind continuation) as killing the scratch register.
-
-
-
-%******************************************************************************
 \chapter{Code Generation}
 %******************************************************************************
 
@@ -9962,7 +8408,1623 @@ let app_count r =
 @ 
 
 %******************************************************************************
-\chapter{Optimization}
+\chapter{Mips target}
+%******************************************************************************
+
+%******************************************************************************
+\chapter{Runtime}
+%******************************************************************************
+
+%was runtime.nw
+% ---------------------------------------------------------------------------
+\section{{\PAL} Run-time Interface}
+% ---------------------------------------------------------------------------
+
+This is essentially the interface in the specification, except we
+don't provide access to global variables.
+<<qc--runtime.h>>=
+#ifndef QCMM_RUNTIME_H
+#define QCMM_RUNTIME_H
+
+<<machine-dependent macro definitions for the public interface>>
+
+<<data structures>>
+<<exposed private data structures>>
+<<public functions>>
+<<exposed private functions>>
+#endif /* QCMM_RUNTIME_H */
+@
+The definitions of the basic {\PAL}  types are public.
+<<data structures>>=
+typedef unsigned  Cmm_Word;
+typedef void*     Cmm_Dataptr;
+typedef void    (*Cmm_Codeptr)();
+@ 
+The layouts of continuations and activations are considered private.
+<<data structures>>=
+typedef struct cmm_cont Cmm_Cont;
+typedef struct cmm_activation Cmm_Activation;
+@
+Because
+we wish for a client to be able to allocate an activation on the
+stack as a local variable, the representation  of an activation is
+actually exposed below.
+It is nevertheless an \emph{unchecked} run-time error to depend in any
+way on the definition of [[struct cmm_activation]].
+Similarly, accidents of implemention require us to
+ expose [[struct cmm_cont]], but again, it is an \emph{unchecked}
+ run-time error to depend in any way on its definition.
+ 
+We provide a function to help debug the run-time system.
+<<public functions>>=
+extern void Cmm_show_activation(const Cmm_Activation *a); /* for debugging */
+@ 
+Functions for walking the stack.
+
+<<public functions>>=
+Cmm_Activation Cmm_YoungestActivation (const Cmm_Cont *t);
+int            Cmm_isOldestActivation (const Cmm_Activation *a);
+Cmm_Activation Cmm_NextActivation     (const Cmm_Activation *a);
+int            Cmm_ChangeActivation   (Cmm_Activation *a);
+Cmm_Cont*      Cmm_MakeUnwindCont     (Cmm_Activation *a, Cmm_Word index, ...);
+@
+<<public functions>>=
+Cmm_Dataptr Cmm_GetDescriptor(const Cmm_Activation *a, Cmm_Word token);
+@ 
+Functions for finding local variables.
+<<public functions>>=
+void      Cmm_LocalVarWritten  (const Cmm_Activation *a, unsigned n);
+unsigned  Cmm_LocalVarCount    (const Cmm_Activation *a);
+void*     Cmm_FindLocalVar     (const Cmm_Activation *a, unsigned n);
+void*     Cmm_FindDeadLocalVar (const Cmm_Activation *a, unsigned n);
+void*     Cmm_FindStackLabel   (const Cmm_Activation *a, unsigned n);
+@ 
+Convenience.
+<<public functions>>=
+void      Cmm_CutTo            (const Cmm_Cont *k);
+@ 
+Thread creation.
+<<public functions>>=
+Cmm_Cont* Cmm_CreateThread     (Cmm_Codeptr f, Cmm_Dataptr x, void *s, unsigned n);
+void Cmm_Yield (Cmm_Cont *k, Cmm_Cont *kold);
+@ 
+These functions are currently unimplemented.
+<<unimplemented public functions>>=
+void*     Cmm_FindGlobalVar    (int n);
+@ 
+\section{Implementation}
+
+First, the machine-dependent register information.
+<<machine-dependent macro definitions for the public interface ((x86-linux))>>=
+#define NUM_REGS 12
+@
+<<machine-dependent macro definitions for the implementation ((x86-linux))>>=
+#define ESP 8 /* r[4] */
+#define PC  0 /* c[0] */
+@
+
+%pad: Choice
+<<machine-dependent macro definitions for the public interface>>=
+#ifdef __powerpc__
+/* claude: ppc's flat register-index numbering (target/target.ml's
+ * mk_reg_ix_map, applied to arch/ppc/ppc.ml's Spaces module) runs the
+ * control space 'c' (7 registers -> indices 0-7), then 'f' (32 float
+ * registers -> indices 8-40), then 'r' (32 int registers -> indices
+ * 41-73) - confirmed empirically via gdb (a running program's own
+ * pcmap entries), not just by reading the space declarations. The
+ * x86-sized array below silently overflowed for every ppc register
+ * above index 11 (i.e. almost all of them), corrupting whatever
+ * memory follows a Cmm_Activation on the stack. 96 leaves headroom. */
+#define NUM_REGS 96
+#elif defined(__sparc__)
+/* claude: same overflow bug as ppc's (see the comment above) - the
+ * x86-sized array below silently overflowed for sparc too, since
+ * update_saved_regs's "new->regs[regs[i].index] = ..." has no bounds
+ * check. sparc's own flat register-index numbering (target/target.ml's
+ * mk_reg_ix_map, spaces filtered to Reg/Fixed and taken in
+ * arch/sparc/sparc.ml's own list order: r, f, c, k - m/t/u/q are
+ * Memory/Temp classified and excluded) covers roughly 49 indices (32
+ * general + 9 float + 6 control + 2 window-pointer registers); 128
+ * leaves headroom the same way ppc's 96 does. Not yet pinned down to
+ * the exact count the way ppc's was (still confirming FP_REG - see
+ * gcc-linux.c), so generous rather than tight. */
+#define NUM_REGS 128
+#else
+<<machine-dependent macro definitions for the public interface ((x86-linux))>>
+#endif
+@
+
+<<machine-dependent macro definitions for the implementation>>=
+<<machine-dependent macro definitions for the implementation ((x86-linux))>>
+@
+
+
+<<machine-dependent macro definitions for the public interface ((x86-cygwin))>>=
+#define NUM_REGS 12
+@
+<<machine-dependent macro definitions for the implementation ((x86-cygwin))>>=
+#define ESP 8 /* r[4] */
+#define PC  0 /* c[0] */
+@ 
+
+% ---------------------------------------------------------------------------
+\subsection{Walking the stack}
+% ---------------------------------------------------------------------------
+This implementation assumes that a {\PAL} thread can only be
+suspended at a continuation. Particularly, this means we do not expect
+that the runtime system will be entered in response to an interrupt or
+some other method that preempts the {\PAL} thread at an arbitrary
+point.
+(At some future time, it may be worthwhile for the run-time system to
+be able to capture a Unix signal context and synthesize a suitable
+{\PAL} continuation.)
+
+Walking the stack always begins at a continuation. A {\PAL}
+continuation contains the program counter and stack pointer at the
+point of return to the continuation. From this an initial virtual
+frame pointer (vfp) can be derived. The process of walking the stack
+involves computing the vfp of each caller, and tracking the locations
+of all saved registers along the way.
+
+In order to compute the virtual frame pointer for an activation, the
+runtime system needs to know how it relates to the stack pointer at
+each call site and 
+continuation in the {\PAL} program. 
+In addition, the run-time system
+needs to know the locations of caller- and callee-saved registers.
+Happily, for {\PAL} functions, all of this information is emitted by
+the {\PAL} compiler as part of the run-time data. 
+For  non-{\PAL} functions, including C~functions, we must rely on the
+target-specific ABI to skip over unknown areas of the
+stack.\footnote
+{If the ABI does not specify the locations in which registers
+are saved, we make pessimistic assumptions.}
+
+\subsubsection{Stack-walking data structures and internal interfaces}
+
+We dispatch between generic {\PAL} code and target-specific code using
+function pointers.
+At present, there is only one function pointer, which implements
+[[ChangeActivation]]. 
+At a future point, to make things more efficient, we may add an
+implementation of [[IsOldestActivation]].
+<<definitions of private data structures>>=
+struct cmm_activation_methods {
+  int (*change)(Cmm_Activation *a);
+};
+@ 
+The activation contains a pointer to the method suite, a virtual frame
+pointer, and a pointer to the run-time sytem's data.
+It also contains a pointer to each machine register; if the value of a
+register is not known, the corresponding pointer is [[NULL]].
+<<exposed private data structures>>=
+<<definition of [[struct cmm_cont]]>>
+struct cmm_activation {
+  struct cmm_activation_methods *methods;
+  char *vfp;   /* declared char* so that arithmetic works on addresses */
+  struct cmm_pc_map_entry *rtdata;  
+  Cmm_Word* regs[NUM_REGS];
+  <<other fields of an activation>>
+};
+@
+
+In addition to the fields above, an activation also holds a program
+counter [[pc]] (used only for debugging), plus space for specialized run-time
+system functions.
+\begin{itemize} 
+\item
+For an activation built from a continuation, the [[pc]] is the program
+counter of that continuation.
+For an activation suspended at a call site, it is the normal return address.
+\item 
+The space is stored in a union~[[u]]; 
+the [[unwind]] field is used by the interface function
+[[MakeUnwindContinuation]], and the 
+[[cwalk]] field contains a counter that may be useful to some
+target-specific stack walkers.
+\end{itemize}
+<<other fields of an activation>>=
+Cmm_Codeptr pc;   /* used only for debugging */
+union {  /* following fields are temporary space to avoid allocation */
+  struct {
+    Cmm_Cont   k;
+  } unwind;
+  struct {
+    unsigned tries;
+  } cwalk;
+} u;
+@
+The target-specific stack-walking code must export these two functions:
+<<external functions>>=
+extern int Cmm_c_change_activation(Cmm_Activation *a);
+extern void Cmm_init_c_frame(Cmm_Activation *a, char *young_in_overflow);
+@
+
+The function [[Cmm_c_change_activation]] is the 
+[[change]] method (i.e., it implements [[ChangeActivation]]) for an
+activation suspended at a call site in a 
+C~function.
+The function [[Cmm_init_c_frame]]
+is used to initialize a frame for such an activation.
+For such a frame, the [[regs]] field is as accurate as we can make it,
+and the [[pc]] field is initialized to the return address.
+The [[methods]] and [[rtdata]] fields are initialized appropriately.
+The pointer [[young_in_overflow]] points to the young end of the
+callee's incoming overflow parameters.
+N.B.~in an activation representing a target-specific frame, the
+meaning of the [[vfp]] field is target-dependent.
+
+The implementations of  [[Cmm_c_change_activation]] and
+[[Cmm_init_c_frame]] live in target-specific files---one for each
+compiler-machine combination that we support. 
+The rest of the stack-walking code lives here, in this file.
+
+Here are the methods that are used by the stack walker.
+A~pointer to the {\PAL} method suite is exported to target-specific code.
+
+<<definitions of method suites>>=
+static int change_nothing(Cmm_Activation *a) { return 0; }
+static struct cmm_activation_methods cmm_methods    = { normal_change           };
+static struct cmm_activation_methods c_methods      = { Cmm_c_change_activation }; 
+static struct cmm_activation_methods oldest_methods = { change_nothing          }; 
+struct cmm_activation_methods *Cmm_cmm_frame_methods = &cmm_methods;
+@ 
+
+Both generic and target-specific code need to be able to identify a
+thread-start frame, because it does 
+not actually appear on the (virtual) stack.
+
+<<external functions>>=
+int Cmm_is_thread_start_frame(struct cmm_pc_map_entry *rtdata, Cmm_Codeptr pc);
+@ 
+
+\subsubsection{Initializing and walking a stack}
+
+The run-time system can begin walking a call stack only at a {\PAL}
+continuation. The youngest activation is constructed by looking up the
+run-time data associated with the given continuation. 
+The initial activation record is returned by value,
+which forces the caller to allocate space for it.
+
+Almost every continuation can be dealt with simply by looking up the
+appropriate entry in the PC~map.
+The exception is a continuation that represents a freshly created
+thread.
+Such a continuation points to [[Cmm_start_thread_helper]], which is a
+procedure, not a call site or a {\PAL} continuation, and therefore is
+\emph{not} in the PC~map.
+We treat that case specially, as required by the {\PAL}~specification.
+There are two bits of magic: methods that treat it as the oldest
+activation, and a special, hand-written PC-map entry that makes the
+two parameters visible.
+<<implementations of public functions>>=
+Cmm_Activation Cmm_YoungestActivation(const Cmm_Cont* k) {
+  int i;
+  Cmm_Activation a;
+
+  if (k->pc == Cmm_start_thread_helper) {
+    a.methods = &oldest_methods;
+    a.vfp     = (char *)k->sp;
+    a.pc      = k->pc;
+    if (Cmm_stack_growth > 0)
+      a.rtdata = Cmm_thread_start_up_pcmap_entry;
+    else
+      a.rtdata = Cmm_thread_start_dn_pcmap_entry;
+  } else {
+    pc_map_entry* entry = Cmm_lookup_entry(k->pc);
+    assert(entry);
+    a.methods = &cmm_methods;
+    a.vfp     = (char *)k->sp - Cmm_as_offset(entry->outalloc);
+    a.pc      = k->pc;
+    a.rtdata  = entry;
+  }
+  for (i = 0; i < NUM_REGS; i++)
+    a.regs[i] = NULL;
+  return a;
+}
+@ 
+The function for walking past a {\PAL} frame is [[normal_change]].
+<<declarations of private functions>>=
+static int normal_change(Cmm_Activation *a);
+@ 
+The reasoning required to get from one [[vfp]] to another is slightly
+involved.
+The key idea is that in the presence of tail calls, the only thing we
+can count on is the location of the \emph{deallocation point}.
+This point marks the location on the stack below which it is the
+callee's responsibility to deallocate, whether on a return or on a
+tail call.
+The PC-map entry for a call site stores the incoming deallocation point of its
+procedure, as well as the outgoing deallocation point of the call
+site.
+The caller's outgoing point is the callee's incoming point, and by
+solving the equation, we can compute the caller's [[vfp]] from the
+callee's [[vfp]].
+<<private functions>>=
+static int normal_change(Cmm_Activation *a) {
+  char *vfp;
+  pc_map_entry* calleedata, *callerdata;
+
+  assert(a && a->vfp);
+  calleedata = a->rtdata;
+
+  vfp = a->vfp;
+  a->pc      = *(Cmm_Codeptr*)locptr(a, calleedata->return_addressp);
+  update_saved_regs(a, a);
+  <<possibly shout about caller's EBP>>
+  callerdata = Cmm_lookup_entry(a->pc);
+  a->rtdata  = callerdata;
+
+  if (callerdata) {
+    if (Cmm_is_thread_start_frame(callerdata, a->pc))
+      return 0;
+    /* deallocpt = vfp       + calleedata->inalloc
+       deallocpt = callervfp + callerdata->outalloc
+
+       therefore callerfvp = vfp + calleedata->inalloc - callerdata->outalloc 
+    */
+    a->vfp = vfp + Cmm_as_offset(calleedata->inalloc)
+                 - Cmm_as_offset(callerdata->outalloc);
+  } else {
+    a->methods = &c_methods;
+    a->rtdata = Cmm_empty_pcmap_entry;
+    Cmm_init_c_frame(a, vfp + Cmm_as_offset(calleedata->inalloc));
+  }
+  return 1;
+}
+@ 
+<<possibly shout about caller's EBP>>=
+#define NOISY 0
+#if NOISY
+  fprintf(stderr, "leaving C-- activation; caller's EBP == 0x%08x\n",
+          a->regs[9] ? (unsigned)*a->regs[9] : 0xdeadbeef);
+#endif
+@ 
+\subsubsection{Tracking register contents}
+
+As new activations are created during a walk of the stack, the
+locations of saved registers are recorded within the activations. The
+locations of all saved registers for an activation can be computed
+using information in the pc map table along with the previous
+activation.
+
+<<declarations of private functions>>=
+void update_saved_regs(Cmm_Activation* new, const Cmm_Activation* prev);
+@
+<<private functions>>=
+void update_saved_regs(Cmm_Activation* new, const Cmm_Activation* prev) {
+  int i;
+  int r = prev->rtdata->num_registers;
+  struct reg* regs = registers(prev->rtdata);
+
+  for (i = 0; i < NUM_REGS; i++) 
+    new->regs[i] = prev->regs[i];
+  
+  for (i = 0; i < r; i++)
+    new->regs[regs[i].index] = (Cmm_Word*)(prev->vfp + Cmm_as_offset(regs[i].saved));
+}
+@
+
+This code will fail loudly if a register is ever saved in another
+register (instead of on the stack).
+This is as it should be, since a worse problem would be for the code
+to fail silently in the presence of a cycle among registers (e.g.,
+register~5 is saved in register~7 and vice versa).
+
+\subsubsection{Exported stack-walking functions}
+
+At present, all the exported functions are built on top of the
+[[change]] method.
+The efficient path is [[ChangeActivation]].
+As long as we don't have a very mixed stack, branch-prediction
+hardware should do well with the indirect call.
+<<implementations of public functions>>=
+int Cmm_ChangeActivation(Cmm_Activation *a) {
+  return a->methods->change(a);
+}
+@ 
+[[NextActivation]] is not too bad, as most of the copying is
+necessary. 
+<<implementations of public functions>>=
+Cmm_Activation Cmm_NextActivation(const Cmm_Activation *a) {
+  Cmm_Activation na = *a;
+  int rc = na.methods->change(&na);
+  assert(rc);
+  return na;
+}
+@ 
+[[isOldestActivation]] is wildly inefficient---in the common case, we
+copy the activation, mutate it, and then throw all that work away.
+<<implementations of public functions>>=
+int Cmm_isOldestActivation(const Cmm_Activation *a) {
+  Cmm_Activation na = *a;
+  return (!na.methods->change(&na));
+}
+@ 
+\subsection{Unwinding to a continuation}
+
+To unwind to a continuation, we pass an activation to some assembly
+code that restores the registers from the contents of the activation.
+We do this by synthesizing the continuation [[a->u.unwind.k]], in
+which the PC points to the assembly code and the SP points to the
+relevant part of the activation.
+Although this assembly code is nothing like a C~function, we import it
+as such.
+<<implementations of public functions>>=
+extern void Cmm_unwindcont_pc();  /* assembly code; not a C function */
+Cmm_Cont* Cmm_MakeUnwindCont(Cmm_Activation *a, Cmm_Word index, ...) {
+  int i;
+  struct conts *conts;
+  struct contblock *block;
+
+  assert(a->rtdata);
+  conts = continuations(a->rtdata);
+  if (index >= conts->num_entries)
+    die("C-- run-time error: index %d out of bounds in Cmm_MakeUnwindCont", index);
+  block = (struct contblock *) ((Cmm_Word *) conts + conts->entries[index]);
+  <<write variadic parameters into [[block->vars]]>>
+
+  /* We initialize unknown registers to a bogus (but clearly live) address:
+     that of the activation.  Otherwise, assembly code dereferences 0. */
+  for (i = 0; i < NUM_REGS; i++)
+    if (a->regs[i] == NULL)
+      a->regs[i] = (Cmm_Word *)a;
+
+  /* This activation can't be passed into this interface again, so it 
+     is safe to overwrite the PC and ESP registers with the values that
+     belong to the unwind continuation */
+
+  a->regs[PC]      = (Cmm_Word *) block->pc;
+  a->regs[ESP]     = (Cmm_Word *) (a->vfp + Cmm_as_offset(block->sp));
+  a->u.unwind.k.pc = Cmm_unwindcont_pc;
+  a->u.unwind.k.sp = (Cmm_Word *) a->regs;
+
+  return(&a->u.unwind.k);
+}
+@ 
+This part of the interface is unsafe, but it can't be helped.
+<<write variadic parameters into [[block->vars]]>>=
+{
+  va_list ap;
+  va_start(ap, index);
+  for (i = 0; i < block->num_vars; i++) {
+    <<assign [[block->vars[i]]] from [[ap]]>>
+    Cmm_LocalVarWritten(a, block->vars[i].localnum);
+  }
+  va_end(ap);
+}
+@
+Because passing to a varargs function involves implicit promotions, we
+do the promotions that are needed.
+The [[L]] argument is the type used internally; the [[R]]~version is
+the same type as promoted for passing to a varargs function.
+Because somebody might generate code in which a formal parameter of a
+continuation is not used, we have to consider the possibility that 
+the variable being assigned to is dead.
+In that case, we consume the actual parameter but make no assignment.
+<<assign [[block->vars[i]]] from [[ap]]>>=
+#define ASSIGN(L,R) \
+  { L *formalp = (L*) Cmm_FindLocalVar(a, block->vars[i].localnum); \
+    R actual   = va_arg(ap, R); \
+    if (formalp) *formalp = (L) actual; \
+  } 
+switch(block->vars[i].ctype) {
+  case CHAR:             ASSIGN (char,               int);                break;
+  case DOUBLE:           ASSIGN (double,             double);             break;
+  case FLOAT:            ASSIGN (float,              double);             break;
+  case INT:              ASSIGN (int,                int);                break;
+  case LONGDOUBLE:       ASSIGN (long double,        long double);        break;
+  case LONGINT:          ASSIGN (long int,           long int);           break;
+  case LONGLONGINT:      ASSIGN (long long           int, long long int); break;
+  case SHORT:            ASSIGN (short,              int);                break;
+  case SIGNEDCHAR:       ASSIGN (signed char,        int);                break;
+  case UNSIGNEDCHAR:     ASSIGN (unsigned char,      int);                break;
+  case UNSIGNEDLONG:     ASSIGN (unsigned long,      unsigned long);      break;
+  case UNSIGNEDSHORT:    ASSIGN (unsigned short,     int);                break;
+  case UNSIGNEDINT:      ASSIGN (unsigned int,       unsigned int);       break;
+  case UNSIGNEDLONGLONG: ASSIGN (unsigned long long, unsigned long long); break;
+  case ADDRESS:          ASSIGN (void *,             void *);             break;
+  default: assert(0);
+}
+@
+% ---------------------------------------------------------------------------
+\subsection{Span Data}
+% ---------------------------------------------------------------------------
+For any activation, the client may ask for the innermost enclosing
+span associated with a given token. 
+The user spans are contained in the
+run-time data emitted by the compiler. 
+Tokens must be integers greater
+than or equal to zero. A table of descriptors is stored in the pc map
+entry immediately following the locals data. Using the activation
+record, the table of descriptors is looked up, and the appropriate
+entry returned.
+<<implementations of public functions>>=
+Cmm_Dataptr Cmm_GetDescriptor(const Cmm_Activation *a, Cmm_Word token) {
+  unsigned num_spans;
+  Cmm_Word* descs;
+  pc_map_entry* entry = a->rtdata;
+  if (!entry)
+    return 0;
+
+  num_spans = entry->num_spans;
+  if ((unsigned) token < num_spans) {
+    descs = spans(entry);
+    return (Cmm_Dataptr)descs[token];
+  } else {
+    return 0;
+  }
+}
+@
+% ---------------------------------------------------------------------------
+\subsection{Accessing Local Variables}
+% ---------------------------------------------------------------------------
+Local variables for an activation can can be found either on the
+stack, or in registers. The location of parameters is computed using
+information generated by the {\PAL} compiler. Each {\PAL} call site
+has associated with it the number of locals, and an array containing
+information about each local. If a local lives on the stack, an offset
+from the frame pointer is given. If a local is in a register, then the
+register number is given. The number of registers, and their indexes
+are architecture dependent.
+
+In addition to information about locals, each call site has
+information about saved registers at the time of the call. If a
+register has been saved on the stack, then the offset from the frame
+pointer is given. Otherwise, a zero indicates that the register has
+not been saved by this activation.
+ 
+Clients of the runtime system must report when a local variable is written.
+<<implementations of public functions>>=
+void Cmm_LocalVarWritten(const Cmm_Activation *a, unsigned n) {
+  return;
+}
+@
+Clients of the runtime system can ask for the number of locals for a
+given activation. This information is stored in the activation
+structure.
+<<implementations of public functions>>=
+unsigned Cmm_LocalVarCount(const Cmm_Activation *a) {
+  assert(a);
+  if (a->rtdata)
+    return a->rtdata->num_locals;
+  else
+    return 0;
+}
+@ 
+Local variables are asked for by index. A pointer is returned to the
+local by looking it up in the array of locals for this
+activation. 
+<<implementations of public functions>>=
+void* Cmm_FindLocalVar(const Cmm_Activation *a, unsigned n) {
+  pc_map_entry* entry = a->rtdata;
+  assert(entry);
+  if (n >= entry->num_locals)
+    die("local var index %d out of range", n);
+  return locptr(a, locals(entry)[n]);
+}
+@
+If a location is in a register, a pointer into the saved
+register is returned. Otherwise, a pointer into the stack where the
+register is saved is returned.
+
+<<declarations of private functions>>=
+static Cmm_Word *locptr(const Cmm_Activation *a, location l);
+@
+<<private functions>>=
+static Cmm_Word *locptr(const Cmm_Activation *a, location l) {
+  int reg;
+  switch (Cmm_loctype(l)) {
+    case REGISTER:
+      reg = Cmm_as_register(l);
+      assert(a);
+      assert(a->regs);
+      if (a->regs[reg] == NULL) 
+        die("Tried to find a value in an unrecoverable register.\n"
+            "Probable cause: calling C without using the \"paranoid C\" convention.");
+      return a->regs[reg];
+    case DEAD:
+      return NULL;
+    case OFFSET:
+      return (Cmm_Word *)(a->vfp + Cmm_as_offset(l));
+    default:
+      die("this can't happen --- badly coded location");
+      return 0;
+  }
+}
+@ 
+In the current implementation it is not possible to find the location
+of a dead variable.
+<<implementations of public functions>>=
+void* Cmm_FindDeadLocalVar(const Cmm_Activation *a, unsigned n) {
+  return Cmm_FindLocalVar(a, n);
+}
+@
+Stack data is stored in a table per procedure. Each PC map entry links
+to the correct stack data table.
+<<implementations of public functions>>=
+void* Cmm_FindStackLabel(const Cmm_Activation *a, unsigned n) {
+  pc_map_entry* entry = a->rtdata;
+  struct sd *sdt = entry->stackdata_table;
+  assert(sdt);
+  if (n >= sdt->num_entries)
+     die("Stack data index %d out of range [0..%d)\n", n, sdt->num_entries);
+  return locptr(a, sdt->entries[n]);
+}
+@ 
+\subsection{Run-time functions written in {\PAL}}
+
+Function [[Cmm_CutTo]] is a convenience; it is easy to write in~{\PAL}.
+<<cut.c-->>=
+target byteorder little;
+export Cmm_CutTo;
+foreign "C" Cmm_CutTo(bits32 k) {
+  cut to k();
+}
+@ 
+<<yield.c-->>=
+target byteorder little;
+export Cmm_Yield;
+foreign "C" Cmm_Yield(bits32 k,bits32 kold) {
+  bits32[kold] = bits32[knew];
+  bits32[kold+4] = bits32[knew+4];
+  cut to k() also cuts to knew also aborts;
+  continuation knew(): foreign "C" return ;
+}
+@ 
+\subsection{Threads}
+
+<<external functions>>=
+extern void Cmm_start_thread_helper();
+extern void Cmm_thread_helper_fence();
+extern int Cmm_stack_growth; /* generated by qc-- -globals */
+@
+<<implementations of public functions>>=
+int Cmm_is_thread_start_frame(struct cmm_pc_map_entry *rtdata, Cmm_Codeptr pc) {
+  return spans(rtdata)[0] == 0xeffaced &&
+         (unsigned) Cmm_start_thread_helper <= (unsigned) pc &&
+         (unsigned) pc <= (unsigned) Cmm_thread_helper_fence;
+}
+@
+Because the run-time system is split across multiple C~files, this
+function needs to be exposed---but it is private to the {\PAL}
+run-time system, and it is an unchecked run-time error for client code
+to call this function.
+<<exposed private functions>>=
+int Cmm_is_thread_start_frame(struct cmm_pc_map_entry *rtdata, Cmm_Codeptr pc);
+@
+<<implementations of public functions>>=
+Cmm_Cont* Cmm_CreateThread(Cmm_Codeptr f, Cmm_Dataptr x, void *s, unsigned n) {
+  char *stack = s;
+  char *young, *old, *vfp;
+  Cmm_Cont *k;
+  if (Cmm_stack_growth < 0) {
+    <<set up stack for growth downward>>
+    return k;
+  } else {
+    <<set up stack for growth upward>>
+    return k;
+  }
+}
+@ 
+Here is the layout of a thread with a down-going stack:
+\begin{center}
+\unitlength=15pt
+\def\~{\hspace*{15pt}}
+\begin{picture}(22,8)(-14,-5)
+  \put(-5,1.5){\framebox(13,1.5)[l]{\~[[k->pc = Cmm_start_thread_helper]]}}
+  \put(-5,0){\framebox(13,1.5)[l]{\~[[k->sp = vfp]]}}
+  \put(-5,-1.5){\framebox(13,1.5)[l]{\~[[x]]}}
+  \put(-5,-3.0){\framebox(13,1.5)[l]{\~[[f]]}}
+  \put(-5,-2.7){\makebox(0,0)[r]{[[vfp]]\raisebox{0.5ex}{\vector(1,0){1}}}}
+  \put(-5,0.3){\makebox(0,0)[r]{result of [[Cmm_CreateThread]]\raisebox{0.5ex}{\vector(1,0){1}}}}
+  \put(-5,-4.5){\makebox(13,2.0)[l]{\vrule\hfill$\vdots$\hfill\vrule}}
+\end{picture}
+\end{center}
+I set up the stack pointer to point to the first empty word.
+
+<<set up stack for growth downward>>=
+young = stack;
+old   = stack + n;
+k = (Cmm_Cont *) old;
+k--;
+k->sp = (Cmm_Word*) (vfp = old - sizeof(*k) - sizeof(f) - sizeof(x));
+k->pc = Cmm_start_thread_helper;
+*(Cmm_Codeptr*)vfp = f;
+vfp += sizeof(f);
+*(Cmm_Dataptr*)vfp = x;
+@
+<<set up stack for growth upward>>=
+old   = stack;
+young = stack + n;
+k = (Cmm_Cont *) old;
+k++;
+k->sp = (Cmm_Word*) (vfp = old + sizeof(*k) + sizeof(f) + sizeof(x));
+k->pc = Cmm_start_thread_helper;
+*(Cmm_Codeptr*)vfp = f;
+vfp -= sizeof(f);
+*(Cmm_Dataptr*)vfp = x;
+@
+<<thread.c-->>=
+target byteorder little;
+export Cmm_start_thread_helper, Cmm_thread_helper_fence;
+import write, abort;
+section "text" {
+  span 0 0xeffaced {
+    foreign "C-- thread" Cmm_start_thread_helper(bits32 f, bits32 x) {  
+      f(x) also aborts;
+      foreign "C" write(2, "address" msg, msg_end - msg);
+      foreign "C" abort() never returns;
+    }
+  }
+  Cmm_thread_helper_fence:
+}
+section "data" {
+  msg: bits8[] "fatal C-- error: function passed to Cmm_CreateStack returned!\n";
+  msg_end:
+}
+@ 
+
+<<implementations of public functions>>=
+static void show_span(unsigned key, void *value, void *closure) {
+  if (value)
+    printf("    span %d == %p\n", key, value);
+}
+
+void Cmm_show_activation(const Cmm_Activation *a) {
+  printf("activation @ %p = {\n", (void*)a);
+  printf("  methods = ");
+  if (a->methods == Cmm_cmm_frame_methods)
+    printf("C-- methods,\n");
+  else if (a->methods == &c_methods) 
+    printf("C methods,\n");
+  else
+    printf("unknown methods at %p,\n", (void*)a->methods);
+  printf("  vfp = %p, pc = %p,\n", a->vfp, (void *)a->pc);
+  <<print registers in activation [[a]]>>
+  printf("  entry = {\n");
+  Cmm_show_map_entry(a->rtdata, -1, a->pc, show_span, NULL);
+  printf("  }\n}\n");
+}
+@
+<<print registers in activation [[a]]>>=
+{ int any, i;
+  char *pfx;
+  any = 0;
+  for (i = 0; i < NUM_REGS; i++)
+    if (a->regs[i]) {
+      any = 1;
+      break;
+    }
+  if (any) {
+    printf("  regs = { ");
+    pfx = "";
+    for (i = 0; i < NUM_REGS; i++)
+      if (a->regs[i]) {
+        printf("%sREG %d @ %p", pfx, i, (void*)a->regs[i]);
+        pfx = ", ";
+      }
+    printf(" },\n");
+  } else {
+    printf("  regs = (no registers recoverable),\n");
+  }
+}
+@
+
+<<definition of [[struct cmm_cont]]>>=
+struct cmm_cont {
+  Cmm_Codeptr pc;
+  Cmm_Word*   sp;
+};
+@ 
+\subsection{Putting it together}
+
+<<runtime.c>>=
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+
+#include "qc--runtime.h"
+#include "pcmap.h"
+
+<<machine-dependent macro definitions for the implementation>>
+<<external functions>>
+<<definitions of private data structures>>
+<<declarations of private functions>>
+<<definitions of method suites>>
+<<private functions>>
+<<implementations of public functions>>
+@
+ 
+<<declarations of private functions>>=
+static void die(char *msg,...);
+@
+<<private functions>>=
+static void die(char *msg,...) {   /* see K&R 2nd ed, page 174 */
+  va_list args;
+  va_start(args,msg);
+  fprintf(stderr, "C-- run-time error: ");
+  vfprintf(stderr, msg, args);
+  fprintf(stderr,"\n");
+  va_end(args);
+  abort();
+}
+@
+
+
+
+
+%was pcmap.nw
+% ---------------------------------------------------------------------------
+\section{PC Map}
+% ---------------------------------------------------------------------------
+
+This file provides an interface to the run-time data emitted by the
+compiler. 
+<<pcmap.h>>=
+#ifndef PC_MAP_H
+#define PC_MAP_H
+
+<<exported type, procedure, and macro declarations>>
+
+#endif /* PC_MAP_H */
+@ 
+Locations are coded as described in [[src/runtimedata.nw]].
+A~location has one of three types: dead, register, or offset.
+To get the register number of a location with register type, pass the
+location to [[as_register]]; similarly with [[as_offset]].
+To use one of these functions with a location of the wrong type is a
+checked run-time error.
+<<exported type, procedure, and macro declarations>>=
+typedef struct coded_location { Cmm_Word l; } location;
+typedef enum { DEAD=0, REGISTER=1, OFFSET=2 } loctype; 
+loctype  Cmm_loctype(location l);
+unsigned Cmm_as_register(location l);
+int      Cmm_as_offset  (location l);
+#define isdead(LOC) ((LOC).l == 0)
+@ 
+
+The [[pc_map_index]] and [[pc_map_entry]] structs below are used to
+access the PC map table and run-time data entries emitted by the
+compiler. A more detailed description of the layout and contents of
+the emitted data can be found in the file [[src/runtimedata.nw]].
+N.B. although the [[pc_map_index]] definition is exact, the
+[[pc_map_entry]] is only an approximation.
+The actual data structure has fields of varying size; hence the
+[[num_*]] fields and the macros.
+The documentation of the fields needs work.
+
+<<exported type, procedure, and macro declarations>>=
+typedef struct {
+  Cmm_Codeptr ra;
+  struct cmm_pc_map_entry* entry;
+} pc_map_index;
+
+typedef struct cmm_pc_map_entry pc_map_entry;
+struct cmm_pc_map_entry {
+  location   inalloc;          /* incoming dealloc point on stack (always offset) */
+  location   outalloc;         /* outgoing dealloc point on stack (always offset) */
+  location   return_addressp;  /* where return address is saved */
+  struct sd *stackdata_table;
+  Cmm_Word   num_registers;
+  Cmm_Word   num_locals;
+  Cmm_Word   num_spans;
+  Cmm_Word   cont_block_size;
+  location   data[2]; /* registers, locals, continuations, spans */
+};
+@ 
+
+Here are the individual pieces.
+The stack-data array stores the location of each [[stackdata]] label.
+<<exported type, procedure, and macro declarations>>=
+struct sd {
+  unsigned num_entries;
+  location entries[1];  /* variable length */
+};
+@ 
+Information about callee-saved registers gives the index of a register
+and the location in which the value of the register is saved.
+<<exported type, procedure, and macro declarations>>=
+struct reg {
+  unsigned index;               /* machine-specific index */
+  location saved;               /* where saved (or dead) */
+};
+@ 
+The structure for [[also unwinds to]] continuations is more
+complicated.
+Each call site contains a list of entries.  
+A~single entry is represented by a [[contblock]], which is of variable
+size because each continuation may take a different number of
+parameters. 
+<<exported type, procedure, and macro declarations>>=
+struct conts {
+  unsigned num_entries;
+  int entries[1]; /* variable length (offset of contblock) */
+};
+
+struct contblock {
+  unsigned num_vars;
+  Cmm_Codeptr pc;
+  location sp;
+  struct contarg {
+    Cmm_Word localnum;
+    Cmm_Word ctype;
+  } vars[1]; /* variable length */
+};
+@ 
+The compiler and run-time system must agree on the representation of
+C~types.
+The [[ctype]] field above would be declared [[enum ctypes]] except
+that we can't rely on a C~compiler to give an enum a predictable size
+and alignemnt.
+<<exported type, procedure, and macro declarations>>=
+enum ctypes { CHAR = 0, DOUBLE = 1, FLOAT = 2, INT = 3, LONGDOUBLE = 4, LONGINT = 5
+            , LONGLONGINT = 6, SHORT = 7, SIGNEDCHAR = 8, UNSIGNEDCHAR = 9
+            , UNSIGNEDLONG = 10, UNSIGNEDSHORT = 11, UNSIGNEDINT = 12
+            , UNSIGNEDLONGLONG = 13, ADDRESS = 14 
+            };
+@ 
+Here is the address arithmetic that provides access to different parts
+of an entry.
+We do the address arithmetic using macros whose names end in~[[A]].
+We then provide a second set of macros that contain suitable casts.
+Using macros is a bit dodgy, but NR was worried about procedure-call
+overhead for the arithmetic.
+
+<<exported type, procedure, and macro declarations>>=
+#define registersA(e)     ((e)->data)
+#define localsA(e)        (registersA(e)     + 2 * (e)->num_registers)
+#define continuationsA(e) (localsA(e)        +     (e)->num_locals)
+#define spansA(e)         (continuationsA(e) +     (e)->cont_block_size)
+
+#define registers(e)      ((struct reg*)registersA(e))
+#define locals(e)         ((location *)localsA(e))
+#define continuations(e)  ((struct conts *)continuationsA(e))
+#define spans(e)          ((Cmm_Word*)spansA(e))
+@
+Finally, here is where we get entries: we can look them up by PC, or
+we have special entries for unknown procedures (the empty entry) and
+for start-of-thread activations.
+
+<<exported type, procedure, and macro declarations>>=
+pc_map_entry* Cmm_lookup_entry(const Cmm_Codeptr caller);
+pc_map_entry* Cmm_empty_pcmap_entry;
+pc_map_entry* Cmm_thread_start_up_pcmap_entry;
+pc_map_entry* Cmm_thread_start_dn_pcmap_entry;
+@ 
+
+We provide some functions for debugging.
+If not [[NULL]], the ``span shower'' is called for each user span.
+
+<<exported type, procedure, and macro declarations>>=
+typedef void (*Cmm_span_shower)(unsigned key, void *value, void *closure);
+void Cmm_show_map(Cmm_span_shower, void *); /* for debugging */
+void Cmm_show_map_entry(pc_map_entry *entry, int index, Cmm_Codeptr ra,
+                        Cmm_span_shower show_span, void *closure);
+@ 
+
+\subsection{Implementation}
+
+<<pcmap.c>>=
+<<pcmap.c >>
+@
+
+<<pcmap.c >>=
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
+#include "qc--runtime.h"
+#include "pcmap.h"
+@ 
+
+\subsubsection{Hand-written map entries}
+
+Here are the hand-written map entries, together with some support for
+creating locations.
+
+
+<<pcmap.c >>=
+#define MKOFFSET(N) { (1 << (sizeof(location)*8 - 1)) | (N) }
+#define MKDEAD      { 0 }
+static struct sd nostackdata = { 0, { MKDEAD } };
+@ 
+An unknown functions has no stackdata, registers, locals, spans, or
+continuations, 
+and we don't know any relations on allocation points.
+<<pcmap.c >>=
+static struct cmm_pc_map_entry empty = {
+  MKOFFSET(0),
+  MKOFFSET(0),
+  MKOFFSET(0),
+  &nostackdata,
+  0, 0, 0, 0, { MKDEAD }
+};
+pc_map_entry* Cmm_empty_pcmap_entry = &empty;
+@ 
+A thread-start activation contains two locals, whose locations depend
+on the direction of stack growth.
+Because such a frame is never walked (it has a special, trivial
+[[change]] method), we don't store anything about deallocation points.
+<<pcmap.c >>=
+static struct cmm_pc_map_entry startdn = {
+  MKOFFSET(0),
+  MKOFFSET(0),
+  MKDEAD,
+  &nostackdata,
+  0, 2, 0, 0, { MKOFFSET(0), MKOFFSET(sizeof(Cmm_Word)) }
+};
+static struct cmm_pc_map_entry startup = {
+  MKOFFSET(0),
+  MKOFFSET(0),
+  MKDEAD,
+  &nostackdata,
+  0, 2, 0, 0, { MKOFFSET(0), MKOFFSET(-sizeof(Cmm_Word)) }
+};
+pc_map_entry* Cmm_thread_start_up_pcmap_entry = &startup;
+pc_map_entry* Cmm_thread_start_dn_pcmap_entry = &startdn;
+@ 
+\subsubsection{Entry lookup by~PC}
+
+The labels [[Cmm_pc_map]] and [[Cmm_pc_map_limit]] are inserted by the
+linker script in chunk [[<<pcmap.ld>>]].
+<<pcmap.c >>=
+extern pc_map_index Cmm_pc_map[];
+extern pc_map_index Cmm_pc_map_limit[];
+#define pc_map_size (Cmm_pc_map_limit - Cmm_pc_map)
+@ 
+If we could rely on the compiler to sort the entries by PC, then the
+lookup function could always do binary search.
+But there have been bugs, so we have to check, and if entries are not
+sorted, we use linear search.
+
+Here's where we check for sorting.
+Two adjacent entries with \emph{equal} PCs are considered OK.
+This can happen if a call site annotated with [[never returns]] is
+followed immediately by a continuation, for example.
+<<pcmap.c >>=
+static int is_sorted(void) {
+  pc_map_index *p;
+  for (p = Cmm_pc_map+1; p < Cmm_pc_map_limit; p++)
+    if ((unsigned)p[-1].ra > (unsigned)p[0].ra) {  
+      <<conditionally spray information about the [[pc_map]] array>>
+      return 0;
+    }
+  <<conditionally announce that [[pc_map]] is sorted>>
+  return 1;
+}
+@ 
+Here's the binary search for the sorted case.
+<<pcmap.c >>=
+static int compare(const void *x, const void *y) {
+  const pc_map_index *p = y;
+  return (unsigned) x - (unsigned) p->ra;
+}
+
+static pc_map_entry *binlookup(const Cmm_Codeptr caller) {
+  pc_map_index *p;
+  p = bsearch((void*)caller, Cmm_pc_map, pc_map_size, sizeof(Cmm_pc_map[0]), compare);
+  if (p)
+    return p->entry;
+  else
+    return NULL;
+}
+@ 
+Here's the linear search for the unsorted case.
+<<pcmap.c >>=
+static pc_map_entry* linlookup(const Cmm_Codeptr caller) {
+  unsigned i = 0;
+  for(i = 0; i < pc_map_size; ++i)
+    if (Cmm_pc_map[i].ra == caller)
+      return Cmm_pc_map[i].entry;
+  return NULL;
+}
+@ 
+We cache the search function in [[lookup]].
+<<pcmap.c >>=
+pc_map_entry* Cmm_lookup_entry(const Cmm_Codeptr caller)
+{
+  static pc_map_entry *(*lookup)(const Cmm_Codeptr caller) = NULL;
+  if (lookup == NULL)
+    lookup = is_sorted() ? binlookup : linlookup;
+  return lookup(caller);
+}
+@ 
+And this is for debugging!
+<<conditionally spray information about the [[pc_map]] array>>=
+#define SHOW_UNSORTED 1
+{ char *debug = getenv("QCDEBUG");
+  if (SHOW_UNSORTED || (debug && strstr(debug, "pcmap"))) {
+    fprintf(stderr, "C-- Surprise! PCMAP array is unsorted!\n");
+    for (p = Cmm_pc_map; p < Cmm_pc_map_limit; p++) {
+      fprintf(stderr, "  ra = %8p", (void*)p->ra);
+      if (p > Cmm_pc_map && (unsigned)p[-1].ra > (unsigned)p[0].ra)
+        fprintf(stderr, " *");
+      fprintf(stderr, "\n");
+    }
+  }
+}
+@
+<<conditionally announce that [[pc_map]] is sorted>>=
+{ char *debug = getenv("QCDEBUG");
+  if (debug && strstr(debug, "pcmap"))
+    fprintf(stderr, "C-- info: PCMAP array is sorted, as expected\n");
+}
+@ 
+\subsubsection{Locations}
+
+The compiler encodes the type in the top two bits. Registers are given
+the encoding [[01]], dead variables are given [[00]], and offsets are
+prefixed with 1. See [[emit_data]] in [[src/runtimedata.nw]] for more
+details.
+<<pcmap.c >>=
+#define GOODBITS (sizeof(local)*8 - 2)
+
+loctype Cmm_loctype(location l) {
+  int local = l.l;
+  local = local >> GOODBITS;
+  if (local & 2)
+    return OFFSET;
+  else
+    return (loctype) local;
+}
+@ 
+<<pcmap.c >>=
+unsigned Cmm_as_register(location l) {
+  int local = l.l;
+  int mask   = GOODBITS / 2;
+  int slice  = (local & ((1 << GOODBITS) - 1))
+            >> mask;
+  int offset =  local & ((1 << mask    ) - 1);
+  assert(Cmm_loctype(l) == REGISTER);
+
+  if (slice) {
+    fprintf(stderr, "register slices not supported.\n");
+    assert(0);
+  }
+  return offset;
+}
+@ 
+<<pcmap.c >>=
+signed Cmm_as_offset(location l) {
+  int local = l.l;
+  return (local << 1)
+      >> 1;
+}
+@ 
+\subsubsection{Debugging support}
+
+[[show_map]] dumps out all of the run-time data. It is only useful for
+debugging the [[qc--]] run-time system.
+<<pcmap.c >>=
+static void printloc(location loc) {
+  switch (Cmm_loctype(loc)) {
+    case REGISTER:
+      printf ("REG %d", Cmm_as_register(loc));
+      break;
+    case DEAD:
+      printf ("DEAD");
+      break;
+    case OFFSET:
+      printf ("OFFSET %d", Cmm_as_offset(loc));
+      break;
+    default:
+      printf ("<MALFORMED %X>", loc.l);
+      break;
+  }
+}
+@
+<<pcmap.c >>=
+<<private show functions>>
+
+void Cmm_show_map(Cmm_span_shower show_span, void *closure) {
+  pc_map_index *idx;
+  printf("pc_map_size %d\n", pc_map_size);
+  for (idx = Cmm_pc_map; idx < Cmm_pc_map_limit; idx++) {
+    Cmm_show_map_entry(idx->entry, idx - Cmm_pc_map, idx->ra, show_span, closure);
+  }
+}
+@
+<<pcmap.c >>=
+void Cmm_show_map_entry(pc_map_entry *entry, int index, Cmm_Codeptr ra,
+                        Cmm_span_shower show_span, void *closure)
+{
+  struct sd *sdt;
+  char *indent = index < 0 ? "    " : "";
+  if (index >= 0) 
+    printf("%sentry%3d @ %p (ra = %p):\n", indent, index, (void *)entry, (void *) ra);
+  else
+    printf("%sentry @ %p (ra = %p):\n", indent, (void *)entry, (void *) ra);
+  printf("%s  inalloc = %d (coded %X), outalloc = %d (coded %X)\n"
+         "%s  num_regs = %d, num_locals = %d, num_spans = %d,"
+         " size of cont block = %d\n",
+         indent,
+         Cmm_as_offset(entry->inalloc),
+         entry->inalloc.l,
+         Cmm_as_offset(entry->outalloc),
+         entry->outalloc.l,
+         indent,
+         entry->num_registers,
+         entry->num_locals,
+         entry->num_spans,
+         entry->cont_block_size);
+  printf("%s  return address at ", indent);
+  printloc(entry->return_addressp);
+  printf("\n");
+  sdt = entry->stackdata_table;
+  <<show locals>>
+  <<show registers>>
+  <<show continuations>>
+  <<show stack-data table [[sdt]]>>
+  <<show spans>>
+}
+@ 
+<<show stack-data table [[sdt]]>>=
+assert(sdt);
+if (sdt->num_entries == 0) {
+  printf ("%s    (no stackdata)\n", indent);
+} else {
+  int i;
+  for (i = 0; i < sdt->num_entries; i++) {
+    printf("%s    stacklabel%3d = ", indent, i);
+    printloc(sdt->entries[i]);
+    printf("\n");
+  }
+}
+@ 
+<<show registers>>=
+{
+  int r = entry->num_registers;
+  int i;
+  struct reg* regs = registers(entry);
+  for (i = 0; i < r; i++) {
+    printf("%s      pair %2d: caller register %d at ", indent, i, regs[i].index);
+    printloc(regs[i].saved);
+    printf("\n");
+  }
+}
+@
+<<show locals>>=
+{
+  int n = entry->num_locals;
+  if (n == 0) {
+    printf("%s    (no locals)\n", indent);
+  } else {
+    int i;
+    for (i = 0; i < n; i++) {
+      printf("%s    local%3d at ", indent, i);
+      printloc((locals(entry))[i]);
+      printf("\n");
+    }
+  }
+}
+@ 
+<<show continuations>>=
+{
+  int i;
+  struct conts *conts;
+  conts = continuations(entry);
+
+  if (conts->num_entries == 0) {
+    printf("%s    (no continuations)\n", indent);
+  } else {
+    for (i = 0; i < conts->num_entries; i++)
+      show_cont(conts, i, indent);
+  }
+}
+@ 
+<<show spans>>=
+{ unsigned i;
+  Cmm_Word *descs = spans(entry);
+  for (i = 0; i < entry->num_spans; i++)
+    show_span(i, (void *)descs[i], closure);
+}
+@ 
+<<private show functions>>=
+const char *typestring(enum ctypes t) {
+#define xx(T) case T: return #T;
+  switch(t) {
+    xx(CHAR) xx(DOUBLE) xx(FLOAT) xx(INT) xx(LONGDOUBLE) xx(LONGINT)
+    xx(LONGLONGINT) xx(SHORT) xx(SIGNEDCHAR) xx(UNSIGNEDCHAR)
+    xx(UNSIGNEDLONG) xx(UNSIGNEDSHORT) xx(UNSIGNEDINT)
+    xx(UNSIGNEDLONGLONG) xx(ADDRESS) 
+    default: return "unknown-type";
+  }
+}
+@
+<<private show functions>>=
+static void show_cont(struct conts *conts, int contnum, const char *indent) {
+  struct contblock *block;
+  int i;
+
+  printf("%s    unwind cont%2d (", indent, contnum);
+  block = (struct contblock *) ((Cmm_Word *) conts + conts->entries[contnum]);
+  for (i = 0; i < block->num_vars; i++) {
+    printf("%s%s local%d", i > 0 ? ", " : "", typestring(block->vars[i].ctype),
+           block->vars[i].localnum);
+  }
+  printf(") = <pc=%p, sp=", (void*)block->pc);
+  printloc(block->sp);
+  printf(">\n");
+}
+@ 
+\subsection{Linker script}
+
+The run-time data is in a table indexed by PC. For each call
+site and continuation, there is an entry in the [[pcmap]] section
+which points to the run-time data. The actual run-time data is placed in
+the [[pcmap_data]] section. Both of these are collected up
+and placed in the a data section by the system linker. Below is an
+example linker script for x86 Linux that makes the PC~map available to
+the run-time system.
+
+<<pcmap.ld>>=
+SECTIONS {
+ .rodata : {
+   . =  (. + 3) & ~ 3;
+   Cmm_pc_map = .;
+   *(.pcmap)
+   Cmm_pc_map_limit = .;
+   *(.pcmap_data)
+ }
+}
+@
+
+If the compiler is careful to sort PC-map entries within each
+compilation unit, this linker script will ensure they are sorted
+overall.
+
+
+% was in gcc-linux.nw
+% ---------------------------------------------------------------------------
+\section{Walking GCC-Linux Stack Frames}
+% ---------------------------------------------------------------------------
+This version of the gcc stack walker is based on the System~V ABI for
+the i386 platform.
+We assume that a frame pointer is
+being used (no [[--fomit-frame-pointer]]). Every function stores the frame
+pointer in [[EBP]], and this register is saved at the top of each
+stack frame on entry.
+<<gcc-linux.c>>=
+<<gcc-linux.c >>
+@
+
+<<gcc-linux.c >>=
+#include "qc--runtime.h"
+#include "pcmap.h"
+#include <assert.h>
+#include <stdio.h>
+
+/* claude: FP_REG is the activation-index of whichever callee-saved
+ * register real gcc-compiled C code (compiled -fno-omit-frame-pointer,
+ * see runtime/regenerate-ppc.sh) uses as its own frame-pointer chain -
+ * this is what lets the walk below continue from our outermost C--
+ * frame into genuine C frames above it (main's caller, libc, ...).
+ * x86: %ebp (index 9, see qc--runtime.h's NUM_REGS comment for how
+ * ppc's own numbering was derived). ppc: r31 (index 72) - confirmed by
+ * compiling a probe with powerpc-linux-gnu-gcc -fno-omit-frame-pointer
+ * and seeing "mr 31,1" in the prologue, gcc's ppc equivalent of x86's
+ * "push %ebp; mov %esp,%ebp". */
+#ifdef __powerpc__
+#define FP_REG 72 /* r31 */
+#elif defined(__sparc__)
+/* claude: on SPARC this index is never actually populated, by design -
+ * see the graceful-bail comment on the assert below for why, and don't
+ * bother hunting for "the right" FP_REG value here the way ppc's 72 was
+ * found; any in-range placeholder works identically since the slot is
+ * always NULL. */
+#define FP_REG 30 /* %fp/%i6, never saved via update_saved_regs on sparc */
+#else
+#define FP_REG 9 /* %ebp, r[5] */
+#endif
+@
+On initialization, the [[young_in_overflow]] pointer is the callee's
+deallocation point.    Because the x86 uses a frame pointer, we don't
+actually need this information.
+<<gcc-linux.c >>=
+void Cmm_init_c_frame(Cmm_Activation *a, char *young_in_overflow) {
+  Cmm_Word fp;
+  /* claude: was a bare "assert(a->regs[FP_REG])", which is fine for x86/
+   * ppc (their calling conventions mark the frame-pointer register non-
+   * volatile, so qc--'s own register-preservation bookkeeping - see
+   * runtime.c's update_saved_regs - always records a slot for it before
+   * we get here) but wrong for SPARC: its calling convention
+   * (arch/sparc/sparccall.ml's pre_nvregs) marks NOTHING as callee-saved,
+   * because SPARC's register windows preserve registers across calls
+   * automatically, in hardware, with no software cooperation needed -
+   * so a->regs[FP_REG] is *always* NULL there, not just occasionally.
+   * Confirmed empirically: a temporary debug print in update_saved_regs
+   * showed its "for each saved register" loop never running at all for
+   * a tiger program's outermost C-- frame on SPARC (num_registers == 0).
+   * Treat "we don't know the C caller's frame pointer" as "nothing more
+   * to walk" (same outcome as the implausible-value case just below,
+   * and the same philosophy as Cmm_c_change_activation's own guard a
+   * few lines down) instead of asserting - a no-op for x86/ppc, since
+   * their assert never fired in practice, but the only thing that lets
+   * a windowed architecture's C-- programs finish a GC stack walk that
+   * runs off the end of the outermost C-- frame. */
+  if (a->regs[FP_REG] == NULL) {
+    a->vfp = 0;
+    a->u.cwalk.tries = 0;
+    return;
+  }
+  fp = *a->regs[FP_REG];
+  /* claude: main (a foreign "C" C-- procedure) blanket-preserves FP_REG
+   * like any other callee-saved register, with no notion that it is
+   * "the" frame pointer - so what we recover here is genuinely just
+   * whatever FP_REG held when something called main, which is only a
+   * valid frame pointer if that something was ALSO compiled with frame
+   * pointers on (see Cmm_c_change_activation's big comment below for
+   * the precedent: modern glibc/crt usually is not). The x86 case
+   * happened to produce an obviously-wrong value (1, unaligned); on
+   * ppc it produced a plausible-looking one (r31 left holding main's
+   * own code address by whatever loaded it before the call) - aligned
+   * and non-null, so alignment alone doesn't catch it. A real caller
+   * frame has to live at or above our own frame's stack extent
+   * (stacks grow down), so bound-check against that instead. Treat
+   * "not a frame pointer" the same as "nothing more to walk": a->vfp=0
+   * makes the very next Cmm_c_change_activation call return 0 via its
+   * own existing guard. */
+  if (fp < (Cmm_Word) young_in_overflow) {
+    a->vfp = 0;
+  } else {
+    a->vfp = (char *) fp;
+  }
+  a->u.cwalk.tries = 0;   /* logging only */
+}
+extern struct cmm_activation_methods *Cmm_cmm_frame_methods;
+@
+
+The most important information in the ABI is in Chapter~3, ``C~Stack
+Frame,'' page~3-42, Figure~3-47.
+(This information is slightly different in both placement and content
+from the draft ABI on the web.)
+
+The ABI says that the caller's EDI, ESI, and EBX must be saved, and it
+even says where to look for them on the stack, but there is no
+specified way to determine whether they have actually been saved on
+the stack or simply left untouched.
+In any case, it is crystal clear that \texttt{gcc} does not conform to
+this part of the specification.
+For this reason, we can restore only EBP---not the other registers.
+If it needs access to variables held in registers, a {\PAL} program
+will need to kill all registers, e.g., by using the [["paranoid C"]]
+convention to call into the run-time system.
+
+We identify the oldest activation by seeing a ``caller's EBP'' equal
+to zero.
+(This as claimed by the ``Process Stack and Registers'' part of the
+``Process Initialization'' section of the 
+``Operating-System Interface'' chapter of the ABI, pages 3-28 and 3-29.)
+<<gcc-linux.c >>=
+#define NOISY 0
+
+int Cmm_c_change_activation(Cmm_Activation *a) {
+  Cmm_Word callerfp;
+  Cmm_Codeptr ra;
+  pc_map_entry *entry;
+  int i;
+
+  /* claude: this must come before the assert below, and must accept 0.
+   *
+   * a->vfp here is a frame-pointer value recovered from a C frame (see
+   * FP_REG above), and the whole C walk assumes it chains: word 0 of the
+   * frame is the caller's own frame pointer, ending in 0. That held when
+   * this was written for x86, but modern glibc and crt are built with
+   * -fomit-frame-pointer and use %ebp as an ordinary register, so whatever
+   * it holds when main is called is not a frame pointer. What that is
+   * varies by libc: 0x1 on this machine's glibc 2.39, 0 on the 2.35 in the
+   * Docker image - and 0 tripped the assert, which is why the suite passed
+   * here and failed there. (ppc's r31, by contrast, is the ABI's own
+   * back-chain register whenever -fno-omit-frame-pointer is on - see
+   * runtime/regenerate-ppc.sh - so this degenerate case shouldn't arise
+   * there, but the same guard costs nothing to keep for both.)
+   *
+   * There is no way to walk a C stack that has no frame pointers, so an
+   * implausible one ends the walk instead. A real frame pointer is a
+   * non-null word-aligned stack address.
+   *
+   * For a C-- program called from main this loses nothing: the frames above
+   * the outermost C-- one belong to crt and libc and hold no C-- data.
+   */
+  if (a->vfp == 0 || ((Cmm_Word)a->vfp & (sizeof(Cmm_Word) - 1)) != 0)
+    return 0;
+
+  assert(a->vfp != 0);   /* protect against an unexpected error */
+  <<possibly shout about our departure, showing arguments>>
+  callerfp = *(Cmm_Word *)a->vfp;
+  <<possibly announce caller's ebp>>
+  if (callerfp == 0) {
+    <<possibly shout about finishing tries>>
+    return 0;
+  }
+  for(i = 0; i < NUM_REGS; i++)  /* registers cannot be restored */
+    a->regs[i] = NULL;
+  a->regs[FP_REG] = (Cmm_Word*)a->vfp;  /* point to location of caller's fp */
+
+  ra = ((Cmm_Codeptr *)a->vfp)[1];
+  entry = Cmm_lookup_entry(ra);
+  if (entry) { /* next frame is a C-- frame */
+    if (Cmm_is_thread_start_frame(entry, ra))
+      return 0;  /* such a frame must not be seen */
+    a->rtdata = entry;
+    /* deallocation point = vfp + 8         (because caller deallocates args)
+       deallocation point = callervfp + entry->outalloc
+
+       so  callervfp = vfp + 8 - entry-outalloc  */
+    a->vfp += 8 - Cmm_as_offset(entry->outalloc);
+    a->pc = ra;  /* for debugging only */
+    a->methods = Cmm_cmm_frame_methods;
+  } else {
+    a->vfp = (char *)callerfp;
+    a->pc  = ra;  /* for debugging only */
+  }
+  return 1;
+}
+@
+<<possibly shout about our departure, showing arguments>>=
+#if NOISY
+ {
+  Cmm_Word *myfp = (Cmm_Word*) a->vfp;
+  fprintf(stderr, "Leaving C activation; my fp = %p, ra = %p, caller's fp = %p\n",
+          (void*)myfp, (void*)myfp[1], (void*)myfp[0]);
+  for (i = 0; i < 3; i++) fprintf(stderr, "  arg[%d] = 0x%08x\n", i, myfp[i+2]);
+ }
+#endif
+@
+<<possibly announce caller's ebp>>=
+#if 0
+  fprintf(stderr, "walked to caller fp == 0x%08x\n", callerfp);
+#endif
+@
+<<possibly shout about finishing tries>>=
+#if NOISY
+    fprintf(stderr, "finished C walk with callerfp = 0x%08x, tries = %d\n",
+            (unsigned)callerfp, a->u.cwalk.tries);
+#endif
+@
+
+% was in x86cont.nw
+\section{x86cont}
+
+For [[Cmm_MakeUnwindContinuation]], we need a continuation that
+restores the callee-saves 
+registers and cuts to the unwind-target.
+The precondition here is that the SP points to an array of pointers
+to register values.
+There is one exception---the slot for the SP holds the SP value
+directly, not a pointer to that value.
+
+<<x86cont.s>>=
+.globl Cmm_unwindcont_pc
+.section .data
+__cmm_unwind_pc:
+.long 0
+.section .text
+Cmm_unwindcont_pc:
+  movl 0(%esp), %eax  # grab the unwind pc
+  movl %eax, __cmm_unwind_pc # move it to a well-known location (not thread-safe!)
+  movl 16(%esp), %eax; movl (%eax), %eax  # restore the registers (skipping %esp)
+  movl 20(%esp), %ecx; movl (%ecx), %ecx 
+  movl 24(%esp), %edx; movl (%edx), %edx 
+  movl 28(%esp), %ebx; movl (%ebx), %ebx 
+  movl 36(%esp), %ebp; movl (%ebp), %ebp 
+  movl 40(%esp), %esi; movl (%esi), %esi 
+  movl 44(%esp), %edi; movl (%edi), %edi 
+  movl 32(%esp), %esp  # restore %esp
+  jmp *__cmm_unwind_pc
+@ 
+N.B. The code above is not thread-safe.  The right solution is to
+pick a designated register as a scratch register for unwind
+continuations.  This register should be used to hold the program
+counter.  The compiler should mark the flow edge (from the call site
+to the unwind continuation) as killing the scratch register.
+
+
+
+%******************************************************************************
+\chapter{Optimizations}
 %******************************************************************************
 
 % was in optimize.nw
@@ -10226,8 +10288,6 @@ let elim_dead_assignments _ (g, proc) =
 
 
 % was in peephole.nw
-
-
 \section{Peephole Optimization}
 
 The idea behind peephole optimization is simple.
@@ -10501,6 +10561,8 @@ let is_copy rtl = match Dn.rtl rtl with
 \chapter{Advanced Topics}
 %******************************************************************************
 
+% advanced features?
+
 %******************************************************************************
 \chapter{Conclusion}
 %******************************************************************************
@@ -10513,11 +10575,11 @@ let is_copy rtl = match Dn.rtl rtl with
 %claude: see Macros_cmm.tex; more than 26 appendix chapters here
 \renewcommand{\thechapter}{\AlphAlph{\value{chapter}}}
 
-
 %******************************************************************************
 \chapter{Debugging}
 %******************************************************************************
 
+% was in rtl/debug.nw
 \section{Diagnostic output}
 
 %%Uses environment variable [[QCDEBUG]] to make noise.
@@ -10571,7 +10633,7 @@ let explain () =
 @ 
 
 
-
+% was in astpp.nw
 %%% ------------------------------------------------------------------  
 \section{AST Pretty Printer}\label{sec:astpp}
 %%% ------------------------------------------------------------------  
@@ -11285,6 +11347,7 @@ let emit fd ~width tl =
 \chapter{Error Management}
 %******************************************************************************
 
+% was in error.nw
 %%% ------------------------------------------------------------------  
 \section{Error Handling}
 %%% ------------------------------------------------------------------ 
@@ -11747,6 +11810,7 @@ let errorRegPrt (l,r) msg =
     )
 @
 
+% was in rtl/impossible.nw
 %%% ------------------------------------------------------------------ 
 \section{Impossible}
 %%% ------------------------------------------------------------------ 
@@ -11790,6 +11854,7 @@ let unimp msg =
   raise (Impossible msg)
 @
 
+% was in rtl/unsupported.nw
 \section{Announcing unsupported constructs}
 
 %%This is a central place at which to announce all the things that a
@@ -11995,6 +12060,8 @@ let popcnt ~notok ~ok =
 %******************************************************************************
 \chapter{Utilities}
 %******************************************************************************
+% lots in libs/commons2
+% pp.ml, pc.ml, lc.ml, rx.ml, rc.ml
 
 %******************************************************************************
 \chapter{Mini stdlib}
@@ -12030,9 +12097,7 @@ PAL Portable Assembly Language
 %\chapter{References} 
 \addcontentsline{toc}{section}{References}
 
-%claude: use the shared Principia.bib like the other books, instead of a
-%claude: hand-written thebibliography. mkcommon always runs bibtex, which
-%claude: aborts mk when the .aux has no \bibdata/\bibstyle/\citation.
+%TODO: why need that? fix that, fix Principia.bib?
 \nocite{lp-book,noweb,syncweb}
 \bibliography{latex/Principia}
 \bibliographystyle{alpha}
