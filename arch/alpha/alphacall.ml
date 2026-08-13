@@ -109,12 +109,25 @@ let c ~return_to cut spec =
 
     ; C.stack_growth     = growth
     ; C.stable_sp_loc    = std_sp_location
-    ; C.replace_vfp      = Cfgx.Vfp.replace_with ~sp
+    (* claude: C.cutto (the newpc/newsp embed/project map) isn't a Call.t
+     * field anymore - see call.mli, and sparccall.ml's identical drop of
+     * "C.cutto = cut" (the `cut` param is threaded through purely for
+     * Alphacall.cconv's/alpha.ml's interface shape now, unused here,
+     * same as sparc's). C.jump_tgt_reg is new: a hardware register
+     * reserved for indirect jumps, since spilling a temp after the sp
+     * has already moved would be unsafe. $28/at is the DEC Alpha ABI's
+     * own "assembler temporary" register, set aside for exactly this
+     * kind of compiler-internal scratch use - not a0-a5 (args), not
+     * s0-s5 (callee-saved), not ra/pv/gp/sp/zero. Mirrors sparccall.ml's
+     * r5 and ppc.ml's rreg 7, both similarly-motivated arbitrary-but-
+     * unused picks for their own targets. *)
+    ; C.jump_tgt_reg     = R.reg (r 28)
+    (* claude: Cfgx.Vfp renamed to Vfprewrite - same fix as sparccall.ml. *)
+    ; C.replace_vfp      = Vfprewrite.replace_with ~sp
     ; C.sp_align         = sp_align
     ; C.pre_nvregs       = RS.union (RS.of_list nvl_int) (RS.of_list nvl_fp)
     ; C.volregs          = RS.union (RS.of_list vol_int) (RS.of_list vol_fp)
     ; C.saved_nvr        = saved_nvr
-    ; C.cutto            = cut
     ; C.return           = rtn return_to
     ; C.ra_on_entry      = (fun _     -> R.fetch ra wordsize)
     ; C.where_to_save_ra = (fun _ t   -> Talloc.Multiple.loc t 't' wordsize)
@@ -124,52 +137,61 @@ let c ~return_to cut spec =
     }
 
 (*x: alphacall.ml  *)
-module CS = Callspec
-
-let template = (* conservative spec *)
-        { CS.name           = "cmm"
-        ; CS.stack_growth   = Memalloc.Down
-        ; CS.overflow       = CS.overflow C.Caller C.Caller
-        ; CS.memspace       = mspace
-        ; CS.sp             = r 30
-        ; CS.sp_align       = sp_align
-        ; CS.all_regs       = RS.of_list (List.concat [nvl_int; nvl_fp;
-                                                       vol_int; vol_fp])
-        ; CS.nv_regs        = RS.of_list (nvl_int @ nvl_fp)
-        ; CS.save_nvr       = saved_nvr
-        ; CS.ra             = (ra, CS.ReturnAddress.SaveToTemp 't')
-        }
+(* claude: Callspec (module CS) isn't wired into this fork's build yet -
+ * it still sits, untouched, in TODO/arch/callspec.{ml,mli} (unlike
+ * Automaton/Call/etc, already integrated under front_ir/). Nothing in
+ * Alphacc.cc_specs uses the "cmm0"/"cmm1"/"cmm2" names cconv below would
+ * have dispatched to this Callspec-backed cc/template/cmm0/cmm1/cmm2/
+ * cmm3 for - Alphacc.cc_specs only registers "C"/"C--"/"notail"/
+ * "C-- thread" (mirrors sparccc.ml), all of which land on the plain `c`
+ * convention above via cconv's own "_ -> c" fallback just below. So this
+ * was already dead code before Callspec went missing from the link line
+ * - not a functional loss to comment out. Kept here in case Callspec is
+ * integrated later and this is worth reviving as-is:
+ *
+ * module CS = Callspec
+ *
+ * let template = (* conservative spec *)
+ *         { CS.name           = "cmm"
+ *         ; CS.stack_growth   = Memalloc.Down
+ *         ; CS.overflow       = CS.overflow C.Caller C.Caller
+ *         ; CS.memspace       = mspace
+ *         ; CS.sp             = r 30
+ *         ; CS.sp_align       = sp_align
+ *         ; CS.all_regs       = RS.of_list (List.concat [nvl_int; nvl_fp;
+ *                                                        vol_int; vol_fp])
+ *         ; CS.nv_regs        = RS.of_list (nvl_int @ nvl_fp)
+ *         ; CS.save_nvr       = saved_nvr
+ *         ; CS.ra             = (ra, CS.ReturnAddress.SaveToTemp 't')
+ *         }
+ *
+ * let cc auto return_to cut spec =
+ *     let t = CS.to_call cut (rtn return_to) auto spec in
+ *         { t with C.ra_on_exit   = (fun _ _ t -> ra)
+ *         ;        C.sp_on_unwind = (fun e -> RU.store sp e)
+ *         }
+ *
+ * let cmm0 ~return_to cut ccspec = cc ccspec return_to cut
+ *     { template with CS.name     = "cmm0"
+ *                   ; CS.overflow = CS.overflow C.Caller C.Caller
+ *     }
+ * let cmm1 ~return_to cut ccspec = cc ccspec return_to cut
+ *     { template with CS.name     = "cmm1"
+ *                   ; CS.overflow = CS.overflow C.Caller C.Callee
+ *     }
+ * let cmm2 ~return_to cut ccspec = cc ccspec return_to cut
+ *     { template with CS.name     = "cmm2"
+ *                   ; CS.overflow = CS.overflow C.Callee C.Caller
+ *     }
+ * let cmm3 ~return_to cut ccspec = cc ccspec return_to cut
+ *     { template with CS.name     = "cmm3"
+ *                   ; CS.overflow = CS.overflow C.Callee C.Callee
+ *     }
+ *)
 (*x: alphacall.ml  *)
-let cc auto return_to cut spec =
-    let t = CS.to_call cut (rtn return_to) auto spec in 
-        { t with C.ra_on_exit   = (fun _ _ t -> ra)
-        ;        C.sp_on_unwind = (fun e -> RU.store sp e)
-        }
-(*x: alphacall.ml  *)
-let cmm0 ~return_to cut ccspec = cc ccspec return_to cut
-    { template with CS.name     = "cmm0"
-                  ; CS.overflow = CS.overflow C.Caller C.Caller 
-    }
-let cmm1 ~return_to cut ccspec = cc ccspec return_to cut
-
-    { template with CS.name     = "cmm1"
-                  ; CS.overflow = CS.overflow C.Caller C.Callee 
-    }
-let cmm2 ~return_to cut ccspec = cc ccspec return_to cut 
-    { template with CS.name     = "cmm2"
-                  ; CS.overflow = CS.overflow C.Callee C.Caller 
-    }
-let cmm3 ~return_to cut ccspec = cc ccspec return_to cut 
-    { template with CS.name     = "cmm3"
-                  ; CS.overflow = CS.overflow C.Callee C.Callee 
-    }
-(*x: alphacall.ml  *)
-let cconv ~return_to cut ccname spec = 
+let cconv ~return_to cut ccname spec =
   let f =
     match ccname with
-    | "cmm0" -> cmm0
-    | "cmm1" -> cmm1
-    | "cmm2" -> cmm2
     | _      -> c
   in f ~return_to cut spec
 (*e: alphacall.ml  *)

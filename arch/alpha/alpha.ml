@@ -1,5 +1,8 @@
 (*s: alpha.ml *)
 (*s: alpha.ml  *)
+(* claude: =*= (list-of-widths equality) lives in Nopoly, not the
+ * default Stdlib polymorphic (=) - same fix sparc.ml/ppc.ml needed. *)
+open Nopoly
 let arch        = "alpha"                    (* architecture *)
 let byteorder   = Rtl.LittleEndian 
 let wordsize    = 64
@@ -7,6 +10,7 @@ let wordsize    = 64
 module SS   = Space.Standard64
 module A    = Automaton
 module PX   = Postexpander
+module DG   = Dag
 module R    = Rtl
 module RU   = Rtlutil
 module RP   = Rtl.Private
@@ -60,12 +64,19 @@ module F = Mflow.MakeStandard
         let pc_rhs    = pc
         let ra_reg    = R.reg ra
         let ra_offset = ra_offset
-     end)   
+     end)
+(* claude: needed for T.cc_spec_to_auto's cutto embed/project pair below -
+ * same role as sparc.ml's fmach (see sparc.ml for the longer version of
+ * this comment). *)
+let fmach = F.machine (R.reg sp)
 (*x: alpha.ml  *)
 let return e = R.store pc e wordsize
 (*x: alpha.ml  *)
-let (<:>) = PX.(<:>)
-let rtl r = PX.Rtl r
+(* claude: PX.(<:>)/PX.Rtl don't exist - Nop/Rtl/Test/(<:>) live in Dag
+ * (aliased DG above), not Postexpander; same stale-interface fix already
+ * applied to sparc.ml/ppc.ml. *)
+let (<:>) = DG.(<:>)
+let rtl r = DG.Rtl r
 module Post = struct
     (*s: Alpha postexpander *)
     let byte_order  = byteorder
@@ -136,7 +147,7 @@ module Post = struct
     (*x: Alpha postexpander *)
     let move ~dst ~src =
         assert (reg_width src = reg_width dst);
-        if Register.eq src dst then PX.Nop
+        if Register.eq src dst then DG.Nop
         else rtl (R.store (tloc dst) (tval src) (twidth src))
     (*x: Alpha postexpander *)
     let extract ~dst ~lsb ~src = Impossible.unimp "extract"
@@ -163,8 +174,8 @@ module Post = struct
     let pc_lhs = pc         (* PC as assigned by branch *)
     let pc_rhs = pc         (* PC as captured by call   *)
     (*x: Alpha postexpander *)
-    let br ~tgt = PX.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
-    let b  ~tgt = PX.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
+    let br ~tgt = DG.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
+    let b  ~tgt = DG.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
     (*x: Alpha postexpander *)
     let bit = R.opr "bit" [wordsize] 
     let com x =
@@ -196,10 +207,29 @@ module Post = struct
         | _             -> impossible 
                           "bad comparison in expanded Alpha conditional branch"
     (*x: Alpha postexpander *)
-    let bc x (opr, ws as op) y ~ifso ~ifnot =
+    (* claude: split from the old single `bc` into bc_guard/bc_of_guard,
+     * the shape Postexpander.S now requires (see sparc.ml/ppc.ml's own
+     * bc_guard/bc_of_guard for the same split, and alpharec.mlb's
+     * "cmp_zero: Cmp(op, reg, zero)" rule for why a register-vs-zero
+     * comparison is the only branch shape Alpha instructions recognize:
+     * there is no direct register-vs-register conditional branch in the
+     * ISA, only "b<cond> $reg, target" testing a register against zero.
+     * So a general `x op y` compare has to happen in two steps: first
+     * `cmp` computes the boolean into x itself (one of the special App
+     * cases alpharec.mlb's exp function recognizes - eq/ne/lt/../geu),
+     * then a second, separate zero-comparison of that result becomes the
+     * actual branch guard. This mirrors the original (pre-split) `bc`'s
+     * computation exactly, just divided across the two functions the
+     * current interface wants - not re-derived from scratch, since
+     * there's no way to exercise/verify the branch sense (eq-to-zero
+     * here, matching the original) until a conditional actually runs
+     * under qemu-alpha. *)
+    let bc_guard x (opr, ws as op) y =
       assert (ws =*= [wordsize]);
-      let bcond = R.app (R.opr "eq" [wordsize]) [tval x; R.bits (Bits.zero 64) 64] in
-      PX.Test (cmp opr x y, (bcond, ifso, ifnot))
+      cmp opr x y, R.app (R.opr "eq" [wordsize]) [tval x; R.bits (Bits.zero 64) 64]
+    let bc_of_guard (setup, guard) ~ifso ~ifnot =
+      let brtl cond tgt = R.guard cond (R.store pc_lhs tgt wordsize) in
+      DG.Test (setup, (brtl guard, ifso, ifnot))
     (*x: Alpha postexpander *)
     let bnegate r = 
         let zero   = R.bits (Bits.zero 64) 64 in    
@@ -218,21 +248,64 @@ module Post = struct
         | _ -> Impossible.impossible "ill-formed Alpha conditional branch"
     (*x: Alpha postexpander *)
     let alpha_gp = R.opr "alpha_gp" []   (* takes one argument *)
-    let ldgp_ra  = R.store (R.reg gp) 
-                           (R.app alpha_gp [fetch_word (R.reg ra)]) wordsize      
+    let ldgp_ra  = R.store (R.reg gp)
+                           (R.app alpha_gp [fetch_word (R.reg ra)]) wordsize
 
+    (* claude: original do_call/call/callr took an extra ~others param
+     * (dropped: Postexpander.S's call/callr are just ~tgt now, see
+     * sparc.ml's identical fix) and packed the WHOLE call sequence -
+     * including the actual pc jump - into the "block" (pre-branch
+     * effects) half of the return pair, leaving the "branch" (terminal
+     * Rtl.rtl) half holding ldgp_ra alone: a gp reload, not a jump. That
+     * can't be right structurally - Dag.branch = block * Rtl.rtl, and
+     * only that second Rtl.rtl component ever reaches the recognizer as
+     * the node's terminal instruction (see Dag.mli), so the call would
+     * never actually transfer control, only ever reload gp. Also, per
+     * the DEC Alpha ABI, `pv`/$27 must hold the callee's address for ANY
+     * call (direct or indirect) - alphaasm.ml already emits an
+     * unconditional "ldgp $gp,0($27)" at the top of every function
+     * (see its cfg_instr), which is how a NEW gp gets established once
+     * inside the callee. Restructured so the branch half is the actual
+     * "Par(Goto(reg=pv), next=store ra)" pattern alpharec.mlb's grammar
+     * recognizes for "jsr" (same shape as sparc.ml's call/callr), with
+     * loading the target into pv left in the block half as ordinary
+     * setup. This drops the old code's ldgp_ra use (there is no slot in
+     * the current call/callr signature for "run this after the callee
+     * returns" - that belongs in the calling convention's own epilogue,
+     * per this function's own original "SHOULD BE PART OF CALLING
+     * CONVENTION" comment below, not here) - kept as dead code, unused,
+     * since restoring $gp after a call is a real DEC Alpha ABI
+     * requirement that alphacc.ml/alphacall.ml will need to pick up
+     * later if/when a program actually needs gp again post-call (a
+     * single-compilation-unit hello-world does not: every callee
+     * reloads its own gp from pv on entry, and there's only one gp value
+     * in play). *)
     let effects = List.map Up.effect
-    let do_call ~tgt ~others =
-      rtl (R.store pv_loc tgt wordsize) <:>
-      rtl (R.par (store_word pc_lhs (fetch_word pv_loc) :: effects others)),
-      ldgp_ra  (* FLAGRANT LIE HERE---SHOULD BE PART OF CALLING CONVENTION *)
-    
-    let call  ~tgt ~others = do_call (Up.const tgt) others
-    let callr ~tgt ~others = do_call (tval tgt) others
+    let do_call tgt =
+      rtl (R.store pv_loc tgt wordsize),
+      R.par [ R.store pc_lhs (fetch_word pv_loc) wordsize
+            ; R.store (R.reg ra) (RU.addk wordsize (R.fetch pc wordsize) ra_offset) wordsize
+            ]
+      (* ldgp_ra  -- FLAGRANT LIE HERE---SHOULD BE PART OF CALLING CONVENTION *)
+
+    let call  ~tgt = do_call (Up.const tgt)
+    let callr ~tgt = do_call (tval tgt)
     (*x: Alpha postexpander *)
-    let cut_to effs = PX.Nop, R.par (effects effs)
+    (* claude: adapted from the old effect-list signature to the current
+     * Mflow.cut_args record ({new_sp; new_pc}) - same fix as sparc.ml's
+     * cut_to, minus sparc's register-window reset since Alpha has none. *)
+    let cut_to {Mflow.new_sp = sp'; Mflow.new_pc = pc'} =
+      DG.Nop, R.par [R.store pc_lhs pc' wordsize; R.store (R.reg sp) sp' wordsize]
     (*x: Alpha postexpander *)
     let don't_touch_me es = false
+    (*x: Alpha postexpander *)
+    (* claude: return/forbidden are required by Postexpander.S but had no
+     * definition here (same gap sparc.ml had). Alpha has no register
+     * windows, so - unlike sparc's return, which also has to bump cwp -
+     * this is just "jump to whatever's in ra", the plain Mflow-style
+     * default. *)
+    let return = return (R.fetch (R.reg ra) wordsize)
+    let forbidden = Rtl.par [] (* BOGUS: NEEDS TO BE A REAL FAULTING INSTRUCTION *)
     (*e: Alpha postexpander *)
 end
 (*x: alpha.ml  *)
@@ -260,6 +333,9 @@ let target =
                  ; Spaces.u
                  ; Spaces.c
                  ] in
+    (* claude: Ast2ir.tgt = Preast2ir.tgt = T of (...) Target.t - a wrapped
+     * variant, not the bare record (see sparc.ml/ppc.ml's own PA.T{...}). *)
+    Preast2ir.T
     { T.name                = "alpha"
     ; T.memspace            = mspace
     ; T.max_unaligned_load  = R.C 1
@@ -272,30 +348,85 @@ let target =
     ; T.reg_ix_map          = T.mk_reg_ix_map spaces
     ; T.distinct_addr_sp    = false
     ; T.float               = Float.ieee754
-    ; T.spill               = spill
-    ; T.reload              = reload
 
     ; T.vfp                 = vfp
-    ; T.bnegate             = F.bnegate cc
-    ; T.goto                = F.goto
-    ; T.jump                = F.jump
-    ; T.call                = F.call
-    ; T.return              = F.return
-    ; T.branch              = F.branch
-    
-    ; T.cc_specs            = A.init_cc
+    (* claude: T.spill/T.reload/T.bnegate/T.goto/T.jump/T.call/T.return/
+     * T.branch aren't Target.t fields anymore (see target.mli) - they now
+     * live inside the single T.machine record, built by the
+     * Expander.IntFloatAddr functor from Post above, same as sparc.ml/
+     * ppc.ml/x86.ml. *)
+    ; T.machine             = X.machine
+
+    ; T.cc_specs            = Alphacc.cc_specs
     ; T.cc_spec_to_auto     = Alphacall.cconv ~return_to:return
-                                   (F.cutto (Rtl.reg sp))
+                                   { T.embed   = fmach.T.cutto.T.embed
+                                   ; T.project = fmach.T.cutto.T.project }
 
     ; T.is_instruction      = Alpharec.is_instruction
     ; T.tx_ast = (fun secs -> secs)
-    ; T.capabilities        = T.incapable
+    (* claude: T.incapable (empty operator/literal/memory lists) would
+     * reject every operator this backend actually implements - see
+     * alpharec.mlb's grammar (only add/sub/com/bit + the eq/ne/lt/gt/ge/
+     * ltu/leu/gtu/geu comparisons are recognized as real instructions;
+     * everything else falls through to the "<...>" catch-all/error path)
+     * and alpha.ml's own Post.cmp (no float comparisons, no mul/div/and/
+     * or/xor/shift - all Impossible.unimp/Unsupported so far). Scoped to
+     * exactly that subset, at the one width this target's registers ever
+     * have (64) - same rationale as sparc.ml's own hand-written operator
+     * list, just much shorter since alpharec.mlb recognizes far fewer
+     * shapes today. Widen this list (and alpharec.mlb) together as more
+     * operators get real camlburg rules. *)
+    ; T.capabilities        = { T.operators = List.map Up.opr
+                                   [ "add",     [64]
+                                   ; "sub",     [64]
+                                   ; "com",     [64]
+                                   ; "eq",      [64]
+                                   ; "ne",      [64]
+                                   ; "lt",      [64]
+                                   ; "gt",      [64]
+                                   ; "ge",      [64]
+                                   ; "ltu",     [64]
+                                   ; "leu",     [64]
+                                   ; "gtu",     [64]
+                                   ; "geu",     [64]
+                                   ; "not",     []
+                                   ; "bool",    []
+                                   ; "disjoin", []
+                                   ; "conjoin", []
+                                   ; "bit",     []
+                                   ]
+                              ; T.litops     = []
+                              ; T.literals   = [64]
+                              ; T.memory     = [8; 16; 32; 64]
+                              ; T.block_copy = true
+                              ; T.itemps     = [64]
+                              ; T.ftemps     = []
+                              ; T.iwiden     = false
+                              ; T.fwiden     = false
+                              }
     ; T.globals             = globals
     ; T.rounding_mode       = Rtl.reg rm_reg
     ; T.named_locs          = Strutil.Map.empty
     ; T.data_section        = "data"
     ; T.charset             = "latin1" (* REMOVE THIS FROM TARGET.T *)
-    }    
+    }
+
+(* claude: Placevar.context's automaton for deciding where a C--
+ * "variable" (as opposed to a hardware register) lives - required by
+ * alphabackend.ml's optimizer (Placevar.context Alpha.placevars), same
+ * role/shape as sparc.ml's/ppc.ml's own placevars, just widened to 64
+ * everywhere 32 appeared there (this backend's only integer temp width -
+ * see Post.itempwidth above). *)
+let placevars =
+  let is_float w kind _ = kind =$= "float" in
+  let warn ~width ~alignment ~kind = () in
+  let mk_stage ~temps =
+    A.choice
+      [ is_float,               A.widen (Auxfuns.round_up_to ~multiple_of: 64)
+      ; (fun w h _ -> w <= 64), A.widen (fun _ -> 64) *> temps 't'
+      ; A.is_any,               A.widen (Auxfuns.round_up_to ~multiple_of: 8)
+      ] in
+  Placevar.mk_automaton ~warn ~vfp ~memspace:mspace mk_stage
 
 (*e: alpha.ml  *)
 (*e: alpha.ml *)

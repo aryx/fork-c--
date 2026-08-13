@@ -1,0 +1,35 @@
+/* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
+ *
+ * claude: same program as hello.c--, adapted to Alpha's 64-bit,
+ * little-endian metrics (wordsize/pointersize 64 - Driver.compile checks
+ * the source's declared metrics against the target's and refuses to
+ * proceed on a mismatch, which is why this needs its own file rather than
+ * reusing hello.c--'s bits32 one, unlike hello_sparc.c-- which only had
+ * to flip byteorder). Exercises qc's Alpha backend end to end:
+ *
+ *   qc -alpha -globals -stop .s -o hello_alpha.s demos/hello_alpha.c--
+ *   alpha-linux-gnu-as hello_alpha.s -o hello_alpha.o
+ *   alpha-linux-gnu-gcc -static hello_alpha.o -o hello_alpha
+ *   qemu-alpha hello_alpha        # prints "hello, world!", exits 0
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag. alpha-linux-gnu-*
+ * is a native 64-bit cross toolchain (unlike -sparc's sparc64-*-m32
+ * biarch trick, Ubuntu ships a plain gcc-alpha-linux-gnu/binutils-alpha-
+ * linux-gnu/libc6.1-dev-alpha-cross set, so no multilib workaround is
+ * needed here).
+ */
+
+target byteorder little wordsize 64 pointersize 64;
+
+import bits64 printf;
+export main, my_data;
+
+section "data" {
+  my_data: bits8 [] "hello, world!\n\0";
+}
+
+foreign "C" main("unsigned" bits64 iargc, "address" bits64 iargv) {
+  foreign "C" printf("address" my_data);
+  foreign "C" return(0);
+}
