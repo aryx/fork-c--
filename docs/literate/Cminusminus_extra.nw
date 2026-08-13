@@ -12967,10 +12967,10 @@ let fold_live_locs f spans z =
 @
 
 %******************************************************************************
-\chapter{[[front_nelab]]}
+\chapter{[[elab]]}
 %******************************************************************************
 
-\section{[[front_nelab/elabexp.nw]]}
+\section{[[elab/elabexp.nw]]}
 <<front_nelab/elabexp.ml>>=
 <<elabexp.ml >>
 @
@@ -15781,10 +15781,10 @@ let cycle1 =
 @
 
 %******************************************************************************
-\chapter{[[front_target]]}
+\chapter{[[target]]}
 %******************************************************************************
 
-\section{[[front_target/automaton.nw]]}
+\section{[[target/automaton.nw]]}
 <<front_target/automaton.ml>>=
 <<automaton.ml >>
 @
@@ -17734,7 +17734,7 @@ end
 @ 
 
 %******************************************************************************
-\chapter{[[front_zipcfg]]}
+\chapter{[[cfg/zipcfg]]}
 %******************************************************************************
 
 \section{[[front_zipcfg/avail.nw]]}
@@ -27001,10 +27001,10 @@ let proc (cfg, p) = Zipcfg.iter_rtls rtl cfg
 @
 
 %******************************************************************************
-\chapter{[[assembler]]}
+\chapter{[[asm]]}
 %******************************************************************************
 
-\section{[[assembler/astasm.nw]]}
+\section{[[asm/astasm.nw]]}
 <<assembler/astasm.ml>>=
 <<astasm.ml >>
 @
@@ -30175,14 +30175,10 @@ and find_k'_added_to_sp (RP.Rtl ges) =
 <<arch/dummy/dummy.ml>>=
 <<dummy.ml>>
 @
-
 <<arch/dummy/dummy.mli>>=
 <<dummy.mli>>
 @
 
-%% -*- mode: Noweb; noweb-code-mode: caml-mode -*-
-%%% vim: ts=8 sw=4 et:
-%%
 %%% ------------------------------------------------------------------ 
 \section{The Dummy Target}
 %%% ------------------------------------------------------------------ 
