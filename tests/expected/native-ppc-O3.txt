@@ -6,7 +6,7 @@ altret3 FAIL
 arglist PASS
 bits-bug PASS
 bool PASS
-blockcpy FAIL
+blockcpy PASS
 carry FAIL
 cut FAIL
 conj PASS
