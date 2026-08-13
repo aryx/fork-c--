@@ -4465,20 +4465,20 @@ let contains ~outer ~inner = match outer, inner with
       Impossible.impossible "slice of register aggregate";
     s =<= s' && i = i' && lsb <= lsb' && lsb+w >= lsb'+w'
 @ 
-\section{[[front_rtl/reloc.nw]]}
+
+\section{[[ir/reloc.nw]]}
+
 <<front_rtl/reloc.ml>>=
 <<reloc.ml content>>
 @
-
 <<front_rtl/reloc.mli>>=
 <<reloc.mli content>>
 @
 
-%%
 %%% ------------------------------------------------------------------ 
 \section{Relocatable Addresses}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%A relocatable address formed by sums and differences of symbolic and
 %%literal constants.
 %%A [['a relocatable]] value represents a bit vector of type [[['a]] whose
@@ -4569,11 +4569,12 @@ let as_simple a =
   | Some _ -> Impossible.impossible "subtracted symbols in simple reloc" in
   fold ~const ~sym ~add ~sub a
 @ 
-\section{[[front_rtl/rtl.nw]]}
+
+\section{[[ir/rtl.nw]]}
+
 <<front_rtl/rtl.ml>>=
 <<rtl.ml content>>
 @
-
 <<front_rtl/rtl.mli>>=
 <<rtl.mli content>>
 @
@@ -4581,18 +4582,17 @@ let as_simple a =
 %%% ------------------------------------------------------------------ 
 \section{Register-transfer Lists (\rtl)}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%Register-transfer lists capture the meaning of instructions.  They are
 %%used as part of the abstract representation of {\PAL}.  The meaning of a
 %%register-transfer list is well defined and especially independent from
 %%any properties of a target architecture because no hidden assumptions
 %%exist.
-%%
-%%
+
 %%% ------------------------------------------------------------------ 
 \subsection{Interface}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%The interface is divided into three parts:  \emph{public},
 %%\emph{private}, and \emph{common}.  The public part provides constructor
 %%functions to build {\rtl}s but hides their actual implementation.  The
@@ -4776,11 +4776,11 @@ val store_cvt : loc -> exp -> width -> rtl
 <<types and functions exported at top level>>=
 val locwidth : loc -> width
 @
-%%
+
 %%% ------------------------------------------------------------------ 
 %%\subsubsection{Conversion between Private and Public Views}
 %%% ------------------------------------------------------------------ 
-%%
+
 %%The purpose of the private interface is to exploit the implementation
 %%details by pattern matching, for example. Values created by the public
 %%interface per se are not compatible with the private types. Conversion
@@ -38749,6 +38749,12 @@ let regname8 ~lsb ~base = match lsb with
 | _ -> Impossible.impossible "bad lsb in slice denoting 8-bit register"
 
 @ 
+
+%******************************************************************************
+\chapter{[[arch/sparc]]}
+%******************************************************************************
+
+% was in xxx.nw
 
 %******************************************************************************
 \chapter{[[runtime/]]}
