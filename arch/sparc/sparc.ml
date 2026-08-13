@@ -498,10 +498,28 @@ module Post = struct
     DG.Rtl (R.store (R.reg cwp) (RO.signed 32 0) 32),
     R.par [R.store pc_lhs pc' wordsize; R.store (R.reg sp) sp' wordsize]
   (* claude: return/forbidden are required by Postexpander.S but had no
-   * definition here; return mirrors ppc.ml's `fmach.Mflow.return`
-   * (the generic Mflow-provided default), forbidden mirrors ppc.ml's
-   * placeholder (not a real trapping instruction). *)
-  let return = fmach.Mflow.return
+   * definition here. return was first set to ppc.ml's
+   * `fmach.Mflow.return` (the generic Mflow-provided default) by
+   * analogy, but that is wrong for SPARC: codegen/expander.ml wires
+   * this field directly into a generic "GR.Return" CFG node
+   * (Mflow.return = Post.return), bypassing the calling-convention-
+   * specific Call.t.return/Sparccall.rtn path entirely - and the
+   * generic default is just "jump to whatever's in the ra register",
+   * with no SPARC-specific "+8" return-address adjustment and no
+   * register-window `restore`. Empirically this is exactly what fired
+   * for demos/hello_sparc.c--'s plain "return(0)": main's epilogue
+   * landed back exactly on __libc_start_call_main's own "call %g1"
+   * instruction (real hardware stores pc_of_call into the return
+   * register, not pc_of_call+4) instead of past it, re-invoking main a
+   * second time with %g1 no longer holding a valid function pointer
+   * (clobbered as ordinary scratch by main's own body) - confirmed via
+   * gdb-over-qemu-gdbserver, single-stepping with a $pc watchpoint from
+   * inside printf out through main's return. Fixed by reusing this
+   * file's own top-level `return e` (also used by Sparccall.cconv's
+   * ~return_to), which emits Store(pc_lhs, e, w) parred with the cwp
+   * increment sparcrec.mlb's "restore" nonterminal matches - together
+   * exactly "Par(Goto(ra), restore)", recognized as "ret\n\trestore". *)
+  let return = return (R.fetch (R.reg ra) wordsize)
   let forbidden = Rtl.par [] (* BOGUS: NEEDS TO BE A REAL FAULTING INSTRUCTION *)
   (*x: SPARC postexpander *)
   let don't_touch_me =

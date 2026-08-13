@@ -7,14 +7,18 @@
  *   qc -sparc -globals -stop .s -o hello_sparc.s demos/hello_sparc.c--
  *   sparc64-linux-gnu-as -32 hello_sparc.s -o hello_sparc.o
  *   sparc64-linux-gnu-gcc -m32 -static hello_sparc.o -o hello_sparc
- *   qemu-sparc hello_sparc        # prints "hello, world!", exits 0
+ *   qemu-sparc32plus hello_sparc  # prints "hello, world!", exits 0
  *
  * -globals is required at link time even for this one-file program: see
  * driver/main.ml's comment on the exportglobals flag. sparc64-linux-gnu-*
  * is this fork's SPARC cross toolchain (Ubuntu ships no plain 32-bit
  * sparc-linux-gnu cross compiler, only sparc64, which targets 32-bit
  * SPARC V8 via -m32/-32 - same biarch trick as x86_64 hosts use for -m32
- * i386; see demos/hello_ppc.c-- for the ppc-elf equivalent).
+ * i386; see demos/hello_ppc.c-- for the ppc-elf equivalent). Needs
+ * qemu-sparc32plus specifically, not plain qemu-sparc: this toolchain's
+ * multilib -m32 output is SPARC32PLUS (v8plus) flagged, which plain
+ * qemu-sparc (v8) rejects with "Invalid ELF image for this architecture"
+ * even though the actual instructions used are plain v8.
  */
 
 target byteorder big;
