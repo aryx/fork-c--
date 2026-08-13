@@ -13,6 +13,18 @@
    let sprintf   = Printf.sprintf (* useful for formatting msg *)
    (*x: [[Alpharec]] head *)
    let guard p = if p then 0 else Camlburg.inf_cost
+   (* claude: Alpha's ALU instructions (addq/subq/...) only accept an
+    * unsigned 8-bit literal operand (0..255) in their immediate form -
+    * anything else needs a real register, or (for the common "adjust sp
+    * by a small signed constant" case this guards) the "lda" pseudo-op,
+    * which takes a full signed 16-bit displacement instead. Confirmed by
+    * alpha-linux-gnu-as itself: "addq $30, -16, $30" (frame-size setup,
+    * a negative literal) fails to assemble with "operand out of range
+    * (-16 is not between 0 and 255)". See the "addq"/"lda" rule pair
+    * below in %% that this guards between. *)
+   let is_addq_lit b =
+       let n = Bits.S.to_int64 b in
+       Int64.compare n 0L >= 0 && Int64.compare n 255L <= 0
    (*x: [[Alpharec]] head *)
    let int64 b =
        assert (Bits.width b = 64);
@@ -43,6 +55,8 @@
 
 type
     (
+        't39,
+        't38,
         't37,
         't36,
         't35,
@@ -85,33 +99,35 @@ type
 nonterm
 =
     {
-        _Zx3: ( 't37 ) Camlburg.nt;
-        _Sx1: ( 't36 ) Camlburg.nt;
-        _Goto7: ( 't35 ) Camlburg.nt;
-        _Goto5: ( 't34 ) Camlburg.nt;
-        _GP6: ( 't33 ) Camlburg.nt;
-        _Fetch2: ( 't32 ) Camlburg.nt;
-        _Com9: ( 't31 ) Camlburg.nt;
-        _Bit8: ( 't30 ) Camlburg.nt;
-        _Add4: ( 't29 ) Camlburg.nt;
-        _Add11: ( 't28 ) Camlburg.nt;
-        _Add10: ( 't27 ) Camlburg.nt;
-        zero: ( 't26 ) Camlburg.nt;
-        symbol: ( 't25 ) Camlburg.nt;
-        spl: ( 't24 ) Camlburg.nt;
-        sp: ( 't23 ) Camlburg.nt;
-        regl: ( 't22 ) Camlburg.nt;
-        reg: ( 't21 ) Camlburg.nt;
-        ral: ( 't20 ) Camlburg.nt;
-        ra: ( 't19 ) Camlburg.nt;
-        pvl: ( 't18 ) Camlburg.nt;
-        pv: ( 't17 ) Camlburg.nt;
-        pcl: ( 't16 ) Camlburg.nt;
-        pc: ( 't15 ) Camlburg.nt;
-        next: ( 't14 ) Camlburg.nt;
-        meml: ( 't13 ) Camlburg.nt;
-        mem: ( 't12 ) Camlburg.nt;
-        inst: ( 't11 ) Camlburg.nt;
+        _Zx3: ( 't39 ) Camlburg.nt;
+        _Sx1: ( 't38 ) Camlburg.nt;
+        _Goto7: ( 't37 ) Camlburg.nt;
+        _Goto5: ( 't36 ) Camlburg.nt;
+        _GP6: ( 't35 ) Camlburg.nt;
+        _Fetch2: ( 't34 ) Camlburg.nt;
+        _Com9: ( 't33 ) Camlburg.nt;
+        _Bit8: ( 't32 ) Camlburg.nt;
+        _Add4: ( 't31 ) Camlburg.nt;
+        _Add12: ( 't30 ) Camlburg.nt;
+        _Add11: ( 't29 ) Camlburg.nt;
+        _Add10: ( 't28 ) Camlburg.nt;
+        zero: ( 't27 ) Camlburg.nt;
+        symbol: ( 't26 ) Camlburg.nt;
+        spl: ( 't25 ) Camlburg.nt;
+        sp: ( 't24 ) Camlburg.nt;
+        regl: ( 't23 ) Camlburg.nt;
+        reg: ( 't22 ) Camlburg.nt;
+        ral: ( 't21 ) Camlburg.nt;
+        ra: ( 't20 ) Camlburg.nt;
+        pvl: ( 't19 ) Camlburg.nt;
+        pv: ( 't18 ) Camlburg.nt;
+        pcl: ( 't17 ) Camlburg.nt;
+        pc: ( 't16 ) Camlburg.nt;
+        next: ( 't15 ) Camlburg.nt;
+        meml: ( 't14 ) Camlburg.nt;
+        mem: ( 't13 ) Camlburg.nt;
+        inst: ( 't12 ) Camlburg.nt;
+        imm8: ( 't11 ) Camlburg.nt;
         imm: ( 't10 ) Camlburg.nt;
         gpl: ( 't9 ) Camlburg.nt;
         gp: ( 't8 ) Camlburg.nt;
@@ -138,6 +154,7 @@ inf =
     ;gp = (Camlburg.infinity)
     ;gpl = (Camlburg.infinity)
     ;imm = (Camlburg.infinity)
+    ;imm8 = (Camlburg.infinity)
     ;inst = (Camlburg.infinity)
     ;mem = (Camlburg.infinity)
     ;meml = (Camlburg.infinity)
@@ -156,6 +173,7 @@ inf =
     ;zero = (Camlburg.infinity)
     ;_Add10 = (Camlburg.infinity)
     ;_Add11 = (Camlburg.infinity)
+    ;_Add12 = (Camlburg.infinity)
     ;_Add4 = (Camlburg.infinity)
     ;_Bit8 = (Camlburg.infinity)
     ;_Com9 = (Camlburg.infinity)
@@ -188,7 +206,7 @@ and update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 248 "alpharec.mlb"
+# 268 "alpharec.mlb"
                                 ( cat ["<";any;">"] )
                                 
 # 000 "/dev/stdout"
@@ -221,7 +239,7 @@ and update_const =
                             let const = x.const.Camlburg.action ()
                             in
                                 
-# 167 "alpharec.mlb"
+# 180 "alpharec.mlb"
                                 ( const  )
                                 
 # 000 "/dev/stdout"
@@ -272,7 +290,7 @@ and update_imm =
                             let imm = x.imm.Camlburg.action ()
                             in
                                 
-# 162 "alpharec.mlb"
+# 175 "alpharec.mlb"
                                 ( imm                      )
                                 
 # 000 "/dev/stdout"
@@ -280,6 +298,12 @@ and update_imm =
                     })
                     x)
                 { x with imm = (nt) }
+and update_imm8 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.imm8.Camlburg.cost then
+            x
+        else
+            { x with imm8 = (nt) }
 and update_inst =
     fun nt x ->
         if nt.Camlburg.cost >= x.inst.Camlburg.cost then
@@ -353,8 +377,8 @@ and update_reg =
                             let reg = x.reg.Camlburg.action ()
                             in
                                 
-# 161 "alpharec.mlb"
-                                ( sprintf "(%s)" reg       )
+# 174 "alpharec.mlb"
+                                ( sprintf "0(%s)" reg       )
                                 
 # 000 "/dev/stdout"
 )
@@ -392,7 +416,7 @@ and update_symbol =
                             let symbol = x.symbol.Camlburg.action ()
                             in
                                 
-# 165 "alpharec.mlb"
+# 178 "alpharec.mlb"
                                 ( symbol                   )
                                 
 # 000 "/dev/stdout"
@@ -407,7 +431,7 @@ and update_symbol =
                                 let symbol = x.symbol.Camlburg.action ()
                                 in
                                     
-# 168 "alpharec.mlb"
+# 181 "alpharec.mlb"
                                     ( symbol )
                                     
 # 000 "/dev/stdout"
@@ -433,6 +457,12 @@ and update__Add11 =
             x
         else
             { x with _Add11 = (nt) }
+and update__Add12 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Add12.Camlburg.cost then
+            x
+        else
+            { x with _Add12 = (nt) }
 and update__Add4 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Add4.Camlburg.cost then
@@ -507,7 +537,7 @@ conZx =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 261 "alpharec.mlb"
+# 281 "alpharec.mlb"
                             ( cat [ "Zx(";any;")" ] )
                             
 # 000 "/dev/stdout"
@@ -521,7 +551,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 250 "alpharec.mlb"
+# 270 "alpharec.mlb"
                     ( cat [ "True"  ] )
                     
 # 000 "/dev/stdout"
@@ -545,7 +575,7 @@ and conSx =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 260 "alpharec.mlb"
+# 280 "alpharec.mlb"
                             ( cat [ "Sx(";any;")" ] )
                             
 # 000 "/dev/stdout"
@@ -563,7 +593,7 @@ and conSub =
                     and y = arg2.any.Camlburg.action ()
                     in
                         
-# 259 "alpharec.mlb"
+# 279 "alpharec.mlb"
                         ( cat [ "Sub(";x;", ";y;")" ] )
                         
 # 000 "/dev/stdout"
@@ -582,7 +612,7 @@ and conStore =
                     and w = arg3
                     in
                         
-# 268 "alpharec.mlb"
+# 288 "alpharec.mlb"
                         ( cat [ "Store(";dst;",";src;",";width w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -600,7 +630,7 @@ and conStore =
                             and imm = arg2.imm.Camlburg.action ()
                             in
                                 
-# 173 "alpharec.mlb"
+# 189 "alpharec.mlb"
                                 ( sprintf "lda %s, %s" regl imm )
                                 
 # 000 "/dev/stdout"
@@ -616,7 +646,7 @@ and conStore =
                             and const = arg2.const.Camlburg.action ()
                             in
                                 
-# 177 "alpharec.mlb"
+# 193 "alpharec.mlb"
                                 ( sprintf "ldiq %s, %s" regl const )
                                 
 # 000 "/dev/stdout"
@@ -632,7 +662,7 @@ and conStore =
                             and mem = arg2.mem.Camlburg.action ()
                             in
                                 
-# 181 "alpharec.mlb"
+# 197 "alpharec.mlb"
                                 ( sprintf "ldq %s, %s" regl mem )
                                 
 # 000 "/dev/stdout"
@@ -649,7 +679,7 @@ and conStore =
                                 let (mem, x) = _v1
                                 in
                                     
-# 184 "alpharec.mlb"
+# 200 "alpharec.mlb"
                                     ( sprintf "ld%s %s, %s" (suffix w) regl mem )
                                     
 # 000 "/dev/stdout"
@@ -666,7 +696,7 @@ and conStore =
                                 let (mem, x) = _v1
                                 in
                                     
-# 187 "alpharec.mlb"
+# 203 "alpharec.mlb"
                                     ( sprintf "ld%su %s, %s" (suffix w) regl mem )
                                     
 # 000 "/dev/stdout"
@@ -681,7 +711,7 @@ and conStore =
                             and w = arg3
                             in
                                 
-# 191 "alpharec.mlb"
+# 207 "alpharec.mlb"
                                 ( sprintf "st%s %s, %s" (suffix w) reg meml )
                                 
 # 000 "/dev/stdout"
@@ -696,7 +726,7 @@ and conStore =
                             and w = arg3
                             in
                                 
-# 194 "alpharec.mlb"
+# 210 "alpharec.mlb"
                                 ( sprintf "sts %s, %s" freg meml )
                                 
 # 000 "/dev/stdout"
@@ -712,7 +742,7 @@ and conStore =
                             and reg = arg2.reg.Camlburg.action ()
                             in
                                 
-# 197 "alpharec.mlb"
+# 213 "alpharec.mlb"
                                 ( sprintf "mov %s, %s" reg  regl )
                                 
 # 000 "/dev/stdout"
@@ -728,7 +758,7 @@ and conStore =
                             and freg = arg2.freg.Camlburg.action ()
                             in
                                 
-# 200 "alpharec.mlb"
+# 216 "alpharec.mlb"
                                 ( sprintf "fmov %s, %s" freg  fregl )
                                 
 # 000 "/dev/stdout"
@@ -744,7 +774,7 @@ and conStore =
                             and reg = arg2.reg.Camlburg.action ()
                             in
                                 
-# 203 "alpharec.mlb"
+# 219 "alpharec.mlb"
                                 ( sprintf "itoft %s, %s" reg  fregl )
                                 
 # 000 "/dev/stdout"
@@ -760,7 +790,7 @@ and conStore =
                             and freg = arg2.freg.Camlburg.action ()
                             in
                                 
-# 206 "alpharec.mlb"
+# 222 "alpharec.mlb"
                                 ( sprintf "ftoit %s, %s" freg  regl )
                                 
 # 000 "/dev/stdout"
@@ -778,7 +808,7 @@ and conStore =
                                 let reg = _v1
                                 in
                                     
-# 221 "alpharec.mlb"
+# 237 "alpharec.mlb"
                                     ( sprintf "ldgp $gp, (%s)" reg )
                                     
 # 000 "/dev/stdout"
@@ -796,7 +826,7 @@ and conStore =
                                 let cmp = _v1
                                 in
                                     
-# 232 "alpharec.mlb"
+# 248 "alpharec.mlb"
                                     ( match cmp with (op, x, y) -> 
                 sprintf "cmp%s %s, %s" op x y 
             )
@@ -816,7 +846,7 @@ and conStore =
                                 let reg = _v1
                                 in
                                     
-# 237 "alpharec.mlb"
+# 253 "alpharec.mlb"
                                     ( sprintf "not %s, %s" dst reg )
                                     
 # 000 "/dev/stdout"
@@ -834,7 +864,7 @@ and conStore =
                                 let (x, y) = _v1
                                 in
                                     
-# 241 "alpharec.mlb"
+# 257 "alpharec.mlb"
                                     ( sprintf "addq %s, %s, %s" x y dst )
                                     
 # 000 "/dev/stdout"
@@ -852,8 +882,28 @@ and conStore =
                                 let (x, y) = _v1
                                 in
                                     
-# 244 "alpharec.mlb"
+# 260 "alpharec.mlb"
                                     ( sprintf "addq %s, %s, %s" x y dst )
+                                    
+# 000 "/dev/stdout"
+)
+                    }
+                    ;{Camlburg.cost =
+                        (1 + arg1.regl.Camlburg.cost
+                        +
+                        arg2._Add12.Camlburg.cost
+                        +
+                        (Camlburg.matches 64) arg3)
+                    ;Camlburg.action =
+                        (fun () ->
+                            let dst = arg1.regl.Camlburg.action ()
+                            and _v1 = arg2._Add12.Camlburg.action ()
+                            in
+                                let (x, y) = _v1
+                                in
+                                    
+# 264 "alpharec.mlb"
+                                    ( sprintf "lda %s, %s(%s)" dst y x )
                                     
 # 000 "/dev/stdout"
 )
@@ -871,7 +921,7 @@ and conStore =
                                 let (pc, four) = _v1
                                 in
                                     
-# 215 "alpharec.mlb"
+# 231 "alpharec.mlb"
                                     ( regl )
                                     
 # 000 "/dev/stdout"
@@ -888,7 +938,7 @@ and conReg =
                     and n = arg2
                     in
                         
-# 265 "alpharec.mlb"
+# 285 "alpharec.mlb"
                         ( cat [ "Reg('";Char.escaped char;"',";width n;")" ] )
                         
 # 000 "/dev/stdout"
@@ -901,7 +951,7 @@ and conReg =
                         let n = arg2
                         in
                             
-# 139 "alpharec.mlb"
+# 151 "alpharec.mlb"
                             ( freg n )
                             
 # 000 "/dev/stdout"
@@ -915,7 +965,7 @@ and conReg =
                     ;Camlburg.action =
                         (fun () ->
                             
-# 145 "alpharec.mlb"
+# 157 "alpharec.mlb"
                             ( () )
                             
 # 000 "/dev/stdout"
@@ -929,7 +979,7 @@ and conReg =
                         ;Camlburg.action =
                             (fun () ->
                                 
-# 141 "alpharec.mlb"
+# 153 "alpharec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -943,7 +993,7 @@ and conReg =
                             ;Camlburg.action =
                                 (fun () ->
                                     
-# 144 "alpharec.mlb"
+# 156 "alpharec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -957,7 +1007,7 @@ and conReg =
                                 ;Camlburg.action =
                                     (fun () ->
                                         
-# 143 "alpharec.mlb"
+# 155 "alpharec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -971,7 +1021,7 @@ and conReg =
                                             let n = arg2
                                             in
                                                 
-# 138 "alpharec.mlb"
+# 150 "alpharec.mlb"
                                                 ( reg  n )
                                                 
 # 000 "/dev/stdout"
@@ -985,7 +1035,7 @@ and conReg =
                                         ;Camlburg.action =
                                             (fun () ->
                                                 
-# 142 "alpharec.mlb"
+# 154 "alpharec.mlb"
                                                 ( () )
                                                 
 # 000 "/dev/stdout"
@@ -1003,7 +1053,7 @@ and conPar =
                     and r = arg2.any.Camlburg.action ()
                     in
                         
-# 278 "alpharec.mlb"
+# 298 "alpharec.mlb"
                         ( cat [ "Par(";l;",";r;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1020,7 +1070,7 @@ and conPar =
                             let reg = _v1
                             in
                                 
-# 218 "alpharec.mlb"
+# 234 "alpharec.mlb"
                                 ( sprintf "jsr %s,(%s)" next reg )
                                 
 # 000 "/dev/stdout"
@@ -1034,7 +1084,7 @@ and conNop =
             ;Camlburg.action =
                 (fun () ->
                     
-# 246 "alpharec.mlb"
+# 266 "alpharec.mlb"
                     ( "nop" )
                     
 # 000 "/dev/stdout"
@@ -1050,7 +1100,7 @@ and conMem =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 264 "alpharec.mlb"
+# 284 "alpharec.mlb"
                         ( cat [ "Mem(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1063,7 +1113,7 @@ and conMem =
                         let addr = arg1.addr.Camlburg.action ()
                         in
                             
-# 158 "alpharec.mlb"
+# 170 "alpharec.mlb"
                             ( addr )
                             
 # 000 "/dev/stdout"
@@ -1079,7 +1129,7 @@ and conLobits =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 262 "alpharec.mlb"
+# 282 "alpharec.mlb"
                         ( cat [ "Lobits(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1096,7 +1146,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 252 "alpharec.mlb"
+# 272 "alpharec.mlb"
                         ( cat [ "Link(";x#mangled_text;",";width w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1110,7 +1160,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 136 "alpharec.mlb"
+# 148 "alpharec.mlb"
                             ( x#mangled_text       )
                             
 # 000 "/dev/stdout"
@@ -1127,7 +1177,7 @@ and conLate =
                     and w = arg2
                     in
                         
-# 253 "alpharec.mlb"
+# 273 "alpharec.mlb"
                         ( cat [ "Late(";string;",";width w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1143,7 +1193,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 269 "alpharec.mlb"
+# 289 "alpharec.mlb"
                         ( cat [ "Kill(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1161,7 +1211,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 272 "alpharec.mlb"
+# 292 "alpharec.mlb"
                         ( cat [ "Guarded(";guard;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1178,7 +1228,7 @@ and conGuarded =
                             let addr = _v1
                             in
                                 
-# 224 "alpharec.mlb"
+# 240 "alpharec.mlb"
                                 ( match cmp_zero with (op,reg) ->
                 sprintf "b%s %s, %s" op reg addr
             )
@@ -1207,7 +1257,7 @@ and conGoto =
                             let any = arg1.any.Camlburg.action ()
                             in
                                 
-# 279 "alpharec.mlb"
+# 299 "alpharec.mlb"
                                 ( cat [ "Goto(";any;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1223,7 +1273,7 @@ and conGoto =
                                         arg1.symbol.Camlburg.action ()
                                     in
                                         
-# 210 "alpharec.mlb"
+# 226 "alpharec.mlb"
                                         ( sprintf "br %s" symbol )
                                         
 # 000 "/dev/stdout"
@@ -1235,7 +1285,7 @@ and conGoto =
                                     let reg = arg1.reg.Camlburg.action ()
                                     in
                                         
-# 213 "alpharec.mlb"
+# 229 "alpharec.mlb"
                                         ( sprintf "jmp (%s)" reg  )
                                         
 # 000 "/dev/stdout"
@@ -1256,7 +1306,7 @@ and conGP =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 275 "alpharec.mlb"
+# 295 "alpharec.mlb"
                             ( cat [ "GP(";any;")"] )
                             
 # 000 "/dev/stdout"
@@ -1282,7 +1332,7 @@ and conFetch =
                         and w = arg2
                         in
                             
-# 256 "alpharec.mlb"
+# 276 "alpharec.mlb"
                             ( cat [ "Fetch(";any;",";width w;")" ] )
                             
 # 000 "/dev/stdout"
@@ -1296,7 +1346,7 @@ and conFetch =
                             and w = arg2
                             in
                                 
-# 149 "alpharec.mlb"
+# 161 "alpharec.mlb"
                                 ( fregl   )
                                 
 # 000 "/dev/stdout"
@@ -1312,7 +1362,7 @@ and conFetch =
                                 let gpl = arg1.gpl.Camlburg.action ()
                                 in
                                     
-# 155 "alpharec.mlb"
+# 167 "alpharec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1326,7 +1376,7 @@ and conFetch =
                                     and w = arg2
                                     in
                                         
-# 159 "alpharec.mlb"
+# 171 "alpharec.mlb"
                                         ( meml )
                                         
 # 000 "/dev/stdout"
@@ -1342,7 +1392,7 @@ and conFetch =
                                         let pcl = arg1.pcl.Camlburg.action ()
                                         in
                                             
-# 151 "alpharec.mlb"
+# 163 "alpharec.mlb"
                                             ( () )
                                             
 # 000 "/dev/stdout"
@@ -1360,7 +1410,7 @@ and conFetch =
                                                 arg1.pvl.Camlburg.action ()
                                             in
                                                 
-# 154 "alpharec.mlb"
+# 166 "alpharec.mlb"
                                                 ( () )
                                                 
 # 000 "/dev/stdout"
@@ -1379,7 +1429,7 @@ and conFetch =
                                                         ()
                                                 in
                                                     
-# 153 "alpharec.mlb"
+# 165 "alpharec.mlb"
                                                     ( () )
                                                     
 # 000 "/dev/stdout"
@@ -1397,7 +1447,7 @@ and conFetch =
                                                     and w = arg2
                                                     in
                                                         
-# 148 "alpharec.mlb"
+# 160 "alpharec.mlb"
                                                         ( regl    )
                                                         
 # 000 "/dev/stdout"
@@ -1417,7 +1467,7 @@ and conFetch =
                                                                 ()
                                                         in
                                                             
-# 152 "alpharec.mlb"
+# 164 "alpharec.mlb"
                                                             ( () )
                                                             
 # 000 "/dev/stdout"
@@ -1431,7 +1481,7 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 251 "alpharec.mlb"
+# 271 "alpharec.mlb"
                     ( cat [ "False" ] )
                     
 # 000 "/dev/stdout"
@@ -1452,7 +1502,7 @@ and conCom =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 276 "alpharec.mlb"
+# 296 "alpharec.mlb"
                             ( cat [ "Com(";any;")"] )
                             
 # 000 "/dev/stdout"
@@ -1471,7 +1521,7 @@ and conCmp =
                     and y = arg3.any.Camlburg.action ()
                     in
                         
-# 274 "alpharec.mlb"
+# 294 "alpharec.mlb"
                         ( cat [ "Cmp(";op;",";x;",";y;")"] )
                         
 # 000 "/dev/stdout"
@@ -1487,7 +1537,7 @@ and conCmp =
                         and y = arg3.reg.Camlburg.action ()
                         in
                             
-# 228 "alpharec.mlb"
+# 244 "alpharec.mlb"
                             ( (op, x, y) )
                             
 # 000 "/dev/stdout"
@@ -1503,7 +1553,7 @@ and conCmp =
                             and zero = arg3.zero.Camlburg.action ()
                             in
                                 
-# 229 "alpharec.mlb"
+# 245 "alpharec.mlb"
                                 ( (op, reg)  )
                                 
 # 000 "/dev/stdout"
@@ -1519,7 +1569,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 254 "alpharec.mlb"
+# 274 "alpharec.mlb"
                         ( cat [ "Bits(b)" ] )
                         
 # 000 "/dev/stdout"
@@ -1532,7 +1582,7 @@ and conBits =
                         let bits = arg1
                         in
                             
-# 133 "alpharec.mlb"
+# 145 "alpharec.mlb"
                             ( int64 bits           )
                             
 # 000 "/dev/stdout"
@@ -1543,7 +1593,7 @@ and conBits =
                         (let bits = arg1
                         in
                             
-# 135 "alpharec.mlb"
+# 147 "alpharec.mlb"
                             ( guard (Bits.eq bits (Bits.S.of_int 4 64)) )
                             
 # 000 "/dev/stdout"
@@ -1553,19 +1603,19 @@ and conBits =
                             let bits = arg1
                             in
                                 
-# 135 "alpharec.mlb"
+# 147 "alpharec.mlb"
                                 (())
                                 
 # 000 "/dev/stdout"
 )
                     })
-                    ((update_zero
+                    ((update_imm8
                         {Camlburg.cost =
                             (let bits = arg1
                             in
                                 
-# 134 "alpharec.mlb"
-                                ( guard (Bits.eq bits (Bits.zero 64)) )
+# 186 "alpharec.mlb"
+                                ( guard (is_addq_lit bits) )
                                 
 # 000 "/dev/stdout"
 )
@@ -1574,13 +1624,34 @@ and conBits =
                                 let bits = arg1
                                 in
                                     
-# 134 "alpharec.mlb"
-                                    ( () )
+# 186 "alpharec.mlb"
+                                    ( int64 bits )
                                     
 # 000 "/dev/stdout"
 )
                         })
-                        inf)))
+                        ((update_zero
+                            {Camlburg.cost =
+                                (let bits = arg1
+                                in
+                                    
+# 146 "alpharec.mlb"
+                                    ( guard (Bits.eq bits (Bits.zero 64)) )
+                                    
+# 000 "/dev/stdout"
+)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let bits = arg1
+                                    in
+                                        
+# 146 "alpharec.mlb"
+                                        ( () )
+                                        
+# 000 "/dev/stdout"
+)
+                            })
+                            inf))))
 and conBit =
     fun arg1 ->
         (update__Bit8
@@ -1595,7 +1666,7 @@ and conBit =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 277 "alpharec.mlb"
+# 297 "alpharec.mlb"
                             ( cat [ "Bit(";any;")"] )
                             
 # 000 "/dev/stdout"
@@ -1616,124 +1687,136 @@ and conAdd =
             })
             ((update__Add11
                 {Camlburg.cost =
-                    (arg1.reg.Camlburg.cost + arg2.imm.Camlburg.cost)
+                    (arg1.reg.Camlburg.cost + arg2.imm8.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
                         let x = arg1.reg.Camlburg.action ()
-                        and y = arg2.imm.Camlburg.action ()
+                        and y = arg2.imm8.Camlburg.action ()
                         in
                             (x ,y))
                 })
-                ((update__Add4
+                ((update__Add12
                     {Camlburg.cost =
-                        (arg1.pc.Camlburg.cost + arg2.four.Camlburg.cost)
+                        (arg1.reg.Camlburg.cost + arg2.imm.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let pc = arg1.pc.Camlburg.action ()
-                            and four = arg2.four.Camlburg.action ()
+                            let x = arg1.reg.Camlburg.action ()
+                            and y = arg2.imm.Camlburg.action ()
                             in
-                                (pc ,four))
+                                (x ,y))
                     })
-                    ((update_addr
-                        (Camlburg.choice
-                            [{Camlburg.cost =
-                                (arg1.imm.Camlburg.cost
-                                +
-                                arg2.reg.Camlburg.cost)
-                            ;Camlburg.action =
-                                (fun () ->
-                                    let imm = arg1.imm.Camlburg.action ()
-                                    and reg = arg2.reg.Camlburg.action ()
-                                    in
-                                        
-# 163 "alpharec.mlb"
-                                        ( sprintf "%s(%s)" imm reg )
-                                        
+                    ((update__Add4
+                        {Camlburg.cost =
+                            (arg1.pc.Camlburg.cost + arg2.four.Camlburg.cost)
+                        ;Camlburg.action =
+                            (fun () ->
+                                let pc = arg1.pc.Camlburg.action ()
+                                and four = arg2.four.Camlburg.action ()
+                                in
+                                    (pc ,four))
+                        })
+                        ((update_addr
+                            (Camlburg.choice
+                                [{Camlburg.cost =
+                                    (arg1.imm.Camlburg.cost
+                                    +
+                                    arg2.reg.Camlburg.cost)
+                                ;Camlburg.action =
+                                    (fun () ->
+                                        let imm = arg1.imm.Camlburg.action ()
+                                        and reg = arg2.reg.Camlburg.action ()
+                                        in
+                                            
+# 176 "alpharec.mlb"
+                                            ( sprintf "%s(%s)" imm reg )
+                                            
 # 000 "/dev/stdout"
 )
-                            }
-                            ;{Camlburg.cost =
-                                (arg1.reg.Camlburg.cost
-                                +
-                                arg2.imm.Camlburg.cost)
-                            ;Camlburg.action =
-                                (fun () ->
-                                    let reg = arg1.reg.Camlburg.action ()
-                                    and imm = arg2.imm.Camlburg.action ()
-                                    in
-                                        
-# 164 "alpharec.mlb"
-                                        ( sprintf "%s(%s)" imm reg )
-                                        
+                                }
+                                ;{Camlburg.cost =
+                                    (arg1.reg.Camlburg.cost
+                                    +
+                                    arg2.imm.Camlburg.cost)
+                                ;Camlburg.action =
+                                    (fun () ->
+                                        let reg = arg1.reg.Camlburg.action ()
+                                        and imm = arg2.imm.Camlburg.action ()
+                                        in
+                                            
+# 177 "alpharec.mlb"
+                                            ( sprintf "%s(%s)" imm reg )
+                                            
 # 000 "/dev/stdout"
 )
-                            }]))
-                        ((update_any
-                            {Camlburg.cost =
-                                (arg1.any.Camlburg.cost
-                                +
-                                arg2.any.Camlburg.cost)
-                            ;Camlburg.action =
-                                (fun () ->
-                                    let x = arg1.any.Camlburg.action ()
-                                    and y = arg2.any.Camlburg.action ()
-                                    in
-                                        
-# 258 "alpharec.mlb"
-                                        ( cat [ "Add(";x;", ";y;")" ] )
-                                        
+                                }]))
+                            ((update_any
+                                {Camlburg.cost =
+                                    (arg1.any.Camlburg.cost
+                                    +
+                                    arg2.any.Camlburg.cost)
+                                ;Camlburg.action =
+                                    (fun () ->
+                                        let x = arg1.any.Camlburg.action ()
+                                        and y = arg2.any.Camlburg.action ()
+                                        in
+                                            
+# 278 "alpharec.mlb"
+                                            ( cat [ "Add(";x;", ";y;")" ] )
+                                            
 # 000 "/dev/stdout"
 )
-                            })
-                            ((update_imm
-                                (Camlburg.choice
-                                    [{Camlburg.cost =
-                                        (arg1.symbol.Camlburg.cost
-                                        +
-                                        arg2.imm.Camlburg.cost)
-                                    ;Camlburg.action =
-                                        (fun () ->
-                                            let
-                                                symbol =
-                                                arg1.symbol.Camlburg.action
-                                                    ()
-                                            and
-                                                imm =
-                                                arg2.imm.Camlburg.action ()
-                                            in
-                                                
-# 169 "alpharec.mlb"
-                                                ( sprintf "%s+%s" symbol imm )
-                                                
+                                })
+                                ((update_imm
+                                    (Camlburg.choice
+                                        [{Camlburg.cost =
+                                            (arg1.symbol.Camlburg.cost
+                                            +
+                                            arg2.imm.Camlburg.cost)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    symbol =
+                                                    arg1.symbol.Camlburg.action
+                                                        ()
+                                                and
+                                                    imm =
+                                                    arg2.imm.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 182 "alpharec.mlb"
+                                                    ( sprintf "%s+%s" symbol imm )
+                                                    
 # 000 "/dev/stdout"
 )
-                                    }
-                                    ;{Camlburg.cost =
-                                        (arg1.imm.Camlburg.cost
-                                        +
-                                        arg2.symbol.Camlburg.cost)
-                                    ;Camlburg.action =
-                                        (fun () ->
-                                            let
-                                                imm =
-                                                arg1.imm.Camlburg.action ()
-                                            and
-                                                symbol =
-                                                arg2.symbol.Camlburg.action
-                                                    ()
-                                            in
-                                                
-# 170 "alpharec.mlb"
-                                                ( sprintf "%s+%s" symbol imm )
-                                                
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.imm.Camlburg.cost
+                                            +
+                                            arg2.symbol.Camlburg.cost)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    imm =
+                                                    arg1.imm.Camlburg.action
+                                                        ()
+                                                and
+                                                    symbol =
+                                                    arg2.symbol.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 183 "alpharec.mlb"
+                                                    ( sprintf "%s+%s" symbol imm )
+                                                    
 # 000 "/dev/stdout"
 )
-                                    }]))
-                                inf)))))
+                                        }]))
+                                    inf))))))
 
 
 
-# 39 "alpharec.mlb"
+# 51 "alpharec.mlb"
  
    (*s: [[Alpharec]] tail *)
    let const = function

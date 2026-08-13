@@ -12,6 +12,18 @@
    let sprintf   = Printf.sprintf (* useful for formatting msg *)
    (*x: [[Alpharec]] head *)
    let guard p = if p then 0 else Camlburg.inf_cost
+   (* claude: Alpha's ALU instructions (addq/subq/...) only accept an
+    * unsigned 8-bit literal operand (0..255) in their immediate form -
+    * anything else needs a real register, or (for the common "adjust sp
+    * by a small signed constant" case this guards) the "lda" pseudo-op,
+    * which takes a full signed 16-bit displacement instead. Confirmed by
+    * alpha-linux-gnu-as itself: "addq $30, -16, $30" (frame-size setup,
+    * a negative literal) fails to assemble with "operand out of range
+    * (-16 is not between 0 and 255)". See the "addq"/"lda" rule pair
+    * below in %% that this guards between. *)
+   let is_addq_lit b =
+       let n = Bits.S.to_int64 b in
+       Int64.compare n 0L >= 0 && Int64.compare n 255L <= 0
    (*x: [[Alpharec]] head *)
    let int64 b =
        assert (Bits.width b = 64);
@@ -158,16 +170,20 @@ gp:         Fetch(gpl,64)       {: () :}
 meml:       Mem(addr)           {: addr :}
 mem:        Fetch(meml,w:int)   {: meml :}
 
-addr:       reg                 {: sprintf "(%s)" reg       :}
+(* claude: alpha-linux-gnu-as requires an explicit displacement digit before the parens - rejects "stq $26, ($30)", wants "0($30)". *)
+addr:       reg                 {: sprintf "0(%s)" reg       :}
 addr:       imm                 {: imm                      :}
 addr:       Add(imm,reg)        {: sprintf "%s(%s)" imm reg :}
 addr:       Add(reg,imm)        {: sprintf "%s(%s)" imm reg :}
 addr:       symbol              {: symbol                   :}
 (*x: [[Alpharec]] rules *)
-imm:        const               {: const  :} 
+imm:        const               {: const  :}
 imm:        symbol              {: symbol :}
 imm:        Add(symbol,imm)     {: sprintf "%s+%s" symbol imm :}
 imm:        Add(imm,symbol)     {: sprintf "%s+%s" symbol imm :}
+
+(* claude: the unsigned-8-bit-literal subset of const usable directly as an addq/subq/etc immediate - see is_addq_lit's comment in %head. *)
+imm8:       Bits(bits)          [{: guard (is_addq_lit bits) :}] {: int64 bits :}
 (*x: [[Alpharec]] rules *)
 inst:       Store(regl,imm,64)
             {: sprintf "lda %s, %s" regl imm :} 
@@ -239,9 +255,13 @@ inst:       Store(dst:regl,Com(reg),64)
 (*x: [[Alpharec]] rules *)
 inst:       Store(dst:regl, Add(x:reg,y:reg), 64)
             {: sprintf "addq %s, %s, %s" x y dst :}
-     
-inst:       Store(dst:regl, Add(x:reg,y:imm), 64)
+
+inst:       Store(dst:regl, Add(x:reg,y:imm8), 64)
             {: sprintf "addq %s, %s, %s" x y dst :}
+
+(* claude: fallback when the immediate is out of addq's 0..255 literal range (e.g. sp+(-16)) or is a symbol - "lda" takes a full signed 16-bit displacement. Cost 1 so addq (cost 0) wins whenever imm8 also matches. *)
+inst:       Store(dst:regl, Add(x:reg,y:imm), 64) [1]
+            {: sprintf "lda %s, %s(%s)" dst y x :}
 (*x: [[Alpharec]] rules *)
 inst:       Nop() {: "nop" :}
 (*x: [[Alpharec]] rules *)
