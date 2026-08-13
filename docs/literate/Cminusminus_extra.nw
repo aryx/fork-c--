@@ -38841,7 +38841,9 @@ val placevars : Ast2ir.proc -> Automaton.t
 @ 
 
 <<sparc.ml >>=
+open Nopoly
 module PX = Postexpander
+module DG = Dag
 module S  = Space
 module SS = S.Standard32
 module R  = Rtl
@@ -38854,8 +38856,8 @@ module SM = Strutil.Map
 module A  = Automaton
 module T  = Target
 
-let rtl r = PX.Rtl r
-let (<:>) = PX.(<:>)
+let rtl r = DG.Rtl r
+let (<:>) = DG.(<:>)
 let rstore l r w = rtl (R.store l r w) 
 let astore l r w = rtl (A.store l r w) 
 @ 
@@ -38938,6 +38940,10 @@ module F = Mflow.MakeStandard
       let ra_reg    = R.reg ra
       let ra_offset = 4
     end)
+(* claude: needed both for Post.return (the generic Mflow-provided
+ * default, same as ppc.ml's `fmach.Mflow.return`) and for the cutto
+ * embed/project pair threaded into Sparccall.cconv below. *)
+let fmach = F.machine (R.reg sp)
 @ 
 <<sparc.ml >>=
 let return e =
@@ -39077,7 +39083,7 @@ let rec block_copy ~dst dassn ~src sassn w =
         (fun d' s' -> block_copy ~dst:(rfetch d') dassn ~src:(rfetch s') sassn (w - x))
   in
   match w with
-  | 0 -> PX.Nop
+  | 0 -> DG.Nop
   | 8 | 16 ->
       let t = talloc 't' 32 in
       zxload t src w sassn <:> lostore dst t w dassn
@@ -39089,19 +39095,32 @@ let rec block_copy ~dst dassn ~src sassn w =
   | 64 ->
       let q = talloc 'q' 64 in
       load ~dst:q ~addr:src sassn <:> store ~addr:dst ~src:q dassn
+  (* claude: was a runtime While-loop copying 64 bits at a time via
+   * PX.cond, but Postexpander.cond isn't part of the current interface
+   * (commented out in postexpander.mli - Dag.cond exists but at the
+   * wrong representation level for a brtl block here). Left as a stub
+   * like the catchall below rather than guessing at a replacement for
+   * an already-obscure, seemingly untested path (block copies over 64
+   * bits whose width isn't itself a multiple of 64). Original code,
+   * kept in case it's worth reviving once a real cond/While path
+   * exists again:
+   *
+   * | w when w > 64 && (w mod 64) mod 8 = 0 ->
+   *     let wmod64 = w mod 64 in
+   *     let f d' s' =
+   *       let t       = talloc 't' 32 in
+   *       let i       = RO.unsigned 32 (64 / 8) in
+   *       let n64cpys = RO.unsigned 32 ((w - wmod64) / 8) in
+   *       rtl (R.store (R.reg t) (RO.add 32 (rfetch d') n64cpys) 32) <:>
+   *       DG.While(PX.cond (RO.eq 32 (rfetch d') (rfetch t)),
+   *                block_copy ~dst:(rfetch d') dassn ~src:(rfetch s') sassn 64 <:>
+   *                rtl (R.store (R.reg d') (RO.add 32 (rfetch d') i) 32) <:>
+   *                rtl (R.store (R.reg s') (RO.add 32 (rfetch s') i) 32))
+   *     in
+   *     decompose_f dst dassn src sassn wmod64 w f
+   *)
   | w when w > 64 && (w mod 64) mod 8 = 0 ->
-      let wmod64 = w mod 64 in
-      let f d' s' =
-        let t       = talloc 't' 32 in
-        let i       = RO.unsigned 32 (64 / 8) in
-        let n64cpys = RO.unsigned 32 ((w - wmod64) / 8) in
-        rtl (R.store (R.reg t) (RO.add 32 (rfetch d') n64cpys) 32) <:>
-        PX.While(PX.cond (RO.eq 32 (rfetch d') (rfetch t)),
-                 block_copy ~dst:(rfetch d') dassn ~src:(rfetch s') sassn 64 <:>
-                 rtl (R.store (R.reg d') (RO.add 32 (rfetch d') i) 32) <:>
-                 rtl (R.store (R.reg s') (RO.add 32 (rfetch s') i) 32))
-      in
-      decompose_f dst dassn src sassn wmod64 w f
+      unimpf "Block copy of %i bits on SPARC (>64, not a multiple of 64)" w
   | _  -> unimpf "Block copy of %i bits on SPARC" w
 @ 
 We write very strange code in [[if]] in case of the possibility that a
@@ -39117,7 +39136,7 @@ let move ~dst ~src =
     let slot = salloc w 8 in
     rtl (A.store slot (rfetch src) w) <:> rtl (R.store (R.reg dst) (A.fetch slot w) w)
   else if Register.eq src dst then
-    PX.Nop
+    DG.Nop
   else
     rtl (R.store (R.reg dst) (rfetch src) w)
 @ 
@@ -39145,8 +39164,8 @@ let aggregate ~dst ~src = Impossible.unimp "aggregate"
 @ 
 <<SPARC postexpander>>=
 let weird_tmp tmp z = match z with
-| PX.WTemp (Register.Reg t)             -> t, PX.Nop
-| PX.WTemp (Register.Slice (w, 0, t))   -> t, PX.Nop
+| PX.WTemp (Register.Reg t)             -> t, DG.Nop
+| PX.WTemp (Register.Slice (w, 0, t))   -> t, DG.Nop
 | PX.WTemp (Register.Slice (w, lsb, t)) -> 
     tmp, move tmp t <:> rtl (tstore tmp (RO.shrl 32 (rfetch tmp) (RO.unsigned 32 lsb)))
 | PX.WBits b -> tmp, rtl (tstore tmp (R.bits (Bits.Ops.zx 32 b) 32))
@@ -39272,7 +39291,7 @@ let wrdrop ~dst:(fill, dt) op x y z =
   rtl (R.store (R.reg t) zero 32) <:>
   rtl (R.store (R.reg dt) (RO.addc 32 (rfetch t) (rfetch t) carrybit) 32) <:>
   (match fill with
-   | PX.HighAny -> PX.Nop
+   | PX.HighAny -> DG.Nop
    | PX.HighZ   -> shift dt RO.shl 31 <:> shift dt RO.shrl 31  (* zxlo *)
    | PX.HighS   -> shift dt RO.shl 31 <:> shift dt RO.shra 31  (* sxlo *))
 @ 
@@ -39305,16 +39324,22 @@ let pc_lhs = npc        (* PC as assigned by branch *)
 let pc_rhs = pc         (* PC as captured by call   *)
 @ 
 <<SPARC postexpander>>=
-let br ~tgt = PX.Nop, R.store pc_lhs (rfetch tgt)   wordsize  (* branch reg *)
-let b  ~tgt = PX.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
+let br ~tgt = DG.Nop, R.store pc_lhs (rfetch tgt)   wordsize  (* branch reg *)
+let b  ~tgt = DG.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
 @ 
 Needs to be filled in
 <<SPARC postexpander>>=
-let bc x (opr, ws as op) y ~ifso ~ifnot =
+(* claude: split from the old single `bc` (kept in spirit, same RTLs)
+ * into bc_guard/bc_of_guard, the shape Postexpander.S now requires -
+ * see ppc.ml's bc_guard/bc_of_guard for the same split applied there. *)
+let bc_guard x (opr, ws as op) y =
   (* Might be a 64-bit float *)
   assert (ws =*= [wordsize] || ws =*= [wordsize*2]);
-  PX.Test (rstore cc (R.app (R.opr "sparc_subcc" ws) [rfetch x; rfetch y]) 32,
-           (R.app (R.opr ("sparc_"^opr) ws) [R.fetch cc 32], ifso, ifnot))
+  (rstore cc (R.app (R.opr "sparc_subcc" ws) [rfetch x; rfetch y]) 32,
+   R.app (R.opr ("sparc_"^opr) ws) [R.fetch cc 32])
+let bc_of_guard (setup, guard) ~ifso ~ifnot =
+  let brtl cond tgt = R.guard cond (R.store pc_lhs tgt 32) in
+  DG.Test (setup, (brtl guard, ifso, ifnot))
 @ 
 <<SPARC postexpander>>=
 let bnegate r = 
@@ -39337,19 +39362,67 @@ let bnegate r =
 @ 
 <<SPARC postexpander>>=
 let effects = List.map Up.effect
-let call  ~tgt ~others =
-  PX.Nop, R.par (R.store pc_lhs (Up.const tgt) wordsize :: effects others)
-let callr ~tgt ~others =
-  PX.Nop, R.par (R.store pc_lhs (rfetch tgt)   wordsize :: effects others)
+(* claude: dropped ~others (extra live-in effects at the call site) -
+ * Postexpander.S's call/callr no longer take it (see ppc.ml's call/
+ * callr, also just ~tgt); nothing in the Expander machinery calling
+ * these generically could have supplied it anyway. *)
+(* claude: "call ~tgt = DG.Nop, R.store pc_lhs ... wordsize" (just a
+ * Goto, no return-address save) is the exact same bug found and fixed
+ * in ppc.ml's call: every call silently became a tail branch, so
+ * nothing ever returned to its actual caller. sparcrec.mlb's real
+ * "call" mnemonic is only matched by "Par(Goto(target), next)" where
+ * "next: Store(regl, Add(pc, four), w)" (line ~487-489) - i.e. the
+ * RTL must ALSO store pc+4 into some register (real hardware writes
+ * %o7 as a side effect of the CALL instruction; ra=r31=%i7 is what
+ * this register becomes once the callee's own `save` rotates the
+ * window). Mirrors ppc.ml's call/x86.ml's call (Goto first, ra-store
+ * second - Par's constructor argument order matters for the grammar
+ * match). callr uses the same fix via the "Par(Goto(reg), next)" rule
+ * one line below the plain-symbol one. *)
+let call  ~tgt =
+  DG.Nop, R.par [ R.store pc_lhs (Up.const tgt) wordsize
+                 ; R.store (R.reg ra) (RU.addk wordsize (R.fetch pc wordsize) 4) wordsize ]
+let callr ~tgt =
+  DG.Nop, R.par [ R.store pc_lhs (rfetch tgt) wordsize
+                 ; R.store (R.reg ra) (RU.addk wordsize (R.fetch pc wordsize) 4) wordsize ]
 @ 
 <<SPARC postexpander>>=
-let cut_to effs = PX.Rtl (R.store (R.reg cwp) (RO.signed 32 0) 32),
-                  R.par (effects effs)
+(* claude: adapted from the old effect-list-based signature to the
+ * current Mflow.cut_args record ({new_sp; new_pc}), same semantics:
+ * reset the register-window pointer (cwp) then jump to the new pc with
+ * sp set to the new sp. *)
+let cut_to {Mflow.new_sp = sp'; Mflow.new_pc = pc'} =
+  DG.Rtl (R.store (R.reg cwp) (RO.signed 32 0) 32),
+  R.par [R.store pc_lhs pc' wordsize; R.store (R.reg sp) sp' wordsize]
+(* claude: return/forbidden are required by Postexpander.S but had no
+ * definition here. return was first set to ppc.ml's
+ * `fmach.Mflow.return` (the generic Mflow-provided default) by
+ * analogy, but that is wrong for SPARC: codegen/expander.ml wires
+ * this field directly into a generic "GR.Return" CFG node
+ * (Mflow.return = Post.return), bypassing the calling-convention-
+ * specific Call.t.return/Sparccall.rtn path entirely - and the
+ * generic default is just "jump to whatever's in the ra register",
+ * with no SPARC-specific "+8" return-address adjustment and no
+ * register-window `restore`. Empirically this is exactly what fired
+ * for demos/hello_sparc.c--'s plain "return(0)": main's epilogue
+ * landed back exactly on __libc_start_call_main's own "call %g1"
+ * instruction (real hardware stores pc_of_call into the return
+ * register, not pc_of_call+4) instead of past it, re-invoking main a
+ * second time with %g1 no longer holding a valid function pointer
+ * (clobbered as ordinary scratch by main's own body) - confirmed via
+ * gdb-over-qemu-gdbserver, single-stepping with a $pc watchpoint from
+ * inside printf out through main's return. Fixed by reusing this
+ * file's own top-level `return e` (also used by Sparccall.cconv's
+ * ~return_to), which emits Store(pc_lhs, e, w) parred with the cwp
+ * increment sparcrec.mlb's "restore" nonterminal matches - together
+ * exactly "Par(Goto(ra), restore)", recognized as "ret\n\trestore". *)
+let return = return (R.fetch (R.reg ra) wordsize)
+let forbidden = Rtl.par [] (* BOGUS: NEEDS TO BE A REAL FAULTING INSTRUCTION *)
 @ 
 If an instruction modifies the current window pointer, it's a save or
 restore, and the generic expander must not touch it.
 <<SPARC postexpander>>=
-let don't_touch_me _ =
+let don't_touch_me =
   let stores_to_cwp = function
     | RP.Store (RP.Reg maybe_cwp, _, _) when Register.eq maybe_cwp cwp -> true
     | _                                                                -> false in
@@ -39391,6 +39464,10 @@ let target =
                  ; Spaces.c
                  ; Spaces.k
                  ] in
+    (* claude: Ast2ir.tgt = Preast2ir.tgt = T of (...) Target.t - a
+     * wrapped variant, not the bare record (see ppc.ml's `PA.T {...}`,
+     * PA = Preast2ir). *)
+    Preast2ir.T
     { T.name                = "sparc"
     ; T.memspace            = mspace
     ; T.max_unaligned_load  = R.C 1
@@ -39403,20 +39480,19 @@ let target =
     ; T.reg_ix_map          = T.mk_reg_ix_map spaces
     ; T.distinct_addr_sp    = false
     ; T.float               = Float.ieee754
-    ; T.spill               = spill
-    ; T.reload              = reload
 
     ; T.vfp                 = vfp
-    ; T.bnegate             = F.bnegate cc
-    ; T.goto                = F.goto
-    ; T.jump                = F.jump
-    ; T.call                = F.call
-    ; T.return              = F.return
-    ; T.branch              = F.branch
-    
-    ; T.cc_specs            = A.init_cc
+    (* claude: T.spill/T.reload/T.bnegate/T.goto/T.jump/T.call/T.return/
+     * T.branch aren't Target.t fields anymore (see target.mli) - they now
+     * live inside the single T.machine record, built by the
+     * Expander.IntFloatAddr functor from Post below, same as ppc.ml/
+     * x86.ml. *)
+    ; T.machine             = X.machine
+
+    ; T.cc_specs            = Sparccc.cc_specs
     ; T.cc_spec_to_auto     = Sparccall.cconv ~return_to:return
-                                   (F.cutto (Rtl.reg sp))
+                                   { T.embed   = fmach.T.cutto.T.embed
+                                   ; T.project = fmach.T.cutto.T.project }
 
     ; T.is_instruction      = Sparcrec.is_instruction
     ; T.tx_ast = (fun secs -> secs)
@@ -39550,7 +39626,7 @@ let placevars =
       ; (fun w h _ -> w <= 32),   A.widen (fun _ -> 32) *> temps 't'
       ; A.is_any,                 A.widen (Auxfuns.round_up_to ~multiple_of: 8)
       ] in
-  Placevar.mk_automaton ~warn ~vfp:target.T.vfp ~memspace:mspace mk_stage
+  Placevar.mk_automaton ~warn ~vfp ~memspace:mspace mk_stage
 @ 
 
 % was in sparcasm.nw
@@ -39558,11 +39634,15 @@ let placevars =
 \section{SPARC Assembler}
 
 <<sparcasm.mli>>=
-type node = Rtl.rtl Cfgx.M.node
-val make : 
-  ('cfg -> (node -> unit) -> (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
-  out_channel -> ('a, 'cfg, 'b, 'c) Proc.t Asm.assembler
-  (* pass Cfgutil.emit or Cfgutil.emit *)
+(* claude: node/make's shape used to be built on the older Cfgx.M
+ * representation (Rtl.rtl Cfgx.M.node); Cfgutil.emit (the only real
+ * caller, per the comment below) has since moved to the newer
+ * Zipcfg.Rep-based "call" node, same shape arch/ppc/ppcasm.mli uses. *)
+val make :
+  (('a, 'b, 'c, 'd) Proc.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
+            (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
+  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Proc.t) Asm.assembler
+  (* pass Cfgutil.emit *)
 @ 
 
 
@@ -39571,11 +39651,14 @@ val make :
 % ------------------------------------------------------------------ 
 
 <<sparcasm.ml>>=
-module G  = Cfgx.M
+(* claude: was Cfgx.M (the older Cfg representation); Cfgutil.emit (the
+ * only real caller, see sparcasm.mli) has since moved to Zipcfg/
+ * Zipcfg.Rep, same as arch/ppc/ppcasm.ml already uses. *)
+module G  = Zipcfg
+module GR = Zipcfg.Rep
 module SM = Strutil.Map
 <<[[Sparcasm]] utilities>>
 <<[[Sparcasm]] definitions>>
-type node = Rtl.rtl Cfgx.M.node
 let make emitter fd = new asm emitter fd
 @ 
 <<[[Sparcasm]] utilities>>=
@@ -39605,7 +39688,8 @@ let spec =
 
 <<[[Sparcasm]] definitions>>=
 <<definition of [[manglespec]] (for the name mangler)>>
-class ['a, 'b, 'c, 'd] asm emitter fd : [('a, 'b, 'c, 'd) Proc.t] Asm.assembler = 
+class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
+  : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler =
 object (this)
     val         _fd       = fd
     val         _mangle  = (Mangle.mk spec)   
@@ -39636,7 +39720,18 @@ method local s = this#new_symbol s
 method label (s: Symbol.t) = fprintf _fd "%s:\n" s#mangled_text
 method section name =
   _section <- name;
-  fprintf _fd ".section \".%s\"\n" name
+  (* claude: pcmap/pcmap_data must carry the ALLOC flag or the runtime
+   * data lands outside every PT_LOAD segment and Cmm_lookup_entry
+   * always reads zeroes - same fix/reasoning as arch/x86/x86asm.ml's
+   * and arch/ppc/ppcelfasm.ml's #section (GNU as only gives default
+   * flags to the standard section names). Confirmed via gdb: without
+   * this, the live pcmap table at Cmm_pc_map..Cmm_pc_map_limit was
+   * entirely zero bytes, not just missing one entry. *)
+  (match name with
+   | "pcmap" | "pcmap_data" ->
+       fprintf _fd ".section \".%s\",\"a\",@progbits\n" name
+   | _ ->
+       fprintf _fd ".section \".%s\"\n" name)
 method current = _section
 method org n = Impossible.unimp "no .org in SPARC assembler"
 method align  n = 
@@ -39701,27 +39796,31 @@ method private instruction rtl =
   output_string _fd (Sparcrec.to_asm rtl);
   output_string _fd "\n"
 
-method private call node =
-  let longjmp node = fprintf _fd "\tba %s\n\tnop\n" (_mangle (G.label node)) in
-  let output_altret_jmps n =
-    let rec loop i =
-      if i > n then ()
-      else (longjmp (G.join_leading_to (G.succ_n node i)); loop (i+1)) in
-    loop 1 in
-  match Cfgx.M.to_executable node with
-  | None   -> ()
-  | Some i -> this#instruction i; output_altret_jmps (G.altrets node)
+(* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
+ * cal_altrets/cal_contedges) - see arch/ppc/ppcasm.ml's own `call`
+ * method, same shape. The "ba ...\n\tnop" longjmp idiom (branch
+ * always, with its mandatory delay-slot nop) is SPARC-specific,
+ * kept from the original. *)
+method private call (node : GR.call) =
+  let longjmp edge = fprintf _fd "\tba %s\n\tnop\n" (_mangle (snd edge.G.node)) in
+  let rec output_altret_jumps n edges =
+    if n > 0 then
+      match edges with
+      | edge :: edges -> (longjmp edge; output_altret_jumps (n-1) edges)
+      | [] -> Impossible.impossible "contedge count" in
+  begin
+    this#instruction node.GR.cal_i;
+    output_altret_jumps node.GR.cal_altrets (List.tl node.GR.cal_contedges)
+  end
 
 (* this better be only used for printing out functions... *)
-method cfg_instr proc  = 
-  (* We have to emit a label for the procedure's 
+method cfg_instr (cfg, proc) =
+  (* We have to emit a label for the procedure's
      entry point. This is what symbol is for. Simply use this#label?  *)
-  let cfg    = proc.Proc.cfg
-  and symbol = proc.Proc.symbol in
+  let symbol = proc.Proc.symbol in
   let label l = this#label (try SM.find l _syms with Not_found -> this#local l) in
-  let numargs = List.length (proc.Proc.formals) in
-    this#label symbol;    
-    (emitter cfg (this#call) (this#instruction) label : unit)
+    this#label symbol;
+    (emitter proc cfg (this#call) (this#instruction) label : unit)
 @ 
 
 <<private assembly state>>=
@@ -39736,7 +39835,7 @@ val mutable _section = "bogus section"
 <<sparccall.mli>>=
 val cconv :
   return_to:(Rtl.exp -> Rtl.rtl) ->
-  Mflow.cut_args Target.map ->
+  (unit, Mflow.cut_args) Target.map ->
   string -> Automaton.cc_spec ->
   Call.t
 @ 
@@ -39774,6 +39873,33 @@ let dspace = Rg.Spaces.d.Space.space
 let r i = (rspace, i, R.C 1)
 let f i = (fspace, i, R.C 1)
 let x i = (fspace, 8+2*i, R.C 2)
+let oreg i = r (8 + i)   (* %o(i) *)
+let ireg i = r (24 + i)  (* %i(i) *)
+
+let ( *> ) = A.( *> )
+
+(* claude: SPARC register windows mean the SAME automaton cannot
+ * correctly serve both directions for integer/pointer results: the
+ * callee produces its own return value via %i0/%i1 (see sparccc.ml's
+ * c_results, used below by `epilog` - correct for that direction), but
+ * the CALLER reads a just-made call's result via %o0/%o1 - same
+ * physical register file, different window-relative name depending on
+ * which side of the `save`/`restore` boundary you're on. Float results
+ * have no such split (there is only one %f bank, not windowed), so only
+ * the integer/pointer branch differs. Mirrors sparccc.ml's c_results
+ * shape but swapped to o-registers; kept local here since it only
+ * matters for this one incoming direction (`call_results` below, not
+ * `epilog`). Root-caused empirically: fork-tiger's runtime.c--'s
+ * "getenv" call read its own %i0 (an unrelated incoming argument
+ * register) instead of the freshly-returned %o0, so a NULL-returning
+ * getenv looked non-NULL and the following atoi(garbage) segfaulted. *)
+let call_results_via_o =
+  A.choice
+    [ A.is_kind "float", A.useregs (List.map f (Auxfuns.from 0 ~upto:7)) false
+    ; A.is_any, A.widen (Auxfuns.round_up_to ~multiple_of:32)
+                *> A.widths [32; 64]
+                *> A.useregs [oreg 0; oreg 1] false
+    ]
 
 let vol_regs    = RS.of_list (List.map r ([1;2;3;4;31] @ Auxfuns.from 16 ~upto:23))
 let nv_regs     = RS.of_list (List.map r [])
@@ -39819,6 +39945,28 @@ let spval    = R.fetch sp 32
 let sp_align = 16
 let growth   = Memalloc.Down
 let bo       = R.BigEndian
+
+(* claude: the exact same i/o direction split as call_results_via_o
+ * above, but for ARGUMENTS rather than results: Sparccc.c_call's
+ * %o0-%o5 are correct for OUTGOING call args (call_actuals below, i.e.
+ * "I am making a call and placing my arguments"), but wrong for
+ * INCOMING ones (prolog below, i.e. "I am a callee reading my own
+ * parameters") - a procedure's own parameters arrive via %i0-%i5 after
+ * its own `save`, not %o0-%o5 (which are its own, unrelated outgoing
+ * scratch registers for calls it goes on to make). Root-caused
+ * empirically, the same way as call_results_via_o: fork-tiger's
+ * stdlibcmm.c--'s "new_string(bits32 size)" compiled to a bare
+ * "mov %o0,%o0" (a no-op self-move of garbage) instead of
+ * "mov %i0,%o0" when forwarding its own "size" parameter into a
+ * tig_alloc call - main/tig_call_gc's own incoming parameters happened
+ * to never be read for anything, so this exact same bug was already
+ * present (visible as the same suspicious "mov %o0,%o0" in their own
+ * disassembly) without ever being exercised until a parameter's value
+ * actually got used. *)
+let call_via_i =
+  A.widen (Auxfuns.round_up_to ~multiple_of:32)
+  *> A.useregs (List.map ireg (Auxfuns.from 0 ~upto:5)) false
+  *> A.overflow ~growth:Memalloc.Up ~max_alignment:sp_align
 @ 
 \paragraph{Automata for passing values---C~convention}
 
@@ -39891,12 +40039,12 @@ let c_overflow =
     } 
 @ 
 <<sparccall.ml >>=
-let prolog auto = 
+let prolog auto =
   let autosp a = young_end a.A.overflow in
   C.incoming ~growth:growth ~sp:sp
-    ~mkauto:(mk_automaton "in call parms" auto.A.call)
+    ~mkauto:(mk_automaton "in call parms" call_via_i)
     ~autosp:autosp
-    ~postsp:(fun _ _ -> std_sp_location) 
+    ~postsp:(fun _ _ -> std_sp_location)
     ~insp:(fun a _ _ -> autosp a)
 @ 
 <<sparccall.ml >>=
@@ -39914,12 +40062,20 @@ let call_actuals auto =
         ~postsp:(fun a sp -> std_sp_location)
 @ 
 <<sparccall.ml >>=
+(* claude: unlike epilog below (which reuses auto.A.results, and so picks
+ * up "C--"'s extra overflow_up stage via Sparccc.cmm_results), this
+ * always uses the bare 2-register call_results_via_o with no overflow
+ * stage - a call returning more values than fit in %o0/%o1 isn't
+ * handled yet. Not believed to be exercised by anything simple-program-
+ * shaped (a "C" convention runtime call returns at most one pointer/int
+ * here); flagged rather than solved so a real failure is loud instead of
+ * silently wrong. *)
 let call_results auto =
     let autosp = (fun a -> std_sp_location) in
     C.incoming ~growth:growth ~sp:sp
-        ~mkauto:(mk_automaton "in ovfl results" auto.A.results)
+        ~mkauto:(mk_automaton "in ovfl results" call_results_via_o)
         ~autosp:autosp
-        ~postsp:(fun _ _ -> std_sp_location) 
+        ~postsp:(fun _ _ -> std_sp_location)
         ~insp:(fun a _ _ -> std_sp_location)
 @ 
 These might be wrong.  No tests yet.
@@ -39970,17 +40126,33 @@ let to_call ~cutto ~return_to ~altret ccname auto =
     
     ; C.stack_growth     = growth
     ; C.stable_sp_loc    = std_sp_location
-    ; C.replace_vfp      = Cfgx.Vfp.replace_with ~sp:sp
+    (* claude: reserved for indirect jumps (ast2ir.ml stores the target here
+     * before jumping through it); r5 is otherwise unused by this backend -
+     * not zero/sp/fp/ra, not in vol_regs/nv_regs. Mirrors ppc.ml's rreg 7
+     * and x86call.ml's edx, both similarly arbitrary volatile picks. *)
+    ; C.jump_tgt_reg     = R.reg (r 5)
+    ; C.replace_vfp      = Vfprewrite.replace_with ~sp:sp
     ; C.sp_align         = sp_align
     ; C.ra_on_entry      = ra_on_entry
     ; C.where_to_save_ra = where_to_save_ra
     ; C.ra_on_exit       = (fun _ _ t -> ra)
     ; C.sp_on_unwind     = (fun e -> RU.store sp e)
-    ; C.sp_on_jump       = (fun _ _ -> Rtl.null)
+    (* claude: was "fun _ _ -> Rtl.null" - a genuine no-op, same bug
+     * ppc.ml's sp_on_jump had (see its own comment): a tail call
+     * ("jump") never restored sp before re-entering the target's own
+     * prologue, which unconditionally does its own "save %sp,-N,%sp".
+     * Every tail-recursive iteration would therefore shrink sp by
+     * another frame instead of reusing the current one. Mirrors
+     * ppc.ml's fix (RU.store sp (addk (Block.base b) (-24)), its own
+     * linkage-area constant) using this backend's -96 reserved
+     * register-window-save + minimum-outgoing-arg area (see
+     * arch/sparc/sparcbackend.ml's window_and_arg_area_size - not
+     * referenced directly to avoid a backwards dependency, but must
+     * stay in sync with it). *)
+    ; C.sp_on_jump       = (fun b _ -> RU.store sp (RU.addk wordsize (Block.base b) (-96)))
     ; C.pre_nvregs       = nv_regs
     ; C.volregs          = Register.Set.diff all_regs nv_regs
     ; C.saved_nvr        = saved_nvr
-    ; C.cutto            = cutto
     ; C.return           = return
     }
 @ 
@@ -40030,7 +40202,7 @@ module Up   = Rtl.Up
 @ 
 <<sparcrec.mlb>>=
 %head {: 
-   <<[[Sparcrec]] modules>> 
+   <<[[Sparcrec]] modules>>
    <<[[Sparcrec]] code to precede the labeler>>
       :}
 %tail {: 
@@ -40513,6 +40685,8 @@ inst : Nop() {: "! Why do you think there should be a nop? " :}
 
 \paragraph{Diagnostic rules}
 <<[[Sparcrec]] rules>>=
+(* claude: fetch %y then store it right back into itself - marks %y live/defined without moving it; a true no-op on real hardware. Was falling through to the "any" catch-all below (printed verbatim as garbage, only failing later at the real assembler) - see notes_debugging_techniques.txt / sparc-backend-status memory for how this was found (fixed carry/altread/round/spdemo/test-039/divmod/jtab in tests/run-native.sh BACKEND=sparc). *)
+inst: Store(yregl, yreg, w) {: "! y register self-store (no-op)" :}
 inst: any [1000] {: s "<%s>" any :}
 
 any : True  () {: "True"  :}
@@ -40642,7 +40816,7 @@ any : Goto(any) {: s "Goto(%s)" any :}
          op (String.concat "; " (List.map string_of_int ws)) (List.length xs))
 @
 And now we convert between RTLs and Burg constructors.
-<<[[Sparcrec]] code to follow the labeler>>=  
+<<[[Sparcrec]] code to follow the labeler>>=
 let unimp = Impossible.unimp
 let const = function
   | RP.Late(s,w)              -> unimp "sparc: late constants"
@@ -40651,14 +40825,14 @@ let const = function
   | RP.Diff _                 -> error "PIC not supported"
   | RP.Bits(b)                -> conBits(b)
 @ 
-<<[[Sparcrec]] code to follow the labeler>>=  
+<<[[Sparcrec]] code to follow the labeler>>=
 let rec exp = function
   | RP.Const(k)               -> const (k)
   | RP.Fetch(l,w)             -> conFetch (loc l) w
   <<[[Sparcrec]] special cases for particular operators>>
   | RP.App((o,_),_)           -> error ("unknown operator " ^ o)
 @ 
-<<[[Sparcrec]] code to follow the labeler>>=  
+<<[[Sparcrec]] code to follow the labeler>>=
 and loc l = match l with
   | RP.Mem(('m', aff, _), w, e, ass) -> conMem (exp e) w
   | RP.Reg((sp, _, _), i, R.C 1)     -> conReg     sp i
@@ -40684,7 +40858,7 @@ value on the stack, which is pointless.  Should be okay as long as %o7
 is mentioned as volatile and isn't available to pass a parameter on a
 call.  For now, we will just be using the ``ret'' instruction because
 we don't do the so-called ``leaf optimization''.
-<<[[Sparcrec]] code to follow the labeler>>=  
+<<[[Sparcrec]] code to follow the labeler>>=
 and effect = function
   | RP.Store(RP.Reg(('c',_,_), i, c), r, _)
     when (i = 1 (* i = npc *)) -> conGoto (exp r)
@@ -40698,7 +40872,7 @@ and effect = function
   | RP.Kill(l)                        -> unimp "sparc: kill effect"
 @
 We attempt to recognize register pairs.
-<<[[Sparcrec]] code to follow the labeler>>=  
+<<[[Sparcrec]] code to follow the labeler>>=
 and regpair = function
   | _ -> Impossible.impossible "Argument is not a register pair"
 @

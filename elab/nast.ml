@@ -6,6 +6,7 @@ type ty  = Ast.ty
 [@@deriving show]
 type exp = Ast.expr
 [@@deriving show]
+
 type loc = Ast.name_or_mem
 [@@deriving show]
 
@@ -20,24 +21,26 @@ type convention = string
 [@@deriving show]
 type aligned    = int
 [@@deriving show]
+
 (*x: exposed types(nast.nw) *)
 type cformal  = Ast.region * kind * name * aligned option
 [@@deriving show]
 type actual   = kind * exp * aligned option
 [@@deriving show]
+
 type flow     = Ast.flow list
 [@@deriving show]
 type alias    = Ast.mem  list
 [@@deriving show]
 type range    = Ast.range
 [@@deriving show]
+
 type procname = string
 [@@deriving show]
 type label    = string
 [@@deriving show]
 
-type stmt =
-  | S      of stmt * Ast.region
+type stmt = | S of stmt * Ast.region
   | If     of exp * stmt list * stmt list
   | Switch of range option * exp * (range list * stmt list) list
   | Label  of label
