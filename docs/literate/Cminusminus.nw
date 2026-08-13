@@ -94,14 +94,16 @@ Yoann Padioleau\\
 \chapter{Introduction}
 %******************************************************************************
 
-%******************************************************************************
 \section{Motivations}
-%******************************************************************************
 
 The goal of this book is to present in full details the source code of
 a compiler backend.
 Why? Because I think you are a better programmer if
 you fully understand how things work under the hood.
+
+\section{[[C--]]}
+
+\section{Other backend code generators}
 
 Here are other candidates that were considered but ultimately discarded:
 \begin{itemize}
@@ -974,7 +976,7 @@ val program : Ast.toplevel list -> t
 
 \section{Target}
 
-\section{Astm}
+\section{Asm}
 
 
 %******************************************************************************
@@ -1848,6 +1850,7 @@ and line = parse
 %%% ------------------------------------------------------------------  
 \subsection{Debugging the Scanner}
 %%% ------------------------------------------------------------------  
+%alt: in appendix
 
 %%In case of an parse error the problem may be actually caused by the
 %%scanner.  For debugging we define a function [[tok2str]] that turns a
