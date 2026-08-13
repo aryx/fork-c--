@@ -1,4 +1,4 @@
-\documentclass[twocolumn]{report}
+\documentclass[12pt]{report}
 
 \input{latex/Packages}
 \usepackage{latex/noweb}
