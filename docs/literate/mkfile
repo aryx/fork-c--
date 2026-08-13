@@ -248,6 +248,8 @@ SRC_VIEWS= \
  $TOP/arch/sparc/sparcasm.ml\
  $TOP/arch/sparc/sparccall.mli\
  $TOP/arch/sparc/sparccall.ml\
+ $TOP/arch/sparc/sparcrec.mli\
+ $TOP/arch/sparc/sparcrec.mlb\
  \
  $TOP/arch/mips/mips.mli\
  $TOP/arch/mips/mips.ml\
