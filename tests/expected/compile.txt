@@ -2,6 +2,7 @@ bool.c-- OK
 forloop_tiger.c-- OK
 hello.c-- OK
 hello_ppc.c-- FAIL
+hello_sparc.c-- FAIL
 hello_tiger.c-- OK
 sum_product.c-- OK
 add.c-- OK
