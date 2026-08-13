@@ -41355,6 +41355,7 @@ let target =
     ; T.capabilities        = { T.operators = List.map Up.opr
                                    [ "add",     [32]
                                    ; "sub",     [32]
+                                   ; "and",     [32]
                                    ; "eq",      [32]
                                    ; "ne",      [32]
                                    ; "lt",      [32]
@@ -41364,6 +41365,9 @@ let target =
                                    ; "leu",     [32]
                                    ; "gtu",     [32]
                                    ; "geu",     [32]
+                                   (* claude: %lobits8/%lobits16 feeding a narrow-width memory store (mips.ml's Post.lostore, its only producer) - mipsrec.mlb's exp function passes these through as a no-op onto the plain register-store rule, since a MIPS "sb"/"sh" already truncates its source register to the store's own width. Declared here so Target.capable doesn't warn "No acceptable widths for %lobits". *)
+                                   ; "lobits",  [32;8]
+                                   ; "lobits",  [32;16]
                                    ; "not",     []
                                    ; "bool",    []
                                    ; "disjoin", []
@@ -41712,8 +41716,19 @@ let vfp     = Vfp.mk 32
 <<mipscall.ml>>=
 let vol_int  = List.map r (Auxfuns.from 2  ~upto:15 @ [24;25;31])
 let nvl_int  = List.map r (Auxfuns.from 16 ~upto:23 @ [30])
-let vol_fp   = List.map f (Auxfuns.from 0  ~upto:18)
-let nvl_fp   = List.map f (Auxfuns.from 20 ~upto:30)
+(* claude: only the EVEN float registers are independently-named o32
+ * registers (odd ones are the upper half of a double-precision pair, not
+ * a separate save slot) - the original Auxfuns.from 0/20 ~upto:18/30
+ * listed every register, odd included, which mipsel-linux-gnu-gcc's
+ * default assembler flags reject outright ("float register should be
+ * even") the moment any of these show up in the prologue/epilogue's
+ * unconditional non-volatile-register save/restore boilerplate (mipsel-
+ * linux-gnu-as run directly only warned; going through gcc's driver,
+ * which adds its own default ABI flags, turns the same complaint into a
+ * hard error - see demos/Makefile's "mips" target). *)
+let evens regs = List.filter (fun n -> n mod 2 = 0) regs
+let vol_fp   = List.map f (evens (Auxfuns.from 0  ~upto:18))
+let nvl_fp   = List.map f (evens (Auxfuns.from 20 ~upto:30))
 @
 %%Non-volatile registers are saved somewhere in the frame. Currently, we
 %%cannnot provide dedicated locations.
@@ -41993,13 +42008,11 @@ let spec =
         }
 @
 <<mipscall.ml>>=
-(*
 let cconv ~return_to cut ccname stage =
   let f =
     match ccname with
     | _    -> c
   in f ~return_to cut stage
-*)
 @
 %%And finally our lookup function.
 <<mipscall.ml>>=
@@ -42092,9 +42105,17 @@ let guard p = if p then 0 else Camlburg.inf_cost
 %%Some utilities for building strings.
 %%
 <<head>>=
+(* claude: was Bits.U.to_native (unsigned) - mipsel-linux-gnu-as rejects
+ * an unsigned 32-bit literal like "4294967264" as an addi/lw/sw 16-bit
+ * signed-immediate operand ("operand out of range"), even though it is
+ * bit-for-bit the same value as -32. GAS's imm16 range check looks at
+ * the literal as written, it does not infer a negative interpretation
+ * from a large unsigned decimal. Bits.S.to_native (signed) prints "-32"
+ * instead, which addi/lw/sw's 16-bit field accepts directly, and li/la
+ * (which the same const32 feeds too) don't care either way. *)
 let const32 b =
     assert (Bits.width b = 32);
-    Nativeint.to_string (Bits.U.to_native b)
+    Nativeint.to_string (Bits.S.to_native b)
 
 let const64 b =
     assert (Bits.width b = 64);
@@ -42252,7 +42273,11 @@ inst:       Store(fregl,const,64)
 %%
 <<rules(mipsrec.nw)>>=
 inst:       Store(fregl,const,32)
-            {: sprintf "li $1, %s; mtc1 $1, %s" const fregl :} 
+            {: sprintf "li $1, %s; mtc1 $1, %s" const fregl :}
+
+(* claude: Store(meml, freg, w) (float store) already had a rule below ("s.s"); the mirror-image float load never did, so any Store(fregl, mem, 32) - e.g. reloading a spilled non-volatile float register - fell through to the "<...>" catch-all, found via runtime/yield.c-- (its callee-saved $f20-$f30 reload sequence). *)
+inst:       Store(fregl, mem, 32)
+            {: cat ["l.s"; " "; fregl; ","; mem] :}
 @
 %%
 %%To construct the proper rigister names we cannot use the string
@@ -42321,8 +42346,12 @@ inst:       Goto(reg)
 %%
 <<rules(mipsrec.nw)>>=
 next:       Add(pc,const)       {: () :}
-inst:       Par(Goto(addr),Store(ral,next,32))     -- s/addr/symbol/g ? 
-            {: cat ["jal"; " "; addr] :} 
+(* claude: the original "-- s/addr/symbol/g ?" note was right to be suspicious - addr also matches reg (as "(reg)"), which is not valid jal syntax at all (jal only ever takes a direct label/address, never a register). Tightened to symbol here and added a separate jalr rule below for the register case (an indirect call, e.g. through a function pointer) - found via runtime/thread.c-- emitting "jal ($2)", which mipsel-linux-gnu-as rejected outright. *)
+inst:       Par(Goto(symbol),Store(ral,next,32))
+            {: cat ["jal"; " "; symbol] :}
+
+inst:       Par(Goto(target:reg),Store(ral,next,32))
+            {: cat ["jalr"; " "; target] :}
 @
 %%
 %%Here is a special hack for the SPIM {\mips} simulator. A system call on
@@ -42352,17 +42381,9 @@ inst:       Guarded(cmp,Goto(addr))
 %%\paragraph{Arithmetic}
 %%
 <<rules(mipsrec.nw)>>=
-inst:       Store(dst:regl, Add(x:reg,y:reg), 32)
-            {: cat ["add"; " "; dst; ","; x; ","; y] :}
-     
-inst:       Store(dst:regl, Add(x:reg,y:imm), 32)
-            {: cat ["addi"; " "; dst; ","; x; ","; y] :}
-     
-inst:       Store(dst:fregl, D2S(x:freg), 32)
-            {: cat ["cvt.s.d"; " "; dst; ","; x] :}
-
-inst:       Store(dst:fregl, S2D(x:freg), 64)
-            {: cat ["cvt.d.s"; " "; dst; ","; x] :}
+(* claude: recognizes Mips.Post.cut_to's jump-through-register-while-updating-sp RTL, the shape the tiger runtime's Cmm_CutTo (runtime/cut.c--) compiles to - jr's delay slot is exactly where the sp update belongs. *)
+inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 32))
+            {: sprintf "jr %s\n\tmove $29, %s" target nsp :}
 @
 %%\paragraph{Other Instructions}
 %%
@@ -42483,10 +42504,13 @@ let cmp =
 <<[[Mipsrec]] special cases for [[App]]>>=
 | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
 | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
-| RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x) 
-| RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x) 
+| RP.App(("and", [w]), [x; y])            -> conAnd (exp x) (exp y)
+| RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x)
+| RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x)
+(* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store in this backend (see mips.ml's Post.lostore, its only producer) - a MIPS "sb"/"sh" store already truncates its source register to the store's own width, so the narrowing is a free no-op here, not a distinct instruction. Pass the inner value through unchanged rather than erroring "unknown operator lobits" (found via stdlib.c--'s tig_ord, a bits8L[...] := %lobits8(...) store). *)
+| RP.App(("lobits", [_;_]), [x])                    -> exp x
 
-| RP.App((op, [w]), [x; y]) 
+| RP.App((op, [w]), [x; y])
     when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
 @
 
