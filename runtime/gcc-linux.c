@@ -17,13 +17,43 @@
  * "push %ebp; mov %esp,%ebp". */
 #ifdef __powerpc__
 #define FP_REG 72 /* r31 */
+#elif defined(__sparc__)
+/* claude: on SPARC this index is never actually populated, by design -
+ * see the graceful-bail comment on the assert below for why, and don't
+ * bother hunting for "the right" FP_REG value here the way ppc's 72 was
+ * found; any in-range placeholder works identically since the slot is
+ * always NULL. */
+#define FP_REG 30 /* %fp/%i6, never saved via update_saved_regs on sparc */
 #else
 #define FP_REG 9 /* %ebp, r[5] */
 #endif
 /*x: gcc-linux.c  */
 void Cmm_init_c_frame(Cmm_Activation *a, char *young_in_overflow) {
   Cmm_Word fp;
-  assert(a->regs[FP_REG]);
+  /* claude: was a bare "assert(a->regs[FP_REG])", which is fine for x86/
+   * ppc (their calling conventions mark the frame-pointer register non-
+   * volatile, so qc--'s own register-preservation bookkeeping - see
+   * runtime.c's update_saved_regs - always records a slot for it before
+   * we get here) but wrong for SPARC: its calling convention
+   * (arch/sparc/sparccall.ml's pre_nvregs) marks NOTHING as callee-saved,
+   * because SPARC's register windows preserve registers across calls
+   * automatically, in hardware, with no software cooperation needed -
+   * so a->regs[FP_REG] is *always* NULL there, not just occasionally.
+   * Confirmed empirically: a temporary debug print in update_saved_regs
+   * showed its "for each saved register" loop never running at all for
+   * a tiger program's outermost C-- frame on SPARC (num_registers == 0).
+   * Treat "we don't know the C caller's frame pointer" as "nothing more
+   * to walk" (same outcome as the implausible-value case just below,
+   * and the same philosophy as Cmm_c_change_activation's own guard a
+   * few lines down) instead of asserting - a no-op for x86/ppc, since
+   * their assert never fired in practice, but the only thing that lets
+   * a windowed architecture's C-- programs finish a GC stack walk that
+   * runs off the end of the outermost C-- frame. */
+  if (a->regs[FP_REG] == NULL) {
+    a->vfp = 0;
+    a->u.cwalk.tries = 0;
+    return;
+  }
   fp = *a->regs[FP_REG];
   /* claude: main (a foreign "C" C-- procedure) blanket-preserves FP_REG
    * like any other callee-saved register, with no notion that it is

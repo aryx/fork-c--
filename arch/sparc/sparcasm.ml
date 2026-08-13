@@ -59,7 +59,18 @@ object (this)
     method label (s: Symbol.t) = fprintf _fd "%s:\n" s#mangled_text
     method section name =
       _section <- name;
-      fprintf _fd ".section \".%s\"\n" name
+      (* claude: pcmap/pcmap_data must carry the ALLOC flag or the runtime
+       * data lands outside every PT_LOAD segment and Cmm_lookup_entry
+       * always reads zeroes - same fix/reasoning as arch/x86/x86asm.ml's
+       * and arch/ppc/ppcelfasm.ml's #section (GNU as only gives default
+       * flags to the standard section names). Confirmed via gdb: without
+       * this, the live pcmap table at Cmm_pc_map..Cmm_pc_map_limit was
+       * entirely zero bytes, not just missing one entry. *)
+      (match name with
+       | "pcmap" | "pcmap_data" ->
+           fprintf _fd ".section \".%s\",\"a\",@progbits\n" name
+       | _ ->
+           fprintf _fd ".section \".%s\"\n" name)
     method current = _section
     method org n = Impossible.unimp "no .org in SPARC assembler"
     method align  n = 

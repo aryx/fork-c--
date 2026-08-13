@@ -14,6 +14,19 @@
  * above index 11 (i.e. almost all of them), corrupting whatever
  * memory follows a Cmm_Activation on the stack. 96 leaves headroom. */
 #define NUM_REGS 96
+#elif defined(__sparc__)
+/* claude: same overflow bug as ppc's (see the comment above) - the
+ * x86-sized array below silently overflowed for sparc too, since
+ * update_saved_regs's "new->regs[regs[i].index] = ..." has no bounds
+ * check. sparc's own flat register-index numbering (target/target.ml's
+ * mk_reg_ix_map, spaces filtered to Reg/Fixed and taken in
+ * arch/sparc/sparc.ml's own list order: r, f, c, k - m/t/u/q are
+ * Memory/Temp classified and excluded) covers roughly 49 indices (32
+ * general + 9 float + 6 control + 2 window-pointer registers); 128
+ * leaves headroom the same way ppc's 96 does. Not yet pinned down to
+ * the exact count the way ppc's was (still confirming FP_REG - see
+ * gcc-linux.c), so generous rather than tight. */
+#define NUM_REGS 128
 #else
 /*s: machine-dependent macro definitions for the public interface ((x86-linux)) */
 #define NUM_REGS 12
