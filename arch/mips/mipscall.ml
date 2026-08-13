@@ -17,8 +17,19 @@ let vfp     = Vfp.mk 32
 (*x: mipscall.ml *)
 let vol_int  = List.map r (Auxfuns.from 2  ~upto:15 @ [24;25;31])
 let nvl_int  = List.map r (Auxfuns.from 16 ~upto:23 @ [30])
-let vol_fp   = List.map f (Auxfuns.from 0  ~upto:18)
-let nvl_fp   = List.map f (Auxfuns.from 20 ~upto:30)
+(* claude: only the EVEN float registers are independently-named o32
+ * registers (odd ones are the upper half of a double-precision pair, not
+ * a separate save slot) - the original Auxfuns.from 0/20 ~upto:18/30
+ * listed every register, odd included, which mipsel-linux-gnu-gcc's
+ * default assembler flags reject outright ("float register should be
+ * even") the moment any of these show up in the prologue/epilogue's
+ * unconditional non-volatile-register save/restore boilerplate (mipsel-
+ * linux-gnu-as run directly only warned; going through gcc's driver,
+ * which adds its own default ABI flags, turns the same complaint into a
+ * hard error - see demos/Makefile's "mips" target). *)
+let evens regs = List.filter (fun n -> n mod 2 = 0) regs
+let vol_fp   = List.map f (evens (Auxfuns.from 0  ~upto:18))
+let nvl_fp   = List.map f (evens (Auxfuns.from 20 ~upto:30))
 (*x: mipscall.ml *)
 let saved_nvr temps =
     let t = Talloc.Multiple.loc temps 't' in
