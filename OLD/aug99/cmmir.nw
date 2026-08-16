@@ -1,8 +1,6 @@
 
 \section{Intermediate code}
 
-% l2h substitution PAL C--
-
 \subsection{Intermediate-code nodes}
 
 The design of the intermediate form is governed by the following
