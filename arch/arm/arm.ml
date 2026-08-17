@@ -358,23 +358,27 @@ let target =
     ; T.tx_ast              = (fun secs -> secs)
     (* claude: T.incapable (empty operator/literal/memory lists) would
      * reject every operator this backend actually implements - see
-     * armrec.mlb's grammar (only add/sub/and + the eq/ne/lt/gt/ge/ltu/
+     * armrec.mlb's grammar (add/sub/and/mul/quot + the eq/ne/lt/gt/ge/ltu/
      * leu/gtu/geu comparisons are recognized as real instructions;
      * everything else falls through to the "<...>" catch-all/error path)
-     * and this file's own Post (no mul/div/or/xor/shift, no float compute
-     * - unrm/binrm/dblop/wrdop/wrdrop are all Impossible.unimp/
-     * Unsupported so far). Scoped to exactly that subset, at this
-     * target's one integer width (32) - same rationale as arch/mips/
-     * mips.ml's/arch/alpha/alpha.ml's own hand-written operator lists.
-     * Widen this list (and armrec.mlb) together as more operators get
-     * real camlburg rules. *)
+     * and this file's own Post (no double-width mul, or/xor/shift, no
+     * float compute - unrm/binrm/dblop/wrdop/wrdrop are all
+     * Impossible.unimp/Unsupported so far). Scoped to exactly that
+     * subset, at this target's one integer width (32) - same rationale as
+     * arch/mips/mips.ml's/arch/alpha/alpha.ml's own hand-written operator
+     * lists. mul/quot were added later, driven by tests/tiger/'s actual
+     * operator usage (see notes_arm.txt) - widen this list (and
+     * armrec.mlb) together as more operators get real camlburg rules. *)
     ; T.capabilities        = { T.operators = List.map Up.opr
                                    [ "add",     [32]
                                    ; "sub",     [32]
                                    ; "and",     [32]
+                                   ; "mul",     [32]
+                                   ; "quot",    [32]
                                    ; "eq",      [32]
                                    ; "ne",      [32]
                                    ; "lt",      [32]
+                                   ; "le",      [32]
                                    ; "gt",      [32]
                                    ; "ge",      [32]
                                    ; "ltu",     [32]
@@ -387,6 +391,22 @@ let target =
                                    ; "bool",    []
                                    ; "disjoin", []
                                    ; "conjoin", []
+                                   (* claude: "sx"/"zx" from 1 bit + "bit"
+                                    * (empty width list, like not/bool/
+                                    * disjoin/conjoin above - a "declared
+                                    * supported generically" marker, not a
+                                    * real per-width instruction) declared
+                                    * so codegen/expander.ml's Sx/Zx(Bit(e))
+                                    * boolean-materialization special case
+                                    * (built purely from Post.li +
+                                    * expand_cbranch, no armrec.mlb grammar
+                                    * needed) doesn't print a spurious
+                                    * "No acceptable widths" mvalidate
+                                    * warning - same declaration sparc.ml's/
+                                    * x86.ml's own capabilities make. *)
+                                   ; "sx",      [1;32]
+                                   ; "zx",      [1;32]
+                                   ; "bit",     []
                                    ]
                               ; T.litops     = []
                               ; T.literals   = [32]

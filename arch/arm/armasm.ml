@@ -57,6 +57,10 @@ object (this)
     val         _mangle  = (Mangle.mk spec)
     val mutable _syms    = SM.empty
     val mutable _section = "bogus section"
+    (* claude: periodic in-function literal pools - see #maybe_pool below
+     * and its use in #instruction/#call. *)
+    val mutable _bytes_since_pool = 0
+    val mutable _pool_id          = 0
 
     method globals _ = ()
     method private new_symbol name =
@@ -135,16 +139,49 @@ object (this)
     method const (s: Symbol.t) (b:Bits.bits) =
         fprintf _fd "%s = %Lx" s#mangled_text (int64 b)
 
+    (* claude: every "ldr rX, =value" armrec.mlb emits (its immediate-
+     * materialization trick, used for every non-trivial constant/large
+     * add-sub/mul/quot immediate) is a PC-relative load from a literal
+     * pool - GNU as only auto-places one at the end of .text, too far
+     * (>4KB away) from an early reference in a large enough function
+     * ("invalid literal constant: pool needs to be closer", hit
+     * compiling tests/tiger/colmajor.c--/rb.c--). #cfg_instr's own
+     * trailing ".ltorg" bounds that to one function's size, which wasn't
+     * enough for rb.c-- - so also track approximate bytes emitted (4 per
+     * instruction line - a multi-line "ldr ip,=y\n\tOP" immediate rule
+     * counts as 2) and drop a guarded pool (a branch around a ".ltorg",
+     * so control never falls into the pool data) well under the 4KB limit
+     * whenever the budget is exceeded. *)
+    method private maybe_pool () =
+      if _bytes_since_pool > 3000 then begin
+        _pool_id <- _pool_id + 1;
+        let lbl = sprintf ".Lpool%d" _pool_id in
+        fprintf _fd "\tb %s\n\t.ltorg\n%s:\n" lbl lbl;
+        _bytes_since_pool <- 0
+      end
+
+    method private count_lines s =
+      let n = ref 1 in
+      String.iter (fun c -> if c = '\n' then incr n) s;
+      !n
+
     method private instruction rtl =
-        output_string _fd (Armrec.to_string rtl);
-        output_string _fd "\n"
+        let s = Armrec.to_string rtl in
+        output_string _fd s;
+        output_string _fd "\n";
+        _bytes_since_pool <- _bytes_since_pool + 4 * (this#count_lines s);
+        this#maybe_pool ()
 
     (* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
      * cal_altrets/cal_contedges) - see arch/alpha/alphaasm.ml's own #call,
      * same shape (no branch-delay slot on ARM either, so a longjmp is a
      * plain unconditional branch, no trailing nop like mips's/sparc's). *)
     method private call (node : GR.call) =
-      let longjmp edge = fprintf _fd "\tb %s\n" (_mangle (snd edge.G.node)) in
+      let longjmp edge =
+        fprintf _fd "\tb %s\n" (_mangle (snd edge.G.node));
+        _bytes_since_pool <- _bytes_since_pool + 4;
+        this#maybe_pool ()
+      in
       let rec output_altret_jumps n edges =
         if n > 0 then
           match edges with
@@ -167,6 +204,18 @@ object (this)
         Printf.fprintf _fd ".syntax unified  /* HACK! armasm.ml did this */\n";
         Printf.fprintf _fd ".arm             /* HACK! armasm.ml did this */\n";
         this#label symbol;
-        (emitter proc cfg (this#call) (this#instruction) label : unit)
+        (emitter proc cfg (this#call) (this#instruction) label : unit);
+        (* claude: every "ldr rX, =value" this backend emits (armrec.mlb's
+         * immediate-materialization trick, used for every non-trivial
+         * constant/large add-sub/mul/quot immediate) is a PC-relative load
+         * from a literal pool GNU as places at the end of .text by
+         * default - too far (>4KB) from an early reference in a large
+         * enough function ("invalid literal constant: pool needs to be
+         * closer", hit compiling tests/tiger/colmajor.c--). A ".ltorg"
+         * right after each function's own body bounds that distance to
+         * the function's own size, which was enough for every tests/
+         * tiger/ function; a function large enough to still overflow that
+         * would need periodic in-function pools instead - not needed yet. *)
+        Printf.fprintf _fd "\t.ltorg\n"
 end
 let make emitter fd = new asm emitter fd

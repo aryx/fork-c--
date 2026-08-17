@@ -201,8 +201,22 @@ let default_mips_cc = "clang -target mipsel-unknown-linux-gnu"
  * arm-linux-gnueabihf gcc cross toolchain on this machine, so it can be
  * the plain default (both assembler and linker), same as -ppc-elf's
  * default_powerpc_elf_cc pattern but with gcc directly instead of clang -
- * confirmed empirically that "arm-linux-gnueabihf-gcc -static" links. *)
-let default_arm_cc = "arm-linux-gnueabihf-gcc"
+ * confirmed empirically that "arm-linux-gnueabihf-gcc -static" links.
+ * -march=armv7ve+fp: plain armv7-a (this toolchain's own default,
+ * "armv7-a+fp") has no integer divide instruction at all ("sdiv"/"udiv"
+ * fail to assemble) - needed once armrec.mlb started emitting sdiv for
+ * %quot (see notes_arm.txt). Confirmed the resulting binary still runs
+ * fine under plain qemu-arm with no special -cpu flag. The "+fp" is not
+ * optional: "-march=armv7ve" alone drops the "+fp" this toolchain's
+ * default carries, and -mfloat-abi=hard (this toolchain's own default
+ * ABI) then refuses to compile any real C source ("selected architecture
+ * lacks an FPU") - hit runtime/Makefile's BACKEND=arm build (which
+ * compiles runtime.c/pcmap.c/gcc-linux.c), even though plain assembling/
+ * linking of .s/.o files (demos'/qc's own usage) never invoked cc1 and so
+ * never surfaced it. Otherwise a strict superset of the plain armv7-a
+ * this replaces, so every -march=armv7-a instruction this backend
+ * already emits keeps assembling unchanged. *)
+let default_arm_cc = "arm-linux-gnueabihf-gcc -march=armv7ve+fp"
 
 let getenv_or name default =
   match Sys.getenv_opt name with

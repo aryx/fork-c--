@@ -8,9 +8,14 @@
    * SPARC's, not MIPS's direct register-vs-register branch). Only the
    * subset of ARM actually needed by demos/hello.c-- (and, incidentally,
    * the tiger runtime's simple integer/pointer code) is covered: base+
-   * immediate-offset addressing, add/sub/and, the arm_subcc/arm_<cond>
-   * comparison family arm.ml's Post already commits to, and plain direct
-   * calls/branches. No barrel-shifter operand2, no multiply/divide.
+   * immediate-offset addressing, add/sub/and/mul/quot, the arm_subcc/
+   * arm_<cond> comparison family arm.ml's Post already commits to, and
+   * plain direct calls/branches. No barrel-shifter operand2, no shift/or/
+   * xor. mul/quot were added later, driven by tests/tiger/'s actual
+   * operator usage (see notes_arm.txt) - quot uses "sdiv", only available
+   * from -march=armv7ve+fp up (plain armv7-a has no integer divide), see
+   * driver/main.ml's default_arm_cc comment for why the ARM toolchain
+   * default was bumped to armv7ve+fp for this.
    *)
   open Nopoly
   module RP = Rtl.Private
@@ -90,17 +95,20 @@
       | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
 
   (* claude: the arithmetic ops arm.ml's Post.binop actually reaches
-   * (add/sub/and - Post.dblop/wrdop/wrdrop are all Unsupported.xxx, no
-   * mul/div/or/xor/shift yet) plus the arm_subcc/arm_<cond> pair
-   * Post.subflags/bc_guard build for a conditional branch, and %lobits
-   * (Post.lostore's only producer, a free no-op onto a narrow-width
-   * store, same reasoning as mipsrec.mlb's identical case). *)
+   * (add/sub/and/mul/quot - Post.dblop/wrdop/wrdrop are all
+   * Unsupported.xxx, still no double-width mul, or/xor/shift) plus the
+   * arm_subcc/arm_<cond> pair Post.subflags/bc_guard build for a
+   * conditional branch, and %lobits (Post.lostore's only producer, a free
+   * no-op onto a narrow-width store, same reasoning as mipsrec.mlb's
+   * identical case). *)
   let rec exp = function
       | RP.Const(k)               -> const k
       | RP.Fetch(l,w)             -> conFetch (loc l) w
       | RP.App(("add", [w]), [x; y])  -> conAdd (exp x) (exp y)
       | RP.App(("sub", [w]), [x; y])  -> conSub (exp x) (exp y)
       | RP.App(("and", [w]), [x; y])  -> conAnd (exp x) (exp y)
+      | RP.App(("mul", [w]), [x; y])  -> conMul (exp x) (exp y)
+      | RP.App(("quot", [w]), [x; y]) -> conQuot (exp x) (exp y)
       | RP.App(("lobits", [_;_]), [x]) -> exp x
       | RP.App((("arm_subcc"), [w]), [x; y]) -> conSubcc (exp x) (exp y)
       | RP.App((("arm_eq"|"arm_ne"|"arm_lt"|"arm_le"|"arm_gt"|"arm_ge"
@@ -268,6 +276,20 @@ inst:       Store(dst:regl, And(x:reg,y:reg), 32)
 inst:       Store(dst:regl, And(x:reg,y:imm), 32)
             {: cat ["ldr ip, ="; y; "\n\tand "; dst; ", "; x; ", ip"] :}
 
+(* claude: ARM's "mul" only takes register operands, so the immediate variant materializes y into ip first, same trick as add/sub/and's own immediate rules above. *)
+inst:       Store(dst:regl, Mul(x:reg,y:reg), 32)
+            {: cat ["mul"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, Mul(x:reg,y:imm), 32)
+            {: cat ["ldr ip, ="; y; "\n\tmul "; dst; ", "; x; ", ip"] :}
+
+(* claude: "sdiv" needs -march=armv7ve+fp (plain armv7-a has no integer divide) - the ARM toolchain default was bumped everywhere to match, see notes_arm.txt. *)
+inst:       Store(dst:regl, Quot(x:reg,y:reg), 32)
+            {: cat ["sdiv"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, Quot(x:reg,y:imm), 32)
+            {: cat ["ldr ip, ="; y; "\n\tsdiv "; dst; ", "; x; ", ip"] :}
+
 inst:       Nop() {: "nop" :}
 
 inst: any [100]         {: cat ["<";any;">"] :}
@@ -283,6 +305,8 @@ any : Fetch (any, w:int){: cat [ "Fetch(";any;",";string_of_int w;")" ] :}
 any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
 any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
 any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
+any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : Quot(x:any, y:any){: cat [ "Quot(";x;", ";y;")" ] :}
 any : Subcc(x:any,y:any){: cat [ "Subcc(";x;", ";y;")" ] :}
 any : Cond(op:string,any) {: cat [ "Cond(";op;",";any;")" ] :}
 any : Sx(any)           {: cat [ "Sx(";any;")" ] :}

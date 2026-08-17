@@ -60,7 +60,7 @@ CCPPC   ?= powerpc-linux-gnu-gcc
 CCSPARC ?= sparc64-linux-gnu-gcc -m32
 CCALPHA ?= alpha-linux-gnu-gcc
 CCMIPS  ?= mipsel-linux-gnu-gcc
-CCARM   ?= arm-linux-gnueabihf-gcc
+CCARM   ?= arm-linux-gnueabihf-gcc -march=armv7ve+fp
 
 B = build
 

@@ -43,8 +43,35 @@ let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let r n = (Rg.rspace, n, R.C 1)
 let vfp = Vfp.mk 32
 
-let vol_int = List.map r (Auxfuns.from 0 ~upto:3 @ [12])
-let nvl_int = List.map r (Auxfuns.from 4 ~upto:11)
+(* claude: r12/ip must NOT be in vol_int - armrec.mlb's every immediate-
+ * materialization rule ("ldr ip, =y" before an add/sub/and/mul/quot/cmp
+ * with an immediate operand, or a bare "ldr rX, =imm" for any non-trivial
+ * constant) uses it as a private scratch register, unconditionally
+ * clobbering it. Having it in vol_int let Colorgraph/Flowra legitimately
+ * allocate a live temp to r12 across such an instruction, silently
+ * corrupting it - a real latent bug (same class mips.ml's $at reservation
+ * already guards against, see mipscall.ml's own vol_int starting at 2,
+ * not 0), fixed here on general principle even though it turned out NOT
+ * to be the cause of tests/tiger/'s "array of size 0"/"tig_compare_str: t
+ * is null" failures - re-running the suite after this fix alone produced
+ * byte-for-byte identical results. r12 stays reserved for C.jump_tgt_reg
+ * below, consistent with the same rationale.
+ *
+ * r11/fp must ALSO not be in nvl_int, for a different and more consequential
+ * reason: fork-tiger's gc.c is compiled with -fno-omit-frame-pointer
+ * specifically so its collector can cross C--/C frame boundaries by
+ * walking r11 as a real AAPCS frame-pointer chain (see fork-tiger/pad.txt
+ * and this project's own CLAUDE.md). Having r11 allocatable let
+ * Colorgraph/Flowra assign live Tiger temps to it, destroying that chain
+ * the moment a collection actually ran - which every tiny hand-written
+ * smoke test here failed to trigger (too little allocated), but which
+ * every genuinely failing tests/tiger/ program does (rb/wf/wff/merge/
+ * colmajor/qsort/queens/rc4 all call tig_call_gc; sieve/arrays/hello/
+ * forloop/funcall/exceptions - the ones that already passed - happen not
+ * to allocate enough to). This IS believed to be the actual root cause -
+ * see notes_arm.txt for the confirming before/after test run. *)
+let vol_int = List.map r (Auxfuns.from 0 ~upto:3)
+let nvl_int = List.map r (Auxfuns.from 4 ~upto:10)
 
 let saved_nvr temps =
     let t = Talloc.Multiple.loc temps 't' in
