@@ -203,10 +203,11 @@ Modified files
   first).
 - arch/arm/armcall.ml - two allocatable-register-set fixes, both real ABI-
   correctness issues, found by inspection while investigating the runtime
-  failures below (not proven to be THE root cause of what's still failing -
-  see "Root cause not fully isolated" below - but both are genuine bugs
-  worth having fixed regardless, and a before/after test run confirmed
-  neither one, by itself, changed the pass count):
+  failures below (NOT the root cause of what's still failing - see "Root
+  cause CONFIRMED" further down, a shared cross-backend bug unrelated to
+  either of these - but both are genuine bugs worth having fixed regardless,
+  and a before/after test run confirmed neither one, by itself, changed the
+  pass count):
     (1) r12/ip was in vol_int (allocatable) despite armrec.mlb's every
         immediate-materialization rule using it as unconditional scratch -
         the same class of bug mips.ml's $at (r1) reservation already avoids
@@ -255,56 +256,120 @@ on this backend's own C-side test/demo runtime specifically (not a global
 change, not shipped code) was judged the pragmatic fix for a stretch-goal
 pass rather than chasing gcc-generated ARM canary codegen line by line.
 
-Root cause not fully isolated: the remaining 9/15 failures
---------------------------------------------------------------
-Two symptom clusters remain, both deterministic (re-ran individual failing
-tests 3x, byte-identical stderr every time) and both look like a genuine
-correctness bug in this backend's own codegen rather than a test-harness or
-runtime-C issue:
-  - "Attempt to access array index N for array of size 0" (colmajor, qsort,
-    queens, rc4) - tig_bounds_check's `size` argument reads as 0.
-  - "tig_compare_str: Assertion `t' failed." / "took ord of string of length
-    0" (rb, rbshort, wf, wff, merge) - a string pointer argument is NULL
-    where it shouldn't be.
-Diagnosed colmajor specifically by temporarily patching a scratch copy of
-fork-tiger's stdlib.c (restored immediately after, never left modified -
-diff-verified clean) to print tig_bounds_check's actual array pointer/size/
-neighboring words on every call: the array is a genuine 16-element table,
-every access index 0..15 succeeds correctly (real header value 1024,
-consistently reread as identical across 16 calls - not garbage, not
-uninitialized memory), and the very NEXT access is index 16 - i.e. NOT
-memory corruption or a wild pointer, but the *iterator loop itself*
-computing one index too many before its own bounds check should have
-stopped it. tests/tiger/colmajor.c--'s iterator (cmfirst_49/cmnext_50 -
-column-major traversal, using %quot for one coordinate) is the natural
-suspect, but this needs stepping through that specific arithmetic (or
-instrumenting the C-- source directly with a debug foreign-call printi
-right after the relevant %quot, not yet tried) to actually confirm rather
-than guess - not done here.
+Root cause CONFIRMED: a shared, pre-existing GC/register-allocator bug,
+not ARM-specific
+--------------------------------------------------------------------------
+(Written after a follow-up session, same day, still commit-adjacent to the
+6/15 pass above.) The remaining 9/15 failures - both the "array index N for
+array of size 0" cluster (colmajor/qsort/queens/rc4) and the "tig_compare_str:
+t is null" cluster (rb/rbshort/wf/wff/merge) - trace to a single root cause,
+and it is NOT specific to this ARM backend.
+
+Diagnosis: temporarily patched a scratch copy of fork-tiger's gc.c (restored
+immediately after each patch, diff-verified clean both times - never left
+modified) to log every time the collector's tig_gc() actually fires, and
+what Cmm_ChangeActivation's stack-walk finds. For colmajor specifically:
+  - tig_gc DOES fire (the heap is only 8192 bytes per semispace by default,
+    and colmajor's `lines := stringlist[1024] of ""` alone - the array that
+    later comes back "size 0" - eats over half of that on its own, so it
+    doesn't take much more allocation, e.g. from string-building while
+    reading stdin, to exhaust it).
+  - tig_gc's `bzero(from_space, heap_size)` (runtime/gc.c - this is a
+    COPYING/semi-space collector: live data gets relocated to to_space, then
+    the whole old from_space is zeroed unconditionally) runs against
+    from_space=0x72dc8 - exactly the array's own address region.
+  - But Cmm_ChangeActivation's stack-walk (runtime/runtime.c's
+    normal_change) finds only ONE activation (tig_call_gc's own trivial
+    frame, var_count=0, no gc_data - which is expected, alloc.c--'s
+    tig_call_gc declares no Tiger-visible locals of its own) and then STOPS -
+    it never walks further up to tig_alloc's actual Tiger-level caller,
+    which is where the live `lines` root would have been found and
+    relocated. So nothing gets copied, and the still-live array gets wiped
+    by the unconditional bzero right along with the genuinely-dead old
+    generation - a real, observable memory-safety bug, not corruption from
+    a compiler-arithmetic mistake (my earlier working note in this file,
+    since corrected, had misread this as an off-by-one in colmajor's
+    cmfirst_49/cmnext_50 iterator - it isn't; the array's own header/data
+    genuinely change value in place between GC-adjacent calls).
+
+The walk in normal_change reads the return address from a stack location
+described by pcmap's `return_addressp` field for the current procedure - a
+location computed from the SAME architecture-independent path on every
+backend (codegen/ast2ir.ml's `saved_ra`, via `C.where_to_save_ra`, which
+arm.ml/mips.ml/ppc.ml/sparc.ml all implement identically:
+`Talloc.Multiple.loc t 't' width`, an ordinary temp-allocator request with
+no "must stay live across every call in this procedure, for GC safety" flag
+attached). That temp's FINAL location is decided later by each backend's own
+register allocator based on ordinary liveness - and an ordinary allocator is
+entitled to reuse that register/slot for something else the moment its
+normal liveness analysis considers the return-address value dead, which can
+easily be well before every OTHER call site in the same procedure (GC can
+happen at ANY call, not just the ones "close enough" to entry/exit that
+liveness naturally keeps it around for). Under high register pressure this
+reuse actually happens, corrupting what the pcmap descriptor still claims is
+the return-address slot.
+
+This reframes the whole investigation: it's not a bug in armrec.mlb, arm.ml,
+armcall.ml, or armasm.ml - none of the fixes made in the first two passes
+(operator coverage, literal pools, r11/r12 reservations, toolchain march) are
+wrong to have made, but none of them touch the actual defect, which lives in
+shared codegen/register-allocation machinery that has nothing backend-
+specific about its INTENT (only its manifestation is register-pressure-
+dependent, hence backend-dependent in practice).
+
+Confirming cross-backend evidence: this project's own already-recorded
+baselines (tests/expected/tiger-{mips,sparc}.txt, both checked in well before
+this session) show mips at 1/15 (only hello) and sparc at 1/15 (only sieve) -
+the exact same failure shape, on backends that predate this session entirely
+and were never touched here. ppc alone reaches 15/15 - not because ppc's
+C.where_to_save_ra does anything different (arch/ppc/ppc.ml's is textually
+the same `Talloc.Multiple.loc t 't' ws` pattern) but almost certainly because
+ppc has roughly twice the general-purpose registers (32 GPRs vs. 16 on
+ARM/MIPS/SPARC, several of which are further reserved for sp/lr/pc/a
+backend's own scratch use), giving its register allocator enough headroom to
+essentially never need to reuse the return-address temp's register within
+these particular small test programs - sidestepping the bug by luck of
+register count, not fixing it.
 
 Ruled out along the way (in case revisited): NOT the %mul/%quot grammar
-additions themselves (a targeted register+immediate smoke test of both
-passed correctly, including the exact truncating-division semantics needed);
-NOT SP alignment (checked directly in generated .s, always a multiple of 8);
-NOT the literal-pool/.ltorg mechanism (checked its insertion points land
-between complete call+successor-label pairs in the generated .s, never
-splitting one); NOT the r12/r11 allocatable-register bugs above (both fixed,
-confirmably zero effect on the pass count, byte-identical stderr before and
-after - though both are real bugs worth having fixed regardless). GDB-under-
-qemu's-gdbstub also proved unreliable for this specific investigation
-(breakpoints intended to catch the exact failing call either failed to fire
-at all or changed the program's behavior entirely vs. an unmodified run,
-some kind of stub/timing interaction, not chased further) - the stdlib.c
-print-based diagnostic above was what actually produced trustworthy data.
+additions (a targeted register+immediate smoke test of both passed
+correctly, including the exact truncating-division semantics needed); NOT SP
+alignment (checked directly in generated .s, always a multiple of 8); NOT
+the literal-pool/.ltorg mechanism (checked its insertion points land between
+complete call+successor-label pairs, never splitting one); NOT the r12/r11
+allocatable-register fixes from the first tiger-suite pass (both correct
+ABI-compliance fixes, confirmably zero effect on the pass count by
+themselves). GDB-under-qemu's-gdbstub proved unreliable for this
+investigation (breakpoints either failed to fire or changed program behavior
+vs. an unmodified run - some kind of stub/timing interaction, not chased
+further); source-level (gc.c) print instrumentation, restored immediately
+after each use, was what actually produced trustworthy data.
+
+Scope decision: presented this finding to the user (it is a deep,
+cross-backend liveness/register-allocation correctness gap - fixing it
+properly means teaching the compiler that a GC-relevant temp like saved_ra
+must be treated as live across every call in its procedure regardless of
+ordinary dataflow liveness, touching codegen/ast2ir.ml and/or regalloc/ code
+shared by every backend, with real regression risk to ppc/x86/sparc/mips/
+alpha, which currently all build on the same machinery) - decision was to
+stop at 6/15 for now rather than pursue the deep fix in this session. ARM
+already exceeds mips's and sparc's own tiger-suite baselines (1/15 each)
+despite being the newest backend, so 6/15 is not a backend-specific
+shortfall to feel behind about.
 
 Not attempted
 -------------
-- The colmajor iterator bug itself (see above - needs source-level
-  instrumentation of tests/tiger/colmajor.c--'s %quot-using coordinate
-  computation to actually confirm the hypothesis).
-- Whether the string-cluster failures (rb/wf/wff/merge) share the same root
-  cause as colmajor's array-cluster failure, or are a second, separate bug -
-  not diagnosed at the same depth; plausibly the same off-by-one class of
-  bug manifesting differently (a string built one iteration short/long), but
-  not confirmed.
+- The actual fix: making the return-address-holding temp (and in principle
+  any other GC-required-to-be-findable location) genuinely live across every
+  call site in its procedure, not just where ordinary liveness happens to
+  keep it. Natural places to start: codegen/ast2ir.ml's `saved_ra`/`spans`
+  construction (~line 200-215, ~395-400), and whatever regalloc/ liveness
+  pass currently computes interference without knowing about this
+  requirement - Colorgraph.ralloc/Flowra.ralloc's inputs (a Dataflow.t or
+  similar liveness result computed upstream of both) are the likely places
+  to look next.
+- Whether fixing this would actually bring arm to something close to ppc's
+  15/15 (plausible, since ppc's own success looks incidental to register
+  count rather than a genuine different mechanism, but not verified) or
+  whether other, still-undiscovered bugs remain underneath.
 - -O3 (already a known gap from the first pass, unaffected by this one).

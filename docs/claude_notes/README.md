@@ -22,10 +22,12 @@ Index:
   mechanics of renaming across the literate program.
 - [notes_arm.txt](notes_arm.txt) — how the ARM backend (new development, no
   upstream `.nw`) was built: file-by-file summary, toolchain choice, bugs
-  found and fixed, and known remaining gaps (`-O3` hang). Follow-up section:
-  bringing up `tests/run-tiger-arm.sh` (reached 6/15; two undiagnosed bug
-  clusters remain, one root-caused down to an iterator off-by-one but not
-  fully confirmed).
+  found and fixed, and known remaining gaps (`-O3` hang). Follow-up:
+  `tests/run-tiger-arm.sh` reaches 6/15 (beats mips's/sparc's own 1/15
+  baselines); the remaining failures are root-caused to a pre-existing,
+  cross-backend GC/register-allocator bug (a GC-required temp isn't kept
+  live across every call site) — not specific to ARM, deliberately not
+  fixed here (deep, shared, real regression risk to other backends).
 
 Retired: `plan_tiger_hello.md` and `plan_end_to_end.md` planned the path to
 `tigerc demos/hello.tig | qc ... | ./hello` actually running. That milestone
