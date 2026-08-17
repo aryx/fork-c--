@@ -192,8 +192,8 @@ SRC_VIEWS= \
  $TOP/asm/mangle.mli\
  $TOP/asm/mangle.ml\
  \
- $TOP/TODO/arch/callspec.mli\
- $TOP/TODO/arch/callspec.ml\
+ $TOP/TODO/callspec.mli\
+ $TOP/TODO/callspec.ml\
  $TOP/cfg/dataflow/dataflow.mli\
  $TOP/cfg/dataflow/dataflow.ml\
  $TOP/cfg/dataflow/live.mli\

@@ -39366,17 +39366,61 @@ all cases stored in [[x]].
 assign the result to a new temporary, but cannot allocate one. We thus
 mutate the argument.
 <<Alpha postexpander>>=
-let bit = R.opr "bit" [wordsize] 
+(* claude: "bit" is declared width-less ("bit", [] in T.capabilities
+ * just below, matching every other backend's own declaration - ppc.ml/
+ * sparc.ml/x86.ml/arm.ml/interp.ml all agree) and elab/simplify.ml's
+ * own "bit" simplification rule hard-asserts "null w" on every
+ * backend, not just this one. Was "R.opr "bit" [wordsize]" - matched
+ * alpharec.mlb's own (equally wrong) recognizer pattern, so nothing
+ * failed to compile, but any comparison actually reaching
+ * elab/simplify.ml's generic constant-folding (not just alpharec.mlb's
+ * instruction selection) tripped its "assert (null w)" instead. Fixed
+ * together with alpharec.mlb's matching RP.App(("bit", [64]), ...)
+ * pattern, now RP.App(("bit", []), ...). *)
+let bit = R.opr "bit" []
 let com x =
   let o = R.opr "com" [wordsize] in
+  rtl (R.store (tloc x) (R.app o [tval x]) wordsize)
+(* claude: logical negation of a clean 0/1 comparison result - NOT
+ * "com" (bitwise complement): com(1) is -2 (0x...FE), still nonzero,
+ * so every "<:> bnot dst" case below (ne/ge/le/geu) was silently
+ * wrong whenever the underlying comparison held before this existed
+ * (confirmed by hand: %le evaluated true unconditionally, including
+ * %le(7,3)). "alpha_bnot" is an internal-only operator (like
+ * "alpha_gp" below), not part of T.capabilities, recognized by
+ * alpharec.mlb as "xor x, 1, dst". *)
+let bnot x =
+  let o = R.opr "alpha_bnot" [wordsize] in
   rtl (R.store (tloc x) (R.app o [tval x]) wordsize)
 @
 [[relation]] implements a binary relation, where the result is
 stored in [[x]] \emph{as a value}. 
 <<Alpha postexpander>>=
-let relation op x y = 
+(* claude: dst is a FRESH temp (talloc 't'), never x or y - was
+ * "R.store (tloc x) ...", storing the comparison result back into
+ * one of its own two source operands. Two separate bugs came from
+ * that, fixed in two stages: (1) for swapped-operand cases (gt/geu/
+ * gtu/le, which reuse lt/ltu/leu with x and y exchanged) the result
+ * landed in y's register instead of x's - fixed by passing ~dst:x
+ * explicitly; but (2) even with dst pinned to x, reusing x's own
+ * register as the destination corrupts x for any LATER comparison
+ * against the same value - confirmed by hand on
+ * tests/tiger64/exceptions.c--'s handler-dispatch chain ("handle ex1
+ * ... handle ex2 ... handle ex3"), which compares the same raised-
+ * exception-id register against three different constants in
+ * sequence: cmpeq against the first constant overwrote that register
+ * with its own 0/1 result, so the second comparison in the chain was
+ * silently comparing the FIRST comparison's boolean instead of the
+ * original exception id, matching every subsequent constant as false
+ * regardless of what was actually raised. x86/ppc's own compare
+ * instructions set flags/a condition register instead of overwriting
+ * a source operand, so they never had this problem to begin with -
+ * it is specific to Alpha's "materialize the boolean into a GPR"
+ * instruction shape. *)
+let relation op x y =
+  let dst = talloc 't' wordsize in
   let o = R.opr op [wordsize] in
-  rtl (R.store (tloc x) (R.app bit [R.app o [tval x;tval y]]) wordsize )
+  dst, rtl (R.store (tloc dst) (R.app bit [R.app o [tval x;tval y]]) wordsize)
 @
 [[cmp]] implements the {\rtl} comparision operators where the result is
 stored in the first argument. 
@@ -39386,23 +39430,31 @@ REGARDLESS OF THE OPERATOR IN USE.
 <<Alpha postexpander>>=
 let cmp op x y = match op with
     | "eq"          -> relation "eq"  x y
-    | "ne"          -> relation "eq"  x y <:> com x
+    | "ne"          -> let d,s = relation "eq"  x y in d, s <:> bnot d
     | "lt"          -> relation "lt"  x y
     | "gt"          -> relation "lt"  y x
-    | "ge"          -> relation "lt"  x y <:> com x
-    | "ltu"         -> relation "ltu" x y 
+    | "ge"          -> let d,s = relation "lt"  x y in d, s <:> bnot d
+    (* claude: was missing entirely - alpharec.mlb's own "cmp" set
+     * (eq/ge/geu/gt/gtu/le/leu/lt/ltu/ne) already recognizes "le",
+     * and there is no "lea" alpha instruction, so any signed <=
+     * comparison (e.g. a for-loop bound) hit the "_ -> impossible"
+     * case below instead ("bad comparison in expanded Alpha
+     * conditional branch"). x<=y is NOT(y<x), same derivation as
+     * "ge" just above (x>=y is NOT(x<y)). *)
+    | "le"          -> let d,s = relation "lt"  y x in d, s <:> bnot d
+    | "ltu"         -> relation "ltu" x y
     | "leu"         -> relation "leu" x y
     | "gtu"         -> relation "ltu" y x
     | "geu"         -> relation "leu" y x
-    | "feq"         
-    | "fne"         
-    | "flt"         
-    | "fle"         
-    | "fgt"         
-    | "fge"         
-    | "fordered"    
+    | "feq"
+    | "fne"
+    | "flt"
+    | "fle"
+    | "fgt"
+    | "fge"
+    | "fordered"
     | "funordered"  -> unimp "floating-point comparison"
-    | _             -> impossible 
+    | _             -> impossible
                       "bad comparison in expanded Alpha conditional branch"
 @
 A conditional branch is a sequence of relational operators, followed by
@@ -39418,18 +39470,23 @@ OR PERHAPS THE COMPARISON SHOULD BE RETURNED FROM [[cmp]]?
  * there is no direct register-vs-register conditional branch in the
  * ISA, only "b<cond> $reg, target" testing a register against zero.
  * So a general `x op y` compare has to happen in two steps: first
- * `cmp` computes the boolean into x itself (one of the special App
- * cases alpharec.mlb's exp function recognizes - eq/ne/lt/../geu),
- * then a second, separate zero-comparison of that result becomes the
- * actual branch guard. This mirrors the original (pre-split) `bc`'s
- * computation exactly, just divided across the two functions the
- * current interface wants - not re-derived from scratch, since
- * there's no way to exercise/verify the branch sense (eq-to-zero
- * here, matching the original) until a conditional actually runs
- * under qemu-alpha. *)
+ * `cmp` computes the boolean into a fresh temp (one of the special
+ * App cases alpharec.mlb's exp function recognizes - eq/ne/lt/../
+ * geu), then a second, separate zero-comparison of that result
+ * becomes the actual branch guard. claude: was "eq"-to-zero ("guard
+ * holds when cmp's result is 0, i.e. the comparison was FALSE") -
+ * the surrounding comment already flagged this exact line as
+ * unverified ("not re-derived from scratch... until a conditional
+ * actually runs"), and it was backwards: bc_of_guard's ~ifso/~ifnot
+ * convention takes the guard-true branch to ifso, so a guard that
+ * holds on FALSE sent every %gt/%le/%ge/%ne (the branch senses this
+ * exercises) to the wrong side - confirmed by hand (%gt(7,3)
+ * evaluated as 0, %gt(3,7) as -1, exactly inverted). "ne"-to-zero
+ * (guard holds when the comparison was TRUE) is correct. *)
 let bc_guard x (opr, ws as op) y =
   assert (ws =*= [wordsize]);
-  cmp opr x y, R.app (R.opr "eq" [wordsize]) [tval x; R.bits (Bits.zero 64) 64]
+  let dst, setup = cmp opr x y in
+  setup, R.app (R.opr "ne" [wordsize]) [tval dst; R.bits (Bits.zero 64) 64]
 let bc_of_guard (setup, guard) ~ifso ~ifnot =
   let brtl cond tgt = R.guard cond (R.store pc_lhs tgt wordsize) in
   DG.Test (setup, (brtl guard, ifso, ifnot))
@@ -39664,10 +39721,13 @@ let target =
     ; T.capabilities        = { T.operators = List.map Up.opr
                                    [ "add",     [64]
                                    ; "sub",     [64]
+                                   ; "mul",     [64]
+                                   ; "and",     [64]
                                    ; "com",     [64]
                                    ; "eq",      [64]
                                    ; "ne",      [64]
                                    ; "lt",      [64]
+                                   ; "le",      [64]
                                    ; "gt",      [64]
                                    ; "ge",      [64]
                                    ; "ltu",     [64]
@@ -39679,6 +39739,9 @@ let target =
                                    ; "disjoin", []
                                    ; "conjoin", []
                                    ; "bit",     []
+                                   ; "lobits",  [64;8]
+                                   ; "lobits",  [64;16]
+                                   ; "lobits",  [64;32]
                                    ]
                               ; T.litops     = []
                               ; T.literals   = [64]
@@ -39987,10 +40050,29 @@ allocation, but the call instruction always writes it (and it is live on
 entry).
 
 <<alphacall.ml >>=
-let byteorder = R.LittleEndian         
+let byteorder = R.LittleEndian
 let mspace = ('m', byteorder, Cell.of_size 8)
-let rspace = ('r', byteorder, Cell.of_size 64)
-let fspace = ('f', byteorder, Cell.of_size 64)
+(* claude: Rtl.Identity, not byteorder - must match alpha.ml's own
+ * Spaces.r/Spaces.f (both "SS.r/f 32 id [64]", id = Rtl.Identity), since
+ * this file can't import alpha.ml directly (alpha.ml depends on
+ * Alphacall.cconv, so the reverse would be circular) and instead
+ * hand-rolls its own copy of these space tuples for volregs/pre_nvregs.
+ * Getting the aggregation field wrong here doesn't fail to compile - it
+ * silently fails Target.fits's stands_for match (front_target/target.ml:
+ * "agg =*= agg'") against alpha.ml's real Spaces.t/Spaces.u temp spaces
+ * for EVERY register, since none of cc.Call.volregs/pre_nvregs's
+ * registers then match any temp space's expected aggregation - which
+ * regalloc/flowra.ml's get_regs_for_space silently turns into an empty
+ * candidate-register list for any temp needing allocation, only
+ * surfacing as "alloc_one: no registers to spill?" once something
+ * actually contends for registers (confirmed: demos/hello_alpha.c--,
+ * straight-line with no competing temps, never spills and so never hit
+ * this; tests/tiger64/hello.c-- does). riscv64call.ml avoids this whole
+ * class of bug by importing Riscv64regs.rspace/fspace directly instead
+ * of re-deriving them - not done here since alpha has no equivalent
+ * regs-only module to import from without restructuring. *)
+let rspace = ('r', Rtl.Identity, Cell.of_size 64)
+let fspace = ('f', Rtl.Identity, Cell.of_size 64)
 
 let r n     = (rspace, n, R.C 1)
 let f n     = (fspace, n, R.C 1)
@@ -40474,11 +40556,23 @@ let reg n   = "$"  ^ string_of_int n
 let freg n  = "$f" ^ string_of_int n
 
 let suffix = function
-    | 8  -> "b"      
+    | 8  -> "b"
     | 16 -> "w"
     | 32 -> "l"
     | 64 -> "q"
     | w  -> error (sprintf "not an Alpha width: %d" w)
+
+(* claude: Alpha's actual mnemonics for the unsigned cases are
+ * "cmpult"/"cmpule" (unsigned-prefix, then lt/le), not "cmpltu"/
+ * "cmpleu" (qc--'s own RTL operator names, ltu/leu, unsigned-suffix) -
+ * a bare "cmp" ^ op concatenation produced an assembler-rejected
+ * mnemonic for every unsigned compare until this remap (confirmed:
+ * alpha-linux-gnu-as "unknown opcode cmpltu"). eq/lt/le pass through
+ * unchanged - they already match. Defined here in %head, not %tail
+ * (where "cmp" just below lives) - %% actions can only see %head
+ * bindings, confirmed by is_addq_lit's own placement/use above. *)
+let alpha_cmp_mnemonic = function
+  | "ltu" -> "ult" | "leu" -> "ule" | op -> op
 
 let width w = string_of_int w
 @
@@ -40581,6 +40675,10 @@ inst:       Store(regl,const,64)
 inst:       Store(regl,mem,64)
             {: sprintf "ldq %s, %s" regl mem :}
 
+(* claude: was missing - only the store-to-memory direction ("sts", spilling a callee-saved float register) existed, not this reload direction; Tiger allocates no float temps, but the calling convention still walks alphacall.ml's nvl_fp/vol_fp sets unconditionally, so a real instruction is needed - confirmed by hand (exceptions/rb/wf/wff.c-- hit the "<...>" catch-all here). "lds" to match "sts"'s own mnemonic. *)
+inst:       Store(fregl,mem,64)
+            {: sprintf "lds %s, %s" fregl mem :}
+
 inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
             {: sprintf "ld%s %s, %s" (suffix w) regl mem :}
             
@@ -40630,6 +40728,10 @@ inst:       Goto(symbol)
 
 inst:       Goto(reg)
             {: sprintf "jmp (%s)" reg  :}
+
+(* claude: was missing - recognizes Post.cut_to's jump-through-register-while-updating-sp RTL (a Tiger "cuts to", e.g. tig_call_gc's continuation), ported from riscv64rec.mlb's identical rule/comment. Alpha has no delay slot either, so the sp update has to come first, same discipline. *)
+inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 64))
+            {: sprintf "mov %s, $30\n\tjmp (%s)" nsp target :}
 @
 
 The [[next]] rule covers storing the address of the next instruction in
@@ -40663,13 +40765,18 @@ inst:       Guarded(cmp_zero,Goto(addr))
 cmp:        Cmp(op:string,x:reg,y:reg)                      {: (op, x, y) :}
 cmp_zero:   Cmp(op:string,reg,zero)                         {: (op, reg)  :}
 
+(* claude: 3-operand form (dst explicit, not implied by x) - alpha.ml's relation now always passes an explicit ~dst that can differ from the instruction's own first operand x (see its own claude: comment for why: gt/geu/gtu/le all swap x/y to reuse the lt/ltu/leu instruction). *)
 inst:       Store(dst:regl,Bit(cmp),64)
-            {: match cmp with (op, x, y) -> 
-                sprintf "cmp%s %s, %s" op x y 
+            {: match cmp with (op, x, y) ->
+                sprintf "cmp%s %s, %s, %s" (alpha_cmp_mnemonic op) x y dst
             :}
 
 inst:       Store(dst:regl,Com(reg),64)
             {: sprintf "not %s, %s" dst reg :}
+
+(* claude: logical negation of a clean 0/1 value (alpha.ml's bnot, used to negate a comparison result) - NOT the same as Com/"not" above (bitwise complement: not(1) is -2, still nonzero, silently wrong when used for this - confirmed by hand, see alpha.ml's own claude: comment on bnot). "xor $reg, 1, $dst" flips just the low bit, 1 fits xor's 8-bit literal form directly like and's does. *)
+inst:       Store(dst:regl,Bnot(reg),64)
+            {: sprintf "xor %s, 1, %s" reg dst :}
 
 @
 
@@ -40687,6 +40794,21 @@ inst:       Store(dst:regl, Add(x:reg,y:imm8), 64)
 (* claude: fallback when the immediate is out of addq's 0..255 literal range (e.g. sp+(-16)) or is a symbol - "lda" takes a full signed 16-bit displacement. Cost 1 so addq (cost 0) wins whenever imm8 also matches. *)
 inst:       Store(dst:regl, Add(x:reg,y:imm), 64) [1]
             {: sprintf "lda %s, %s(%s)" dst y x :}
+
+(* claude: "subq" - was entirely missing (only the "any : Sub" debug fallback existed), unlike Add which has full reg/imm8/imm coverage - confirmed real Tiger code needs register-vs-register subq (tests/tiger64/qsort.c--/queens.c--/rb.c--/rc4.c--/wf.c--/wff.c-- all hit the "<...>" catch-all here). No imm8/imm split added, matching Mul just above - nothing has exercised a constant-subtrahend yet. *)
+inst:       Store(dst:regl, Sub(x:reg,y:reg), 64)
+            {: sprintf "subq %s, %s, %s" x y dst :}
+
+(* claude: "mulq" is register-only, no immediate form - matching Add's own imm8/imm split would need a scratch-reg fallback like riscv64rec.mlb's mul/div immediate rules, not added since nothing exercised it yet (Tiger's multiplications so far are all register-vs-register). *)
+inst:       Store(dst:regl, Mul(x:reg,y:reg), 64)
+            {: sprintf "mulq %s, %s, %s" x y dst :}
+
+(* claude: "and" takes only an 8-bit literal directly (like addq's imm8, not added here - nothing has needed it yet); tig_alloc's own alignment mask (0xFFFFFFFFFFFFFFF8) needs the full imm case, so - unlike Add, which has "lda" as a single-instruction fallback - this materializes y into $28 first ("at", the Alpha ABI's own assembler-temporary register - see alphacall.ml's C.jump_tgt_reg comment for the same register/rationale) and ANDs against that. *)
+inst:       Store(dst:regl, And(x:reg,y:reg), 64)
+            {: sprintf "and %s, %s, %s" x y dst :}
+
+inst:       Store(dst:regl, And(x:reg,y:imm), 64) [1]
+            {: sprintf "ldiq $28, %s\n\tand %s, $28, %s" y x dst :}
 @
 
 \paragraph{Other Instructions}
@@ -40715,6 +40837,8 @@ any : Fetch (any, w:int){: cat [ "Fetch(";any;",";width w;")" ] :}
 
 any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
 any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
 any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
 any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
 any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
@@ -40732,6 +40856,7 @@ any : Cmp(op:string, x:any, y:any)
                         {: cat [ "Cmp(";op;",";x;",";y;")"] :}
 any : GP(any)           {: cat [ "GP(";any;")"] :}
 any : Com(any)          {: cat [ "Com(";any;")"] :}
+any : Bnot(any)         {: cat [ "Bnot(";any;")"] :}
 any : Bit(any)          {: cat [ "Bit(";any;")"] :}
 any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
 any : Goto(any)         {: cat [ "Goto(";any;")" ] :}
@@ -40803,16 +40928,21 @@ let rtl (RP.Rtl es) = geffects es
 | RP.Store(RP.Reg(('c',_,_),i,_),r,_) when i = SS.indices.SS.pc   -> conGoto (exp r)
 @
 <<[[Alpharec]] helpers for [[exp]] and [[loc]]>>=
-let cmp = Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] 
+let cmp = Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"]
 @
 <<[[Alpharec]] special cases for [[App]]>>=
 | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
 | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
+| RP.App(("mul", [w]), [x; y])            -> conMul (exp x) (exp y)
+| RP.App(("and", [w]), [x; y])            -> conAnd (exp x) (exp y)
 | RP.App((op, [w]), [x; y])  
     when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
-| RP.App(("bit", [64]), [x])              -> conBit (exp x)  
-| RP.App(("alpha_gp", []), [x])           -> conGP  (exp x)  
-| RP.App(("com", [64]), [x])              -> conCom  (exp x)  
+| RP.App(("bit", []), [x])                -> conBit (exp x)
+| RP.App(("alpha_gp", []), [x])           -> conGP  (exp x)
+| RP.App(("alpha_bnot", [64]), [x])       -> conBnot (exp x)
+| RP.App(("com", [64]), [x])              -> conCom  (exp x)
+(* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store (alpha.ml's Post.lostore, its only producer) - a real stb/stw/stl already truncates its source register to the store's own width, so the narrowing is a free no-op here, same reasoning riscv32rec.mlb's/riscv64rec.mlb's/mipsrec.mlb's identical case gives. *)
+| RP.App(("lobits", [_;_]), [x])          -> exp x
 @
 
 <<[[Alpharec]] special cases for [[guarded]]>>=
@@ -42677,11 +42807,16 @@ val placevars : Ast2ir.proc -> Automaton.t
 %%% ------------------------------------------------------------------ 
 %%
 <<arm.ml>>=
+(* claude: =*= (list-of-widths equality) lives in Nopoly, not the default
+ * Stdlib polymorphic (=) - same fix arch/mips/mips.ml/arch/sparc/sparc.ml/
+ * arch/alpha/alpha.ml needed. *)
+open Nopoly
 module SS   = Space.Standard32
 module S    = Space
 module A    = Automaton
 let ( *> )  = A.( *> ) 
 module PX   = Postexpander
+module DG   = Dag
 module R    = Rtl
 module RP   = Rtl.Private
 module RU   = Rtlutil
@@ -42692,8 +42827,13 @@ module T    = Target
 
 let unimp               = Impossible.unimp
 let impossible          = Impossible.impossible
-let rtl r = PX.Rtl r
-let (<:>) = PX.(<:>)
+(* claude: PX.Rtl/PX.(<:>) don't exist - Nop/Rtl/Test/(<:>) live in Dag
+ * (aliased DG above), not Postexpander; same stale-interface fix already
+ * applied to arch/mips/mips.ml/arch/sparc/sparc.ml/arch/alpha/alpha.ml
+ * (arm.ml was ported straight from upstream's arm.nw, which predates that
+ * interface change, so it still needs the same fix here). *)
+let rtl r = DG.Rtl r
+let (<:>) = DG.(<:>)
 @ 
 <<utilities that depend on [[byteorder]] or [[wordsize]]>>=
 let fetch_word l        = R.fetch l   wordsize
@@ -42780,7 +42920,18 @@ module F = Mflow.MakeStandard
 %%Module [[F]] does not provide a return instruction. A return is simply a
 %%jump.
 <<arm.ml>>=
-let return = R.store pc (fetch_word (R.reg ra))
+(* claude: was "R.store pc (fetch_word (R.reg ra))", missing its trailing
+ * `width` argument (R.store is curried loc -> exp -> width -> rtl), so
+ * `return` had the hidden function type `width -> rtl` rather than the
+ * plain `Rtl.rtl` every actual use site below needs - same bug mips.ml's
+ * own `return` originally had. Turned into an explicit function of the
+ * value to store into pc, matching alpha.ml's/sparc.ml's own top-level
+ * `return e`, used both by Post.return below and by T.cc_spec_to_auto's
+ * ~return_to. *)
+let return e = R.store pc e wordsize
+(* claude: needed for T.cc_spec_to_auto's cutto embed/project pair below -
+ * same role as mips.ml's/sparc.ml's/alpha.ml's own fmach. *)
+let fmach = F.machine (R.reg sp)
 @
 %%
 %%% ------------------------------------------------------------------ 
@@ -42880,7 +43031,7 @@ let lostore ~addr ~src n assn =
 <<ARM postexpander>>=
 let move ~dst ~src =
   assert (Register.width src = Register.width dst);
-  if Register.eq src dst then PX.Nop
+  if Register.eq src dst then DG.Nop
   else rtl (R.store (tloc dst) (tval src) (twidth src))
 @ 
 <<ARM postexpander>>=
@@ -42935,8 +43086,8 @@ let pc_rhs = pc         (* PC as captured by call   *)
 %%
 %%\paragraph{Unconditional Branches}
 <<ARM postexpander>>=
-let br ~tgt = PX.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
-let b  ~tgt = PX.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
+let br ~tgt = DG.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
+let b  ~tgt = DG.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
 @
 %%
 %%\paragraph{Conditional Branches}
@@ -42946,18 +43097,28 @@ let b  ~tgt = PX.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
 %%We turn each condition into an ARM-specific test of the condition
 %%code, where the ARM operators use the ARM assembly-language mnemonics.
 <<ARM postexpander>>=
-let cmp x y = rtl (subflags (tval x) (tval y) 32) 
+let cmp x y = rtl (subflags (tval x) (tval y) 32)
 
-let rec bc x (opr, ws as op) y ~ifso ~ifnot =
+(* claude: split from the old single `bc` (kept in spirit, same RTLs)
+ * into bc_guard/bc_of_guard, the shape Postexpander.S now requires -
+ * see arch/sparc/sparc.ml's bc_guard/bc_of_guard for the same split
+ * applied to a target whose condition codes are also a single flags
+ * pseudo-location (arm.ml's `cc`, like sparc.ml's), rather than
+ * MIPS's direct register-vs-register branch or Alpha's register-vs-
+ * zero branch. *)
+let rec bc_guard x (opr, ws as op) y =
   assert (ws =*= [wordsize]);
   let cond c = R.app (R.opr c [32]) [R.fetch cc 32] in
   match opr with
   | "eq" | "ne" | "lt" | "le" | "gt" | "ge" | "leu" | "gtu" ->
-      PX.Test (cmp x y, (cond (arm_cond opr), ifso, ifnot))
-  | "ltu" -> bc y ("gtu", ws) x ~ifso ~ifnot
-  | "geu" -> bc y ("leu", ws) x ~ifso ~ifnot
+      (rtl (subflags (tval x) (tval y) 32), cond (arm_cond opr))
+  | "ltu" -> bc_guard y ("gtu", ws) x
+  | "geu" -> bc_guard y ("leu", ws) x
   | _ -> Impossible.impossible
           "non-comparison in ARM conditional branch (or overflow not implemented)"
+and bc_of_guard (setup, guard) ~ifso ~ifnot =
+  let brtl cond tgt = R.guard cond (R.store pc_lhs tgt wordsize) in
+  DG.Test (setup, (brtl guard, ifso, ifnot))
 and arm_cond = function
   | "eq"  -> "arm_eq"
   | "ne"  -> "arm_ne"
@@ -43019,21 +43180,47 @@ and negate = function
 %%\paragraph{Calls} 
 %%In an indirect call the target is held in a register. 
 <<ARM postexpander>>=
-let effects = List.map Up.effect
-let call  ~tgt ~others = 
-  PX.Nop, R.par (R.store pc_lhs (Up.const tgt) wordsize :: effects others)
-let callr ~tgt ~others = 
-  PX.Nop, R.par (R.store pc_lhs (tval tgt) wordsize :: effects others)
+(* claude: original call/callr took an extra ~others param (dropped:
+ * Postexpander.S's call/callr are just ~tgt now, see arch/mips/
+ * mips.ml's/arch/sparc/sparc.ml's identical fix) and only ever stored
+ * pc_lhs, never storing ra - so a "call" would jump but never leave a
+ * usable return address, i.e. it could never actually return (same
+ * class of bug those backends' original call/callr had). armrec.mlb's
+ * grammar only recognizes a call as "Par(Goto(target),
+ * Store(ral,next,32))" ("bl"/"blx"), where next=Add(pc,const) is the
+ * return address, so both stores must land in the single Par the
+ * recognizer sees - hence do_call below, mirroring mips.ml's/sparc.ml's
+ * restructured do_call/call/callr. *)
+let do_call tgt =
+  DG.Nop,
+  R.par [ R.store pc_lhs tgt wordsize
+        ; R.store (R.reg ra) (RU.addk wordsize (R.fetch pc_rhs wordsize) 4) wordsize
+        ]
+let call  ~tgt = do_call (Up.const tgt)
+let callr ~tgt = do_call (tval tgt)
 @
 %%
 %%\paragraph{Cut-To}
 <<ARM postexpander>>=
-let cut_to effs = PX.Nop, R.par (effects effs)
+(* claude: adapted from the old effect-list signature to the current
+ * Mflow.cut_args record ({new_sp; new_pc}) - same fix as arch/mips/
+ * mips.ml's/arch/sparc/sparc.ml's/arch/alpha/alpha.ml's cut_to. *)
+let cut_to {Mflow.new_sp = sp'; Mflow.new_pc = pc'} =
+  DG.Nop, R.par [R.store pc_lhs pc' wordsize; R.store (R.reg sp) sp' wordsize]
 @
 %%
 %%\paragraph{No sacred instructions}
 <<ARM postexpander>>=
 let don't_touch_me es = false
+(* claude: return/forbidden are required by Postexpander.S but had no
+ * definition here (same gap arch/mips/mips.ml/arch/sparc/sparc.ml/
+ * arch/alpha/alpha.ml originally had). ARM has no register windows
+ * (unlike SPARC) and no gp/pv indirection (unlike Alpha), so this is
+ * just "jump to whatever's in lr" - the plain Mflow-style default,
+ * reusing this file's own top-level `return e` (also used by
+ * Armcall.cconv's ~return_to). *)
+let return = return (R.fetch (R.reg ra) wordsize)
+let forbidden = Rtl.par [] (* BOGUS: NEEDS TO BE A REAL FAULTING INSTRUCTION *)
 @
 %%
 %%% ------------------------------------------------------------------ 
@@ -43080,12 +43267,21 @@ let globals base =
 %%% ------------------------------------------------------------------ 
 %%
 <<arm.ml>>=
-let target : Ast2ir.tgt =
+(* claude: rewritten target record to match the current Target.t shape
+ * (target.mli): T.spill/T.reload/T.bnegate/T.goto/T.jump/T.call/T.return/
+ * T.branch aren't Target.t fields anymore - they now live inside the
+ * single T.machine record, built by the Expander.IntFloatAddr functor
+ * from Post above (module X), same as arch/mips/mips.ml/arch/sparc/
+ * sparc.ml/arch/alpha/alpha.ml. Ast2ir.tgt = Preast2ir.tgt = T of (...)
+ * Target.t is a wrapped variant, not the bare record, hence the
+ * Preast2ir.T wrapper below (same as those three backends' own target). *)
+let target =
     let spaces = [ Spaces.m
                  ; Spaces.r
                  ; Spaces.t
                  ; Spaces.c
                  ] in
+    Preast2ir.T
     { T.name                = "arm"
     ; T.memspace            = mspace
     ; T.max_unaligned_load  = R.C 1
@@ -43098,32 +43294,84 @@ let target : Ast2ir.tgt =
     ; T.reg_ix_map          = T.mk_reg_ix_map spaces
     ; T.distinct_addr_sp    = false
     ; T.float               = Float.none
-    ; T.spill               = spill
-    ; T.reload              = reload
 
     ; T.vfp                 = vfp
-    ; T.bnegate             = F.bnegate cc
-    ; T.goto                = F.goto
-    ; T.jump                = F.jump
-    ; T.call                = F.call
-    ; T.return              = F.return
-    ; T.branch              = F.branch
-    
-    ; T.cc_specs            = A.init_cc
-    ; T.cc_spec_to_auto     = (fun _ _ -> assert false)
-    ; T.is_instruction      = (fun _ -> false)  (* no back end yet *)
-    ; T.capabilities        = T.incapable
-(*
-                              Armcall.cconv 
-                                ~return_to:(fun ra -> (R.store pc ra wordsize))
-                                (F.cutto (Rtl.reg sp))
-*)                    
+    ; T.machine             = X.machine
+
+    ; T.cc_specs            = Armcc.cc_specs
+    ; T.cc_spec_to_auto     = Armcall.cconv
+                                ~return_to:return
+                                { T.embed   = fmach.T.cutto.T.embed
+                                ; T.project = fmach.T.cutto.T.project }
+    ; T.is_instruction      = Armrec.is_instruction
+    ; T.tx_ast              = (fun secs -> secs)
+    (* claude: T.incapable (empty operator/literal/memory lists) would
+     * reject every operator this backend actually implements - see
+     * armrec.mlb's grammar (add/sub/and/mul/quot + the eq/ne/lt/gt/ge/ltu/
+     * leu/gtu/geu comparisons are recognized as real instructions;
+     * everything else falls through to the "<...>" catch-all/error path)
+     * and this file's own Post (no double-width mul, or/xor/shift, no
+     * float compute - unrm/binrm/dblop/wrdop/wrdrop are all
+     * Impossible.unimp/Unsupported so far). Scoped to exactly that
+     * subset, at this target's one integer width (32) - same rationale as
+     * arch/mips/mips.ml's/arch/alpha/alpha.ml's own hand-written operator
+     * lists. mul/quot were added later, driven by tests/tiger/'s actual
+     * operator usage (see notes_arm.txt) - widen this list (and
+     * armrec.mlb) together as more operators get real camlburg rules. *)
+    ; T.capabilities        = { T.operators = List.map Up.opr
+                                   [ "add",     [32]
+                                   ; "sub",     [32]
+                                   ; "and",     [32]
+                                   ; "mul",     [32]
+                                   ; "quot",    [32]
+                                   ; "eq",      [32]
+                                   ; "ne",      [32]
+                                   ; "lt",      [32]
+                                   ; "le",      [32]
+                                   ; "gt",      [32]
+                                   ; "ge",      [32]
+                                   ; "ltu",     [32]
+                                   ; "leu",     [32]
+                                   ; "gtu",     [32]
+                                   ; "geu",     [32]
+                                   ; "lobits",  [32;8]
+                                   ; "lobits",  [32;16]
+                                   ; "not",     []
+                                   ; "bool",    []
+                                   ; "disjoin", []
+                                   ; "conjoin", []
+                                   (* claude: "sx"/"zx" from 1 bit + "bit"
+                                    * (empty width list, like not/bool/
+                                    * disjoin/conjoin above - a "declared
+                                    * supported generically" marker, not a
+                                    * real per-width instruction) declared
+                                    * so codegen/expander.ml's Sx/Zx(Bit(e))
+                                    * boolean-materialization special case
+                                    * (built purely from Post.li +
+                                    * expand_cbranch, no armrec.mlb grammar
+                                    * needed) doesn't print a spurious
+                                    * "No acceptable widths" mvalidate
+                                    * warning - same declaration sparc.ml's/
+                                    * x86.ml's own capabilities make. *)
+                                   ; "sx",      [1;32]
+                                   ; "zx",      [1;32]
+                                   ; "bit",     []
+                                   ]
+                              ; T.litops     = []
+                              ; T.literals   = [32]
+                              ; T.memory     = [8; 16; 32]
+                              ; T.block_copy = true
+                              ; T.itemps     = [32]
+                              ; T.ftemps     = []
+                              ; T.iwiden     = false
+                              ; T.fwiden     = false
+                              }
     ; T.globals             = globals
     ; T.rounding_mode       = R.reg (('?', Rtl.Identity, Cell.of_size 32), 99, R.C 1)
     ; T.named_locs          = Strutil.assoc2map []
     ; T.data_section        = "data"
     ; T.charset             = "latin1" (* REMOVE THIS FROM TARGET.T *)
-    }    
+    }
 
 @ 
 
