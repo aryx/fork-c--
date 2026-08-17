@@ -48,6 +48,22 @@
  * r31), which is why this is trusted without an ppc-style gdb probe of
  * its own. 96 leaves the same headroom margin as ppc's. */
 #define NUM_REGS 96
+#elif defined(__alpha__)
+/* claude: same overflow bug as every other non-x86 backend above (the
+ * x86-sized array silently overflowed for Alpha too) - and no __alpha__
+ * branch existed here at all until this fix, so Alpha was silently
+ * running with x86's NUM_REGS=12/FP_REG=9 the whole time. arch/alpha/
+ * alpha.ml's Spaces module declares exactly the same c(6)/f(32)/r(32)
+ * shape __riscv's own comment above derives from, right down to the
+ * identical "pc, npc, cc, _, fp_mode, fp_fcmp" comment on its 'c' space -
+ * so the same sort-by-space-character derivation applies unchanged: c
+ * (6 -> flat indices 0-5), f (32 -> 6-37), r (32 -> 38-69) = 70 total,
+ * 96 leaves the same headroom margin. Confirmed by hand: tests/tiger64/
+ * arrays.c-- hung (infinite loop) and rb.c--/wff.c-- crashed under
+ * -alpha before this fix, all consistent with Cmm_Activation.regs[]
+ * overflow corrupting adjacent stack memory - fixed by this alone (no
+ * other change), same as ppc/sparc/riscv's own histories. */
+#define NUM_REGS 96
 #else
 /*s: machine-dependent macro definitions for the public interface ((x86-linux)) */
 #define NUM_REGS 12

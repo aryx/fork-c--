@@ -192,6 +192,16 @@ module Post = struct
     let com x =
       let o = R.opr "com" [wordsize] in
       rtl (R.store (tloc x) (R.app o [tval x]) wordsize)
+    (* claude: logical negation of a clean 0/1 comparison result - NOT
+     * "com" (bitwise complement): com(1) is -2 (0x...FE), still nonzero,
+     * so every "<:> com x" case below (ne/ge/le/geu) was silently wrong
+     * whenever the underlying comparison held (confirmed by hand: %le
+     * evaluated true unconditionally, including %le(7,3)). "alpha_bnot"
+     * is an internal-only operator (like "alpha_gp" below), not part of
+     * T.capabilities, recognized by alpharec.mlb as "xor x, 1, dst". *)
+    let bnot x =
+      let o = R.opr "alpha_bnot" [wordsize] in
+      rtl (R.store (tloc x) (R.app o [tval x]) wordsize)
     (*x: Alpha postexpander *)
     (* claude: dst is explicit and separate from the underlying compare
      * instruction's own x/y operand order - was "let relation op x y =
@@ -212,10 +222,10 @@ module Post = struct
     (*x: Alpha postexpander *)
     let cmp op x y = match op with
         | "eq"          -> relation ~dst:x "eq"  x y
-        | "ne"          -> relation ~dst:x "eq"  x y <:> com x
+        | "ne"          -> relation ~dst:x "eq"  x y <:> bnot x
         | "lt"          -> relation ~dst:x "lt"  x y
         | "gt"          -> relation ~dst:x "lt"  y x
-        | "ge"          -> relation ~dst:x "lt"  x y <:> com x
+        | "ge"          -> relation ~dst:x "lt"  x y <:> bnot x
         (* claude: was missing entirely - alpharec.mlb's own "cmp" set
          * (eq/ge/geu/gt/gtu/le/leu/lt/ltu/ne) already recognizes "le",
          * and there is no "lea" alpha instruction, so any signed <=
@@ -223,7 +233,7 @@ module Post = struct
          * case below instead ("bad comparison in expanded Alpha
          * conditional branch"). x<=y is NOT(y<x), same derivation as
          * "ge" just above (x>=y is NOT(x<y)). *)
-        | "le"          -> relation ~dst:x "lt"  y x <:> com x
+        | "le"          -> relation ~dst:x "lt"  y x <:> bnot x
         | "ltu"         -> relation ~dst:x "ltu" x y
         | "leu"         -> relation ~dst:x "leu" x y
         | "gtu"         -> relation ~dst:x "ltu" y x
@@ -250,15 +260,19 @@ module Post = struct
      * `cmp` computes the boolean into x itself (one of the special App
      * cases alpharec.mlb's exp function recognizes - eq/ne/lt/../geu),
      * then a second, separate zero-comparison of that result becomes the
-     * actual branch guard. This mirrors the original (pre-split) `bc`'s
-     * computation exactly, just divided across the two functions the
-     * current interface wants - not re-derived from scratch, since
-     * there's no way to exercise/verify the branch sense (eq-to-zero
-     * here, matching the original) until a conditional actually runs
-     * under qemu-alpha. *)
+     * actual branch guard. claude: was "eq"-to-zero ("guard holds when
+     * cmp's result is 0, i.e. the comparison was FALSE") - the
+     * surrounding comment already flagged this exact line as unverified
+     * ("not re-derived from scratch... until a conditional actually
+     * runs"), and it was backwards: bc_of_guard's ~ifso/~ifnot convention
+     * takes the guard-true branch to ifso, so a guard that holds on
+     * FALSE sent every %gt/%le/%ge/%ne (the branch senses this exercises)
+     * to the wrong side - confirmed by hand (%gt(7,3) evaluated as 0,
+     * %gt(3,7) as -1, exactly inverted). "ne"-to-zero (guard holds when
+     * the comparison was TRUE) is correct. *)
     let bc_guard x (opr, ws as op) y =
       assert (ws =*= [wordsize]);
-      cmp opr x y, R.app (R.opr "eq" [wordsize]) [tval x; R.bits (Bits.zero 64) 64]
+      cmp opr x y, R.app (R.opr "ne" [wordsize]) [tval x; R.bits (Bits.zero 64) 64]
     let bc_of_guard (setup, guard) ~ifso ~ifnot =
       let brtl cond tgt = R.guard cond (R.store pc_lhs tgt wordsize) in
       DG.Test (setup, (brtl guard, ifso, ifnot))

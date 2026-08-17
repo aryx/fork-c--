@@ -83,7 +83,8 @@
        | RP.App((op, [w]), [x; y])  
            when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
        | RP.App(("bit", []), [x])                -> conBit (exp x)
-       | RP.App(("alpha_gp", []), [x])           -> conGP  (exp x)  
+       | RP.App(("alpha_gp", []), [x])           -> conGP  (exp x)
+       | RP.App(("alpha_bnot", [64]), [x])       -> conBnot (exp x)
        | RP.App(("com", [64]), [x])              -> conCom  (exp x)
        (* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store (alpha.ml's Post.lostore, its only producer) - a real stb/stw/stl already truncates its source register to the store's own width, so the narrowing is a free no-op here, same reasoning riscv32rec.mlb's/riscv64rec.mlb's/mipsrec.mlb's identical case gives. *)
        | RP.App(("lobits", [_;_]), [x])          -> exp x
@@ -277,6 +278,10 @@ inst:       Store(dst:regl,Bit(cmp),64)
 inst:       Store(dst:regl,Com(reg),64)
             {: sprintf "not %s, %s" dst reg :}
 
+(* claude: logical negation of a clean 0/1 value (alpha.ml's bnot, used to negate a comparison result) - NOT the same as Com/"not" above (bitwise complement: not(1) is -2, still nonzero, silently wrong when used for this - confirmed by hand, see alpha.ml's own claude: comment on bnot). "xor $reg, 1, $dst" flips just the low bit, 1 fits xor's 8-bit literal form directly like and's does. *)
+inst:       Store(dst:regl,Bnot(reg),64)
+            {: sprintf "xor %s, 1, %s" reg dst :}
+
 (*x: [[Alpharec]] rules *)
 inst:       Store(dst:regl, Add(x:reg,y:reg), 64)
             {: sprintf "addq %s, %s, %s" x y dst :}
@@ -336,6 +341,7 @@ any : Cmp(op:string, x:any, y:any)
                         {: cat [ "Cmp(";op;",";x;",";y;")"] :}
 any : GP(any)           {: cat [ "GP(";any;")"] :}
 any : Com(any)          {: cat [ "Com(";any;")"] :}
+any : Bnot(any)         {: cat [ "Bnot(";any;")"] :}
 any : Bit(any)          {: cat [ "Bit(";any;")"] :}
 any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
 any : Goto(any)         {: cat [ "Goto(";any;")" ] :}

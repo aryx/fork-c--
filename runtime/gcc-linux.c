@@ -37,6 +37,16 @@
  * applied to ppc's numbers, but this is the first thing to re-check if
  * a RISC-V GC-crossing test misbehaves. */
 #define FP_REG 46
+#elif defined(__alpha__)
+/* claude: $15 (s6/fp) - confirmed directly (not just derived) by
+ * compiling a probe with alpha-linux-gnu-gcc -fno-omit-frame-pointer and
+ * reading its own ".frame $15,32,$26,0" directive, the Alpha ABI's
+ * explicit declaration of which register it uses as frame pointer -
+ * stronger evidence than riscv64's own FP_REG derivation, which was
+ * formula-only. Flat index derived the same way as qc--runtime.h's own
+ * NUM_REGS comment: c(6)->0-5, f(32)->6-37, so r15 within r's 38-69
+ * range is flat index 38+15=53. */
+#define FP_REG 53
 #else
 #define FP_REG 9 /* %ebp, r[5] */
 #endif
