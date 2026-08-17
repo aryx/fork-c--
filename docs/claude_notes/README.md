@@ -34,9 +34,19 @@ Index:
   two widths. RV64 is verified end to end like every other backend
   (`qemu-riscv64`, real glibc link); RV32 has no Linux-userspace glibc
   toolchain on this machine at all, so it's verified freestanding instead
-  (a hand-written `_start`, checked exit code under `qemu-riscv32`). Known
-  gap: `-O3` compiles but hangs at runtime on RV64 (same unresolved class
-  of bug as ARM's own `-O3` hang).
+  against picolibc (a hand-written `_start`/syscall shim). Follow-up:
+  `tests/run-tiger-riscv32.sh` reaches **15/15** (beats every backend but
+  ppc/x86) — fixes along the way include a real NUM_REGS/FP_REG overflow
+  bug in `qc--runtime.h`/`gcc-linux.c` (same class already fixed for ppc/
+  sparc, likely also latent in mips/arm — flagged, not fixed there), a
+  `gp`-initialization crash in gcc-compiled C code, picolibc's
+  `FDEV_SETUP_STREAM` hosted-I/O integration, and — the actual root cause
+  of 11/15 initial failures — `--gc-sections` (from
+  `--specs=picolibc.specs`) silently dropping individual `.pcmap` entries
+  it can't see are still referenced via a linker-script address range.
+  RV64 tiger tests not attempted (same bits32-pointer blocker as alpha).
+  Known gap: `-O3` compiles but hangs at runtime on RV64 (same unresolved
+  class of bug as ARM's own `-O3` hang).
 
 Retired: `plan_tiger_hello.md` and `plan_end_to_end.md` planned the path to
 `tigerc demos/hello.tig | qc ... | ./hello` actually running. That milestone

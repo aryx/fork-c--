@@ -75,6 +75,8 @@
 
 type
     (
+        't40,
+        't39,
         't38,
         't37,
         't36,
@@ -118,12 +120,14 @@ type
 nonterm
 =
     {
-        _Zx3: ( 't38 ) Camlburg.nt;
-        _Sx1: ( 't37 ) Camlburg.nt;
-        _Sub13: ( 't36 ) Camlburg.nt;
-        _Sub12: ( 't35 ) Camlburg.nt;
-        _Store7: ( 't34 ) Camlburg.nt;
-        _Store5: ( 't33 ) Camlburg.nt;
+        _Zx3: ( 't40 ) Camlburg.nt;
+        _Sx1: ( 't39 ) Camlburg.nt;
+        _Sub13: ( 't38 ) Camlburg.nt;
+        _Sub12: ( 't37 ) Camlburg.nt;
+        _Store7: ( 't36 ) Camlburg.nt;
+        _Store5: ( 't35 ) Camlburg.nt;
+        _Quot20: ( 't34 ) Camlburg.nt;
+        _Quot19: ( 't33 ) Camlburg.nt;
         _Mul18: ( 't32 ) Camlburg.nt;
         _Mul17: ( 't31 ) Camlburg.nt;
         _Goto8: ( 't30 ) Camlburg.nt;
@@ -194,6 +198,8 @@ inf =
     ;_Goto8 = (Camlburg.infinity)
     ;_Mul17 = (Camlburg.infinity)
     ;_Mul18 = (Camlburg.infinity)
+    ;_Quot19 = (Camlburg.infinity)
+    ;_Quot20 = (Camlburg.infinity)
     ;_Store5 = (Camlburg.infinity)
     ;_Store7 = (Camlburg.infinity)
     ;_Sub12 = (Camlburg.infinity)
@@ -223,7 +229,7 @@ and update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 272 "riscv32rec.mlb"
+# 280 "riscv32rec.mlb"
                                 ( cat ["<";any;">"] )
                                 
 # 000 "/dev/stdout"
@@ -256,7 +262,7 @@ and update_const =
                             let const = x.const.Camlburg.action ()
                             in
                                 
-# 184 "riscv32rec.mlb"
+# 185 "riscv32rec.mlb"
                                 ( const                   )
                                 
 # 000 "/dev/stdout"
@@ -325,7 +331,7 @@ and update_r =
                             let r = x.r.Camlburg.action ()
                             in
                                 
-# 164 "riscv32rec.mlb"
+# 165 "riscv32rec.mlb"
                                 ( reg r )
                                 
 # 000 "/dev/stdout"
@@ -358,7 +364,7 @@ and update_reg =
                             let reg = x.reg.Camlburg.action ()
                             in
                                 
-# 179 "riscv32rec.mlb"
+# 180 "riscv32rec.mlb"
                                 ( cat ["0("; reg; ")"] )
                                 
 # 000 "/dev/stdout"
@@ -397,7 +403,7 @@ and update_symbol =
                             let symbol = x.symbol.Camlburg.action ()
                             in
                                 
-# 182 "riscv32rec.mlb"
+# 183 "riscv32rec.mlb"
                                 ( symbol                  )
                                 
 # 000 "/dev/stdout"
@@ -477,6 +483,18 @@ and update__Mul18 =
             x
         else
             { x with _Mul18 = (nt) }
+and update__Quot19 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Quot19.Camlburg.cost then
+            x
+        else
+            { x with _Quot19 = (nt) }
+and update__Quot20 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Quot20.Camlburg.cost then
+            x
+        else
+            { x with _Quot20 = (nt) }
 and update__Store5 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Store5.Camlburg.cost then
@@ -533,7 +551,7 @@ conZx =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 287 "riscv32rec.mlb"
+# 296 "riscv32rec.mlb"
                             ( cat [ "Zx(";any;")" ] )
                             
 # 000 "/dev/stdout"
@@ -547,7 +565,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 274 "riscv32rec.mlb"
+# 282 "riscv32rec.mlb"
                     ( cat [ "True"  ] )
                     
 # 000 "/dev/stdout"
@@ -571,7 +589,7 @@ and conSx =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 286 "riscv32rec.mlb"
+# 295 "riscv32rec.mlb"
                             ( cat [ "Sx(";any;")" ] )
                             
 # 000 "/dev/stdout"
@@ -609,7 +627,7 @@ and conSub =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 283 "riscv32rec.mlb"
+# 291 "riscv32rec.mlb"
                                 ( cat [ "Sub(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -652,7 +670,7 @@ and conStore =
                             and w = arg3
                             in
                                 
-# 294 "riscv32rec.mlb"
+# 303 "riscv32rec.mlb"
                                 ( cat [ "Store(";dst;",";src;",";width w;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -674,7 +692,7 @@ and conStore =
                                         arg2.symbol.Camlburg.action ()
                                     in
                                         
-# 187 "riscv32rec.mlb"
+# 188 "riscv32rec.mlb"
                                         ( cat ["la"; " "; regl; ","; symbol] )
                                         
 # 000 "/dev/stdout"
@@ -692,7 +710,7 @@ and conStore =
                                     and const = arg2.const.Camlburg.action ()
                                     in
                                         
-# 190 "riscv32rec.mlb"
+# 191 "riscv32rec.mlb"
                                         ( cat ["li"; " "; regl; ","; const] )
                                         
 # 000 "/dev/stdout"
@@ -710,7 +728,7 @@ and conStore =
                                     and mem = arg2.mem.Camlburg.action ()
                                     in
                                         
-# 193 "riscv32rec.mlb"
+# 194 "riscv32rec.mlb"
                                         ( cat ["l"; suffix 32; " "; regl; ","; mem] )
                                         
 # 000 "/dev/stdout"
@@ -729,7 +747,7 @@ and conStore =
                                         let (mem, x) = _v1
                                         in
                                             
-# 196 "riscv32rec.mlb"
+# 197 "riscv32rec.mlb"
                                             ( cat ["l"; suffix w; sx; " "; regl; ","; mem] )
                                             
 # 000 "/dev/stdout"
@@ -748,7 +766,7 @@ and conStore =
                                         let (mem, x) = _v1
                                         in
                                             
-# 199 "riscv32rec.mlb"
+# 200 "riscv32rec.mlb"
                                             ( cat ["l"; suffix w; zx; " "; regl; ","; mem] )
                                             
 # 000 "/dev/stdout"
@@ -765,7 +783,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 202 "riscv32rec.mlb"
+# 203 "riscv32rec.mlb"
                                         ( cat ["s"; suffix w; " "; reg; ","; meml] )
                                         
 # 000 "/dev/stdout"
@@ -783,7 +801,7 @@ and conStore =
                                     and reg = arg2.reg.Camlburg.action ()
                                     in
                                         
-# 205 "riscv32rec.mlb"
+# 206 "riscv32rec.mlb"
                                         ( cat ["mv"; " "; regl; ","; reg] )
                                         
 # 000 "/dev/stdout"
@@ -803,7 +821,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 239 "riscv32rec.mlb"
+# 240 "riscv32rec.mlb"
                                             ( cat ["add"; " "; dst; ","; x; ","; y] )
                                             
 # 000 "/dev/stdout"
@@ -823,7 +841,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 242 "riscv32rec.mlb"
+# 243 "riscv32rec.mlb"
                                             ( cat ["addi"; " "; dst; ","; x; ","; y] )
                                             
 # 000 "/dev/stdout"
@@ -843,7 +861,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 246 "riscv32rec.mlb"
+# 247 "riscv32rec.mlb"
                                             ( sprintf "li t0, %s\n\tadd %s, %s, t0" y dst x )
                                             
 # 000 "/dev/stdout"
@@ -863,7 +881,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 249 "riscv32rec.mlb"
+# 250 "riscv32rec.mlb"
                                             ( cat ["sub"; " "; dst; ","; x; ","; y] )
                                             
 # 000 "/dev/stdout"
@@ -883,7 +901,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 252 "riscv32rec.mlb"
+# 253 "riscv32rec.mlb"
                                             ( sprintf "li t0, %s\n\tsub %s, %s, t0" y dst x )
                                             
 # 000 "/dev/stdout"
@@ -903,7 +921,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 255 "riscv32rec.mlb"
+# 256 "riscv32rec.mlb"
                                             ( cat ["and"; " "; dst; ","; x; ","; y] )
                                             
 # 000 "/dev/stdout"
@@ -923,7 +941,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 258 "riscv32rec.mlb"
+# 259 "riscv32rec.mlb"
                                             ( cat ["andi"; " "; dst; ","; x; ","; y] )
                                             
 # 000 "/dev/stdout"
@@ -943,7 +961,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 261 "riscv32rec.mlb"
+# 262 "riscv32rec.mlb"
                                             ( sprintf "li t0, %s\n\tand %s, %s, t0" y dst x )
                                             
 # 000 "/dev/stdout"
@@ -963,7 +981,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 265 "riscv32rec.mlb"
+# 266 "riscv32rec.mlb"
                                             ( cat ["mul"; " "; dst; ","; x; ","; y] )
                                             
 # 000 "/dev/stdout"
@@ -983,8 +1001,48 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 268 "riscv32rec.mlb"
+# 269 "riscv32rec.mlb"
                                             ( sprintf "li t0, %s\n\tmul %s, %s, t0" y dst x )
+                                            
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.regl.Camlburg.cost
+                                +
+                                arg2._Quot19.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let dst = arg1.regl.Camlburg.action ()
+                                    and _v1 = arg2._Quot19.Camlburg.action ()
+                                    in
+                                        let (x, y) = _v1
+                                        in
+                                            
+# 273 "riscv32rec.mlb"
+                                            ( cat ["div"; " "; dst; ","; x; ","; y] )
+                                            
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (1 + arg1.regl.Camlburg.cost
+                                +
+                                arg2._Quot20.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let dst = arg1.regl.Camlburg.action ()
+                                    and _v1 = arg2._Quot20.Camlburg.action ()
+                                    in
+                                        let (x, y) = _v1
+                                        in
+                                            
+# 276 "riscv32rec.mlb"
+                                            ( sprintf "li t0, %s\n\tdiv %s, %s, t0" y dst x )
                                             
 # 000 "/dev/stdout"
 )
@@ -1000,7 +1058,7 @@ and conReg =
                     and n = arg2
                     in
                         
-# 291 "riscv32rec.mlb"
+# 300 "riscv32rec.mlb"
                         ( cat [ "Reg('";Char.escaped char;"',"; width n;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1012,7 +1070,7 @@ and conReg =
                 ;Camlburg.action =
                     (fun () ->
                         
-# 167 "riscv32rec.mlb"
+# 168 "riscv32rec.mlb"
                         ( () )
                         
 # 000 "/dev/stdout"
@@ -1025,7 +1083,7 @@ and conReg =
                             let n = arg2
                             in
                                 
-# 163 "riscv32rec.mlb"
+# 164 "riscv32rec.mlb"
                                 ( n )
                                 
 # 000 "/dev/stdout"
@@ -1039,7 +1097,7 @@ and conReg =
                         ;Camlburg.action =
                             (fun () ->
                                 
-# 169 "riscv32rec.mlb"
+# 170 "riscv32rec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -1053,13 +1111,51 @@ and conReg =
                             ;Camlburg.action =
                                 (fun () ->
                                     
-# 168 "riscv32rec.mlb"
+# 169 "riscv32rec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
 )
                             })
                             inf))))
+and conQuot =
+    fun arg1 arg2 ->
+        (update__Quot19
+            {Camlburg.cost =
+                (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost)
+            ;Camlburg.action =
+                (fun () ->
+                    let x = arg1.reg.Camlburg.action ()
+                    and y = arg2.reg.Camlburg.action ()
+                    in
+                        (x ,y))
+            })
+            ((update__Quot20
+                {Camlburg.cost =
+                    (arg1.reg.Camlburg.cost + arg2.imm.Camlburg.cost)
+                ;Camlburg.action =
+                    (fun () ->
+                        let x = arg1.reg.Camlburg.action ()
+                        and y = arg2.imm.Camlburg.action ()
+                        in
+                            (x ,y))
+                })
+                ((update_any
+                    {Camlburg.cost =
+                        (arg1.any.Camlburg.cost + arg2.any.Camlburg.cost)
+                    ;Camlburg.action =
+                        (fun () ->
+                            let x = arg1.any.Camlburg.action ()
+                            and y = arg2.any.Camlburg.action ()
+                            in
+                                
+# 294 "riscv32rec.mlb"
+                                ( cat [ "Quot(";x;", ";y;")" ] )
+                                
+# 000 "/dev/stdout"
+)
+                    })
+                    inf))
 and conPar =
     fun arg1 arg2 ->
         (update_any
@@ -1071,7 +1167,7 @@ and conPar =
                     and r = arg2.any.Camlburg.action ()
                     in
                         
-# 301 "riscv32rec.mlb"
+# 310 "riscv32rec.mlb"
                         ( cat [ "Par(";l;",";r;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1093,7 +1189,7 @@ and conPar =
                                     let symbol = _v1
                                     in
                                         
-# 216 "riscv32rec.mlb"
+# 217 "riscv32rec.mlb"
                                         ( cat ["jal"; " "; "ra"; ","; symbol] )
                                         
 # 000 "/dev/stdout"
@@ -1113,7 +1209,7 @@ and conPar =
                                     let target = _v1
                                     in
                                         
-# 219 "riscv32rec.mlb"
+# 220 "riscv32rec.mlb"
                                         ( cat ["jalr"; " "; "ra"; ","; target] )
                                         
 # 000 "/dev/stdout"
@@ -1133,7 +1229,7 @@ and conPar =
                                     let target = _v1
                                     in
                                         
-# 223 "riscv32rec.mlb"
+# 224 "riscv32rec.mlb"
                                         ( sprintf "mv sp, %s\n\tjr %s" nsp target )
                                         
 # 000 "/dev/stdout"
@@ -1147,7 +1243,7 @@ and conNop =
             ;Camlburg.action =
                 (fun () ->
                     
-# 270 "riscv32rec.mlb"
+# 278 "riscv32rec.mlb"
                     ( "nop" )
                     
 # 000 "/dev/stdout"
@@ -1185,7 +1281,7 @@ and conMul =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 285 "riscv32rec.mlb"
+# 293 "riscv32rec.mlb"
                                 ( cat [ "Mul(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1201,7 +1297,7 @@ and conMem =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 290 "riscv32rec.mlb"
+# 299 "riscv32rec.mlb"
                         ( cat [ "Mem(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1214,7 +1310,7 @@ and conMem =
                         let addr = arg1.addr.Camlburg.action ()
                         in
                             
-# 175 "riscv32rec.mlb"
+# 176 "riscv32rec.mlb"
                             ( addr )
                             
 # 000 "/dev/stdout"
@@ -1230,7 +1326,7 @@ and conLobits =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 288 "riscv32rec.mlb"
+# 297 "riscv32rec.mlb"
                         ( cat [ "Lobits(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1247,7 +1343,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 276 "riscv32rec.mlb"
+# 284 "riscv32rec.mlb"
                         ( cat [ "Link(";x#mangled_text;",";width w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1261,7 +1357,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 161 "riscv32rec.mlb"
+# 162 "riscv32rec.mlb"
                             ( x#mangled_text )
                             
 # 000 "/dev/stdout"
@@ -1278,7 +1374,7 @@ and conLate =
                     and w = arg2
                     in
                         
-# 277 "riscv32rec.mlb"
+# 285 "riscv32rec.mlb"
                         ( cat [ "Late(";string;",";width w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1294,7 +1390,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 295 "riscv32rec.mlb"
+# 304 "riscv32rec.mlb"
                         ( cat [ "Kill(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1312,7 +1408,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 298 "riscv32rec.mlb"
+# 307 "riscv32rec.mlb"
                         ( cat [ "Guarded(";guard;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1330,7 +1426,7 @@ and conGuarded =
                                 let addr = _v1
                                 in
                                     
-# 227 "riscv32rec.mlb"
+# 228 "riscv32rec.mlb"
                                     ( match cmp with
                | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr]
             )
@@ -1350,7 +1446,7 @@ and conGuarded =
                                 let addr = _v1
                                 in
                                     
-# 234 "riscv32rec.mlb"
+# 235 "riscv32rec.mlb"
                                     ( match cmpc with
                | (op,x,y) -> sprintf "li t0, %s\n\tb%s %s, t0, %s" y op x addr
             )
@@ -1386,7 +1482,7 @@ and conGoto =
                                 let any = arg1.any.Camlburg.action ()
                                 in
                                     
-# 302 "riscv32rec.mlb"
+# 311 "riscv32rec.mlb"
                                     ( cat [ "Goto(";any;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -1402,7 +1498,7 @@ and conGoto =
                                             arg1.symbol.Camlburg.action ()
                                         in
                                             
-# 208 "riscv32rec.mlb"
+# 209 "riscv32rec.mlb"
                                             ( cat ["j"; " "; symbol] )
                                             
 # 000 "/dev/stdout"
@@ -1414,7 +1510,7 @@ and conGoto =
                                         let reg = arg1.reg.Camlburg.action ()
                                         in
                                             
-# 211 "riscv32rec.mlb"
+# 212 "riscv32rec.mlb"
                                             ( cat ["jr"; " "; reg] )
                                             
 # 000 "/dev/stdout"
@@ -1440,7 +1536,7 @@ and conFetch =
                         and w = arg2
                         in
                             
-# 280 "riscv32rec.mlb"
+# 288 "riscv32rec.mlb"
                             ( cat [ "Fetch(";any;",";width w;")" ] )
                             
 # 000 "/dev/stdout"
@@ -1454,7 +1550,7 @@ and conFetch =
                             and w = arg2
                             in
                                 
-# 176 "riscv32rec.mlb"
+# 177 "riscv32rec.mlb"
                                 ( meml )
                                 
 # 000 "/dev/stdout"
@@ -1470,7 +1566,7 @@ and conFetch =
                                 let pcl = arg1.pcl.Camlburg.action ()
                                 in
                                     
-# 171 "riscv32rec.mlb"
+# 172 "riscv32rec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1486,7 +1582,7 @@ and conFetch =
                                     let ral = arg1.ral.Camlburg.action ()
                                     in
                                         
-# 173 "riscv32rec.mlb"
+# 174 "riscv32rec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -1502,7 +1598,7 @@ and conFetch =
                                         and w = arg2
                                         in
                                             
-# 165 "riscv32rec.mlb"
+# 166 "riscv32rec.mlb"
                                             ( regl )
                                             
 # 000 "/dev/stdout"
@@ -1520,7 +1616,7 @@ and conFetch =
                                                 arg1.spl.Camlburg.action ()
                                             in
                                                 
-# 172 "riscv32rec.mlb"
+# 173 "riscv32rec.mlb"
                                                 ( () )
                                                 
 # 000 "/dev/stdout"
@@ -1534,7 +1630,7 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 275 "riscv32rec.mlb"
+# 283 "riscv32rec.mlb"
                     ( cat [ "False" ] )
                     
 # 000 "/dev/stdout"
@@ -1553,7 +1649,7 @@ and conCmp =
                     and y = arg3.any.Camlburg.action ()
                     in
                         
-# 300 "riscv32rec.mlb"
+# 309 "riscv32rec.mlb"
                         ( cat [ "Cmp(";op;",";x;",";y;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1569,7 +1665,7 @@ and conCmp =
                         and y = arg3.reg.Camlburg.action ()
                         in
                             
-# 225 "riscv32rec.mlb"
+# 226 "riscv32rec.mlb"
                             ( (op,x,y) )
                             
 # 000 "/dev/stdout"
@@ -1585,7 +1681,7 @@ and conCmp =
                             and y = arg3.const.Camlburg.action ()
                             in
                                 
-# 232 "riscv32rec.mlb"
+# 233 "riscv32rec.mlb"
                                 ( (op,x,y) )
                                 
 # 000 "/dev/stdout"
@@ -1601,7 +1697,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 278 "riscv32rec.mlb"
+# 286 "riscv32rec.mlb"
                         ( cat [ "Bits(b)" ] )
                         
 # 000 "/dev/stdout"
@@ -1612,7 +1708,7 @@ and conBits =
                     (let bits = arg1
                     in
                         
-# 159 "riscv32rec.mlb"
+# 160 "riscv32rec.mlb"
                         ( guard (Bits.width bits = 32) )
                         
 # 000 "/dev/stdout"
@@ -1622,7 +1718,7 @@ and conBits =
                         let bits = arg1
                         in
                             
-# 159 "riscv32rec.mlb"
+# 160 "riscv32rec.mlb"
                             ( const32 bits )
                             
 # 000 "/dev/stdout"
@@ -1633,7 +1729,7 @@ and conBits =
                         (let bits = arg1
                         in
                             
-# 160 "riscv32rec.mlb"
+# 161 "riscv32rec.mlb"
                             ( guard (Bits.width bits = 32 && fits_imm12 bits) )
                             
 # 000 "/dev/stdout"
@@ -1643,7 +1739,7 @@ and conBits =
                             let bits = arg1
                             in
                                 
-# 160 "riscv32rec.mlb"
+# 161 "riscv32rec.mlb"
                                 ( const32 bits )
                                 
 # 000 "/dev/stdout"
@@ -1691,7 +1787,7 @@ and conAnd =
                                 and y = arg2.any.Camlburg.action ()
                                 in
                                     
-# 284 "riscv32rec.mlb"
+# 292 "riscv32rec.mlb"
                                     ( cat [ "And(";x;", ";y;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -1742,7 +1838,7 @@ and conAdd =
                                     and reg = arg2.reg.Camlburg.action ()
                                     in
                                         
-# 180 "riscv32rec.mlb"
+# 181 "riscv32rec.mlb"
                                         ( cat [imm12;"(";reg;")"] )
                                         
 # 000 "/dev/stdout"
@@ -1758,7 +1854,7 @@ and conAdd =
                                     and imm12 = arg2.imm12.Camlburg.action ()
                                     in
                                         
-# 181 "riscv32rec.mlb"
+# 182 "riscv32rec.mlb"
                                         ( cat [imm12;"(";reg;")"] )
                                         
 # 000 "/dev/stdout"
@@ -1775,7 +1871,7 @@ and conAdd =
                                     and y = arg2.any.Camlburg.action ()
                                     in
                                         
-# 282 "riscv32rec.mlb"
+# 290 "riscv32rec.mlb"
                                         ( cat [ "Add(";x;", ";y;")" ] )
                                         
 # 000 "/dev/stdout"
@@ -1794,7 +1890,7 @@ and conAdd =
                                             arg2.const.Camlburg.action ()
                                         in
                                             
-# 214 "riscv32rec.mlb"
+# 215 "riscv32rec.mlb"
                                             ( () )
                                             
 # 000 "/dev/stdout"
@@ -1823,6 +1919,7 @@ and conAdd =
       | RP.App(("sub", [w]), [x; y])   -> conSub (exp x) (exp y)
       | RP.App(("and", [w]), [x; y])   -> conAnd (exp x) (exp y)
       | RP.App(("mul", [w]), [x; y])   -> conMul (exp x) (exp y)
+      | RP.App(("quot", [w]), [x; y])  -> conQuot (exp x) (exp y)
       (* claude: %lobits only ever wraps a value immediately feeding a
        * narrow-width memory store (riscv32.ml's Post.lostore, its only
        * producer) - a RISC-V sb/sh/sw already truncates its source

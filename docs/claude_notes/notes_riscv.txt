@@ -3,9 +3,11 @@ notes_riscv.txt
 
 Written: 2026-08-17, against commit ed8a0ca (the ARM tiger-suite follow-up,
 parent of the commit that adds this file and the RISC-V backends
-themselves). All claims below are VERIFIED: read in the code, or observed
-by actually running `qc -riscv64 ...` / `qc -riscv32 ...` under qemu, not
-inferred from upstream Lua.
+themselves), updated the same day once tests/run-tiger-riscv32.sh reached
+15/15 (see "RV32 tiger-suite bring-up" below - the biggest addition after
+the initial hello-world pass). All claims below are VERIFIED: read in the
+code, or observed by actually running `qc -riscv64 ...` / `qc -riscv32 ...`
+under qemu, not inferred from upstream Lua.
 
 What this is
 ------------
@@ -144,10 +146,33 @@ were the primary templates (crossed with arm.ml's no-delay-slot bits):
                               riscv64-linux-gnu-gcc-provided crt0/libc, no
                               hand-written stub required.
 
+New files, RV32 tiger-suite bring-up (see that section below)
+----------------------------------------------------------------
+  - runtime/riscv32_syscalls.c - the newlib-style POSIX syscall stubs
+                              (_exit/_write/_read raw `ecall`s, a static-
+                              array _sbrk/sbrk, trivial stubs for the
+                              rest) plus stdout/stdin/stderr, picolibc's
+                              own "hosted" integration point (see that
+                              section for why both are needed).
+  - runtime/riscv32_crt0.s   - the freestanding entry point tests/tiger's
+                              own final link uses (parallels demos/
+                              riscv32_start.s but also initializes gp -
+                              see that section).
+  - runtime/riscv32cont.s    - Cmm_unwindcont_pc trap stub, riscv32's
+                              sibling of armcont.s/mipscont.s/etc.
+  - tests/tiger/regenerate-riscv32.sh, tests/run-tiger-riscv32.sh - the
+                              riscv32 counterparts of regenerate.sh/
+                              run-tiger.sh.
+
 Modified files
 --------------
 - driver/dune          - added cmm_arch_riscv64 and cmm_arch_riscv32 to
                           driver/main.exe's libraries.
+- runtime/qc--runtime.h, runtime/gcc-linux.c - added RISC-V NUM_REGS (96)
+                          and FP_REG (46) entries - see "RV32 tiger-suite
+                          bring-up" below.
+- runtime/Makefile      - added a BACKEND=riscv32 branch (picolibc-based
+                          CC32, RISCV32_EXTRA for riscv32_syscalls.o).
 - driver/main.ml        - mirrored every -mips/-arm wiring site twice (once
                           per width): use_riscv64/use_riscv32 refs,
                           default_riscv64_cc/default_riscv32_cc, the
@@ -275,6 +300,167 @@ session - worth knowing about if anyone else tries to feed qc multiple
 uncompiled inputs at once, but out of scope to fix here (demos/Makefile's
 riscv32 target works around it with three separate rules instead of one).
 
+RV32 tiger-suite bring-up: 15/15
+-----------------------------------
+Following up the hello-world pass above, tests/run-tiger-riscv32.sh now
+passes all 15 tests (arrays, colmajor, exceptions, forloop, funcall, hello,
+merge, qsort, queens, rc4, rb, rbshort, sieve, wf, wff) - see
+expected/tiger-riscv32.txt. This beats every other non-x86/ppc backend's
+own baseline (arm 6/15, mips/sparc 1/15 each) and matches ppc's 15/15.
+RV64 tiger tests were deliberately NOT attempted, on the same structural
+grounds as alpha's own tiger blocker (see alpha-backend-status in memory,
+or the git history around alpha's bring-up): fork-tiger's runtime hardcodes
+bits32 pointers throughout, so a 64-bit target hits the identical
+32-vs-64-bit mismatch alpha did - not investigated here since the user
+confirmed this scope decision ("probably will work just for riscv32
+because tiger does not have a 64 backend yet").
+
+RV32's tiger runtime is picolibc-based, same as its hello-world milestone
+(no glibc for this width - see "Toolchain" above), needing the same
+gcc-riscv64-unknown-elf + picolibc-riscv64-unknown-elf toolchain and the
+same -nostartfiles/custom-_start discipline, but scaled up: tiger's runtime
+(fork-tiger's runtime.c--/alloc.c--/stdlib.c/gc.c, plus this fork's own
+runtime.c/pcmap.c/gcc-linux.c) needs a real printf/malloc/exit surface, not
+just the trivial one hello_riscv32.c-- exercised. Bugs found bringing this
+up, roughly in the order hit:
+
+1. NUM_REGS/FP_REG overflow (runtime/qc--runtime.h, runtime/gcc-linux.c).
+   Cmm_Activation's `regs[NUM_REGS]` array is indexed by target.ml's own
+   flat register numbering (mk_reg_ix_map: every Reg/Fixed-classified
+   space, SORTED BY SPACE CHARACTER - 'c' < 'f' < 'r' - not by the order
+   a backend's own `spaces` list happens to list them in), and
+   update_saved_regs writes into it with NO bounds check. The x86-sized
+   default (NUM_REGS=12) silently overflows for RISC-V's own space sizes
+   (c=6, f=32, r=32 -> 70 flat indices needed) - the exact same overflow
+   bug already fixed for ppc/sparc, just never yet hit for RISC-V. Fixed
+   by adding a `#elif defined(__riscv)` branch (NUM_REGS=96, matching
+   ppc's own headroom margin) covering both RV32 and RV64 (same register
+   topology, only value width differs). gcc-linux.c's FP_REG (the flat
+   index gcc's own -fno-omit-frame-pointer C code uses as a walkable
+   frame-pointer chain across C--/C boundaries) similarly needed its own
+   RISC-V entry: s0/x8 (the register riscv32cc.ml/riscv64cc.ml already
+   reserve out of nvl_int for exactly this reason - see the "What this is"
+   section above) sits at flat index c(6)+f(32)+8 = 46, not the x86-
+   shaped default's 9. Both numbers were derived by formula (not
+   empirically probed via gdb the way ppc's own 72 was pinned down
+   originally) but cross-checked against ppc's own confirmed 96/72 pair -
+   applying the identical sort-by-space-character derivation to ppc's
+   space sizes reproduces its documented 72 exactly, which is why this
+   was trusted enough to apply proactively. Confirmed indirectly by the
+   full suite passing (a wrong FP_REG would show up immediately in any
+   GC-crossing test, and 11 of the 15 tests here do cross that boundary).
+
+2. gp (the global pointer) needs real initialization in the freestanding
+   crt0, or every gcc-compiled C object here (picolibc itself, and fork-
+   tiger's own stdlib.c/gc.c once regenerate-riscv32.sh compiles them)
+   segfaults immediately. GCC's default RV32 codegen uses gp-relative
+   loads/stores ("lw rd, offset(gp)") for small global/static data - a
+   compile-time codegen choice independent of the assembler's own
+   link-time relaxation, so `.option norelax` (already used elsewhere in
+   this backend) does nothing to prevent it. With gp left at whatever the
+   kernel handed the process at entry (effectively 0), any such access
+   reads/writes near address 0 - confirmed empirically: SIGSEGV at
+   si_addr=0xfffff820, i.e. gp=0 plus a small negative 12-bit offset,
+   wrapping to just under 4GB. Fixed in runtime/riscv32_crt0.s with the
+   standard idiom (also what picolibc's own crt0.o does, confirmed by
+   disassembling it): `.option push / .option norelax / la gp,
+   __global_pointer$ / .option pop` before anything else runs - the local
+   norelax scope is required around exactly this instruction, since
+   without it the assembler could "relax" this very load into a
+   gp-relative reference to itself. Notably, qc's OWN generated code never
+   needed this (it doesn't do small-data/gp-relative optimization at all),
+   so demos/riscv32_start.s never needed the fix - this only bites once
+   real gcc-compiled C objects enter the link, which tiger's runtime is
+   the first thing in this session to actually require.
+
+3. picolibc's libc.a does not itself define stdout/stdin/stderr in this
+   packaging (confirmed via `readelf -s` on every candidate .o - e.g.
+   libc_tinystdio_bufio.c.o only WEAKLY REFERENCES them, `UND` in every
+   object in the archive, never a real definition) - printf.o's own
+   reference to `stdout` is `U stdout` and just stays unresolved. This is
+   picolibc's normal "hosted" integration point: the platform integrator
+   is expected to supply the three streams via the documented
+   FDEV_SETUP_STREAM macro (a FILE struct built from put/get byte
+   callbacks - unbuffered by construction, one call per character, no
+   separate buffering layer to worry about flushing). Added to
+   runtime/riscv32_syscalls.c: con_put/con_get/err_put wrapping the raw
+   _write/_read syscalls, and `FILE *const stdout = &con_out;` etc.
+   (confirmed unbuffered behavior directly: a printf immediately followed
+   by abort() still shows the printf's output).
+
+4. picolibc's malloc doesn't call the newlib-style `_sbrk` this backend
+   already provided - it calls the POSIX-named `sbrk()` directly
+   (libc_picolib_picosbrk.c.o), which in ITS default form wants linker-
+   provided `__heap_start`/`__heap_end` symbols that only exist under
+   picolibc.ld's own memory-map layout (see bug 5 below for why that
+   layout is unusable here at all). Fixed by renaming the existing
+   static-array bump allocator to `sbrk` (POSIX name) with `_sbrk` now
+   just forwarding to it - a strong definition of `sbrk` means the linker
+   never needs to pull picolib_picosbrk.c.o from the archive at all,
+   sidestepping the __heap_start/__heap_end requirement entirely rather
+   than trying to satisfy it.
+
+5. Two DISTINCT problems, both caused by linking through
+   `riscv64-unknown-elf-gcc --specs=picolibc.specs` instead of plain `ld`
+   directly, both found empirically (not anticipated):
+     a. picolibc.specs' `*link` spec injects `-Tpicolibc.ld` unless -T is
+        given explicitly. picolibc.ld lays out a bare-metal-style
+        flash+RAM memory map (with ROM-to-RAM .data copy semantics that
+        only picolibc's own crt0 - which this backend deliberately
+        doesn't use - performs) at a load address (0x80000000) that plain
+        qemu-riscv32 user-mode emulation cannot run: confirmed via
+        `readelf -l` (two PT_LOAD segments with differing VirtAddr/
+        PhysAddr, i.e. genuine flash-vs-RAM addresses, meaningless outside
+        a real memory-mapped microcontroller) and empirically (SIGSEGV
+        before even reaching main).
+     b. Passing an explicit `-T` to work around (a) does NOT disable the
+        SAME spec's unconditional `--gc-sections`, which silently
+        discards INDIVIDUAL .pcmap/.pcmap_data entries (not the whole
+        section - confirmed via readelf: the entry for fork-tiger's own
+        runtime/alloc.c--'s `tig_call_gc`'s "cuts to k" continuation was
+        missing from the FINAL LINKED BINARY even though it was
+        confirmed present, via `objdump -dr`, in alloc.o's own .pcmap
+        section before linking). pcmap.ld's Cmm_pc_map/Cmm_pc_map_limit
+        symbols still bound a correctly-SIZED region either way -
+        --gc-sections's liveness analysis simply doesn't understand that
+        a linker-script address-range reference (not an ordinary symbol
+        reference) is what keeps an individual .pcmap entry meaningful,
+        so entries with no other referrer get treated as dead code and
+        dropped. This manifested as `assert(entry)` failing in runtime.c's
+        Cmm_YoungestActivation (SIGABRT, "assertion \"entry\" failed") -
+        confirmed by temporarily logging the failing pc: it was exactly
+        alloc.c--'s own `_Lcut_entry_l8` label, the "continuation k():"
+        target `tig_call_gc` cuts to once GC finishes - i.e. every single
+        test that allocates enough to trigger a real collection hit this
+        (11 of 15 tests failed with the identical symptom before this
+        fix, 0 after).
+     Fixed by abandoning `riscv64-unknown-elf-gcc --specs=picolibc.specs`
+     for the FINAL LINK step entirely (kept only for compiling, where its
+     include-path setup is still wanted) - tests/run-tiger-riscv32.sh now
+     links with plain `riscv64-unknown-elf-ld` directly (no picolibc.ld
+     injection since nothing asks for it, no --gc-sections), adding
+     -L/--start-group -lc -lgcc --end-group explicitly, with the library
+     directories derived from the installed toolchain (`gcc
+     -print-libgcc-file-name`, `gcc -print-multi-directory` composed with
+     picolibc's known install layout) rather than hardcoded, so this
+     survives a toolchain version bump. Note: `ld` still prints a
+     "contains output sections; did you forget -T?" warning about
+     pcmap.ld even in this fixed form - confirmed harmless (the actual
+     runtime behavior is correct with or without an explicit -T once
+     --gc-sections is out of the picture; the warning was a red herring
+     during this investigation, not the real bug).
+
+6. riscv32rec.mlb was missing `%quot` (integer division) entirely -
+   sieve.c--/colmajor.c--/merge.c-- all genuinely divide, unlike either
+   hello demo. Added RV32M's native `div` instruction (truncating,
+   round-toward-zero - the same semantics %quot already assumes, so no
+   sign-fixup needed) plus the same [1]-cost li-then-op immediate
+   fallback add/sub/and/mul already have, in both riscv32.ml's
+   T.capabilities and riscv32rec.mlb - not extended to riscv64 in this
+   pass (out of scope: RV64 tiger tests weren't attempted, see above), so
+   riscv64's own capabilities list is now narrower than riscv32's until
+   something actually needs div there too.
+
 Known remaining gaps
 ---------------------
 - -O3 compiles cleanly for both widths (`qc -riscv64/-riscv32 -O3 ...`
@@ -282,40 +468,42 @@ Known remaining gaps
   runtime under qemu-riscv64 (verified: a 10-second `timeout qemu-riscv64
   ./hello_riscv64_O3` times out, exit 124). Not investigated - same
   situation notes_arm.txt documents for ARM's own -O3 hang (-O0, the
-  default, is what's verified, the same bar every prior backend's initial
-  pass met). RV32 -O3 was not run under qemu at all this session (only
-  confirmed the compile step succeeds); given RV64 already hangs, it was
-  not worth the time to check RV32 separately before this is actually
-  investigated.
-- Tiger backend tests (tests/run-tiger-riscv64.sh / a freestanding RV32
-  equivalent) were not attempted this session - the milestone this note
-  covers is the hello-world bring-up pass, the same bar notes_arm.txt's
-  *first* pass met before its separate tiger-suite follow-up session. If
-  revisited, expect the same cross-backend GC/register-allocator liveness
-  gap notes_arm.txt's follow-up section root-caused (a GC-required temp,
-  e.g. the saved return address, isn't kept live across every call site in
-  its procedure) to cap however far the tiger suite gets, same as it capped
-  ARM at 6/15 and already-shipped mips/sparc at 1/15 each - not a RISC-V-
-  specific gap, and not attempted here for the same reason it wasn't
-  chased down for ARM (deep, shared, real regression risk to every other
-  backend built on the same regalloc/liveness machinery).
-- riscv64rec.mlb/riscv32rec.mlb's operator coverage is scoped tightly to
-  what demos/hello_riscv64.c--/hello_riscv32.c-- actually exercise (see
-  "New files" above) - no or/xor/shift/div, no floating point at all
-  (Post.unrm/binrm/dblop/wrdop/wrdrop are all Impossible.unimp/
-  Unsupported, matching mips.ml's/arm.ml's own current scope). "mul" is
-  the one operator included beyond hello world's own strict needs (RISC-V
-  M-extension mul is a single real instruction with no immediate-
-  materialization complexity, unlike ARM's session which deferred mul/quot
-  to a follow-up pass) - div/rem were left out since nothing in this
-  session's scope needed them and truncating-division semantics deserve
-  their own targeted verification the way ARM's follow-up session gave
-  %quot, not a speculative add here.
+  default, is what's verified everywhere else in this fork too). RV32
+  -O3 was not run under qemu at all this session (only confirmed the
+  compile step succeeds).
+- RV64 tiger tests not attempted at all (see "RV32 tiger-suite bring-up"
+  above) - blocked on the same bits32-pointers-in-a-64-bit-runtime
+  mismatch as alpha, not investigated further per explicit scope
+  agreement with the user.
+- riscv64rec.mlb's operator coverage (add/sub/and/mul, no quot/or/xor/
+  shift, no floating point) is now narrower than riscv32rec.mlb's (which
+  also has quot) purely because RV64 tiger tests were never attempted to
+  drive out what else it would need - see item 6 above.
 - The fits_imm12/imm[1]-cost fallback pattern (materializing an
   out-of-range addi/andi immediate via `li t0, ...` then a register-
   register instruction) and the analogous Cmp(op,x:reg,y:const) branch-
-  against-constant fallback are both modeled on alpharec.mlb's/armrec.mlb's
-  precedent but NOT known to be exercised by either hello demo (both
-  programs' immediates/frame sizes are small) - unverified beyond
-  compiling without error. If a future program's stack frame or constant
-  exceeds the 12-bit window, this is the first place to check.
+  against-constant fallback, in both riscvNNrec.mlb files, are modeled on
+  alpharec.mlb's/armrec.mlb's precedent but STILL not known to be
+  exercised by anything run so far (all 15 tiger programs' immediates/
+  frame sizes stayed small) - unverified beyond compiling without error.
+  If a future program's stack frame or constant exceeds the 12-bit
+  window, this is the first place to check.
+- The NUM_REGS=96/FP_REG=46 fix (see item 1 above) was derived by formula
+  and cross-checked against ppc's own numbers, not independently
+  confirmed via a from-scratch gdb probe the way ppc's original 72 was.
+  The RV32 tiger suite passing end to end (11 of 15 tests genuinely cross
+  the C boundary during a real GC) is strong indirect evidence it's
+  right, but if something GC-related ever misbehaves on either RISC-V
+  width, this is worth re-deriving from first principles rather than
+  assumed correct forever.
+- This session's NUM_REGS/FP_REG investigation strongly suggests mips.ml
+  and arm.ml have the SAME latent bug (both default to the unmodified
+  x86-sized NUM_REGS=12/FP_REG=9, and both have register-space layouts
+  at least as large as RISC-V's - mips: r=32/f=32/c=6, same 70-index
+  need; arm: r=16/c=3, still exceeds 12) - not fixed here (out of scope:
+  those backends were not touched this session, and fixing them needs
+  its own verification pass against their own tiger baselines), but
+  worth flagging: this may be a real, currently-unexplained contributor
+  to notes_arm.txt's own "6/15, root cause is a shared liveness bug"
+  finding, not necessarily a fully separate issue from what's described
+  there.

@@ -83,6 +83,46 @@ if [ ! -f "$B/riscv32_crt0.o" ]; then
   $CCRISCV32 -c "$RT/riscv32_crt0.s" -o "$B/riscv32_crt0.o" || exit 2
 fi
 
+# claude: the final link is done with plain `ld`, NOT `$CCRISCV32` (gcc +
+# --specs=picolibc.specs) - two independent reasons, both found the hard
+# way:
+#
+# 1. picolibc.specs' *link spec injects "-Tpicolibc.ld" unless -T is given
+#    explicitly - picolibc.ld lays out a bare-metal-style flash+RAM memory
+#    map (with ROM-to-RAM .data copy semantics that only picolibc's own
+#    crt0 - which we don't use - performs) at a load address (0x80000000)
+#    that plain qemu-riscv32 user-mode emulation cannot run (confirmed:
+#    SIGSEGV before even reaching main).
+#
+# 2. picolibc.specs' *link spec ALSO adds "--gc-sections" unconditionally.
+#    Passing an explicit -T to work around (1) does NOT disable this, and
+#    it silently discards individual .pcmap/.pcmap_data entries (whole
+#    ones, not the whole section - e.g. runtime/alloc.c--'s tig_call_gc
+#    "cuts to k" continuation entry) even though pcmap.ld's own
+#    Cmm_pc_map/Cmm_pc_map_limit symbols still bound a correctly-sized
+#    region: --gc-sections's liveness analysis doesn't understand that a
+#    linker-script address-range reference (not an ordinary symbol
+#    reference) is what keeps a .pcmap entry meaningful, so entries with
+#    no other referrer get treated as dead and dropped - confirmed
+#    empirically (tests/tiger/'s "arrays" test's stack walk hit exactly
+#    this missing entry, SIGABRT via runtime.c's "assert(entry)" in
+#    Cmm_YoungestActivation, for a pc that genuinely existed in the
+#    original .o's own .pcmap section - see notes_riscv.txt).
+#
+# Plain ld sidesteps both: no picolibc.ld injection (nothing asks for it),
+# no --gc-sections. -lc/-lgcc and their search paths, normally supplied by
+# the specs file, are added explicitly instead - derived from the
+# installed gcc/picolibc rather than hardcoded, so this survives a
+# toolchain version bump unchanged.
+LDRISCV32=riscv64-unknown-elf-ld
+GCCLIBDIR=$(dirname "$(riscv64-unknown-elf-gcc -march=rv32imac -mabi=ilp32 -print-libgcc-file-name)")
+MULTIDIR=$(riscv64-unknown-elf-gcc -march=rv32imac -mabi=ilp32 -print-multi-directory)
+PICOLIBDIR=/usr/lib/picolibc/riscv64-unknown-elf/lib/$MULTIDIR
+if [ ! -f "$PICOLIBDIR/libc.a" ]; then
+  echo "run-tiger-riscv32.sh: no libc.a under $PICOLIBDIR - picolibc-riscv64-unknown-elf layout changed?" >&2
+  exit 2
+fi
+
 update=no
 if [ "$1" = "--update" ]; then update=yes; shift; fi
 want=$*
@@ -101,9 +141,12 @@ while read -r name src rc stdin_file; do
        >"$B/$name.qcerr" 2>&1; then
     echo "FAIL $name (compile)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
-  if ! $CCRISCV32 -nostartfiles -o "$B/$name" \
+  if ! $LDRISCV32 -m elf32lriscv -static -e _start \
+       -L"$PICOLIBDIR" -L"$GCCLIBDIR" \
        "$B/riscv32_crt0.o" "$T/tigermain-riscv32.o" "$B/$name.o" "$T/stdlib-riscv32.a" \
-       "$LIB" "$RT/pcmap.ld" 2>"$B/$name.lderr"; then
+       "$LIB" "$RT/pcmap.ld" \
+       --start-group -lc -lgcc --end-group \
+       -o "$B/$name" 2>"$B/$name.lderr"; then
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
 

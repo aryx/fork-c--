@@ -85,6 +85,7 @@
       | RP.App(("sub", [w]), [x; y])   -> conSub (exp x) (exp y)
       | RP.App(("and", [w]), [x; y])   -> conAnd (exp x) (exp y)
       | RP.App(("mul", [w]), [x; y])   -> conMul (exp x) (exp y)
+      | RP.App(("quot", [w]), [x; y])  -> conQuot (exp x) (exp y)
       (* claude: %lobits only ever wraps a value immediately feeding a
        * narrow-width memory store (riscv32.ml's Post.lostore, its only
        * producer) - a RISC-V sb/sh/sw already truncates its source
@@ -267,6 +268,13 @@ inst:       Store(dst:regl, Mul(x:reg,y:reg), 32)
 inst:       Store(dst:regl, Mul(x:reg,y:imm), 32) [1]
             {: sprintf "li t0, %s\n\tmul %s, %s, t0" y dst x :}
 
+(* claude: RV32M's "div" is a truncating (round-toward-zero) signed division, matching %quot's own semantics exactly - same reasoning as "mul" above for why the immediate variant materializes y into t0 first (no divi either). Added once tests/tiger/'s sieve.c--/colmajor.c--/merge.c-- (real integer division, not speculative) needed it. *)
+inst:       Store(dst:regl, Quot(x:reg,y:reg), 32)
+            {: cat ["div"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:regl, Quot(x:reg,y:imm), 32) [1]
+            {: sprintf "li t0, %s\n\tdiv %s, %s, t0" y dst x :}
+
 inst:       Nop() {: "nop" :}
 
 inst: any [100]         {: cat ["<";any;">"] :}
@@ -283,6 +291,7 @@ any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
 any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
 any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
 any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : Quot(x:any, y:any) {: cat [ "Quot(";x;", ";y;")" ] :}
 any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
 any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
 any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
