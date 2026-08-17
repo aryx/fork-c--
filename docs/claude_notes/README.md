@@ -44,9 +44,22 @@ Index:
   of 11/15 initial failures — `--gc-sections` (from
   `--specs=picolibc.specs`) silently dropping individual `.pcmap` entries
   it can't see are still referenced via a linker-script address range.
-  RV64 tiger tests not attempted (same bits32-pointer blocker as alpha).
   Known gap: `-O3` compiles but hangs at runtime on RV64 (same unresolved
-  class of bug as ARM's own `-O3` hang).
+  class of bug as ARM's own `-O3` hang). Follow-up: a later session
+  brought up `tests/tiger64/` (bits64 tiger tests) against RV64 — see
+  that same file's own "RV64 tiger-suite bring-up" section and
+  `notes_64bits.txt` below — reaching 13/15 (`tests/run-tiger64-riscv64.sh`),
+  the fix that unblocked it being a `Cmm_Word` (pcmap field width)
+  bug in `qc--runtime.h` shared by every backend, not RV64-specific.
+
+- [notes_64bits.txt](notes_64bits.txt) — target-independent summary of what
+  actually blocks a 64-bit backend (-alpha, -riscv64) from running real
+  Tiger programs: three separately-owned bits32-hardcoding bugs (two in
+  fork-tiger, one in this repo's own `runtime/qc--runtime.h` `Cmm_Word` —
+  the one that generalizes to every 64-bit backend, not just riscv64) plus
+  each backend's own remaining instruction-selection gaps. Points at
+  `notes_riscv.txt` and `tests/tiger64/README` for the riscv64-specific and
+  tiger-suite-specific detail respectively.
 
 Retired: `plan_tiger_hello.md` and `plan_end_to_end.md` planned the path to
 `tigerc demos/hello.tig | qc ... | ./hello` actually running. That milestone

@@ -461,6 +461,81 @@ up, roughly in the order hit:
    riscv64's own capabilities list is now narrower than riscv32's until
    something actually needs div there too.
 
+RV64 tiger-suite bring-up: 13/15
+-----------------------------------
+Picked back up in a later session what the RV32 section above deliberately
+left alone: fork-tiger grew a `tigerc -64` flag (emits bits64 C--, wordsize/
+pointersize 64) specifically to unblock a 64-bit qc-- backend, and this
+session used it to bring up tests/tiger64/ (the bits64 counterpart of
+tests/tiger/) against -riscv64, going from "not attempted" to 13/15 -
+tests/run-tiger64-riscv64.sh, expected/tiger64-riscv64.txt. See
+tests/tiger64/README for the full writeup; summary here since this file is
+the RISC-V-specific record. riscv64 is glibc-based (real
+riscv64-linux-gnu-gcc, real qemu-riscv64 usermode), so none of RV32's
+picolibc/freestanding items above (2-5) applied - the bugs found this time
+were different in kind:
+
+1. fork-tiger's tigerc -64 itself emitted invalid bits64 C-- (two bugs in
+   frontend/frame.ml/backend/codegen.ml, fixed in fork-tiger, not here) -
+   a prerequisite before any of this backend's own bugs could even be
+   reached.
+
+2. fork-tiger's runtime/gc.c, stdlib/stdlib.c, stdlib/stdlib.h hardcoded
+   "unsigned" (always 32 bits) for heap pointers/the allocation header -
+   confirmed as exactly the "bits32 pointers throughout" blocker item
+   RV32's own section (and alpha-backend-status in memory) predicted.
+   Ported to uintptr_t in fork-tiger (a no-op on every 32-bit backend,
+   confirmed by rerunning every other backend's run-tiger-*.sh
+   afterwards); the .c-- side's own bits32->bits64 mechanics live in
+   tests/tiger64/regenerate-riscv64.sh instead, mirroring how
+   tests/tiger/regenerate-ppc.sh keeps its byteorder flip out of
+   fork-tiger too.
+
+3. riscv64rec.mlb was missing `%quot` exactly like RV32's own item 6
+   above predicted it eventually would - ported the same way, RV64M's
+   plain `div` (not `divw`) operating on full 64-bit registers instead
+   of RV32M's 32-bit ones. riscv64.ml's T.capabilities gained "quot" to
+   match, closing the gap item 6 left between the two widths.
+
+4. The big one: runtime/qc--runtime.h's Cmm_Word - the type backing
+   every pc_map_entry field (locations, the return-address location,
+   span values, register/local/span counts) AND the actual register/
+   stack-pointer VALUES the GC's own activation-record walk reads
+   through it - was hardcoded "unsigned" (32 bits), globally, for every
+   backend. This was never caught before because every backend prior to
+   this session's -riscv64 work was 32-bit, where "unsigned" and
+   "native pointer width" are the same size by coincidence. qc-- itself
+   already emits every one of these fields at the target's actual
+   pointer width (confirmed from a -riscv64 .s dump: inalloc/outalloc/
+   return_addressp/num_registers/etc. are all ".dword", not ".long",
+   and MKOFFSET(0) shows up as bit 63 set, not bit 31) - so on a 64-bit
+   target the C runtime was reading its own pcmap data at the wrong
+   stride, corrupting the very first activation the GC ever walked.
+   Symptom: every test that allocates enough to ever collect (arrays,
+   queens, qsort, sieve, wf, wff, rb, rc4 - 8 of 15) segfaulted or hit a
+   glibc heap-corruption abort, unconditionally, the first time tig_gc
+   ran. Fixed by retyping Cmm_Word to uintptr_t and widening pcmap.c's
+   Cmm_loctype/Cmm_as_register/Cmm_as_offset decoding to match (their
+   GOODBITS already derives from sizeof() of their own local variable,
+   so this generalized for free once that variable's type did) - a
+   no-op on every 32-bit backend, confirmed the same way as item 2.
+   This single fix is what took the suite from "every GC-triggering
+   test crashes" to 13/15. Given this bug lived in shared, target-
+   generic runtime code untouched by anything RISC-V-specific, it is
+   very likely also why alpha's own tiger tests were "blocked" - on top
+   of, not instead of, alpha's separate instruction-selection gaps (see
+   tests/tiger64/README's -alpha status).
+
+Two known failures remain in tests/tiger64/, both confirmed independent of
+heap size (see tests/tiger64/README for the full detail, not repeated
+here): colmajor crashes with a glibc "corrupted top size" abort at the
+default heap size but runs correctly to completion with a huge one (real
+heap corruption, but only for colmajor's specific 2D-array allocation
+pattern - root cause not yet found); merge's stdout matches byte-for-byte
+at any heap size but its exit code is wrong (0 instead of 1) - not a GC
+bug, most likely a calling-convention/tail-call return-value bug somewhere
+in the recursive printlist chain that computes it, not yet confirmed.
+
 Known remaining gaps
 ---------------------
 - -O3 compiles cleanly for both widths (`qc -riscv64/-riscv32 -O3 ...`
@@ -471,14 +546,17 @@ Known remaining gaps
   default, is what's verified everywhere else in this fork too). RV32
   -O3 was not run under qemu at all this session (only confirmed the
   compile step succeeds).
-- RV64 tiger tests not attempted at all (see "RV32 tiger-suite bring-up"
-  above) - blocked on the same bits32-pointers-in-a-64-bit-runtime
-  mismatch as alpha, not investigated further per explicit scope
-  agreement with the user.
-- riscv64rec.mlb's operator coverage (add/sub/and/mul, no quot/or/xor/
-  shift, no floating point) is now narrower than riscv32rec.mlb's (which
-  also has quot) purely because RV64 tiger tests were never attempted to
-  drive out what else it would need - see item 6 above.
+- RV64 tiger tests: see "RV64 tiger-suite bring-up" above - no longer
+  "not attempted" (was blocked on the same bits32-pointers-in-a-64-bit-
+  runtime mismatch as alpha, now fixed), but not yet at RV32's 15/15
+  either - colmajor and merge remain, see that section and
+  tests/tiger64/README.
+- riscv64rec.mlb's operator coverage (add/sub/and/mul/quot, no or/xor/
+  shift, no floating point) is still narrower than riscv32rec.mlb's (no
+  or/xor/shift there either, but see riscv32.ml's own comment) - quot
+  was the one gap RV64 tiger genuinely needed (colmajor/merge/sieve, see
+  "RV64 tiger-suite bring-up" item 3 above); nothing has driven out or/
+  xor/shift for either width yet.
 - The fits_imm12/imm[1]-cost fallback pattern (materializing an
   out-of-range addi/andi immediate via `li t0, ...` then a register-
   register instruction) and the analogous Cmp(op,x:reg,y:const) branch-
@@ -492,10 +570,12 @@ Known remaining gaps
   and cross-checked against ppc's own numbers, not independently
   confirmed via a from-scratch gdb probe the way ppc's original 72 was.
   The RV32 tiger suite passing end to end (11 of 15 tests genuinely cross
-  the C boundary during a real GC) is strong indirect evidence it's
-  right, but if something GC-related ever misbehaves on either RISC-V
-  width, this is worth re-deriving from first principles rather than
-  assumed correct forever.
+  the C boundary during a real GC), and now RV64's own 13/15 doing the
+  same (both widths share this exact code, confirming the formula holds
+  identically at 64 bits too), is strong indirect evidence it's right,
+  but if something GC-related ever misbehaves on either RISC-V width,
+  this is worth re-deriving from first principles rather than assumed
+  correct forever.
 - This session's NUM_REGS/FP_REG investigation strongly suggests mips.ml
   and arm.ml have the SAME latent bug (both default to the unmodified
   x86-sized NUM_REGS=12/FP_REG=9, and both have register-space layouts
