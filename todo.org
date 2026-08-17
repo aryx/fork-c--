@@ -12,24 +12,25 @@ so can cross compile c-- and tiger for plan9! and also for macOS, windows, etc.
 *** LATER take good ideas from HOOPL still by Ramsey and include in c--?
 like why no SSA in c--?
 
-*** LATER port asdl from SML to OCaml and add in tools/ next to ocamlburg?
-use Claude to automate the transformation
-
 *** LATER integrate also mltk and the SLED machine spec tool?
 convert SML code to OCaml?
 
 *** LATER compare with LLVM, look tiger codegenerator for LLVM:
 https://github.com/civp/tiger-compiler
 
+*** still? port asdl from SML to OCaml and add in tools/ next to ocamlburg?
+use Claude to automate the transformation
+or not worth it with deriving or atdgen doing most of what asdl was doing
+
 * Code
 
-** Code este
-
-*** RELAX? remove the Private vs public rtl.ml API? 
-remove Private intermediate? worth it?
+** Code estet
 
 *** RELAX use Xxx.{} syntax so less need module X = Xxx
 and repeated T.x = ; T.y = ; ...
+
+*** RELAX? remove the Private vs public rtl.ml API? 
+remove Private intermediate? worth it?
 
 ** Code reorg
 
@@ -78,7 +79,11 @@ SEMI | `todo/lua/`, `todo/lua-related/`, `todo/h_lua/` | delete — the fork rem
 
 * Test suite
 
-** Last1
+** tiger testsuite
+
+*** fix many of the failing tests, sparc, ppc, alpha, mips, etc.
+
+** other tests
 
 *** fix the failing tests/quest/ FAIL
 
@@ -90,7 +95,6 @@ SEMI | `todo/lua/`, `todo/lua-related/`, `todo/h_lua/` | delete — the fork rem
 
 *** RELAX c--: looks mips backend! probably the cleanest and simplest
 so good starting point
-
 
 * Literate
 
