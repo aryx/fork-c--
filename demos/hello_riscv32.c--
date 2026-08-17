@@ -1,0 +1,38 @@
+/* claude: RISC-V32 has no Linux-userspace glibc cross-toolchain on this
+ * machine (no riscv32-linux-gnu-gcc/libc package - see
+ * docs/claude_notes/notes_riscv.txt), so unlike every other demos/hello_*.c--
+ * this one cannot import/link against printf. Instead it exercises the
+ * backend's core machinery - a "C--"-convention call between two procedures,
+ * an if/else conditional branch, and integer addition - and reports the
+ * result as the process exit code, checked against a hand-written
+ * freestanding _start (demos/riscv32_start.s, no libc, no crt0) that calls
+ * main and exits via a raw syscall:
+ *
+ *   qc -riscv32 -globals -stop .s -o hello_riscv32.s demos/hello_riscv32.c--
+ *   riscv64-linux-gnu-as -march=rv32imac -mabi=ilp32 hello_riscv32.s -o hello_riscv32.o
+ *   riscv64-linux-gnu-as -march=rv32imac -mabi=ilp32 riscv32_start.s -o riscv32_start.o
+ *   riscv64-linux-gnu-ld -m elf32lriscv -static -e _start \
+ *     -o hello_riscv32 riscv32_start.o hello_riscv32.o
+ *   qemu-riscv32 ./hello_riscv32; echo $?     # expect 77 (222+111, mod 256)
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag.
+ */
+
+target byteorder little wordsize 32 pointersize 32;
+
+export main;
+
+foo(bits32 i) {
+  bits32 x;
+  if (i != 0) { x = 111; } else { x = 222; }
+  return(x);
+}
+
+foreign "C" main("unsigned" bits32 iargc, "address" bits32 iargv) {
+  bits32 a, b, r;
+  a = foo(0);
+  b = foo(1);
+  r = a + b;
+  foreign "C" return(r);
+}

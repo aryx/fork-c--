@@ -1,0 +1,36 @@
+/* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
+ *
+ * claude: same program as hello.c--, adapted to RISC-V64's 64-bit,
+ * little-endian metrics (wordsize/pointersize 64 - Driver.compile checks
+ * the source's declared metrics against the target's and refuses to
+ * proceed on a mismatch, which is why this needs its own file rather than
+ * reusing hello.c--'s bits32 one, same reason hello_alpha.c-- needed its
+ * own). Exercises qc's RISC-V64 backend end to end:
+ *
+ *   qc -riscv64 -globals -stop .s -o hello_riscv64.s demos/hello_riscv64.c--
+ *   riscv64-linux-gnu-as hello_riscv64.s -o hello_riscv64.o
+ *   riscv64-linux-gnu-gcc -static hello_riscv64.o -o hello_riscv64
+ *   qemu-riscv64 hello_riscv64    # prints "hello, world!", exits 0
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag. riscv64-linux-gnu-*
+ * is this fork's RISC-V cross toolchain (a native 64-bit gcc/binutils/glibc
+ * set, like alpha's - no multilib trick needed). Unlike RV32, Ubuntu ships
+ * no riscv32-linux-gnu glibc toolchain at all - RV64 is the only RISC-V
+ * width with real Linux-userspace verification here, see
+ * docs/claude_notes/notes_riscv.txt.
+ */
+
+target byteorder little wordsize 64 pointersize 64;
+
+import bits64 printf;
+export main, my_data;
+
+section "data" {
+  my_data: bits8 [] "hello, world!\n\0";
+}
+
+foreign "C" main("unsigned" bits64 iargc, "address" bits64 iargv) {
+  foreign "C" printf("address" my_data);
+  foreign "C" return(0);
+}

@@ -1,0 +1,301 @@
+%head {:
+  (* claude: no upstream riscv64rec.nw exists to port - qc-- predates
+   * RISC-V (see riscv64.ml's header comment). Modeled on
+   * arch/mips/mipsrec.mlb's shape (%head/%tail structure, exp/loc/effect/
+   * guarded dispatch, direct register-vs-register branch guard - RISC-V's
+   * beq/bne/blt/bge/bltu/bgeu, like MIPS's beq/bne/..., compare two
+   * registers directly, no condition-code register) crossed with
+   * arch/arm/armrec.mlb's immediate-materialization discipline (RISC-V's
+   * addi/andi only take a 12-bit signed immediate, narrower than either
+   * MIPS's 16-bit or a full 32-bit constant - out-of-range immediates fall
+   * back to a guarded "li t0, imm" + register-register instruction, the
+   * same [1]-cost fallback pattern arch/alpha/alpharec.mlb's imm8/lda pair
+   * and armrec.mlb's "ldr ip,=y" rules use). Only the subset of RISC-V
+   * actually needed by demos/hello_riscv64.c-- is covered: base+offset
+   * addressing, add/sub/and/mul, the ten eq/ne/lt/le/gt/ge/ltu/leu/gtu/geu
+   * comparisons, plain direct/indirect calls and branches. No or/xor/
+   * shift/div, no compressed (C-extension) instructions ever emitted
+   * (a.opt.norelax below pins the assembler to fixed-width encodings so
+   * our own hand-computed ra_offset=4 stays valid).
+   *)
+  open Nopoly
+  module RP = Rtl.Private
+  module RU = Rtlutil
+  module Up = Rtl.Up
+  module Dn = Rtl.Dn
+  module SS = Space.Standard64
+
+  exception Error of string
+  let error msg = raise (Error msg)
+  let sprintf   = Printf.sprintf
+
+  let guard p = if p then 0 else Camlburg.inf_cost
+
+  (* claude: signed decimal, not unsigned - riscv64-linux-gnu-as's addi/lw/
+   * sw 12-bit signed-immediate field (and li/la, which do not care either
+   * way) rejects a large unsigned decimal the same way mipsel-linux-gnu-
+   * as's imm16 does (see mipsrec.mlb's own const32 comment) - Bits.S, not
+   * Bits.U. *)
+  let const64 b =
+      assert (Bits.width b = 64);
+      Int64.to_string (Bits.S.to_int64 b)
+
+  (* claude: RISC-V addi/andi/slti/... only encode a 12-bit signed immediate
+   * (-2048..2047) - out-of-range values need the "li t0, imm" fallback (see
+   * the guarded imm12/imm rule pairs below). *)
+  let fits_imm12 b =
+    let n = Bits.S.to_int64 b in
+    Int64.compare n (-2048L) >= 0 && Int64.compare n 2047L <= 0
+
+  let cat     = String.concat ""
+  let sprintf = Printf.sprintf
+
+  let reg n   = "x" ^ string_of_int n
+
+  (* claude: RISC-V load/store width suffixes - b/h/w/d, and (like MIPS,
+   * unlike ARM) a zero-extending sub-word load just appends "u" to the
+   * same suffix (lbu/lhu/lwu) rather than using a distinct mnemonic. *)
+  let suffix = function
+      | 8  -> "b"
+      | 16 -> "h"
+      | 32 -> "w"
+      | 64 -> "d"
+      | w  -> error (sprintf "not a RISC-V width: %d" w)
+
+  let zx    = "u"
+  let sx    = ""
+  let width = string_of_int
+:}
+%tail {:
+  let const = function
+      | RP.Bool _                 -> error "boolean found"
+      | RP.Link(s,_,w)            -> conLink s w
+      | RP.Diff _                 -> error "PIC not supported"
+      | RP.Bits(b)                -> conBits b
+      | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
+
+  let cmp =
+      Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"]
+
+  let rec exp = function
+      | RP.Const(k)               -> const k
+      | RP.Fetch(l,w)             -> conFetch (loc l) w
+      | RP.App(("add", [w]), [x; y])   -> conAdd (exp x) (exp y)
+      | RP.App(("sub", [w]), [x; y])   -> conSub (exp x) (exp y)
+      | RP.App(("and", [w]), [x; y])   -> conAnd (exp x) (exp y)
+      | RP.App(("mul", [w]), [x; y])   -> conMul (exp x) (exp y)
+      (* claude: %lobits only ever wraps a value immediately feeding a
+       * narrow-width memory store (riscv64.ml's Post.lostore, its only
+       * producer) - a RISC-V sb/sh/sw already truncates its source
+       * register to the store's own width, so the narrowing is a free
+       * no-op here, same reasoning as mipsrec.mlb's identical case. *)
+      | RP.App(("lobits", [_;_]), [x]) -> exp x
+      | RP.App((op, [w]), [x; y])
+          when Strutil.Set.mem op cmp  -> conCmp op (exp x) (exp y)
+      | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
+
+  and loc = function
+      | RP.Reg((sp,_,_),i,w)      -> conReg sp i
+      | RP.Mem(('m',_,_),w,e,ass) -> conMem (exp e)
+      | RP.Mem((sp,_,_),_,_,_)    -> error (sprintf "mem-space space %c" sp)
+      | RP.Var   (s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Global(s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Slice _                -> error "cannot handle slice"
+
+  let effect = function
+      | RP.Store(RP.Reg(('c',_,_),i,w),r,_)
+        when i = SS.indices.SS.pc  -> conGoto (exp r)
+      | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+      | RP.Kill(l)                -> error "cannot handle kill"
+
+  let guarded g stmt = match g with
+      | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
+      | _                         -> conGuarded (exp g) (effect stmt)
+
+  let rec geffects = function
+      | []                        -> conNop ()
+      | [g, s]                    -> guarded g s
+      | (g, s) :: t               -> conPar (guarded g s) (geffects t)
+
+  let rtl (RP.Rtl es) = geffects es
+
+  let rtl_to_string = RU.ToString.rtl
+
+  let dump msg rtl =
+      List.iter prerr_string
+      [ "error in recognizer: "
+      ; msg
+      ; " on "
+      ; rtl_to_string rtl
+      ; "\n"
+      ]
+
+  let to_string r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          Printf.sprintf "\t%s" (plan.inst.Camlburg.action ())
+      with
+          | Camlburg.Uncovered -> cat ["not an instruction: "
+                                      ; rtl_to_string r
+                                      ]
+          | Error msg          -> ( dump msg r
+                                  ; sprintf "error: %s" (rtl_to_string r)
+                                  )
+
+  let is_instruction r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          plan.inst.Camlburg.cost < 100
+      with
+          | Camlburg.Uncovered -> false
+          | Error msg          -> ( dump msg r
+                                  ; false
+                                  )
+:}
+%term
+  bits n x w
+%%
+const:      Bits(bits) [{: guard (Bits.width bits = 64) :}]{: const64 bits :}
+imm12:      Bits(bits) [{: guard (Bits.width bits = 64 && fits_imm12 bits) :}]{: const64 bits :}
+symbol:     Link(x, w:int)      {: x#mangled_text :}
+
+r:          Reg('r', n:int)  {: n :}
+regl:       r   {: reg r :}
+reg:        Fetch(regl,w:int)   {: regl :}
+
+pcl:        Reg('c',  0) {: () :}
+spl:        Reg('r',  2) {: () :}
+ral:        Reg('r',  1) {: () :}
+
+pc:         Fetch(pcl,64)       {: () :}
+sp:         Fetch(spl,64)       {: () :}
+ra:         Fetch(ral,64)       {: () :}
+
+meml:       Mem(addr)     {: addr :}
+mem:        Fetch(meml,w:int)   {: meml :}
+
+(* claude: classic base+offset addressing, plus a bare symbol (a real RISC-V assembler pseudo memory-operand form: "lw rd, symbol" expands to auipc+lw internally) - a minimal subset, no shifted/scaled operands. *)
+addr:       reg                 {: cat ["0("; reg; ")"] :}
+addr:       Add(imm12,reg)      {: cat [imm12;"(";reg;")"] :}
+addr:       Add(reg,imm12)      {: cat [imm12;"(";reg;")"] :}
+addr:       symbol              {: symbol                  :}
+
+imm:        const               {: const                   :}
+
+inst:       Store(regl,symbol,64)
+            {: cat ["la"; " "; regl; ","; symbol] :}
+
+inst:       Store(regl,const,64)
+            {: cat ["li"; " "; regl; ","; const] :}
+
+inst:       Store(regl,mem,64)
+            {: cat ["l"; suffix 64; " "; regl; ","; mem] :}
+
+inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
+            {: cat ["l"; suffix w; sx; " "; regl; ","; mem] :}
+
+inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int)
+            {: cat ["l"; suffix w; zx; " "; regl; ","; mem] :}
+
+inst:       Store(meml, reg, w:int)
+            {: cat ["s"; suffix w; " "; reg; ","; meml] :}
+
+inst:       Store(regl, reg, 64)
+            {: cat ["mv"; " "; regl; ","; reg] :}
+
+inst:       Goto(symbol)
+            {: cat ["j"; " "; symbol] :}
+
+inst:       Goto(reg)
+            {: cat ["jr"; " "; reg] :}
+
+(* claude: jal/jalr's rd := pc+4 is a hardware-guaranteed side effect of the instruction itself (see riscv64.ml's ra_offset comment) - "next" just recognizes the RTL shape Post.do_call builds, same role as mipsrec.mlb's/armrec.mlb's own "next" rule. *)
+next:       Add(pc,const)       {: () :}
+inst:       Par(Goto(symbol),Store(ral,next,64))
+            {: cat ["jal"; " "; "ra"; ","; symbol] :}
+
+inst:       Par(Goto(target:reg),Store(ral,next,64))
+            {: cat ["jalr"; " "; "ra"; ","; target] :}
+
+(* claude: recognizes Post.cut_to's jump-through-register-while-updating-sp RTL - RISC-V has no delay slot, so the sp update must come first (once "jr" fires control has left), same discipline as armrec.mlb's analogous rule. *)
+inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 64))
+            {: sprintf "mv sp, %s\n\tjr %s" nsp target :}
+
+cmp:        Cmp(op:string,x:reg,y:reg)              {: (op,x,y) :}
+inst:       Guarded(cmp,Goto(addr))
+            {: match cmp with
+               | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr]
+            :}
+
+(* claude: RISC-V has no branch-immediate form (unlike MIPS's own beq-with-literal pseudo-op) - a comparison against a constant needs the operand materialized into scratch first, same [1]-cost fallback shape as the arithmetic imm12/imm pairs below. Not known to be exercised by demos/hello_riscv64.c-- (Postexpander normally hands bc_guard two already-allocated temps), kept for defensive coverage the way mipsrec.mlb's own "Cmp(op,x:reg,y:const)" rule is. *)
+cmpc:       Cmp(op:string,x:reg,y:const)            {: (op,x,y) :}
+inst:       Guarded(cmpc,Goto(addr)) [1]
+            {: match cmpc with
+               | (op,x,y) -> sprintf "li t0, %s\n\tb%s %s, t0, %s" y op x addr
+            :}
+
+inst:       Store(dst:regl, Add(x:reg,y:reg), 64)
+            {: cat ["add"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:regl, Add(x:reg,y:imm12), 64)
+            {: cat ["addi"; " "; dst; ","; x; ","; y] :}
+
+(* claude: fallback when the immediate is out of addi's -2048..2047 range - cost 1 so addi (cost 0, via imm12) wins whenever it also matches, same pattern as alpharec.mlb's imm8/lda pair. *)
+inst:       Store(dst:regl, Add(x:reg,y:imm), 64) [1]
+            {: sprintf "li t0, %s\n\tadd %s, %s, t0" y dst x :}
+
+inst:       Store(dst:regl, Sub(x:reg,y:reg), 64)
+            {: cat ["sub"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:regl, Sub(x:reg,y:imm), 64) [1]
+            {: sprintf "li t0, %s\n\tsub %s, %s, t0" y dst x :}
+
+inst:       Store(dst:regl, And(x:reg,y:reg), 64)
+            {: cat ["and"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:regl, And(x:reg,y:imm12), 64)
+            {: cat ["andi"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:regl, And(x:reg,y:imm), 64) [1]
+            {: sprintf "li t0, %s\n\tand %s, %s, t0" y dst x :}
+
+(* claude: "mul" only takes register operands (RISC-V's M extension has no muli), so the immediate variant materializes y into t0 first, same trick as add/sub/and's own immediate rules. *)
+inst:       Store(dst:regl, Mul(x:reg,y:reg), 64)
+            {: cat ["mul"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:regl, Mul(x:reg,y:imm), 64) [1]
+            {: sprintf "li t0, %s\n\tmul %s, %s, t0" y dst x :}
+
+inst:       Nop() {: "nop" :}
+
+inst: any [100]         {: cat ["<";any;">"] :}
+
+any : True  ()          {: cat [ "True"  ] :}
+any : False ()          {: cat [ "False" ] :}
+any : Link(x, w:int)    {: cat [ "Link(";x#mangled_text;",";width w;")" ] :}
+any : Late(string,w:int){: cat [ "Late(";string;",";width w;")" ] :}
+any : Bits(bits)        {: cat [ "Bits(b)" ] :}
+
+any : Fetch (any, w:int){: cat [ "Fetch(";any;",";width w;")" ] :}
+
+any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
+any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
+any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
+any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
+any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
+
+any : Mem(any)   {: cat [ "Mem(";any;")" ] :}
+any : Reg(char, n:int)  {: cat [ "Reg('";Char.escaped char;"',"; width n;")" ] :}
+
+any : Store (dst:any, src:any, w:int)
+                        {: cat [ "Store(";dst;",";src;",";width w;")" ] :}
+any : Kill(any)         {: cat [ "Kill(";any;")" ] :}
+
+any : Guarded(guard:any, any)
+                        {: cat [ "Guarded(";guard;",";any;")" ] :}
+any : Cmp(op:string, x:any, y:any)
+                        {: cat [ "Cmp(";op;",";x;",";y;")" ] :}
+any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
+any : Goto(any)         {: cat [ "Goto(";any;")" ] :}

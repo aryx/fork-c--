@@ -28,6 +28,15 @@ Index:
   cross-backend GC/register-allocator bug (a GC-required temp isn't kept
   live across every call site) — not specific to ARM, deliberately not
   fixed here (deep, shared, real regression risk to other backends).
+- [notes_riscv.txt](notes_riscv.txt) — how the RISC-V backends (RV64 and
+  RV32, both new development, no upstream `.nw`) were built: mips.ml's
+  Post design crossed with arm.ml's no-delay-slot call/cut_to ordering, at
+  two widths. RV64 is verified end to end like every other backend
+  (`qemu-riscv64`, real glibc link); RV32 has no Linux-userspace glibc
+  toolchain on this machine at all, so it's verified freestanding instead
+  (a hand-written `_start`, checked exit code under `qemu-riscv32`). Known
+  gap: `-O3` compiles but hangs at runtime on RV64 (same unresolved class
+  of bug as ARM's own `-O3` hang).
 
 Retired: `plan_tiger_hello.md` and `plan_end_to_end.md` planned the path to
 `tigerc demos/hello.tig | qc ... | ./hello` actually running. That milestone

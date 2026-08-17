@@ -1,6 +1,7 @@
 # The qc-- run-time system, built for 32-bit x86, 32-bit big-endian ppc,
-# 32-bit big-endian sparc (V8), 32-bit little-endian mips (mipsel), or
-# 32-bit little-endian arm (armhf).
+# 32-bit big-endian sparc (V8), 32-bit little-endian mips (mipsel),
+# 32-bit little-endian arm (armhf), or 32-bit little-endian riscv32
+# (rv32imac, freestanding against picolibc - see BACKEND=riscv32 below).
 #
 # Produces build-$(BACKEND)/libqcmm.a, which is what a C-- program links
 # against. Both demos/ and tests/ use this rather than each rebuilding the
@@ -73,8 +74,28 @@ else ifeq ($(BACKEND),arm)
 CC32    ?= arm-linux-gnueabihf-gcc -march=armv7ve+fp -fno-stack-protector
 CONTOBJ  = $(B)/armcont.o
 QCFLAG   = -arm
+else ifeq ($(BACKEND),riscv32)
+# claude: Ubuntu ships no riscv32-linux-gnu glibc at all (unlike every
+# other BACKEND here) - see docs/claude_notes/notes_riscv.txt. CC32 here
+# is a bare-metal (gcc-riscv64-unknown-elf) compiler targeting rv32imac/
+# ilp32, linked against picolibc instead of glibc; RISCV32_EXTRA supplies
+# the syscall glue (riscv32_syscalls.c) picolibc needs in place of real
+# glibc syscalls - see that file's own header comment. --specs=
+# picolibc.specs selects picolibc over any default libc at link time.
+# riscv32_crt0.s (the freestanding _start, picolibc's own crt0 replacement)
+# is deliberately NOT built here / NOT folded into libqcmm.a - like every
+# real crt0/crt1.o, it must be passed as a plain object directly on the
+# final link command line (see tests/run-tiger-riscv32.sh), not archived:
+# a linker only pulls an archive member in for a referenced undefined
+# symbol, and nothing ever references "_start" by name (it is found via
+# entry-point lookup, a different mechanism) - archived, it would simply
+# never get linked in.
+CC32    ?= riscv64-unknown-elf-gcc -march=rv32imac -mabi=ilp32 --specs=picolibc.specs
+CONTOBJ  = $(B)/riscv32cont.o
+QCFLAG   = -riscv32
+RISCV32_EXTRA = $(B)/riscv32_syscalls.o
 else
-$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips or arm)
+$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm or riscv32)
 endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
@@ -113,7 +134,7 @@ CFLAGS32 = -w -fcommon -I .
 GLOBALS_DECL ?= bits32 alloc_ptr;
 
 
-C_OBJS   = $(B)/runtime.o $(B)/pcmap.o $(B)/gcc-linux.o $(CONTOBJ)
+C_OBJS   = $(B)/runtime.o $(B)/pcmap.o $(B)/gcc-linux.o $(CONTOBJ) $(RISCV32_EXTRA)
 CMM_OBJS = $(B)/cut.o $(B)/thread.o $(B)/yield.o
 
 .PHONY: all clean
@@ -141,6 +162,10 @@ $(B)/mipscont.o: mipscont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/armcont.o: armcont.s | $(B)
 	$(CC32) -c $< -o $@
+$(B)/riscv32cont.o: riscv32cont.s | $(B)
+	$(CC32) -c $< -o $@
+$(B)/riscv32_syscalls.o: riscv32_syscalls.c | $(B)
+	$(CC32) $(CFLAGS32) -c $< -o $@
 
 # The globals declaration is inserted after the "target byteorder" line so
 # the syncweb markers and everything else are preserved. claude: ppc/sparc
@@ -166,4 +191,4 @@ $(B)/%.o: $(B)/%.c--
 	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm
+	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32

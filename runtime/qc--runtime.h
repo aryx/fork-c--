@@ -27,6 +27,25 @@
  * the exact count the way ppc's was (still confirming FP_REG - see
  * gcc-linux.c), so generous rather than tight. */
 #define NUM_REGS 128
+#elif defined(__riscv)
+/* claude: same overflow bug as ppc's/sparc's (see the comments above) -
+ * the x86-sized array below silently overflowed for RISC-V too.
+ * __riscv is defined by the compiler for both RV32 and RV64 - the flat
+ * register-index numbering (target/target.ml's mk_reg_ix_map, which
+ * sorts ALL Reg/Fixed-classified spaces by space CHARACTER, not by the
+ * order they're listed in arch/riscv{32,64}/riscv{32,64}.ml's own
+ * `spaces` list) is identical between the two widths: only register
+ * VALUES differ in width, not the register-space topology. Sorted
+ * alphabetically that's 'c' (6 registers: pc, npc, cc, _, fp_mode,
+ * fp_fcmp -> flat indices 0-5), then 'f' (32 float registers, unused by
+ * this backend but still Reg-classified -> flat indices 6-37), then 'r'
+ * (32 general registers x0-x31 -> flat indices 38-69) = 70 total.
+ * Cross-checked against ppc's own confirmed 96/72 numbers above: the
+ * same sort-by-space-character derivation reproduces ppc's documented
+ * layout exactly (c(7)->0-7, f(32)->8-40, r(32)->41-73, FP_REG=72 for
+ * r31), which is why this is trusted without an ppc-style gdb probe of
+ * its own. 96 leaves the same headroom margin as ppc's. */
+#define NUM_REGS 96
 #else
 /*s: machine-dependent macro definitions for the public interface ((x86-linux)) */
 #define NUM_REGS 12

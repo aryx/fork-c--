@@ -145,6 +145,21 @@ let use_mips = ref false
  * needed - arch/arm/armasm.ml already emits GNU-as-compatible syntax. *)
 let use_arm = ref false
 
+(* claude: -riscv64, 64-bit little-endian RISC-V (RV64GC, what qemu-riscv64
+ * and gcc-riscv64-linux-gnu target - see arch/riscv64/riscv64.ml). Like
+ * -sparc/-alpha/-mips/-arm, no separate ELF sibling needed -
+ * arch/riscv64/riscv64asm.ml already emits GNU-as-compatible syntax. *)
+let use_riscv64 = ref false
+
+(* claude: -riscv32, 32-bit little-endian RISC-V (RV32IMAC - see
+ * arch/riscv32/riscv32.ml). Unlike every other -<arch> flag, there is no
+ * Linux-userspace glibc cross-toolchain for it on this machine (Ubuntu
+ * packages only riscv64-linux-gnu, not riscv32-linux-gnu - see
+ * docs/claude_notes/notes_riscv.txt), so this backend is verified
+ * freestanding only (demos/hello_riscv32.c-- + demos/riscv32_start.s, no
+ * libc). *)
+let use_riscv32 = ref false
+
 (* -stop .<ext>. Empty means "go all the way to an executable". *)
 let stop_after = ref ""
 
@@ -217,6 +232,24 @@ let default_mips_cc = "clang -target mipsel-unknown-linux-gnu"
  * this replaces, so every -march=armv7-a instruction this backend
  * already emits keeps assembling unchanged. *)
 let default_arm_cc = "arm-linux-gnueabihf-gcc -march=armv7ve+fp"
+(* claude: for -riscv64. Ubuntu ships a real riscv64-linux-gnu gcc/binutils/
+ * glibc cross toolchain (native 64-bit, no multilib trick needed - same
+ * situation as -alpha's gcc-alpha-linux-gnu), so this can be the plain
+ * default, same pattern as default_arm_cc. Its default -march=rv64gc
+ * already includes the M extension (mul/div), which riscv64rec.mlb's "mul"
+ * rule needs - no march bump required, unlike -arm's own divide-instruction
+ * fix. *)
+let default_riscv64_cc = "riscv64-linux-gnu-gcc"
+(* claude: for -riscv32. No riscv32-linux-gnu-gcc/libc exists on this
+ * machine (see use_riscv32's comment), so this reuses the riscv64-linux-
+ * gnu-gcc driver purely as a cross assembler/linker with -march=rv32imac
+ * -mabi=ilp32 and -nostdlib (no libc to link against, no crt0 - the caller
+ * must supply demos/riscv32_start.s, a hand-written freestanding _start, as
+ * an extra input alongside the .c-- source; see hello_riscv32.c--'s own
+ * comment for the full invocation). Unlike -alpha's "no usable default",
+ * this one IS usable end to end - just not self-sufficient the way every
+ * other -<arch> default is (it always needs that extra _start object). *)
+let default_riscv32_cc = "riscv64-linux-gnu-gcc -march=rv32imac -mabi=ilp32 -nostdlib"
 
 let getenv_or name default =
   match Sys.getenv_opt name with
@@ -376,6 +409,17 @@ type backend =
    * same story as Sparc/Alpha/Mips above - no separate "-arm-elf"
    * sibling needed. *)
   | Arm
+  (* claude: 64-bit little-endian RISC-V (RV64GC), what qemu-riscv64
+   * targets. Emits GNU-as-compatible ELF/Linux assembly directly
+   * (arch/riscv64/riscv64asm.ml), same story as Sparc/Alpha/Mips/Arm above -
+   * no separate "-riscv64-elf" sibling needed. *)
+  | Riscv64
+  (* claude: 32-bit little-endian RISC-V (RV32IMAC), what qemu-riscv32
+   * targets. Emits GNU-as-compatible ELF/Linux assembly directly
+   * (arch/riscv32/riscv32asm.ml), same story as Riscv64 above - no separate
+   * "-riscv32-elf" sibling needed. Verified freestanding only (no glibc for
+   * this width on this machine - see use_riscv32's comment). *)
+  | Riscv32
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
    *)
@@ -394,6 +438,8 @@ let effective_cc backend cmd =
            | Alpha -> default_alpha_cc ()
            | Mips -> default_mips_cc
            | Arm -> default_arm_cc
+           | Riscv64 -> default_riscv64_cc
+           | Riscv32 -> default_riscv32_cc
            | Ppc -> failwith "-ppc: pass -as/-ld (or QC_AS/QC_LD) explicitly \
                                for the Mach-O assembler/linker to use"
            | Interp -> failwith "-interp has no assembler/linker step")
@@ -406,7 +452,7 @@ let effective_cc backend cmd =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm -> ".s"
+   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -437,6 +483,12 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     | Arm ->
         let asm = Armasm.make Cfgutil.emit chan in
         Arm.target, asm, Armbackend.optimizer ~opt_level:!opt_level asm, true
+    | Riscv64 ->
+        let asm = Riscv64asm.make Cfgutil.emit chan in
+        Riscv64.target, asm, Riscv64backend.optimizer ~opt_level:!opt_level asm, true
+    | Riscv32 ->
+        let asm = Riscv32asm.make Cfgutil.emit chan in
+        Riscv32.target, asm, Riscv32backend.optimizer ~opt_level:!opt_level asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
          * see TODO/lua/lualink.ml:234 *)
@@ -638,13 +690,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm) -> Assembly
+  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm) -> Object
+  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm) -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -677,6 +729,8 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     else if !use_alpha then Alpha
     else if !use_mips then Mips
     else if !use_arm then Arm
+    else if !use_riscv64 then Riscv64
+    else if !use_riscv32 then Riscv32
     else X86
   in
   let stop = stop_at_of_flag backend in
@@ -804,9 +858,14 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " generate 32-bit little-endian MIPS (mipsel) Linux/ELF assembly instead of x86";
     "-arm", Arg.Unit (fun () -> use_arm := true),
     " generate 32-bit little-endian ARM Linux/ELF assembly instead of x86";
+    "-riscv64", Arg.Unit (fun () -> use_riscv64 := true),
+    " generate 64-bit little-endian RISC-V (RV64GC) Linux/ELF assembly instead of x86";
+    "-riscv32", Arg.Unit (fun () -> use_riscv32 := true),
+    " generate 32-bit little-endian RISC-V (RV32IMAC) Linux/ELF assembly instead of x86";
     "-x86", Arg.Unit (fun () ->
       use_interp := false; use_ppc := false; use_ppc_elf := false; use_sparc := false;
-      use_alpha := false; use_mips := false; use_arm := false),
+      use_alpha := false; use_mips := false; use_arm := false; use_riscv64 := false;
+      use_riscv32 := false),
     " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";

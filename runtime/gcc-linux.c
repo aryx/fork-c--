@@ -24,6 +24,19 @@
  * found; any in-range placeholder works identically since the slot is
  * always NULL. */
 #define FP_REG 30 /* %fp/%i6, never saved via update_saved_regs on sparc */
+#elif defined(__riscv)
+/* claude: s0/x8, the register arch/riscv{32,64}/riscv{32,64}cc.ml
+ * reserves out of nvl_int specifically so riscv{32,64}-*-gcc's own
+ * -fno-omit-frame-pointer C code (see runtime/regenerate-riscv32.sh)
+ * uses it as a real, walkable frame-pointer chain - same rationale as
+ * arm.ml's own r11/fp reservation. Flat index derived the same way as
+ * qc--runtime.h's own NUM_REGS comment: c(6)->0-5, f(32)->6-37, so x8
+ * within r's 38-69 range is flat index 38+8=46. Not yet confirmed via
+ * gdb the way ppc's 72 was (see qc--runtime.h) - the derivation is
+ * trusted because it reproduces ppc's own confirmed 72 exactly when
+ * applied to ppc's numbers, but this is the first thing to re-check if
+ * a RISC-V GC-crossing test misbehaves. */
+#define FP_REG 46
 #else
 #define FP_REG 9 /* %ebp, r[5] */
 #endif

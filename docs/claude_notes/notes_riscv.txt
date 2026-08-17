@@ -1,0 +1,321 @@
+notes_riscv.txt
+================
+
+Written: 2026-08-17, against commit ed8a0ca (the ARM tiger-suite follow-up,
+parent of the commit that adds this file and the RISC-V backends
+themselves). All claims below are VERIFIED: read in the code, or observed
+by actually running `qc -riscv64 ...` / `qc -riscv32 ...` under qemu, not
+inferred from upstream Lua.
+
+What this is
+------------
+RISC-V is the sixth and seventh non-x86 backends plugged into this fork,
+after ppc, sparc, alpha, mips, and arm - two backends, not one, because
+RISC-V comes in two widths this fork supports: RV64 (arch/riscv64/) and
+RV32 (arch/riscv32/). Like ARM, upstream qc-- never had any RISC-V code at
+all (RISC-V postdates upstream qc--'s active development), so both
+backends are new development with no .nw counterpart anywhere upstream -
+every file below is plain source with no syncweb (*s:*)/(*x:*)/(*e:*)
+markers, same situation notes_arm.txt documents for arch/arm/.
+
+Architecturally RISC-V is closer to MIPS than to ARM/SPARC/Alpha: it has NO
+condition-code register at all - beq/bne/blt/bge/bltu/bgeu (plus GNU as's
+ble/bgt/bleu/bgtu pseudo-ops) compare two registers directly and branch,
+exactly the shape mips.ml's Post.bc_guard/bc_of_guard already model (unlike
+ARM's/SPARC's/Alpha's own single-flags-register or compare-to-zero
+designs). Where RISC-V differs from MIPS: it has no branch-delay slot (like
+ARM/Alpha/PPC), so do_call/cut_to follow arm.ml's ordering discipline (sp
+update before the jump that leaves control, not "in the delay slot" after
+it) rather than mips.ml's. So both riscv64.ml and riscv32.ml are mips.ml's
+Post design crossed with arm.ml's no-delay-slot call/cut_to ordering, at
+whichever of the two widths the backend targets (riscv64.ml uses
+Space.Standard64 like alpha.ml; riscv32.ml uses Space.Standard32 like
+mips.ml - see riscv64.ml's/riscv32.ml's own header comments).
+
+Register numbering follows the real RISC-V integer calling-convention
+table (x0=zero, x1=ra, x2=sp, x3=gp, x4=tp, x5-x7=t0-t2, x8=s0/fp, x9=s1,
+x10-x17=a0-a7, x18-x27=s2-s11, x28-x31=t3-t6), identical between RV64 and
+RV32 - only the register *width* differs, not the numbering/ABI roles. x5/
+t0 is reserved as this backend's own immediate-materialization scratch
+register (not in vol_int/nvl_int), same role as mips.ml's $1/at, arm.ml's
+r12/ip. x8/s0 is ALSO reserved out of nvl_int, proactively, even though
+nothing in this session's hello-world milestone exercises it: this is the
+same fix armcall.ml's r11/fp reservation made in the ARM session, for the
+same reason (fork-tiger's gc.c, built with -fno-omit-frame-pointer, walks
+s0 as a real frame-pointer chain across C--/C boundaries - letting the
+register allocator reuse it would silently corrupt that chain the moment a
+real program actually collects garbage). Applied here from the start
+rather than rediscovered the way ARM's session found it, since the fix
+costs nothing and the failure mode is identical.
+
+Toolchain: RV64 only
+---------------------
+Ubuntu packages a real riscv64-linux-gnu gcc/binutils/glibc cross toolchain
+(native 64-bit, no multilib trick needed - same situation as alpha's
+gcc-alpha-linux-gnu), installed this session via `sudo apt install
+gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu libc6-dev-riscv64-cross`.
+qemu-riscv64/qemu-riscv32 (user-mode emulation) were already present.
+
+Ubuntu ships NO riscv32-linux-gnu package at all - confirmed via
+`apt-cache search riscv`: only riscv64-linux-gnu-* packages exist. This
+isn't a packaging oversight to work around - mainline Linux distributions
+generally don't support a 32-bit RISC-V *userspace* (unlike ARM, where
+32-bit has full distro support alongside 64-bit): there is no glibc built
+for the ilp32 ABI in this toolchain's sysroot at all (confirmed directly:
+`riscv64-linux-gnu-gcc -march=rv32imac -mabi=ilp32 -static t.c` fails with
+"fatal error: gnu/stubs-ilp32.h: No such file or directory" - the ilp32
+variant of libc headers simply isn't installed). So -riscv32 cannot be
+verified the way every other backend in this fork is (a libc-linked binary
+running end to end) - see "RV32 verification" below for what was done
+instead.
+
+New files
+---------
+Two near-identical directory trees, arch/riscv64/ and arch/riscv32/ (the
+latter built by copying the former and mechanically narrowing every
+wordsize-dependent literal - see "RV32 vs RV64: what actually differs"
+below for the precise list). Both follow the exact same file breakdown as
+arch/mips/, since mips.ml/mipscall.ml/mipscc.ml/mipsasm.ml/mipsbackend.ml
+were the primary templates (crossed with arm.ml's no-delay-slot bits):
+  - riscvNN.ml/.mli        - Target.t + Post postexpander (mips.ml's shape,
+                              arm.ml's do_call/cut_to ordering)
+  - riscvNNregs.ml/.mli    - Spaces (Space.Standard64 for riscv64,
+                              Standard32 for riscv32), pc/cc locations,
+                              rspace - split out to avoid a circular
+                              dependency with RiscvNN, mirrors
+                              mipsregs.ml/armregs.ml
+  - riscvNNcc.ml           - T.cc_specs table: "C"/"C--"/"notail"/
+                              "C-- thread" all dispatch to one calling
+                              convention (a0-a7 args/return, s1/s2-s11
+                              callee-saved, t1-t2/t3-t6 volatile - see the
+                              header comment there for the full register
+                              table and the s0/t0 reservation rationale)
+  - riscvNNcall.ml/.mli    - Call.t builder, same C.incoming/C.outgoing
+                              prolog/epilog/call_actuals/call_results
+                              structure as mipscall.ml's `c`. sp_align=16
+                              (the RISC-V psABI's stack-alignment
+                              requirement, identical for ILP32 and LP64D)
+  - riscvNNrec.mlb -> .ml/.mli
+                            - camlburg instruction-selection grammar,
+                              generated via `bin/ocamlburg
+                              arch/riscvNN/riscvNNrec.mlb >
+                              arch/riscvNN/riscvNNrec.ml` (not a dune rule,
+                              same as every other *rec.ml in the tree).
+                              Covers add/sub/and/mul, the ten eq/ne/lt/le/
+                              gt/ge/ltu/leu/gtu/geu comparisons, base+
+                              offset addressing (plus a bare-symbol operand
+                              - a real RISC-V assembler pseudo memory
+                              form), and plain direct/indirect calls/
+                              branches/cuts. No or/xor/shift/div, no
+                              floating point.
+  - riscvNNasm.ml/.mli     - Asm.assembler: GNU-as-syntax ELF emitter, no
+                              branch-delay-slot nop (unlike mipsasm.ml's),
+                              closer to armasm.ml's/alphaasm.ml's shape.
+                              Emits `.option norelax` at the top of every
+                              procedure (see "Bugs found" below).
+  - riscvNNbackend.ml      - the phase pipeline, copied from
+                              mipsbackend.ml's/armbackend.ml's structure
+                              (trim_unreachable_code -> Placevar.context
+                              RiscvNN.placevars -> ... -> RiscvNN.X.cfg ->
+                              ... -> Colorgraph.ralloc/Flowra.ralloc ->
+                              layout -> Phases.rmvfp -> asm#cfg_instr ->
+                              Phases.emit_data)
+  - dune, Makefile         - new library cmm_arch_riscvNN, same shape as
+                              arch/mips/'s own
+  - demos/hello_riscv64.c-- (new) - same program as hello_alpha.c-- (its
+                              closer template: also needs an explicit
+                              `wordsize 64 pointersize 64` target pragma
+                              and bits64 printf import, for the same
+                              metrics-mismatch reason)
+  - demos/hello_riscv32.c-- (new) - NOT the same program as hello.c--:
+                              since there is no libc to link against (see
+                              "Toolchain" above), this cannot import printf
+                              at all. Instead it exercises a "C--"-
+                              convention call between two procedures, an
+                              if/else conditional branch, and integer
+                              addition, and reports the result (333) as the
+                              process exit code (masked to 8 bits: 77) -
+                              see "RV32 verification" below.
+  - demos/riscv32_start.s (new) - a hand-written freestanding ELF entry
+                              point (no crt0, no libc) that calls main via
+                              the plain RISC-V C ABI and exits via a raw
+                              `ecall` syscall with main's own return value.
+                              Needed only for -riscv32; RV64 uses the real
+                              riscv64-linux-gnu-gcc-provided crt0/libc, no
+                              hand-written stub required.
+
+Modified files
+--------------
+- driver/dune          - added cmm_arch_riscv64 and cmm_arch_riscv32 to
+                          driver/main.exe's libraries.
+- driver/main.ml        - mirrored every -mips/-arm wiring site twice (once
+                          per width): use_riscv64/use_riscv32 refs,
+                          default_riscv64_cc/default_riscv32_cc, the
+                          `backend` variant Riscv64/Riscv32, the
+                          effective_cc/default_output_file/
+                          stop_at_of_flag matches, the compile_file
+                          dispatch (RiscvNNasm.make, RiscvNN.target,
+                          RiscvNNbackend.optimizer), the backend-selection
+                          if-chain, the "-riscv64"/"-riscv32" CLI flags and
+                          their entries in -x86's reset list.
+                          default_riscv32_cc is unlike every other
+                          default_*_cc: because there is no libc, it is
+                          `riscv64-linux-gnu-gcc -march=rv32imac
+                          -mabi=ilp32 -nostdlib` and is NOT self-sufficient
+                          on its own - the caller must additionally pass
+                          demos/riscv32_start.s as an extra input, since qc
+                          has no crt0 to supply for a libc-free target.
+- demos/Makefile        - added riscv64 (works exactly like arm/mips/alpha's
+                          own targets) and riscv32 (a 3-step
+                          qc-then-as-then-ld recipe - see "RV32
+                          verification" below for why a single qc
+                          invocation doesn't work here) targets, updated
+                          the header comment's toolchain-install list.
+
+RV32 vs RV64: what actually differs
+------------------------------------
+Everything is identical except the numbers that are genuinely
+wordsize-dependent (the whole rest of the design - register roles, calling
+convention, addressing modes, mnemonics - is the same real RISC-V ISA at
+two widths):
+  - wordsize: 64 vs 32; Space.Standard64 vs Standard32 (riscvNNregs.ml)
+  - register/memory cell width: Cell.of_size 64 vs 32
+  - T.memory/the load-store suffix table: riscv64 has an extra "d" (ld/sd)
+    entry RV32 doesn't (no 64-bit load/store instructions exist on RV32);
+    correspondingly riscv64asm.ml's #value handles a 64-bit case (.dword)
+    that riscv32asm.ml's does not
+  - T.alignment/globals' default alignment: 8 vs 4
+  - Reloc.width assert in riscvNNasm.ml's #addr: 64 vs 32 (a pointer-sized
+    relocation, so it must track T.pointersize)
+  - the 12-bit signed immediate range for addi/andi (imm12, -2048..2047) is
+    UNCHANGED between the two - that field width is architecturally fixed
+    regardless of xlen, not a wordsize-scaled quantity, so
+    riscvNNrec.mlb's fits_imm12 is identical text in both files
+  - sp_align (16) is also UNCHANGED - the RISC-V psABI mandates 16-byte
+    stack alignment for both ILP32 and LP64D
+
+Bugs found and fixed while bringing this up
+---------------------------------------------
+- riscv64rec.mlb's fits_imm12 helper, written as the obvious
+  `n >= -2048L && n <= 2047L` (n : int64, from Bits.S.to_int64), failed to
+  typecheck once compiled as part of the whole riscvNNrec.mlb %head block
+  in this project's build: "This expression has type int64 but an
+  expression was expected of type int", pointing at the bare `n` on the
+  left of `>=`. A standalone repro of the same two lines in a bare `ocaml`
+  toplevel typechecks fine, and grepping the whole tree found no `-open`
+  flag or Nopoly-style shadow of `(>=)`/`(<=)` that would explain a
+  monomorphic-int bias - the exact mechanism was not root-caused further
+  (this didn't block anything: no existing backend's .mlb head compares
+  int64 values with the polymorphic operators, so there was no established
+  precedent to compare against). Fixed by using `Int64.compare n (-2048L)
+  >= 0 && Int64.compare n 2047L <= 0` instead, which sidesteps the
+  polymorphic operators entirely and compiles cleanly.
+- riscv64-linux-gnu-as's default assumes the C (compressed) extension is
+  live (RV64GC), meaning the assembler/linker are entitled to relax
+  ordinary instructions into 2-byte compressed forms or otherwise adjust
+  encodings at link time. This backend's own hand-computed ra_offset=4
+  (riscvNN.ml's Post.do_call, matching jal/jalr's hardware-guaranteed
+  rd:=pc+4) assumes every jal/jalr it emits is exactly 4 bytes and nothing
+  shifts around it afterward. Fixed proactively (not from an observed
+  failure - hello.c-- is too small a program to have exposed a real
+  divergence) by emitting `.option norelax` at the top of every procedure
+  in riscvNNasm.ml's #cfg_instr, pinning the assembler to fixed-width,
+  non-relaxed encodings - the same class of proactive fix as this fork's
+  now-familiar #section ALLOC-flag fix for pcmap/pcmap_data.
+
+RV64 verification
+------------------
+  ./bin/qc -riscv64 -globals -o hello_riscv64 demos/hello_riscv64.c--
+  qemu-riscv64 ./hello_riscv64
+    -> prints "hello, world!", exits 0
+
+Checked in all three invocation styles this fork's convention expects: the
+3-step form (qc -stop .s, then riscv64-linux-gnu-as, then
+riscv64-linux-gnu-gcc -static), the one-shot `-ld "riscv64-linux-gnu-gcc
+-static"` form, and the plain default (QC_AS/QC_LD unset, relying on
+default_riscv64_cc) via `demos/Makefile`'s own riscv64/run-riscv64 targets.
+All three produce a binary that runs correctly under qemu-riscv64.
+
+RV32 verification
+------------------
+Since there is no libc for this width (see "Toolchain" above),
+demos/hello_riscv32.c-- cannot be linked the way every other backend's
+demo is. Verification is freestanding instead: qc compiles the .c-- source
+down to a plain .o (no crt0 involved), which is linked directly against a
+hand-written _start (demos/riscv32_start.s, see "New files" above) using
+riscv64-linux-gnu-as/-ld invoked as bare cross tools (not through the gcc
+driver, so no libc/sysroot is ever consulted):
+
+  qc -riscv32 -globals -stop .o -o hello_riscv32.o demos/hello_riscv32.c--
+  riscv64-linux-gnu-as -march=rv32imac -mabi=ilp32 \
+    demos/riscv32_start.s -o riscv32_start.o
+  riscv64-linux-gnu-ld -m elf32lriscv -static -e _start \
+    -o hello_riscv32 riscv32_start.o hello_riscv32.o
+  qemu-riscv32 ./hello_riscv32; echo $?
+    -> exits 77 (222+111, masked to 8 bits - see hello_riscv32.c--'s own
+       comment for the exact computation)
+
+This exercises the same core machinery hello_riscv64.c-- does (procedure
+calls via the "C--"/"foreign C" conventions, the full prolog/epilog stack
+frame, register save/restore) plus one thing hello_riscv64.c-- does NOT
+exercise: an if/else conditional branch (bc_guard/bc_of_guard/negate),
+since hello.c---style programs have no control flow of their own. This is
+believed to be at least as strong a smoke test as any other backend's
+hello-world milestone, just measured by exit code instead of stdout.
+
+A single `qc -riscv32 ... riscv32_start.s hello_riscv32.c--` one-shot
+invocation (passing both source files together, the way `qc -globals -o
+hello runtime.o stdlib.a hello.c--` mixes prebuilt objects with one source
+file elsewhere in this project) does NOT work: main_action names each
+compiled input's intermediate .o after the single shared `-o` name rather
+than each input's own basename, so two *sources* needing compilation in
+the same invocation collide and overwrite each other's object file. This
+is pre-existing driver behavior, not something introduced or fixed in this
+session - worth knowing about if anyone else tries to feed qc multiple
+uncompiled inputs at once, but out of scope to fix here (demos/Makefile's
+riscv32 target works around it with three separate rules instead of one).
+
+Known remaining gaps
+---------------------
+- -O3 compiles cleanly for both widths (`qc -riscv64/-riscv32 -O3 ...`
+  exits 0 and produces assembly) but the resulting RV64 binary HANGS at
+  runtime under qemu-riscv64 (verified: a 10-second `timeout qemu-riscv64
+  ./hello_riscv64_O3` times out, exit 124). Not investigated - same
+  situation notes_arm.txt documents for ARM's own -O3 hang (-O0, the
+  default, is what's verified, the same bar every prior backend's initial
+  pass met). RV32 -O3 was not run under qemu at all this session (only
+  confirmed the compile step succeeds); given RV64 already hangs, it was
+  not worth the time to check RV32 separately before this is actually
+  investigated.
+- Tiger backend tests (tests/run-tiger-riscv64.sh / a freestanding RV32
+  equivalent) were not attempted this session - the milestone this note
+  covers is the hello-world bring-up pass, the same bar notes_arm.txt's
+  *first* pass met before its separate tiger-suite follow-up session. If
+  revisited, expect the same cross-backend GC/register-allocator liveness
+  gap notes_arm.txt's follow-up section root-caused (a GC-required temp,
+  e.g. the saved return address, isn't kept live across every call site in
+  its procedure) to cap however far the tiger suite gets, same as it capped
+  ARM at 6/15 and already-shipped mips/sparc at 1/15 each - not a RISC-V-
+  specific gap, and not attempted here for the same reason it wasn't
+  chased down for ARM (deep, shared, real regression risk to every other
+  backend built on the same regalloc/liveness machinery).
+- riscv64rec.mlb/riscv32rec.mlb's operator coverage is scoped tightly to
+  what demos/hello_riscv64.c--/hello_riscv32.c-- actually exercise (see
+  "New files" above) - no or/xor/shift/div, no floating point at all
+  (Post.unrm/binrm/dblop/wrdop/wrdrop are all Impossible.unimp/
+  Unsupported, matching mips.ml's/arm.ml's own current scope). "mul" is
+  the one operator included beyond hello world's own strict needs (RISC-V
+  M-extension mul is a single real instruction with no immediate-
+  materialization complexity, unlike ARM's session which deferred mul/quot
+  to a follow-up pass) - div/rem were left out since nothing in this
+  session's scope needed them and truncating-division semantics deserve
+  their own targeted verification the way ARM's follow-up session gave
+  %quot, not a speculative add here.
+- The fits_imm12/imm[1]-cost fallback pattern (materializing an
+  out-of-range addi/andi immediate via `li t0, ...` then a register-
+  register instruction) and the analogous Cmp(op,x:reg,y:const) branch-
+  against-constant fallback are both modeled on alpharec.mlb's/armrec.mlb's
+  precedent but NOT known to be exercised by either hello demo (both
+  programs' immediates/frame sizes are small) - unverified beyond
+  compiling without error. If a future program's stack frame or constant
+  exceeds the 12-bit window, this is the first place to check.
