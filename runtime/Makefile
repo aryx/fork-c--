@@ -94,8 +94,20 @@ CC32    ?= riscv64-unknown-elf-gcc -march=rv32imac -mabi=ilp32 --specs=picolibc.
 CONTOBJ  = $(B)/riscv32cont.o
 QCFLAG   = -riscv32
 RISCV32_EXTRA = $(B)/riscv32_syscalls.o
+else ifeq ($(BACKEND),riscv64)
+# claude: the first 64-bit BACKEND here (wordsize/pointersize 64, unlike
+# every case above). Ubuntu ships a real riscv64-linux-gnu glibc cross
+# toolchain, so - unlike riscv32 - no picolibc/freestanding workaround is
+# needed. GLOBALS_DECL must be overridden to "bits64 alloc_ptr;" by the
+# caller (tests/run-tiger64-riscv64.sh does), matching tigerc -64's own
+# Frame.bits_str(); the $(B)/%.c-- rule below also rewrites bits32 to
+# bits64 wherever it appears, so an unoverridden 32-bit default would get
+# silently fixed up too.
+CC32    ?= riscv64-linux-gnu-gcc
+CONTOBJ  = $(B)/riscv64cont.o
+QCFLAG   = -riscv64
 else
-$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm or riscv32)
+$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, riscv32 or riscv64)
 endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
@@ -166,6 +178,8 @@ $(B)/riscv32cont.o: riscv32cont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/riscv32_syscalls.o: riscv32_syscalls.c | $(B)
 	$(CC32) $(CFLAGS32) -c $< -o $@
+$(B)/riscv64cont.o: riscv64cont.s | $(B)
+	$(CC32) -c $< -o $@
 
 # The globals declaration is inserted after the "target byteorder" line so
 # the syncweb markers and everything else are preserved. claude: ppc/sparc
@@ -175,7 +189,15 @@ $(B)/riscv32_syscalls.o: riscv32_syscalls.c | $(B)
 # under $(B), not two. arm instead needs float "none" appended to that
 # same line - it has no FPU (arm.ml's T.float = Float.none) while every
 # runtime .c-- source here relies on the implicit ieee754 default, same
-# mismatch demos/hello_arm.c--'s own comment explains.
+# mismatch demos/hello_arm.c--'s own comment explains. riscv64 needs
+# "wordsize 64 pointersize 64" appended instead - cut.c--/thread.c--/
+# yield.c-- were written bits32-only (32-bit pointers/params, and
+# yield.c--'s two word-sized field copies as literal "+4" byte offsets),
+# so under a 64-bit target every bits32 has to become bits64 and every
+# "+4" becomes "+8" too, not just the target pragma line - confirmed by
+# hand that qc rejects the unrewritten bits32 forms under -riscv64
+# ("target of 'cut to' must be a bit vector of the native pointer type",
+# "operator %add expected argument of type bits32, got bits64").
 $(B)/%.c--: %.c-- | $(B)
 ifeq ($(filter $(BACKEND),ppc sparc),$(BACKEND))
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
@@ -183,6 +205,10 @@ ifeq ($(filter $(BACKEND),ppc sparc),$(BACKEND))
 else ifeq ($(BACKEND),arm)
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed 's/^target byteorder little\(.*\);/target byteorder little float "none"\1;/' > $@
+else ifeq ($(BACKEND),riscv64)
+	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
+	  | sed -e 's/^target byteorder little;/target byteorder little wordsize 64 pointersize 64;/' \
+	        -e 's/bits32/bits64/g' -e 's/+4/+8/g' > $@
 else
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< > $@
 endif
@@ -191,4 +217,4 @@ $(B)/%.o: $(B)/%.c--
 	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32
+	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32 build-riscv64

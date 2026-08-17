@@ -7,7 +7,7 @@ typedef struct coded_location { Cmm_Word l; } location;
 typedef enum { DEAD=0, REGISTER=1, OFFSET=2 } loctype; 
 loctype  Cmm_loctype(location l);
 unsigned Cmm_as_register(location l);
-int      Cmm_as_offset  (location l);
+intptr_t Cmm_as_offset  (location l);
 #define isdead(LOC) ((LOC).l == 0)
 /*x: exported type, procedure, and macro declarations */
 typedef struct {

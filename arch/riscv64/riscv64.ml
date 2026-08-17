@@ -308,18 +308,22 @@ let target =
     ; T.is_instruction      = Riscv64rec.is_instruction
     ; T.tx_ast = (fun secs -> secs)
     (* claude: scoped to exactly what riscv64rec.mlb's grammar recognizes
-     * today - add/sub/and/mul + the ten eq/ne/lt/le/gt/ge/ltu/leu/gtu/geu
-     * comparisons (RISC-V's M extension makes mul trivial to add here,
-     * unlike mips.ml/alpha.ml's own hand-written lists which left it out -
-     * see riscv64rec.mlb's "mul" rule). No or/xor/shift/div yet, no float
-     * (Post.unrm/binrm/dblop are all Impossible.unimp/Unsupported).
-     * Widen this list (and riscv64rec.mlb) together as more operators get
-     * real camlburg rules. *)
+     * today - add/sub/and/mul/quot + the ten eq/ne/lt/le/gt/ge/ltu/leu/gtu/
+     * geu comparisons (RISC-V's M extension makes mul/div trivial to add
+     * here, unlike mips.ml/alpha.ml's own hand-written lists which left
+     * them out - see riscv64rec.mlb's "mul"/"quot" rules; quot was added
+     * once tests/tiger64/'s own colmajor.c--/merge.c--/sieve.c-- (real
+     * integer division, not speculative) needed it, same reasoning
+     * riscv32.ml's own comment gives for riscv32rec.mlb's "quot"). No or/
+     * xor/shift yet, no float (Post.unrm/binrm/dblop are all
+     * Impossible.unimp/Unsupported). Widen this list (and riscv64rec.mlb)
+     * together as more operators get real camlburg rules. *)
     ; T.capabilities        = { T.operators = List.map Up.opr
                                    [ "add",     [wordsize]
                                    ; "sub",     [wordsize]
                                    ; "and",     [wordsize]
                                    ; "mul",     [wordsize]
+                                   ; "quot",    [wordsize]
                                    ; "eq",      [wordsize]
                                    ; "ne",      [wordsize]
                                    ; "lt",      [wordsize]

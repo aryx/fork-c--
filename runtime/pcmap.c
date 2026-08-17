@@ -7,7 +7,10 @@
 #include "qc--runtime.h"
 #include "pcmap.h"
 /*x: pcmap.c  */
-#define MKOFFSET(N) { (1 << (sizeof(location)*8 - 1)) | (N) }
+/* claude: (Cmm_Word)1, not a bare 1 (int) - shifting by sizeof(location)*8-1
+ * is 63 on a 64-bit target now that Cmm_Word is uintptr_t, which is
+ * undefined behavior for a 32-bit int shift. */
+#define MKOFFSET(N) { ((Cmm_Word)1 << (sizeof(location)*8 - 1)) | (N) }
 #define MKDEAD      { 0 }
 static struct sd nostackdata = { 0, { MKDEAD } };
 /*x: pcmap.c  */
@@ -100,10 +103,14 @@ pc_map_entry* Cmm_lookup_entry(const Cmm_Codeptr caller)
   return lookup(caller);
 }
 /*x: pcmap.c  */
-#define GOODBITS (sizeof(local)*8 - 2)
+/* claude: local's own width, not a fixed 32 bits - GOODBITS has to match
+ * whatever width qc-- actually packed this location as (see qc--runtime.h's
+ * Cmm_Word claude: comment): 30 on every existing 32-bit backend
+ * (unchanged), 62 on a 64-bit one. */
+#define GOODBITS ((intptr_t)sizeof(local)*8 - 2)
 
 loctype Cmm_loctype(location l) {
-  int local = l.l;
+  intptr_t local = (intptr_t) l.l;
   local = local >> GOODBITS;
   if (local & 2)
     return OFFSET;
@@ -112,22 +119,22 @@ loctype Cmm_loctype(location l) {
 }
 /*x: pcmap.c  */
 unsigned Cmm_as_register(location l) {
-  int local = l.l;
-  int mask   = GOODBITS / 2;
-  int slice  = (local & ((1 << GOODBITS) - 1))
+  intptr_t local = (intptr_t) l.l;
+  intptr_t mask   = GOODBITS / 2;
+  intptr_t slice  = (local & (((intptr_t)1 << GOODBITS) - 1))
             >> mask;
-  int offset =  local & ((1 << mask    ) - 1);
+  intptr_t offset =  local & (((intptr_t)1 << mask    ) - 1);
   assert(Cmm_loctype(l) == REGISTER);
 
   if (slice) {
     fprintf(stderr, "register slices not supported.\n");
     assert(0);
   }
-  return offset;
+  return (unsigned) offset;
 }
 /*x: pcmap.c  */
-signed Cmm_as_offset(location l) {
-  int local = l.l;
+intptr_t Cmm_as_offset(location l) {
+  intptr_t local = (intptr_t) l.l;
   return (local << 1)
       >> 1;
 }

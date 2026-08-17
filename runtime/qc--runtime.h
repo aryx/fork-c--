@@ -2,6 +2,8 @@
 #ifndef QCMM_RUNTIME_H
 #define QCMM_RUNTIME_H
 
+#include <stdint.h>
+
 /*s: machine-dependent macro definitions for the public interface */
 #ifdef __powerpc__
 /* claude: ppc's flat register-index numbering (target/target.ml's
@@ -54,7 +56,23 @@
 /*e: machine-dependent macro definitions for the public interface */
 
 /*s: data structures */
-typedef unsigned  Cmm_Word;
+/* claude: qc-- emits every pc_map_entry field (locations, register/local/
+ * span counts, the location-encoded offsets themselves) at the target's
+ * native pointer width, not a fixed 32 bits - confirmed by hand from a
+ * -riscv64 .s dump, where inalloc/outalloc/return_addressp/num_registers/
+ * etc. are all ".dword" (8 bytes), and MKOFFSET(0) shows up as
+ * -9223372036854775808 (bit 63 set), not bit 31. uintptr_t equals plain
+ * "unsigned" on every existing 32-bit backend, so this is a no-op there.
+ * pcmap.c's Cmm_loctype/Cmm_as_register/Cmm_as_offset decode this
+ * generically off sizeof() of their own local variable, so they need no
+ * further change beyond using a same-width signed type (see that file).
+ * This is a different table from fork-tiger's own "bits32[] {...}" GC
+ * descriptor tables (frontend/frame.ml's output_footer there is a
+ * deliberate, separate choice to stay 32-bit regardless of target) -
+ * those are addressed *through* a span value (itself pointer-width, as
+ * elab/nelab.ml's own span-value check requires), not part of this
+ * struct, so they are unaffected by this typedef. */
+typedef uintptr_t Cmm_Word;
 typedef void*     Cmm_Dataptr;
 typedef void    (*Cmm_Codeptr)();
 /*x: data structures */

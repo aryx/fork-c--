@@ -84,6 +84,11 @@
       | RP.App(("sub", [w]), [x; y])   -> conSub (exp x) (exp y)
       | RP.App(("and", [w]), [x; y])   -> conAnd (exp x) (exp y)
       | RP.App(("mul", [w]), [x; y])   -> conMul (exp x) (exp y)
+      (* claude: RV64M's plain "div" (not "divw", the 32-bit-truncated
+       * variant) already operates on full 64-bit XLEN registers, matching
+       * %quot's wordsize-64 operands directly - see the Quot inst rules
+       * below, ported from riscv32rec.mlb's "div" rule. *)
+      | RP.App(("quot", [w]), [x; y])  -> conQuot (exp x) (exp y)
       (* claude: %lobits only ever wraps a value immediately feeding a
        * narrow-width memory store (riscv64.ml's Post.lostore, its only
        * producer) - a RISC-V sb/sh/sw already truncates its source
@@ -266,6 +271,13 @@ inst:       Store(dst:regl, Mul(x:reg,y:reg), 64)
 inst:       Store(dst:regl, Mul(x:reg,y:imm), 64) [1]
             {: sprintf "li t0, %s\n\tmul %s, %s, t0" y dst x :}
 
+(* claude: RV64M's "div" is a truncating signed division on full 64-bit operands, matching %quot's wordsize-64 semantics exactly - ported from riscv32rec.mlb's "div" rule (same mnemonic, RV32M's own XLEN); no divi either, so the immediate variant materializes y into t0 first like mul's. *)
+inst:       Store(dst:regl, Quot(x:reg,y:reg), 64)
+            {: cat ["div"; " "; dst; ","; x; ","; y] :}
+
+inst:       Store(dst:regl, Quot(x:reg,y:imm), 64) [1]
+            {: sprintf "li t0, %s\n\tdiv %s, %s, t0" y dst x :}
+
 inst:       Nop() {: "nop" :}
 
 inst: any [100]         {: cat ["<";any;">"] :}
@@ -282,6 +294,7 @@ any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
 any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
 any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
 any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : Quot(x:any, y:any) {: cat [ "Quot(";x;", ";y;")" ] :}
 any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
 any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
 any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
