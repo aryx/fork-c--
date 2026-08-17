@@ -39,11 +39,23 @@
    let freg n  = "$f" ^ string_of_int n
 
    let suffix = function
-       | 8  -> "b"      
+       | 8  -> "b"
        | 16 -> "w"
        | 32 -> "l"
        | 64 -> "q"
        | w  -> error (sprintf "not an Alpha width: %d" w)
+
+   (* claude: Alpha's actual mnemonics for the unsigned cases are
+    * "cmpult"/"cmpule" (unsigned-prefix, then lt/le), not "cmpltu"/
+    * "cmpleu" (qc--'s own RTL operator names, ltu/leu, unsigned-suffix) -
+    * a bare "cmp" ^ op concatenation produced an assembler-rejected
+    * mnemonic for every unsigned compare until this remap (confirmed:
+    * alpha-linux-gnu-as "unknown opcode cmpltu"). eq/lt/le pass through
+    * unchanged - they already match. Defined here in %head, not %tail
+    * (where "cmp" just below lives) - %% actions can only see %head
+    * bindings, confirmed by is_addq_lit's own placement/use above. *)
+   let alpha_cmp_mnemonic = function
+     | "ltu" -> "ult" | "leu" -> "ule" | op -> op
 
    let width w = string_of_int w
    (*e: [[Alpharec]] head *)
@@ -58,7 +70,7 @@
        | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
    (*x: [[Alpharec]] tail *)
    (*s: [[Alpharec]] helpers for [[exp]] and [[loc]] *)
-   let cmp = Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"] 
+   let cmp = Strutil.from_list ["eq";"ge";"geu";"gt";"gtu";"le";"leu";"lt";"ltu";"ne"]
    (*e: [[Alpharec]] helpers for [[exp]] and [[loc]] *)
    let rec exp = function
        | RP.Const(k)               -> const k
@@ -66,11 +78,15 @@
        (*s: [[Alpharec]] special cases for [[App]] *)
        | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
        | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
+       | RP.App(("mul", [w]), [x; y])            -> conMul (exp x) (exp y)
+       | RP.App(("and", [w]), [x; y])            -> conAnd (exp x) (exp y)
        | RP.App((op, [w]), [x; y])  
            when Strutil.Set.mem op cmp           -> conCmp op (exp x) (exp y)
-       | RP.App(("bit", [64]), [x])              -> conBit (exp x)  
+       | RP.App(("bit", []), [x])                -> conBit (exp x)
        | RP.App(("alpha_gp", []), [x])           -> conGP  (exp x)  
-       | RP.App(("com", [64]), [x])              -> conCom  (exp x)  
+       | RP.App(("com", [64]), [x])              -> conCom  (exp x)
+       (* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store (alpha.ml's Post.lostore, its only producer) - a real stb/stw/stl already truncates its source register to the store's own width, so the narrowing is a free no-op here, same reasoning riscv32rec.mlb's/riscv64rec.mlb's/mipsrec.mlb's identical case gives. *)
+       | RP.App(("lobits", [_;_]), [x])          -> exp x
        (*e: [[Alpharec]] special cases for [[App]] *)
        | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
 
@@ -196,6 +212,10 @@ inst:       Store(regl,const,64)
 inst:       Store(regl,mem,64)
             {: sprintf "ldq %s, %s" regl mem :}
 
+(* claude: was missing - only the store-to-memory direction ("sts", spilling a callee-saved float register) existed, not this reload direction; Tiger allocates no float temps, but the calling convention still walks alphacall.ml's nvl_fp/vol_fp sets unconditionally, so a real instruction is needed - confirmed by hand (exceptions/rb/wf/wff.c-- hit the "<...>" catch-all here). "lds" to match "sts"'s own mnemonic. *)
+inst:       Store(fregl,mem,64)
+            {: sprintf "lds %s, %s" fregl mem :}
+
 inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
             {: sprintf "ld%s %s, %s" (suffix w) regl mem :}
             
@@ -227,6 +247,10 @@ inst:       Goto(symbol)
 
 inst:       Goto(reg)
             {: sprintf "jmp (%s)" reg  :}
+
+(* claude: was missing - recognizes Post.cut_to's jump-through-register-while-updating-sp RTL (a Tiger "cuts to", e.g. tig_call_gc's continuation), ported from riscv64rec.mlb's identical rule/comment. Alpha has no delay slot either, so the sp update has to come first, same discipline. *)
+inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 64))
+            {: sprintf "mov %s, $30\n\tjmp (%s)" nsp target :}
 (*x: [[Alpharec]] rules *)
 next:       Store(regl,Add(pc,four),64)      {: regl :}
 
@@ -244,9 +268,10 @@ inst:       Guarded(cmp_zero,Goto(addr))
 cmp:        Cmp(op:string,x:reg,y:reg)                      {: (op, x, y) :}
 cmp_zero:   Cmp(op:string,reg,zero)                         {: (op, reg)  :}
 
+(* claude: 3-operand form (dst explicit, not implied by x) - alpha.ml's relation now always passes an explicit ~dst that can differ from the instruction's own first operand x (see its own claude: comment for why: gt/geu/gtu/le all swap x/y to reuse the lt/ltu/leu instruction). *)
 inst:       Store(dst:regl,Bit(cmp),64)
-            {: match cmp with (op, x, y) -> 
-                sprintf "cmp%s %s, %s" op x y 
+            {: match cmp with (op, x, y) ->
+                sprintf "cmp%s %s, %s, %s" (alpha_cmp_mnemonic op) x y dst
             :}
 
 inst:       Store(dst:regl,Com(reg),64)
@@ -262,6 +287,21 @@ inst:       Store(dst:regl, Add(x:reg,y:imm8), 64)
 (* claude: fallback when the immediate is out of addq's 0..255 literal range (e.g. sp+(-16)) or is a symbol - "lda" takes a full signed 16-bit displacement. Cost 1 so addq (cost 0) wins whenever imm8 also matches. *)
 inst:       Store(dst:regl, Add(x:reg,y:imm), 64) [1]
             {: sprintf "lda %s, %s(%s)" dst y x :}
+
+(* claude: "subq" - was entirely missing (only the "any : Sub" debug fallback existed), unlike Add which has full reg/imm8/imm coverage - confirmed real Tiger code needs register-vs-register subq (tests/tiger64/qsort.c--/queens.c--/rb.c--/rc4.c--/wf.c--/wff.c-- all hit the "<...>" catch-all here). No imm8/imm split added, matching Mul just above - nothing has exercised a constant-subtrahend yet. *)
+inst:       Store(dst:regl, Sub(x:reg,y:reg), 64)
+            {: sprintf "subq %s, %s, %s" x y dst :}
+
+(* claude: "mulq" is register-only, no immediate form - matching Add's own imm8/imm split would need a scratch-reg fallback like riscv64rec.mlb's mul/div immediate rules, not added since nothing exercised it yet (Tiger's multiplications so far are all register-vs-register). *)
+inst:       Store(dst:regl, Mul(x:reg,y:reg), 64)
+            {: sprintf "mulq %s, %s, %s" x y dst :}
+
+(* claude: "and" takes only an 8-bit literal directly (like addq's imm8, not added here - nothing has needed it yet); tig_alloc's own alignment mask (0xFFFFFFFFFFFFFFF8) needs the full imm case, so - unlike Add, which has "lda" as a single-instruction fallback - this materializes y into $28 first ("at", the Alpha ABI's own assembler-temporary register - see alphacall.ml's C.jump_tgt_reg comment for the same register/rationale) and ANDs against that. *)
+inst:       Store(dst:regl, And(x:reg,y:reg), 64)
+            {: sprintf "and %s, %s, %s" x y dst :}
+
+inst:       Store(dst:regl, And(x:reg,y:imm), 64) [1]
+            {: sprintf "ldiq $28, %s\n\tand %s, $28, %s" y x dst :}
 (*x: [[Alpharec]] rules *)
 inst:       Nop() {: "nop" :}
 (*x: [[Alpharec]] rules *)
@@ -277,6 +317,8 @@ any : Fetch (any, w:int){: cat [ "Fetch(";any;",";width w;")" ] :}
 
 any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
 any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
 any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
 any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
 any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}

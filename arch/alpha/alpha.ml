@@ -177,25 +177,57 @@ module Post = struct
     let br ~tgt = DG.Nop, R.store pc_lhs (tval tgt)     wordsize  (* branch reg *)
     let b  ~tgt = DG.Nop, R.store pc_lhs (Up.const tgt) wordsize  (* branch     *)
     (*x: Alpha postexpander *)
-    let bit = R.opr "bit" [wordsize] 
+    (* claude: "bit" is declared width-less ("bit", [] in T.capabilities
+     * just below, matching every other backend's own declaration - ppc.ml/
+     * sparc.ml/x86.ml/arm.ml/interp.ml all agree) and elab/simplify.ml's
+     * own "bit" simplification rule hard-asserts "null w" on every
+     * backend, not just this one. Was "R.opr "bit" [wordsize]" - matched
+     * alpharec.mlb's own (equally wrong) recognizer pattern, so nothing
+     * failed to compile, but any comparison actually reaching
+     * elab/simplify.ml's generic constant-folding (not just alpharec.mlb's
+     * instruction selection) tripped its "assert (null w)" instead. Fixed
+     * together with alpharec.mlb's matching RP.App(("bit", [64]), ...)
+     * pattern, now RP.App(("bit", []), ...). *)
+    let bit = R.opr "bit" []
     let com x =
       let o = R.opr "com" [wordsize] in
       rtl (R.store (tloc x) (R.app o [tval x]) wordsize)
     (*x: Alpha postexpander *)
-    let relation op x y = 
+    (* claude: dst is explicit and separate from the underlying compare
+     * instruction's own x/y operand order - was "let relation op x y =
+     * ... R.store (tloc x) ...", storing into whichever of x/y happened
+     * to be passed FIRST to the underlying "op" instruction. That is
+     * correct only when the caller never swaps operands (eq/lt/ltu/leu
+     * above), but "gt"/"geu"/"gtu" (and "le", added just below) all
+     * swap x and y to reuse the "lt"/"ltu"/"leu" instruction, which
+     * silently left the boolean result sitting in y's register instead
+     * of x's - confirmed by hand (%gt(7,3) and %le(3,7), both swapped
+     * cases, evaluated as 0/false unconditionally; %ge, unswapped,
+     * already worked). Every caller below now passes ~dst:x explicitly,
+     * so the result always lands where the caller expects it regardless
+     * of which operand order the instruction itself needs. *)
+    let relation ~dst op x y =
       let o = R.opr op [wordsize] in
-      rtl (R.store (tloc x) (R.app bit [R.app o [tval x;tval y]]) wordsize )
+      rtl (R.store (tloc dst) (R.app bit [R.app o [tval x;tval y]]) wordsize )
     (*x: Alpha postexpander *)
     let cmp op x y = match op with
-        | "eq"          -> relation "eq"  x y
-        | "ne"          -> relation "eq"  x y <:> com x
-        | "lt"          -> relation "lt"  x y
-        | "gt"          -> relation "lt"  y x
-        | "ge"          -> relation "lt"  x y <:> com x
-        | "ltu"         -> relation "ltu" x y 
-        | "leu"         -> relation "leu" x y
-        | "gtu"         -> relation "ltu" y x
-        | "geu"         -> relation "leu" y x
+        | "eq"          -> relation ~dst:x "eq"  x y
+        | "ne"          -> relation ~dst:x "eq"  x y <:> com x
+        | "lt"          -> relation ~dst:x "lt"  x y
+        | "gt"          -> relation ~dst:x "lt"  y x
+        | "ge"          -> relation ~dst:x "lt"  x y <:> com x
+        (* claude: was missing entirely - alpharec.mlb's own "cmp" set
+         * (eq/ge/geu/gt/gtu/le/leu/lt/ltu/ne) already recognizes "le",
+         * and there is no "lea" alpha instruction, so any signed <=
+         * comparison (e.g. a for-loop bound) hit the "_ -> impossible"
+         * case below instead ("bad comparison in expanded Alpha
+         * conditional branch"). x<=y is NOT(y<x), same derivation as
+         * "ge" just above (x>=y is NOT(x<y)). *)
+        | "le"          -> relation ~dst:x "lt"  y x <:> com x
+        | "ltu"         -> relation ~dst:x "ltu" x y
+        | "leu"         -> relation ~dst:x "leu" x y
+        | "gtu"         -> relation ~dst:x "ltu" y x
+        | "geu"         -> relation ~dst:x "leu" y x
         | "feq"         
         | "fne"         
         | "flt"         
@@ -378,10 +410,13 @@ let target =
     ; T.capabilities        = { T.operators = List.map Up.opr
                                    [ "add",     [64]
                                    ; "sub",     [64]
+                                   ; "mul",     [64]
+                                   ; "and",     [64]
                                    ; "com",     [64]
                                    ; "eq",      [64]
                                    ; "ne",      [64]
                                    ; "lt",      [64]
+                                   ; "le",      [64]
                                    ; "gt",      [64]
                                    ; "ge",      [64]
                                    ; "ltu",     [64]
@@ -393,6 +428,9 @@ let target =
                                    ; "disjoin", []
                                    ; "conjoin", []
                                    ; "bit",     []
+                                   ; "lobits",  [64;8]
+                                   ; "lobits",  [64;16]
+                                   ; "lobits",  [64;32]
                                    ]
                               ; T.litops     = []
                               ; T.literals   = [64]

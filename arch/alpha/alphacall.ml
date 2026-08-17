@@ -11,10 +11,29 @@ module T  = Target
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 let wordsize   = 64
 (*x: alphacall.ml  *)
-let byteorder = R.LittleEndian         
+let byteorder = R.LittleEndian
 let mspace = ('m', byteorder, Cell.of_size 8)
-let rspace = ('r', byteorder, Cell.of_size 64)
-let fspace = ('f', byteorder, Cell.of_size 64)
+(* claude: Rtl.Identity, not byteorder - must match alpha.ml's own
+ * Spaces.r/Spaces.f (both "SS.r/f 32 id [64]", id = Rtl.Identity), since
+ * this file can't import alpha.ml directly (alpha.ml depends on
+ * Alphacall.cconv, so the reverse would be circular) and instead
+ * hand-rolls its own copy of these space tuples for volregs/pre_nvregs.
+ * Getting the aggregation field wrong here doesn't fail to compile - it
+ * silently fails Target.fits's stands_for match (front_target/target.ml:
+ * "agg =*= agg'") against alpha.ml's real Spaces.t/Spaces.u temp spaces
+ * for EVERY register, since none of cc.Call.volregs/pre_nvregs's
+ * registers then match any temp space's expected aggregation - which
+ * regalloc/flowra.ml's get_regs_for_space silently turns into an empty
+ * candidate-register list for any temp needing allocation, only
+ * surfacing as "alloc_one: no registers to spill?" once something
+ * actually contends for registers (confirmed: demos/hello_alpha.c--,
+ * straight-line with no competing temps, never spills and so never hit
+ * this; tests/tiger64/hello.c-- does). riscv64call.ml avoids this whole
+ * class of bug by importing Riscv64regs.rspace/fspace directly instead
+ * of re-deriving them - not done here since alpha has no equivalent
+ * regs-only module to import from without restructuring. *)
+let rspace = ('r', Rtl.Identity, Cell.of_size 64)
+let fspace = ('f', Rtl.Identity, Cell.of_size 64)
 
 let r n     = (rspace, n, R.C 1)
 let f n     = (fspace, n, R.C 1)
