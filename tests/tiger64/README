@@ -1,0 +1,36 @@
+64-bit counterpart of ../tiger/: the same fork-tiger test programs, but
+compiled with fork-tiger's tigerc -64, which emits bits64 C-- (target ...
+wordsize 64 pointersize 64) instead of the default bits32. Generated with
+regenerate-c--.sh; see that script's header for how to refresh a file.
+
+Expected stdout/exit codes are the same Tiger programs computing the same
+results, so output/*.1 and the *.0 stdin fixtures here are plain copies of
+../tiger/'s (kept as a separate, self-contained folder, like every other
+backend's tests/ subdirectory, not symlinks).
+
+Status (2026-08-17): all 14 .c-- files elaborate cleanly (`qc -driver_elab`)
+against every backend's metrics, i.e. they are well-formed bits64 C--.
+Codegen (`qc -stop .s`) is split by backend:
+  - -riscv64: all 14 emit assembly cleanly.
+  - -alpha (the priority backend per CLAUDE.md - fork-tiger's own runtime
+    is not yet 64-bit-clean either way, so this is not yet an end-to-end
+    win): none codegen, surfacing real gaps in qc--'s own arch/alpha, not
+    a problem with these files:
+      - alloc_one: no registers to spill (even on hello) - alpha's
+        register allocator/spiller can't handle these frames
+      - "No acceptable widths for %mul/%quot on target 'alpha'; asked for
+        64->64->64" - alpha's instruction selection only has 32-bit
+        mul/quot
+There is no tigermain-<arch>.o/stdlib-<arch>.a here yet (unlike ../tiger/'s
+per-backend tigermain-*.o/stdlib-*.a) and no run-tiger64-<arch>.sh - those
+need fork-tiger's runtime/stdlib built 64-bit-clean too, which is a
+separate, larger piece of work than this directory's .c-- corpus.
+
+While generating this directory, two real bugs were found and fixed in
+fork-tiger's tigerc -64 output itself (both in frontend/frame.ml and
+backend/codegen.ml - see their "claude:" comments there):
+  - the GC descriptor tables' bare integer literals defaulted to the
+    target's native word size (64), mismatching their declared bits32
+    element type
+  - the boolean-to-value widening after a comparison was hardcoded to
+    %sx32 regardless of word size, mismatching bits64 temps

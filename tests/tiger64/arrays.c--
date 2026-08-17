@@ -1,0 +1,155 @@
+target byteorder little wordsize 64 pointersize 64;
+import bits64 "tig_print" as print;
+import bits64 "tig_printi" as printi;
+import bits64 "tig_flush" as flush;
+import bits64 "tig_getchar" as getchar;
+import bits64 "tig_ord" as ord;
+import bits64 "tig_chr" as chr;
+import bits64 "tig_size" as size;
+import bits64 "tig_sizea" as sizea;
+import bits64 "tig_substring" as substring;
+import bits64 "tig_concat" as concat;
+import bits64 "tig_not" as not;
+import bits64 "tig_exit" as exit;
+import bits64 "tig_alloc" as alloc;
+import bits64 "tig_call_gc" as call_gc;
+import bits64 "tig_compare_str" as compare_str;
+import bits64 "tig_bounds_check" as bounds_check;
+import bits64 "tig_set_handler" as set_handler;
+import bits64 "tig_raise" as raise;
+import bits64 "tig_unwind" as unwind;
+import bits64 "tig_spawn" as spawn;
+export tiger_main;
+
+bits64 alloc_ptr;
+import space_end;
+
+section "data" { align 8;
+ Lgbl_57: bits64 { 1 }; bits8[] " \000";
+ Lgbl_49: bits64 { 1 }; bits8[] "\n\000";
+ Lgbl_42: bits64 { 24 }; bits8[] "printing array of size: \000";
+}
+
+tiger_main(bits64 pfp) {
+ span 1 tiger_main_gc_data {
+  stackdata { align 8; fp : bits64[3]; }
+  bits64[fp+0] = pfp;
+  bits64 temp_65;
+  bits64 temp_64;
+  bits64 temp_63;
+  bits64 temp_62;
+  bits64 temp_59;
+  bits64 temp_58;
+  bits64 temp_56;
+  bits64 temp_55;
+  bits64 temp_54;
+  bits64 temp_53;
+  bits64 temp_51;
+  bits64 temp_50;
+  bits64 temp_48;
+  bits64 temp_47;
+  bits64 temp_46;
+  bits64 temp_45;
+  bits64 temp_44;
+  bits64 temp_43;
+  bits64 temp_41;
+  bits64 temp_40;
+  bits64 temp_39;
+  bits64 temp_38;
+  bits64 temp_37;
+  bits64 temp_36;
+  bits64 temp_35;
+  bits64 temp_34;
+  bits64 temp_33;
+  bits64 temp_32;
+  bits64 temp_26;
+  bits64 temp_23;
+  bits64 temp_22;
+  if(%gt(%add(alloc_ptr, 96), bits64[space_end])) {goto Lalc_gc_27;} else {goto Lalc_28;}
+  Lalc_gc_27:
+   call_gc() also aborts ;
+  Lalc_28:
+  bits64[alloc_ptr] = 96;
+  temp_26 = %add(alloc_ptr, 8);
+  alloc_ptr = %add(alloc_ptr, 96);
+  temp_22 = temp_26;
+  bits64[temp_22] = 10;
+  temp_23 = 1;
+  Linit_start_24:
+  bits64[%add(temp_22, %mul(temp_23, 8))] = 80;
+  temp_23 = %add(temp_23, 1);
+  if(%le(temp_23, 11)) {goto Linit_start_24;} else {goto Linit_end_25;}
+  Linit_end_25:
+  bits64[%add(fp, 8)] = temp_22;
+  temp_32 = alloc_ptr;
+  temp_33 = foreign "C"  bounds_check(bits64[%add(fp, 8)],1,7) also aborts ;
+  alloc_ptr = temp_32;
+  /* eliminated: temp_33 */
+  bits64[%add(bits64[%add(fp, 8)], 16)] = 71;
+  temp_34 = alloc_ptr;
+  temp_35 = foreign "C"  bounds_check(bits64[%add(fp, 8)],3,8) also aborts ;
+  alloc_ptr = temp_34;
+  /* eliminated: temp_35 */
+  bits64[%add(bits64[%add(fp, 8)], 32)] = 71;
+  temp_36 = alloc_ptr;
+  temp_37 = foreign "C"  bounds_check(bits64[%add(fp, 8)],5,9) also aborts ;
+  alloc_ptr = temp_36;
+  /* eliminated: temp_37 */
+  bits64[%add(bits64[%add(fp, 8)], 48)] = 71;
+  temp_38 = alloc_ptr;
+  temp_39 = foreign "C"  bounds_check(bits64[%add(fp, 8)],7,10) also aborts ;
+  alloc_ptr = temp_38;
+  /* eliminated: temp_39 */
+  bits64[%add(bits64[%add(fp, 8)], 64)] = 71;
+  temp_40 = alloc_ptr;
+  temp_41 = foreign "C"  bounds_check(bits64[%add(fp, 8)],9,11) also aborts ;
+  alloc_ptr = temp_40;
+  /* eliminated: temp_41 */
+  bits64[%add(bits64[%add(fp, 8)], 80)] = 71;
+  temp_43 = alloc_ptr;
+  temp_44 = foreign "C"  print(Lgbl_42) also aborts ;
+  alloc_ptr = temp_43;
+  /* eliminated: temp_44 */
+  temp_47 = alloc_ptr;
+  temp_45 = alloc_ptr;
+  temp_46 = foreign "C"  sizea(bits64[%add(fp, 8)]) also aborts ;
+  alloc_ptr = temp_45;
+  temp_48 = foreign "C"  printi(temp_46) also aborts ;
+  alloc_ptr = temp_47;
+  /* eliminated: temp_48 */
+  temp_50 = alloc_ptr;
+  temp_51 = foreign "C"  print(Lgbl_49) also aborts ;
+  alloc_ptr = temp_50;
+  /* eliminated: temp_51 */
+  bits64[%add(fp, 16)] = 0;
+  Lloop_start_60:
+  if(%le(bits64[%add(fp, 16)], 9)) {goto Lloop_body_61;} else {goto Lloop_end_52;}
+  Lloop_body_61:
+  temp_55 = alloc_ptr;
+  temp_53 = alloc_ptr;
+  temp_54 = foreign "C"  bounds_check(bits64[%add(fp, 8)],bits64[%add(fp, 16)],18) also aborts ;
+  alloc_ptr = temp_53;
+  /* eliminated: temp_54 */
+  temp_65 =  chr(bits64[%add(bits64[%add(fp, 8)], %mul(%add(bits64[%add(fp, 16)], 1), 8))]) also aborts ;
+  temp_56 = foreign "C"  print(temp_65) also aborts ;
+  alloc_ptr = temp_55;
+  /* eliminated: temp_56 */
+  temp_58 = alloc_ptr;
+  temp_59 = foreign "C"  print(Lgbl_57) also aborts ;
+  alloc_ptr = temp_58;
+  /* eliminated: temp_59 */
+  bits64[%add(fp, 16)] = %add(bits64[%add(fp, 16)], 1);
+  goto Lloop_start_60;
+  Lloop_end_52:
+  temp_62 = alloc_ptr;
+  temp_63 = foreign "C"  print(Lgbl_49) also aborts ;
+  alloc_ptr = temp_62;
+  temp_64 = temp_63;
+  return(temp_64);
+}}
+section "data" {
+ tiger_main_gc_data:
+   bits32[] { 3::bits32,1::bits32,1::bits32,0::bits32 };
+   bits32[] { 32::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,1::bits32,0::bits32,1::bits32 };
+}
+

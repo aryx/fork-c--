@@ -1,0 +1,50 @@
+target byteorder little wordsize 64 pointersize 64;
+import bits64 "tig_print" as print;
+import bits64 "tig_printi" as printi;
+import bits64 "tig_flush" as flush;
+import bits64 "tig_getchar" as getchar;
+import bits64 "tig_ord" as ord;
+import bits64 "tig_chr" as chr;
+import bits64 "tig_size" as size;
+import bits64 "tig_sizea" as sizea;
+import bits64 "tig_substring" as substring;
+import bits64 "tig_concat" as concat;
+import bits64 "tig_not" as not;
+import bits64 "tig_exit" as exit;
+import bits64 "tig_alloc" as alloc;
+import bits64 "tig_call_gc" as call_gc;
+import bits64 "tig_compare_str" as compare_str;
+import bits64 "tig_bounds_check" as bounds_check;
+import bits64 "tig_set_handler" as set_handler;
+import bits64 "tig_raise" as raise;
+import bits64 "tig_unwind" as unwind;
+import bits64 "tig_spawn" as spawn;
+export tiger_main;
+
+bits64 alloc_ptr;
+import space_end;
+
+section "data" { align 8;
+ Lgbl_20: bits64 { 14 }; bits8[] "Hello, world.\n\000";
+}
+
+tiger_main(bits64 pfp) {
+ span 1 tiger_main_gc_data {
+  stackdata { align 8; fp : bits64[2]; }
+  bits64[fp+0] = pfp;
+  bits64 temp_24;
+  bits64 temp_23;
+  bits64 temp_22;
+  bits64[%add(fp, 8)] = Lgbl_20;
+  temp_22 = alloc_ptr;
+  temp_23 = foreign "C"  print(bits64[%add(fp, 8)]) also aborts ;
+  alloc_ptr = temp_22;
+  temp_24 = temp_23;
+  return(temp_24);
+}}
+section "data" {
+ tiger_main_gc_data:
+   bits32[] { 2::bits32,1::bits32,1::bits32 };
+   bits32[] { 4::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
+}
+
