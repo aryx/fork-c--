@@ -1,0 +1,100 @@
+* Big plan
+
+** TODO changes.txt
+
+** Overview
+
+** Later
+
+*** LATER use goken instead of gcc toolchains and probably different "assemblers"
+so can cross compile c-- and tiger for plan9! and also for macOS, windows, etc.
+
+*** LATER take good ideas from HOOPL still by Ramsey and include in c--?
+like why no SSA in c--?
+
+*** LATER port asdl from SML to OCaml and add in tools/ next to ocamlburg?
+use Claude to automate the transformation
+
+*** LATER integrate also mltk and the SLED machine spec tool?
+convert SML code to OCaml?
+
+*** LATER compare with LLVM, look tiger codegenerator for LLVM:
+https://github.com/civp/tiger-compiler
+
+* Code
+
+** Code este
+
+*** RELAX? remove the Private vs public rtl.ml API? 
+remove Private intermediate? worth it?
+
+*** RELAX use Xxx.{} syntax so less need module X = Xxx
+and repeated T.x = ; T.y = ; ...
+
+** Code reorg
+
+*** more code reorg
+# from plan_reorg.md
+
+**** remove deps to semgrep-pfff-libs
+use regular Arg, Fpath, Logs
+maybe just add a light Common.ml
+
+**** `front_rtl -> parsing`** exists *only* for `front_rtl/rtlutil.mli:158-159`:
+   ```ocaml
+   val expr : Rtl.exp -> Ast.expr
+   val rtl  : Rtl.rtl -> Ast.stmt
+   ```
+   a back-conversion (`Rtlutil.ToAst`) used by `Astasm` to print assembly as
+   C-- text. Move `ToAst` into the asm layer and **the core IR stops depending
+   on the parser**.
+
+**** `front_target -> front_nelab`** exists *only* for
+   `front_target/target.mli:95` — `tx_ast : Nelab.compunit -> Nelab.compunit`,
+   one hook field — and `Memalloc.growth` in `automaton.mli:53`, a
+   two-constructor `Up`/`Down` enum. Push `growth` down to `commons`/`ir`, and
+   relocate or parameterize `tx_ast`, and **the machine description stops
+   depending on the elaborator**.
+
+**** Where `todo/` lands
+
+This is the real test of the scheme — every `todo/` directory gets an obvious
+home, which is why the reorg is worth doing *before* integrating any of it:
+
+| from | to |
+| --- | --- |
+| `todo/dataflow/{live,liveset,dead,odead,olive,availpass}` | `analysis/` |
+done: live -> cfg/dataflow/ (not analysis)
+| `todo/optimizers/{optimize,peephole}` | `opt/` |
+DONE | `todo/widen.nw` | `opt/` | in fact codegen/
+| `todo/backend/registers/{flowra,dls,ocolorgraph}` | `regalloc/` |
+done: flowra
+| `todo/colorgraph.nw`, `registerclass.nw`, `lifetime.nw` | `regalloc/` |
+DONE | `todo/lua/stack.ml` (the `freeze` implementation) | `layout/` |
+| `todo/controlflow/zipncfg.nw`, `dominator.nw` | `cfg/` |
+| `todo/arch/*`, `todo/arch_parsing/` | `arch/` |
+SEMI | `todo/runtime/`                      | own top-level dirs |
+SEMI | `todo/lua/`, `todo/lua-related/`, `todo/h_lua/` | delete — the fork removes Lua |
+
+* Test suite
+
+** Last1
+
+*** fix the failing tests/quest/ FAIL
+
+*** fix many of the failing tests, sparc, ppc, alpha,   mips
+
+* Understanding
+
+*** RELAX read OLD/aug99/ .nw files
+
+*** RELAX c--: looks mips backend! probably the cleanest and simplest
+so good starting point
+
+
+* Literate
+
+*** FUN use codemap on fork-c--, read Cminusminus_extra.nw, try to understand the codebase
+go through index.pdf, try to get all phases in
+read also the todos pdf
+
