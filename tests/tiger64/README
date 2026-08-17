@@ -4,9 +4,9 @@ wordsize 64 pointersize 64) instead of the default bits32. Generated with
 regenerate-c--.sh; see that script's header for how to refresh a file.
 
 Expected stdout/exit codes are the same Tiger programs computing the same
-results, so output/*.1 and the *.0 stdin fixtures here are plain copies of
-../tiger/'s (kept as a separate, self-contained folder, like every other
-backend's tests/ subdirectory, not symlinks).
+results, so input/ and output/ here are symlinks to ../tiger/'s, not
+copies - both hold word-size-independent stdin/expected-stdout data, not
+generated code, so there's nothing to diverge.
 
 Status (2026-08-17): all 14 .c-- files elaborate cleanly (`qc -driver_elab`)
 against every backend's metrics, i.e. they are well-formed bits64 C--.

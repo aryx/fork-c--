@@ -86,7 +86,7 @@ while read -r name src rc stdin_file; do
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
 
-  if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=$T/$stdin_file; fi
+  if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=$T/input/$stdin_file; fi
   timeout "$TIMEOUT" $RUN_MIPS "./$B/$name" < "$input" > "$B/$name.out" 2> "$B/$name.err"
   got=$?
 

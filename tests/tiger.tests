@@ -11,7 +11,8 @@
 # (flowra, not dls or color) and run no optimizer, so our generated code
 # legitimately differs from the checked-in tiger/x86/*.s everywhere.
 #
-# Columns:  name  source  expected-rc  stdin ("-" for none)
+# Columns:  name  source  expected-rc  stdin ("-" for none, else a name
+#           looked up in tiger/input/)
 # Expected stdout is always tiger/output/<name>.1
 
 arrays      arrays.c--        1    -
