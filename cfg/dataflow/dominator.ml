@@ -1,26 +1,5 @@
-\section{Graph information}
-We don't want to force any particular representation of a graph so you have
-to provide some values in order to be able to use the dominator tree
-algorithm. Those values must be packages into a module that respect the
-following signature :
-<<dominator.mli>>=
-module type GRAPHINFO = sig
-  
-  type t
-  type result
-  val getNodeNumber : t -> int
-  val getSuccs      : t -> int list array 
-  val getPreds      : t -> int list array
-  val translate     : int array -> t -> result  
-
-end
-@ 
-The type t is the type of your graph. The value getNodeNumber must give the
-number of node in your graph. The value getSuccs must provide an array of
-interger list, each index of the array correspond to a node, each element
-of the array is the list of successors. The value getPreds is the same but
-for predecessors.
-<<dominator.ml>>=
+(*s: dominator.ml *)
+(*s: dominator.ml  *)
 module type GRAPHINFO = sig
   
   type t
@@ -31,68 +10,30 @@ module type GRAPHINFO = sig
   val translate      : int array -> t -> result
   
 end
-@
-\section{The dominator tree interface}
-The dominator tree has the following interface :
-<<dominator.mli>>= 
-module type DOMINATORTREE = 
-  functor (G : GRAPHINFO) -> sig
-    
-  val dominatorTree : G.t -> G.result
-
-end
-@
-<<dominator.ml>>=
+(*x: dominator.ml  *)
 module type DOMINATORTREE = 
 functor (G : GRAPHINFO) -> sig
     
   val dominatorTree : G.t -> G.result
 
 end
-@
-<<dominator.ml>>=
+(*x: dominator.ml  *)
 type tree = 
     Leaf of Zipcfg.label option * Zipcfg.Rep.labelkind option
   | Node of Zipcfg.label option * Zipcfg.Rep.labelkind option * tree list
-@
-I need to declare stuff in the mli file
-<<dominator.mli>>=
-type tree = 
-    Leaf of Zipcfg.label option * Zipcfg.Rep.labelkind option
-  | Node of Zipcfg.label option * Zipcfg.Rep.labelkind option * tree list
-module ZipGraph : GRAPHINFO with type t = Zipcfg.graph 
-                            and type result = tree
-module LengauerTarjan : DOMINATORTREE   
-@
-To get a usable dominatorTree value, you first need to apply the functor using 
-your translation module that respect the signature GRAPHINFO.
-
-Then the only value in the module takes your graph as an argument and gives an 
-array of integers representing the dominator tree.
-\section{The Lengauer-Tarjan algorithm}
-The first Dominator module use the Lengauer-Tarjan algorithm described in 
-the book : 'modern compiler implementation in ML' by Andrew W. Appel.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
 module LengauerTarjan : DOMINATORTREE   = 
   functor (G : GRAPHINFO) -> struct
-@ 
-First, we alias the module Array and the module List for convenience
-<<dominator.ml>>=
+(*x: dominator.ml  *)
   module A = Array
   module L = List
-@  
-Then we implement the dominatorTree value.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
 let dominatorTree graph = 
-@ 
-We first take the information we need about the graph using the module G
-<<dominator.ml>>=
+(*x: dominator.ml  *)
     let nodeNumber = G.getNodeNumber graph 
     and succs =      G.getSuccs graph 
     and preds =      G.getPreds graph in 
-@ 
-And set all the structures we need for the algorithm
-<<dominator.ml>>=
+(*x: dominator.ml  *)
     let vertex =     A.init nodeNumber (fun i -> -1)
     and parent =     A.init nodeNumber (fun i -> -1)
     and bucket =     A.init nodeNumber (fun i -> []) 
@@ -102,11 +43,7 @@ And set all the structures we need for the algorithm
     and idom =       A.init nodeNumber (fun i -> -1)
     and samedom =    A.init nodeNumber (fun i -> -1) 
     and counter =    ref 0 in 
-@ 
-We need a value that number the nodes in a depth first search way and set the 
-parent of each node according to the depth first search tree. We also keep track
-of the ranking of the nodes using vertex. 
-<<dominator.ml>>=
+(*x: dominator.ml  *)
 let rec dfs p n =
       if A.get dfnum n = 0 then (
         A.set dfnum   n !counter ; 
@@ -115,12 +52,7 @@ let rec dfs p n =
         counter := !counter + 1 ;
         L.iter (fun w -> dfs n w) (A.get succs n)
       ) in
-@ 
-We also need to know what is the ancestor that is the lowest semidominator
-of a particular node, say n.
-For this we follow the ancestors searching for the first one that a greater
-dfnum that n.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
     let ancestorWithLowestSemi v = 
       let u = ref v 
       and v = ref v in 
@@ -130,33 +62,21 @@ dfnum that n.
         v := A.get ancestor !v ;
       done ;
       !u
-@ 
-And the last utility value is link which does something really interesting 
-and important.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
     and link p n = 
       A.set ancestor n p in 
-@ 
-We finally compute the dominators.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
 let dominators () =
-@ 
-We first number the graph from the root (-1 means that the root has no parent)
-<<dominator.ml>>=
+(*x: dominator.ml  *)
 dfs (-1) 0 ;
-@ 
-Now, for each dfnum :
-Get the node with the highest dfnum, it parent and declare a storage variable.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
       for i = !counter - 1 downto 1 do 
         
         let n  = A.get vertex i in  
         let p  = A.get parent n in  
         let s  = ref p 
         and s' = ref p in 
-@ 
-Make the calculation of the semidominator of the node.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
         L.iter 
           (fun v -> 
             if dfnum.(v) <= dfnum.(n) 
@@ -166,14 +86,9 @@ Make the calculation of the semidominator of the node.
             A.set semi n !s ;
             A.set bucket !s (L.append (A.get bucket !s) [n]) ;
           ) (A.get preds n) ;
-@ 
-Link the path from s to n into the forest.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
         link p n ;
-@ 
-And we are able to compute the dominators or defer the calculation until 
-y dominator is known.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
         L.iter 
           (fun v -> 
             let y = ancestorWithLowestSemi v in
@@ -183,14 +98,9 @@ y dominator is known.
           ) (A.get bucket p) ;
       
         A.set bucket p [] ;
-@ 
-This is it for a node.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
       done;
-@ 
-Once every node has been done, we can make the calculations of dominators that
-had been deferred earlier.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
       for i = 1 to !counter - 1 do 
         
         let n = A.get vertex i in 
@@ -198,18 +108,13 @@ had been deferred earlier.
         then A.set idom n (A.get idom (A.get samedom n)) 
         
       done ; in
-@ 
-Now, we call this function and return the idom array that represents the
-dominator tree.
-<<dominator.ml>>=
+(*x: dominator.ml  *)
     dominators () ; 
 (* We should not have the graph appearing here ...  *)
     G.translate idom graph  
 
 end
-@ 
-\section{A translator module for the zipcfg}
-<<dominator.ml>>=
+(*x: dominator.ml  *)
 module ZipGraph : GRAPHINFO with type t = Zipcfg.graph 
                             and type result = tree = struct
   
@@ -288,8 +193,5 @@ IntToLabel somewhere in a global mutable state *)
     build 0
 
 end
-@
-
-
-
-
+(*e: dominator.ml  *)
+(*e: dominator.ml *)
