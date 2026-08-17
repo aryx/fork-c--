@@ -5,9 +5,7 @@ TOP=../..
 ##############################################################################
 TARGET=lib
 
-#pad: does not compile for now ...
-
-SRC= arm.ml
+SRC= arm.ml armregs.ml armcc.ml armcall.ml armrec.ml armasm.ml armbackend.ml
 
 SYSLIBS=
 

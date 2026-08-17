@@ -1,0 +1,302 @@
+%head {:
+  (* claude: no upstream armrec.nw exists to port (see arm.ml's header
+   * comment: upstream's src/ only ever had arm.nw, the target-description
+   * module alone) - this grammar is written from scratch, modeled on
+   * arch/mips/mipsrec.mlb's shape (%head/%tail structure, exp/loc/effect/
+   * guarded dispatch) and arch/sparc/sparcrec.mlb's cc-register handling
+   * (ARM's condition codes are a single flags pseudo-location, like
+   * SPARC's, not MIPS's direct register-vs-register branch). Only the
+   * subset of ARM actually needed by demos/hello.c-- (and, incidentally,
+   * the tiger runtime's simple integer/pointer code) is covered: base+
+   * immediate-offset addressing, add/sub/and, the arm_subcc/arm_<cond>
+   * comparison family arm.ml's Post already commits to, and plain direct
+   * calls/branches. No barrel-shifter operand2, no multiply/divide.
+   *)
+  open Nopoly
+  module RP = Rtl.Private
+  module RU = Rtlutil
+  module Up = Rtl.Up
+  module Dn = Rtl.Dn
+  module SS = Space.Standard32
+
+  exception Error of string
+  let error msg = raise (Error msg)
+  let sprintf   = Printf.sprintf
+
+  let guard p = if p then 0 else Camlburg.inf_cost
+
+  (* claude: signed, not unsigned, decimal - two reasons: (1) the "[reg,
+   * #imm]" load/store addressing rules below print this same "imm" as a
+   * real 12-bit signed offset field, where a negative offset must read
+   * as e.g. "-4", not "4294967292" (arm-linux-gnueabihf-as rejects the
+   * latter as out of range - same class of bug mipsrec.mlb's own
+   * const32 comment documents for MIPS's imm16); (2) GNU as's ARM port
+   * auto-swaps add<->sub (and cmp<->cmn, mov<->mvn) when a negative
+   * immediate's positive form fits the rotated-8-bit encoding but the
+   * negative one doesn't (e.g. "add r13,r13,#-8" -> "sub r13,r13,#8"),
+   * which only fires if the immediate is actually written as negative. *)
+  let const32 b =
+      assert (Bits.width b = 32);
+      Nativeint.to_string (Bits.S.to_native b)
+
+  let cat     = String.concat ""
+  let sprintf = Printf.sprintf
+
+  let reg n   = "r" ^ string_of_int n
+
+  (* claude: ARM's load/store suffixes: plain "ldr"/"str" are the 32-bit
+   * (word) forms (empty suffix), "b" is byte, "h" is halfword - unlike
+   * MIPS, where every width always gets an explicit suffix letter
+   * (lw/lb/lh). *)
+  let ldst_suffix = function
+      | 8  -> "b"
+      | 16 -> "h"
+      | 32 -> ""
+      | w  -> error (sprintf "not an ARM load/store width: %d" w)
+
+  (* claude: sign-extending sub-word loads need a distinct mnemonic
+   * ("ldrsb"/"ldrsh" - ARM has no plain 32-bit sign-extend load, so 32
+   * never reaches this), whereas a zero-extending load is just the
+   * ordinary "ldrb"/"ldrh" (ARM zero-extends sub-word loads by default). *)
+  let sx_suffix = function
+      | 8  -> "sb"
+      | 16 -> "sh"
+      | w  -> error (sprintf "not an ARM sign-extend load width: %d" w)
+
+  (* claude: maps arm.ml's Post.arm_cond names (arm_eq/arm_ne/.../arm_hi -
+   * the exact operator names Post.subflags/bc_guard build, see arm.ml
+   * lines ~150-198) to the real ARM branch-suffix mnemonics. arm_vs/
+   * arm_vc (overflow) are listed for completeness even though arm.ml's
+   * arm_cond never actually produces them yet (Impossible.unimp there). *)
+  let arm_bcond = function
+      | "arm_eq" -> "beq"
+      | "arm_ne" -> "bne"
+      | "arm_lt" -> "blt"
+      | "arm_le" -> "ble"
+      | "arm_gt" -> "bgt"
+      | "arm_ge" -> "bge"
+      | "arm_ls" -> "bls"
+      | "arm_hi" -> "bhi"
+      | "arm_vs" -> "bvs"
+      | "arm_vc" -> "bvc"
+      | op       -> error (sprintf "not an ARM condition: %s" op)
+:}
+%tail {:
+  let const = function
+      | RP.Bool _                 -> error "boolean found"
+      | RP.Link(s,_,w)            -> conLink s w
+      | RP.Diff _                 -> error "PIC not supported"
+      | RP.Bits(b)                -> conBits b
+      | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
+
+  (* claude: the arithmetic ops arm.ml's Post.binop actually reaches
+   * (add/sub/and - Post.dblop/wrdop/wrdrop are all Unsupported.xxx, no
+   * mul/div/or/xor/shift yet) plus the arm_subcc/arm_<cond> pair
+   * Post.subflags/bc_guard build for a conditional branch, and %lobits
+   * (Post.lostore's only producer, a free no-op onto a narrow-width
+   * store, same reasoning as mipsrec.mlb's identical case). *)
+  let rec exp = function
+      | RP.Const(k)               -> const k
+      | RP.Fetch(l,w)             -> conFetch (loc l) w
+      | RP.App(("add", [w]), [x; y])  -> conAdd (exp x) (exp y)
+      | RP.App(("sub", [w]), [x; y])  -> conSub (exp x) (exp y)
+      | RP.App(("and", [w]), [x; y])  -> conAnd (exp x) (exp y)
+      | RP.App(("lobits", [_;_]), [x]) -> exp x
+      | RP.App((("arm_subcc"), [w]), [x; y]) -> conSubcc (exp x) (exp y)
+      | RP.App((("arm_eq"|"arm_ne"|"arm_lt"|"arm_le"|"arm_gt"|"arm_ge"
+                |"arm_ls"|"arm_hi"|"arm_vs"|"arm_vc") as op, [32]), [c]) ->
+          conCond op (exp c)
+      | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
+
+  and loc = function
+      | RP.Reg((sp,_,_),i,w)      -> conReg sp i
+      | RP.Mem(('m',_,_),w,e,ass) -> conMem (exp e)
+      | RP.Mem((sp,_,_),_,_,_)    -> error (sprintf "mem-space space %c" sp)
+      | RP.Var   (s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Global(s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Slice _                -> error "cannot handle slice"
+
+  let effect = function
+      | RP.Store(RP.Reg(('c',_,_),i,w),r,_)
+        when i = SS.indices.SS.pc   -> conGoto (exp r)
+      | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+      | RP.Kill(l)                -> error "cannot handle kill"
+
+  let guarded g stmt = match g with
+      | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
+      | _                         -> conGuarded (exp g) (effect stmt)
+
+  let rec geffects = function
+      | []                        -> conNop ()
+      | [g, s]                    -> guarded g s
+      | (g, s) :: t               -> conPar (guarded g s) (geffects t)
+
+  let rtl (RP.Rtl es) = geffects es
+
+  let rtl_to_string = RU.ToString.rtl
+
+  let dump msg rtl =
+      List.iter prerr_string
+      [ "error in recognizer: "
+      ; msg
+      ; " on "
+      ; rtl_to_string rtl
+      ; "\n"
+      ]
+
+  let to_string r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          Printf.sprintf "\t%s" (plan.inst.Camlburg.action ())
+      with
+          | Camlburg.Uncovered -> cat ["not an instruction: "
+                                      ; rtl_to_string r
+                                      ]
+          | Error msg          -> ( dump msg r
+                                  ; sprintf "error: %s" (rtl_to_string r)
+                                  )
+
+  let is_instruction r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          plan.inst.Camlburg.cost < 100
+      with
+          | Camlburg.Uncovered -> false
+          | Error msg          -> ( dump msg r
+                                  ; false
+                                  )
+:}
+%term
+  bits n x w
+%%
+const:      Bits(bits) [{: guard (Bits.width bits = 32)  :}]{: const32 bits :}
+symbol:     Link(x, w:int)      {: x#mangled_text :}
+
+r:          Reg('r', n:int)  {: n :}
+regl:       r   {: reg r :}
+reg:        Fetch(regl,w:int)   {: regl :}
+
+pcl:        Reg('c',  0) {: () :}
+ccl:        Reg('c',  2) {: () :}
+spl:        Reg('r', 13) {: () :}
+ral:        Reg('r', 14) {: () :}
+
+pc:         Fetch(pcl,32)       {: () :}
+ccval:      Fetch(ccl,32)       {: () :}
+sp:         Fetch(spl,32)       {: () :}
+ra:         Fetch(ral,32)       {: () :}
+
+meml:       Mem(addr)     {: addr :}
+mem:        Fetch(meml,w:int)   {: meml :}
+
+(* claude: ARM's classic "[base]" / "[base, #offset]" load/store addressing - a minimal subset, no barrel shifter or register offsets (see %head comment). *)
+addr:       reg                 {: cat ["["; reg; "]"] :}
+addr:       Add(imm,reg)        {: cat ["["; reg; ", #"; imm; "]"] :}
+addr:       Add(reg,imm)        {: cat ["["; reg; ", #"; imm; "]"] :}
+
+(* claude: only a plain numeric constant is a valid "[reg, #imm]" offset - unlike mipsrec.mlb's "imm", ARM has no direct-addressing mode for a bare symbol; symbols get their own "limm" below, used only by the "ldr rX, =X" rules. *)
+imm:        const               {: const :}
+
+(* claude: the operand of GNU as's "ldr rX, =X" pseudo-op, which accepts either a numeric constant or a symbol (builds a literal pool + PC-relative load, GNU as's problem, not ours). *)
+limm:       const               {: const  :}
+limm:       symbol              {: symbol :}
+
+(* claude: "li"/"la" equivalent - ldr's "=" pseudo-immediate sidesteps ARM's rotated-8-bit data-processing immediate encoding entirely, so this one rule covers every 32-bit constant and every symbol address. *)
+inst:       Store(regl, limm, 32)
+            {: cat ["ldr"; " "; regl; ", ="; limm] :}
+
+inst:       Store(regl, mem, 32)
+            {: cat ["ldr"; " "; regl; ", "; mem] :}
+
+inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
+            {: cat ["ldr"; sx_suffix w; " "; regl; ", "; mem] :}
+
+inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int)
+            {: cat ["ldr"; ldst_suffix w; " "; regl; ", "; mem] :}
+
+inst:       Store(meml, reg, w:int)
+            {: cat ["str"; ldst_suffix w; " "; reg; ", "; meml] :}
+
+inst:       Store(regl, reg, 32)
+            {: cat ["mov"; " "; regl; ", "; reg] :}
+
+inst:       Goto(symbol)
+            {: cat ["b"; " "; symbol] :}
+
+inst:       Goto(reg)
+            {: cat ["bx"; " "; reg] :}
+
+(* claude: ARM's "bl"/"blx" compute the return address into lr as a side effect - same shape as mipsrec.mlb's "jal"/"jalr" (Par(Goto(target),Store(ral,next,32))); "next" just recognizes the RTL shape arm.ml's Post.do_call builds. *)
+next:       Add(pc,const)       {: () :}
+inst:       Par(Goto(symbol),Store(ral,next,32))
+            {: cat ["bl"; " "; symbol] :}
+
+inst:       Par(Goto(target:reg),Store(ral,next,32))
+            {: cat ["blx"; " "; target] :}
+
+(* claude: recognizes Arm.Post.cut_to's jump-through-register-while-updating-sp RTL; ARM has no delay slot, so the sp update must come first (once "bx" fires control has left). *)
+inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 32))
+            {: cat ["mov sp, "; nsp; "\n\tbx "; target] :}
+
+(* claude: Post.subflags's "cmp"-equivalent: x - y into the flags pseudo-location (arm.ml's cc), matching ARM's real "cmp" (a subtract that only updates flags). *)
+inst:       Store(ccl, Subcc(x:reg,y:reg), 32)
+            {: cat ["cmp"; " "; x; ", "; y] :}
+inst:       Store(ccl, Subcc(x:reg,y:imm), 32)
+            {: cat ["ldr ip, ="; y; "\n\tcmp "; x; ", ip"] :}
+
+(* claude: the conditional-branch half - Post.bc_of_guard wraps the (setup,guard) pair into "Guarded(guard,Store(pcl,tgt,32))", which the tail turns into "Guarded(cond,Goto(addr))", same shape as mipsrec.mlb's "Guarded(cmp,Goto(addr))". *)
+cond:       Cond(op:string, ccval) {: op :}
+inst:       Guarded(cond,Goto(symbol))
+            {: cat [arm_bcond cond; " "; symbol] :}
+
+inst:       Store(dst:regl, Add(x:reg,y:reg), 32)
+            {: cat ["add"; " "; dst; ", "; x; ", "; y] :}
+
+(* claude: materializes the immediate into ip (r12) via "ldr ip, =y" rather than a data-processing immediate operand - ARM's rotated-8-bit encoding can't represent every 32-bit value (e.g. large frame offsets), "ldr ip, =y" handles any constant uniformly. *)
+inst:       Store(dst:regl, Add(x:reg,y:imm), 32)
+            {: cat ["ldr ip, ="; y; "\n\tadd "; dst; ", "; x; ", ip"] :}
+
+inst:       Store(dst:regl, Sub(x:reg,y:reg), 32)
+            {: cat ["sub"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, Sub(x:reg,y:imm), 32)
+            {: cat ["ldr ip, ="; y; "\n\tsub "; dst; ", "; x; ", ip"] :}
+
+inst:       Store(dst:regl, And(x:reg,y:reg), 32)
+            {: cat ["and"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, And(x:reg,y:imm), 32)
+            {: cat ["ldr ip, ="; y; "\n\tand "; dst; ", "; x; ", ip"] :}
+
+inst:       Nop() {: "nop" :}
+
+inst: any [100]         {: cat ["<";any;">"] :}
+
+any : True  ()          {: cat [ "True"  ] :}
+any : False ()          {: cat [ "False" ] :}
+any : Link(x, w:int)    {: cat [ "Link(";x#mangled_text;",";string_of_int w;")" ] :}
+any : Late(string,w:int){: cat [ "Late(";string;",";string_of_int w;")" ] :}
+any : Bits(bits)        {: cat [ "Bits(b)" ] :}
+
+any : Fetch (any, w:int){: cat [ "Fetch(";any;",";string_of_int w;")" ] :}
+
+any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
+any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
+any : Subcc(x:any,y:any){: cat [ "Subcc(";x;", ";y;")" ] :}
+any : Cond(op:string,any) {: cat [ "Cond(";op;",";any;")" ] :}
+any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
+any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
+any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
+
+any : Mem(any)   {: cat [ "Mem(";any;")" ] :}
+any : Reg(char, n:int)  {: cat [ "Reg('";Char.escaped char;"',"; string_of_int n;")" ] :}
+
+any : Store (dst:any, src:any, w:int)
+                        {: cat [ "Store(";dst;",";src;",";string_of_int w;")" ] :}
+any : Kill(any)         {: cat [ "Kill(";any;")" ] :}
+
+any : Guarded(guard:any, any)
+                        {: cat [ "Guarded(";guard;",";any;")" ] :}
+any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
+any : Goto(any)         {: cat [ "Goto(";any;")" ] :}

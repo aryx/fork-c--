@@ -1,0 +1,38 @@
+/* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
+ *
+ * claude: same program as hello.c--, just with an explicit
+ * `float "none"` target pragma - arch/arm/arm.ml declares T.float =
+ * Float.none (this backend has no floating-point support at all: no FPU
+ * registers, Post.unrm/binrm/fcontext are all Impossible.unimp), whereas
+ * plain hello.c-- relies on Metrics.default's "ieee754", which every
+ * other backend here happens to match (they all set T.float =
+ * Float.ieee754) but arm does not - driver/driver.ml's metrics_ok check
+ * would otherwise reject the mismatch before compilation even starts.
+ * Exercises qc's ARM backend end to end:
+ *
+ *   qc -arm -globals -stop .s -o hello_arm.s demos/hello_arm.c--
+ *   arm-linux-gnueabihf-as hello_arm.s -o hello_arm.o
+ *   arm-linux-gnueabihf-gcc -static hello_arm.o -o hello_arm
+ *   qemu-arm hello_arm            # prints "hello, world!", exits 0
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag. arm-linux-gnueabihf-*
+ * is this fork's ARM cross toolchain - unlike mips/sparc/alpha, Ubuntu
+ * ships a real gcc cross toolchain for it, so "qc -arm -globals -ld
+ * \"arm-linux-gnueabihf-gcc -static\" -o hello_arm demos/hello_arm.c--"
+ * works as a one-shot too.
+ */
+
+target byteorder little float "none";
+
+import bits32 printf;
+export main, my_data;
+
+section "data" {
+  my_data: bits8 [] "hello, world!\n\0";
+}
+
+foreign "C" main("unsigned" bits32 iargc, "address" bits32 iargv) {
+  foreign "C" printf("address" my_data);
+  foreign "C" return(0);
+}
