@@ -3,7 +3,7 @@
 # qemu-mipsel, and checked against stdout/exit code. The mips counterpart of
 # run-tiger.sh - see that script first, this one only differs in the target.
 # Unlike run-tiger-sparc.sh/run-tiger-ppc.sh, mips is 32-bit *little*-endian,
-# matching every cmm/*.c-- source's own "target byteorder little" exactly,
+# matching every cmm-pass/*.c-- source's own "target byteorder little" exactly,
 # so - like run-tiger.sh - no byteorder flip is needed anywhere here.
 #
 # Everything links against tiger/tigermain-mips.o and tiger/stdlib-mips.a,

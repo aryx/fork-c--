@@ -1,0 +1,99 @@
+# Compile-only smoke test corpus: tests/cmm-pass/<name>.c-- sources that are
+# expected to compile successfully with the default (x86) backend.
+#
+# tests/cmm-pass/ and tests/cmm-fail/ are themselves the classification
+# (the directory a file lives in says what it's supposed to do) - this
+# manifest is a belt-and-suspenders cross-check, not the source of truth.
+# run-compile.sh errors out if this list and `ls cmm-pass/*.c--` ever
+# disagree, so a file dropped into the wrong directory (or a name left here
+# after being moved to cmm-fail/) can't go unnoticed.
+#
+# A name here can still legitimately FAIL today: that just means it is a
+# known, not-yet-fixed gap (see cmm-pass/output/<name>.s2_but_should_work)
+# rather than an intentional negative test - those live in cmm-fail/ and
+# cmm-fail.tests instead.
+#
+# One name per line, no extension, no directory (always tests/cmm-pass/<name>.c--).
+
+add
+altread
+altret
+altret2
+altret3
+arglist
+availexprs
+bits-bug
+blockcpy
+bool
+call3
+carry
+conj
+const
+cut
+deadcontvar
+deadcut
+divmod
+emptyifbody
+eqasolve-000
+exp-000
+exp-001
+f2
+fact
+fadd
+failedcase
+fargres
+float-000
+float-001
+float-001-coward
+float-001-hero
+float-002
+float-003
+fork
+global
+hello
+hex
+if-false
+if-false2
+incn
+inf
+infloop
+jtab
+ladd
+lit8
+live_rtd
+multasgn
+nest
+not
+nums
+ovrflow
+r64
+ralloc-000
+ratail
+rnd2
+round
+round2
+sparcerr
+spdemo
+sub
+switch
+tadd
+tail
+tail2
+tailbug
+tail_from_c
+tailnot
+test-009
+test-039
+test-040
+test-043
+test-044
+test-045
+test-046
+test-050
+tf
+trace
+unwind
+wtizzy
+x86-000
+x86-001
+zerou

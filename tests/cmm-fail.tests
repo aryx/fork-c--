@@ -1,0 +1,64 @@
+# Compile-only smoke test corpus: tests/cmm-fail/<name>.c-- sources that are
+# INTENTIONAL negative tests - upstream wrote them to be rejected by the
+# compiler, and the point of the test is that they fail with a specific
+# diagnostic. See cmm-pass.tests's header for why this manifest exists
+# alongside the directory split (belt-and-suspenders, not the source of
+# truth).
+#
+# Every name here must have a golden diagnostic at cmm-fail/output/<name>.s2
+# (recorded/refreshed via run-compile.sh --update). Unlike cmm-pass.tests,
+# there is no "known gap" escape hatch: a name here that starts compiling
+# successfully is never expected, and run-compile.sh reports it as a
+# regression (the compiler silently accepting something it used to reject).
+#
+# One name per line, no extension, no directory (always tests/cmm-fail/<name>.c--).
+
+badlit8
+err-000
+err-001
+err-002
+exp-002
+exp-003
+non-local-cut
+test-000
+test-001
+test-002
+test-004
+test-005
+test-006
+test-007
+test-008
+test-011
+test-012
+test-013
+test-014
+test-015
+test-016
+test-017
+test-018
+test-019
+test-020
+test-021
+test-022
+test-023
+test-024
+test-025
+test-026
+test-027
+test-028
+test-029
+test-030
+test-031
+test-032
+test-033
+test-034
+test-035
+test-036
+test-037
+test-038
+test-041
+test-042
+test-047
+test-048
+test-049
+test-051

@@ -14,7 +14,7 @@
 # argv - kept for consistency/future extension rather than a narrower format.
 #
 # Columns:  name  cmm-sources(+-joined)  other-c-source(or -)  rc  stdin(or -)  [argv...]
-# Sources and stdin are relative to tests/lcc/, not tests/cmm/.
+# Sources and stdin are relative to tests/lcc/, not tests/cmm-pass/.
 # Expected stdout is tests/lcc/output/<name>.1 when it exists; three
 # entries (front, incr, spill) have none upstream and print only on
 # internal failure - run-lcc.sh treats a missing .1 as "expect empty

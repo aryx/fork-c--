@@ -1,5 +1,0 @@
-File "cmm/test-028.c--", line 9, characters 5-26 Error: continuation parameter 'one' may not be a global variable
-File "cmm/test-028.c--", line 8, character 1 - line 10, character 2 Error: continuation parameter 'one' may not be a global variable
-File "cmm/test-028.c--", line 9, characters 5-26 Error: control can fall through to continuation
-File "cmm/test-028.c--", line 8, character 1 - line 10, character 2 Error: control falls off end of procedure
-Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

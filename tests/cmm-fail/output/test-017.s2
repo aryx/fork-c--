@@ -1,0 +1,2 @@
+File "cmm-fail/test-017.c--", line 17, characters 9-24 Error: target of 'cut to' must be a bit vector of the native pointer type
+Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

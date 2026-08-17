@@ -63,7 +63,7 @@ fi
 mkdir -p "$B"
 : > "$B/actual.txt"
 
-# claude: every cmm/*.c-- source declares "target byteorder little"; qc
+# claude: every cmm-pass/*.c-- source declares "target byteorder little"; qc
 # correctly refuses that for ppc, so flip it into a build-local copy first
 # - same as tests/run-native.sh already does for the same reason.
 flip() { sed 's/byteorder[ ][ ]*little/byteorder big/' "$1" > "$2"; }

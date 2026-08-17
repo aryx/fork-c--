@@ -1,0 +1,2 @@
+File "cmm-fail/test-019.c--", line 17, characters 17-36 Error: alignment 3 is not a power of 2
+Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

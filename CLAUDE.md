@@ -108,7 +108,7 @@ the only CI.
 There is **no test suite wired up** (`make test` prints `echo TODO`). `tests/`
 holds the original `.tst` regression suite driven by `testdrv.lua` under `mk`,
 which does not run in this fork. In practice you test by hand with `qc`'s
-`-<action>` flags on `demos/*.c--` or `tests/cmm/*.c--`. Actions are registered
+`-<action>` flags on `demos/*.c--` or `tests/cmm-pass/*.c--`. Actions are registered
 in `main.ml` (`extra_actions`) and `parsing/test_parsing_cmm.ml`, roughly one
 per pipeline stage:
 

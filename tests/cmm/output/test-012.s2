@@ -1,2 +1,0 @@
-File "cmm/test-012.c--", line 12, characters 20-21 Error: initialized string must specify type bits8
-Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

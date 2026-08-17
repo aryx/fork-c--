@@ -509,12 +509,12 @@ only the message disambiguates them.
 
 20. Independent corpus files corroborate a hypothesis better than one
 ------------------------------------------------------------------------
-The first read of the "<<" bug treated tests/cmm/tadd.c-- as a single buggy
+The first read of the "<<" bug treated tests/cmm-pass/tadd.c-- as a single buggy
 fixture (three years newer than a syntax change, so plausibly just a stale
 typo) and nearly got "fixed" by rewriting that one file to use backticks
 instead. Before doing that:
 
-    grep -rln '[^@]<<\|[^@]>>' tests/cmm/*.c-- demos/*.c--
+    grep -rln '[^@]<<\|[^@]>>' tests/cmm-pass/*.c-- demos/*.c--
 
 found bare "<<"/">>" independently in const.c--, carry.c--, and err-002.c--
 too - four unrelated files, written by different people at different times,
@@ -530,11 +530,11 @@ the thing to fix.
 
 21. Decompress and hand-trace the checked-in golden assembly
 -----------------------------------------------------------------
-tests/cmm/x86/*.s.gz are upstream's own compiled output from twenty years
+tests/cmm-pass/x86/*.s.gz are upstream's own compiled output from twenty years
 ago - proof of what the compiler used to produce, not just what it was
 supposed to. For the "bits64 on a 32-bit backend" investigation:
 
-    gunzip -c tests/cmm/x86/r64.s.gz
+    gunzip -c tests/cmm-pass/x86/r64.s.gz
 
 and reading the whole function by hand (not skimming) showed the 64-bit
 constant 0xfeedfacedeadbeef stored as two independent 32-bit immediate
@@ -561,7 +561,7 @@ Entry 2 found pcmap.c's QCDEBUG hook. codegen/expander.ml has its own,
 independent one - Debug.eprintf "expander" ..., gated by the same QCDEBUG
 environment variable (error/debug.ml: `Str.split "," (Sys.getenv "QCDEBUG")`):
 
-    QCDEBUG=expander qc -stop .s -o /tmp/out.s tests/cmm/float-003.c--
+    QCDEBUG=expander qc -stop .s -o /tmp/out.s tests/cmm-pass/float-003.c--
 
 prints every expansion step, including the exact expression being pushed
 onto the x87 stack right before the crash:
@@ -670,7 +670,7 @@ not in the call itself" framing that the backtrace + disassembly gave for
 free.
 
 A few refinements that came up reusing this same setup for later bugs
-(hangs, not crashes - tests/cmm/tail.c--'s tail-recursive "down"):
+(hangs, not crashes - tests/cmm-pass/tail.c--'s tail-recursive "down"):
 
 - Break on the symbol name ("break down"), not a hand-computed address
   from objdump. An address copied from a *different* binary's
@@ -765,7 +765,7 @@ identical from the outside (both just spun, no crash, no progress
 visible in the final output). Printf-tracing which register selectSpill
 picked each round told them apart immediately:
 
-- tests/cmm/add.c-- picked the exact same temp every round (thousands of
+- tests/cmm-pass/add.c-- picked the exact same temp every round (thousands of
   identical "picked $t[5]" lines) - a *stuck* loop. The fix was finding
   what stale reference to that temp survived every rewrite attempt (see
   entry 16's sibling case: this took three wrong guesses -
@@ -774,7 +774,7 @@ picked each round told them apart immediately:
   populated once before the retry loop started and never re-solved as
   the loop rewrote the cfg round after round).
 
-- tests/cmm/tail_from_c.c-- (isolated further to a minimal repro: any
+- tests/cmm-pass/tail_from_c.c-- (isolated further to a minimal repro: any
   procedure with a *self-recursive tail call*, i.e. a real loop in the
   cfg, under enough register pressure to force a spill at all) picked a
   *different* temp every round, over 500 rounds without a single repeat.

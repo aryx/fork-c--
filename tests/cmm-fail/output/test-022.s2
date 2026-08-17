@@ -1,0 +1,2 @@
+File "cmm-fail/test-022.c--", line 10, character 5 - line 12, character 6 Error: condition in `if' is not a Boolean
+Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

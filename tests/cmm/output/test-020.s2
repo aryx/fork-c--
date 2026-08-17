@@ -1,3 +1,0 @@
-File "cmm/test-020.c--", line 16, characters 5-6 Error: may not assign to data label x
-File "cmm/test-020.c--", line 15, character 1 - line 17, character 2 Error: control falls off end of procedure
-Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

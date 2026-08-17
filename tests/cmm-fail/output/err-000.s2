@@ -1,0 +1,2 @@
+File "cmm-fail/err-000.c--", line 12, characters 5-26 Error: overflow computing size
+Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

@@ -10,7 +10,7 @@
 # changing anything that affects the run-time data the compiler emits.
 #
 # Like mips (and unlike ppc/sparc), arm is 32-bit *little*-endian, matching
-# every cmm/*.c-- source's own "target byteorder little" exactly - no
+# every cmm-pass/*.c-- source's own "target byteorder little" exactly - no
 # byteorder flip needed. But arm has no FPU (arch/arm/arm.ml's T.float =
 # Float.none), while these test sources rely on the implicit ieee754
 # default, so - unlike run-tiger-mips.sh - each test source is still copied

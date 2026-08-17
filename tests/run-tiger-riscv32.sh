@@ -3,7 +3,7 @@
 # qemu-riscv32, and checked against stdout/exit code. The riscv32
 # counterpart of run-tiger.sh - see that script first, this one only
 # differs in the target. Like mips (and unlike ppc/sparc), riscv32 is
-# 32-bit *little*-endian, matching every cmm/*.c-- source's own "target
+# 32-bit *little*-endian, matching every cmm-pass/*.c-- source's own "target
 # byteorder little" exactly - no byteorder flip needed, and (unlike arm)
 # arch/riscv32/riscv32.ml's T.float = Float.ieee754 matches the implicit
 # default too, so no float-metrics pragma splice either.

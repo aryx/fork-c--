@@ -12,11 +12,13 @@
 # checked-in x86/*.s files everywhere. What we check instead is the outcome
 # - compiles or does not - against a recorded baseline.
 #
-# A recorded baseline rather than "everything must compile" because a good
-# third of tests/src consists of negative tests (test-0NN, err-0NN) whose
-# whole point is to be rejected with a diagnostic. Failure is the correct
-# result for those, and a baseline captures that without anyone having to
-# classify 143 files by hand.
+# The corpus is two directories: cmm-pass/ holds sources that are supposed
+# to compile, cmm-fail/ holds upstream's INTENTIONAL negative tests (ones
+# written to be rejected by the compiler). cmm-pass.tests and
+# cmm-fail.tests list the same names again as a belt-and-suspenders cross-
+# check against each directory's actual contents - see their headers.
+# demos/ (this fork's own addition, not upstream's negative-test corpus)
+# stays glob-discovered and un-classified, same as before.
 #
 # For files that FAIL, this also checks *why*: stderr is compared against a
 # recorded golden file, so a compile that starts failing for a different
@@ -32,32 +34,24 @@
 # before recording/comparing for the same reason: they churn on unrelated
 # main.ml line-number changes and carry no diagnostic signal.
 #
-# Two golden-file kinds, not one:
-#   cmm/output/<name>.s2                  upstream's own naming. Only ever
-#                                          updated for a name that already
-#                                          has one - those are files
-#                                          upstream itself curated as
-#                                          INTENTIONAL negative tests
-#                                          (test-0NN, err-0NN, badlit8,
-#                                          const, ...), where this
-#                                          diagnostic is the permanently
-#                                          correct result.
-#   cmm/output/<name>.s2_but_should_work  everything else that currently
-#                                          FAILs. As of this fork these are
-#                                          almost always POSITIVE tests
-#                                          broken by a known,
-#                                          still-being-worked-on gap
+# Golden-file kinds:
+#   cmm-fail/output/<name>.s2             the permanently-correct diagnostic
+#                                          for an intentional negative test.
+#   cmm-pass/output/<name>.s2_but_should_work  cmm-pass/ names that currently
+#                                          FAIL. As of this fork these are
+#                                          almost always known,
+#                                          still-being-worked-on gaps
 #                                          (simplify_exps, the remaining
-#                                          widen cases, ...) - freezing
-#                                          that text as a plain .s2 would
+#                                          widen cases, ...) - freezing that
+#                                          text as a plain .s2 would
 #                                          canonicalize the bug as correct
-#                                          behaviour instead of tracking
-#                                          it. Once the underlying gap is
-#                                          fixed the file starts passing
-#                                          and --update prunes its
-#                                          .s2_but_should_work
-#                                          automatically - nothing to
-#                                          remember to clean up by hand.
+#                                          behaviour instead of tracking it.
+#                                          Once the underlying gap is fixed
+#                                          the file starts passing and
+#                                          --update prunes its
+#                                          .s2_but_should_work automatically
+#                                          - nothing to remember to clean up
+#                                          by hand.
 #
 # Usage:
 #   ./run-compile.sh              check against the baseline
@@ -79,7 +73,6 @@ export LC_ALL
 here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}
-baseline=expected/compile.txt
 tmp=${TMPDIR:-/tmp}/qc-compile-smoke.$$
 
 if [ ! -x "$QC" ]; then
@@ -90,92 +83,152 @@ fi
 mkdir -p "$tmp" expected
 trap 'rm -rf "$tmp"' EXIT
 
-# The corpus: the regression sources plus the demos. Sorted so the output
-# is stable across machines.
-corpus=$(ls cmm/*.c-- ../demos/*.c-- 2>/dev/null | sort)
-
 update=no
 if [ "$1" = "--update" ]; then update=yes; fi
 
-: > "$tmp/actual.txt"
-msg_changed=""
-for f in $corpus; do
-  name=$(basename "$f" .c--)
+pos_names=$(grep -v '^#' cmm-pass.tests | grep -v '^[ 	]*$' | sort)
+neg_names=$(grep -v '^#' cmm-fail.tests | grep -v '^[ 	]*$' | sort)
+
+# Guard against drift: cmm-pass.tests / cmm-fail.tests must exactly match
+# their directory's contents, or a file moved/added/removed on one side
+# without the other would silently go untested (or rot in a manifest).
+#
+# comm needs real files, not <(...): this script runs under dash (/bin/sh),
+# which has no process substitution.
+echo "$pos_names" > "$tmp/pos_names"
+echo "$neg_names" > "$tmp/neg_names"
+ls cmm-pass/*.c-- | xargs -n1 basename | sed 's/\.c--$//' | sort > "$tmp/pos_files"
+ls cmm-fail/*.c-- | xargs -n1 basename | sed 's/\.c--$//' | sort > "$tmp/neg_files"
+pos_only_manifest=$(comm -23 "$tmp/pos_names" "$tmp/pos_files")
+pos_only_dir=$(comm -13 "$tmp/pos_names" "$tmp/pos_files")
+neg_only_manifest=$(comm -23 "$tmp/neg_names" "$tmp/neg_files")
+neg_only_dir=$(comm -13 "$tmp/neg_names" "$tmp/neg_files")
+if [ -n "$pos_only_manifest$pos_only_dir$neg_only_manifest$neg_only_dir" ]; then
+  echo "run-compile.sh: cmm-pass.tests/cmm-fail.tests are out of sync with cmm-pass/ or cmm-fail/:" >&2
+  [ -n "$pos_only_manifest" ] && echo "  in cmm-pass.tests but no such cmm-pass/*.c-- file: $(echo "$pos_only_manifest" | tr '\n' ' ')" >&2
+  [ -n "$pos_only_dir" ] && echo "  in cmm-pass/ but not listed in cmm-pass.tests: $(echo "$pos_only_dir" | tr '\n' ' ')" >&2
+  [ -n "$neg_only_manifest" ] && echo "  in cmm-fail.tests but no such cmm-fail/*.c-- file: $(echo "$neg_only_manifest" | tr '\n' ' ')" >&2
+  [ -n "$neg_only_dir" ] && echo "  in cmm-fail/ but not listed in cmm-fail.tests: $(echo "$neg_only_dir" | tr '\n' ' ')" >&2
+  exit 2
+fi
+
+# --- positive corpus: cmm-pass/*.c--, plus demos/*.c-- ---------------------
+# demos/ is this fork's own addition (not upstream's negative-test corpus)
+# and is not namespaced the same way as cmm-pass/ - demos/bool.c-- and
+# cmm-pass/bool.c-- would otherwise collide on the same
+# cmm-pass/output/bool.s2 (currently harmless, since the two files are
+# byte-identical, but fragile). So demos/ stays glob-discovered and gets no
+# message-check.
+demo_files=$(ls ../demos/*.c-- 2>/dev/null | sort)
+
+: > "$tmp/pos.txt"
+for name in $pos_names; do
+  f="cmm-pass/$name.c--"
   if "$QC" -stop .s -o "$tmp/out.s" "$f" >/dev/null 2>"$tmp/err.txt"; then
-    echo "$name.c-- OK" >> "$tmp/actual.txt"
+    echo "$name.c-- OK" >> "$tmp/pos.txt"
     continue
   fi
-  echo "$name.c-- FAIL" >> "$tmp/actual.txt"
+  echo "$name.c-- FAIL" >> "$tmp/pos.txt"
 
-  # Message-checking only applies to tests/cmm/: cmm/output/*.s2 is
-  # upstream's own naming, always scoped to Test.source = "src" (now
-  # "cmm") in the old .tst files. demos/ is this fork's own addition and
-  # is not namespaced the same way - demos/bool.c-- and cmm/bool.c--
-  # would otherwise collide on the same cmm/output/bool.s2 (currently
-  # harmless, since the two files are byte-identical, but fragile).
-  case "$f" in
-    cmm/*)
-      s2="cmm/output/$name.s2"
-      todo="cmm/output/$name.s2_but_should_work"
-      if [ -f "$s2" ]; then target=$s2; kind="error message"
-      else                  target=$todo; kind="known-gap message"
-      fi
-
-      # Strip the OCaml backtrace, keep the diagnostic(s) and the exception
-      # summary line - see the header comment for why.
-      grep -v '^Raised at \|^Called from ' "$tmp/err.txt" > "$tmp/msg.txt"
-
-      if [ "$update" = yes ]; then
-        cp "$tmp/msg.txt" "$target"
-      elif [ -f "$target" ]; then
-        if ! diff "$target" "$tmp/msg.txt" > "$tmp/msgdiff.$name" 2>&1; then
-          msg_changed="$msg_changed $name"
-          echo "$kind" > "$tmp/msgkind.$name"
-        fi
-      fi
-      ;;
-  esac
+  target="cmm-pass/output/$name.s2_but_should_work"
+  grep -v '^Raised at \|^Called from ' "$tmp/err.txt" > "$tmp/msg.txt"
+  if [ "$update" = yes ]; then
+    cp "$tmp/msg.txt" "$target"
+  elif [ -f "$target" ]; then
+    if ! diff "$target" "$tmp/msg.txt" > "$tmp/msgdiff.$name" 2>&1; then
+      pos_msg_changed="$pos_msg_changed $name"
+      echo "known-gap message" > "$tmp/msgkind.$name"
+    fi
+  fi
+done
+for f in $demo_files; do
+  name=$(basename "$f" .c--)
+  if "$QC" -stop .s -o "$tmp/out.s" "$f" >/dev/null 2>"$tmp/err.txt"; then
+    echo "$name.c-- OK" >> "$tmp/pos.txt"
+  else
+    echo "$name.c-- FAIL" >> "$tmp/pos.txt"
+  fi
 done
 
-# Prune golden files for cmm/ corpus files that no longer fail - see the
-# header comment on why a stale one is worse than a missing one (doubly so
-# for .s2_but_should_work: a fixed gap should not still look unfixed).
 if [ "$update" = yes ]; then
-  for f in cmm/*.c--; do
-    name=$(basename "$f" .c--)
-    grep -q "^$name\\.c-- FAIL\$" "$tmp/actual.txt" && continue
-    rm -f "cmm/output/$name.s2" "cmm/output/$name.s2_but_should_work"
+  for name in $pos_names; do
+    grep -q "^$name\\.c-- FAIL\$" "$tmp/pos.txt" && continue
+    rm -f "cmm-pass/output/$name.s2_but_should_work"
   done
 fi
 
-total=$(grep -c "" "$tmp/actual.txt")
-ok=$(grep -c " OK$" "$tmp/actual.txt" || true)
+# --- negative corpus: cmm-fail/*.c-- ---------------------------------------
+: > "$tmp/neg.txt"
+for name in $neg_names; do
+  f="cmm-fail/$name.c--"
+  if "$QC" -stop .s -o "$tmp/out.s" "$f" >/dev/null 2>"$tmp/err.txt"; then
+    echo "$name.c-- OK" >> "$tmp/neg.txt"
+    continue
+  fi
+  echo "$name.c-- FAIL" >> "$tmp/neg.txt"
+
+  target="cmm-fail/output/$name.s2"
+  grep -v '^Raised at \|^Called from ' "$tmp/err.txt" > "$tmp/msg.txt"
+  if [ "$update" = yes ]; then
+    cp "$tmp/msg.txt" "$target"
+  elif [ -f "$target" ]; then
+    if ! diff "$target" "$tmp/msg.txt" > "$tmp/msgdiff.$name" 2>&1; then
+      neg_msg_changed="$neg_msg_changed $name"
+      echo "error message" > "$tmp/msgkind.$name"
+    fi
+  fi
+done
 
 if [ "$update" = yes ]; then
-  cp "$tmp/actual.txt" "$baseline"
-  echo "recorded baseline: $ok/$total compile ($baseline)"
+  for name in $neg_names; do
+    grep -q "^$name\\.c-- FAIL\$" "$tmp/neg.txt" && continue
+    rm -f "cmm-fail/output/$name.s2"
+  done
+fi
+
+pos_baseline=expected/cmm-pass.txt
+neg_baseline=expected/cmm-fail.txt
+
+pos_total=$(grep -c "" "$tmp/pos.txt")
+pos_ok=$(grep -c " OK$" "$tmp/pos.txt" || true)
+neg_total=$(grep -c "" "$tmp/neg.txt")
+neg_ok=$(grep -c " FAIL$" "$tmp/neg.txt" || true)
+
+if [ "$update" = yes ]; then
+  cp "$tmp/pos.txt" "$pos_baseline"
+  cp "$tmp/neg.txt" "$neg_baseline"
+  echo "recorded baseline: $pos_ok/$pos_total compile ($pos_baseline)"
+  echo "recorded baseline: $neg_ok/$neg_total correctly rejected ($neg_baseline)"
   exit 0
 fi
 
-if [ ! -f "$baseline" ]; then
-  echo "run-compile.sh: no baseline at $baseline; run with --update" >&2
+if [ ! -f "$pos_baseline" ] || [ ! -f "$neg_baseline" ]; then
+  echo "run-compile.sh: no baseline at $pos_baseline / $neg_baseline; run with --update" >&2
   exit 2
 fi
 
 failed=no
-if ! diff "$baseline" "$tmp/actual.txt" > "$tmp/diff.txt" 2>&1; then
-  echo "compile smoke: FAILED, the outcome changed for these files:"
+
+if ! diff "$pos_baseline" "$tmp/pos.txt" > "$tmp/diff.pos" 2>&1; then
+  echo "compile smoke: FAILED, the outcome changed for these supposed-to-compile files:"
   echo
-  # "<" is the baseline, ">" is what we just got.
-  grep '^[<>]' "$tmp/diff.txt"
+  grep '^[<>]' "$tmp/diff.pos"
   echo
   failed=yes
 fi
 
-if [ -n "$msg_changed" ]; then
+if ! diff "$neg_baseline" "$tmp/neg.txt" > "$tmp/diff.neg" 2>&1; then
+  echo "compile smoke: FAILED, the outcome changed for these intentional negative tests:"
+  echo
+  grep '^[<>]' "$tmp/diff.neg"
+  echo
+  failed=yes
+fi
+
+if [ -n "$pos_msg_changed$neg_msg_changed" ]; then
   echo "compile smoke: FAILED, the compile-failure message changed for these files:"
   echo
-  for name in $msg_changed; do
+  for name in $pos_msg_changed $neg_msg_changed; do
     echo "--- $name ($(cat "$tmp/msgkind.$name")) ---"
     cat "$tmp/msgdiff.$name"
   done
@@ -188,5 +241,5 @@ if [ "$failed" = yes ]; then
   exit 1
 fi
 
-echo "compile smoke: $ok/$total compile, matching the baseline (incl. error messages)"
+echo "compile smoke: $pos_ok/$pos_total compile, $neg_ok/$neg_total correctly rejected, matching the baseline (incl. error messages)"
 exit 0

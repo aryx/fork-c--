@@ -1,0 +1,5 @@
+File "cmm-fail/test-004.c--", line 7, characters 1-21 Error: constant definition for x is cyclic
+File "cmm-fail/test-004.c--", line 7, characters 19-20 Error: unknown value: y
+File "cmm-fail/test-004.c--", line 7, characters 1-21 Error: re-declaration of value x
+File "cmm-fail/test-004.c--", line 7, characters 1-21 Error: previously declared here
+Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

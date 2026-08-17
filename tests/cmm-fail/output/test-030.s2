@@ -1,0 +1,2 @@
+File "cmm-fail/test-030.c--", line 7, characters 5-22 Error: a constant expression may not refer to register variable 'one'
+Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

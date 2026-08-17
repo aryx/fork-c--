@@ -1,3 +1,0 @@
-File "cmm/test-005.c--", line 7, characters 15-18 Error: unknown value: foo
-File "cmm/test-005.c--", line 9, characters 1-18 Error: control falls off end of procedure
-Fatal error: exception Error.ErrorExn("compilation aborted because of errors")

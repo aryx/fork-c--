@@ -12,7 +12,7 @@
 # and its Cmm.globalsig hash would not match.
 #
 # Columns:  name  cmm-source  other-source  expected-rc  stdin ("-" for none)
-# Expected stdout is always tests/cmm/output/<name>.1
+# Expected stdout is always tests/cmm-pass/output/<name>.1
 
 deadcontvar  deadcontvar.c--  deadcontvar-unwind.c  0  -
 fact         fact.c--         factmain.c            0  -
@@ -28,6 +28,6 @@ unwind       unwind.c--       unwindt.c             0  -
 # glibc's qsort - built without frame pointers on modern glibc, so the walk
 # died one step into it. Fixed by swapping qsort for a hand-rolled sort
 # tracemain.c compiles itself (see the "claude:" comment there) and passing
-# -fno-omit-frame-pointer for cmm/$other in run-rt.sh. The exact number of
-# "Undescribed frame" lines in cmm/output/trace.1 is an artifact of that
+# -fno-omit-frame-pointer for cmm-pass/$other in run-rt.sh. The exact number of
+# "Undescribed frame" lines in cmm-pass/output/trace.1 is an artifact of that
 # sort's call depth, not a value worth matching exactly.

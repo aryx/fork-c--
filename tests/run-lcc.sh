@@ -2,7 +2,7 @@
 # Behavioural tests: LCC's own regression suite (lcc.tests, ported from
 # lcc.x86.tst). Same mechanics as run-native.sh - no run-time system needed
 # (Ld.rtend = "" upstream), -globals on each test's first source only - but
-# scoped to tests/lcc/ instead of tests/cmm/, and x86-only: there is no
+# scoped to tests/lcc/ instead of tests/cmm-pass/, and x86-only: there is no
 # lcc.ppc.tst/lcc.sparc.tst upstream to prepare for, unlike native.tests.
 #
 # Usage:
