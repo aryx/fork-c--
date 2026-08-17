@@ -1,0 +1,53 @@
+notes_ssa.txt — why qc-- doesn't use SSA internally
+Written 2026-08-17, against commit ec9f990.
+
+Question asked: why does qc-- not use SSA to optimize things?
+
+Verified (grepped the tree; no SSA anywhere in the pipeline):
+- No module, comment, or .nw chunk implementing SSA construction/destruction
+  exists in this fork or (per pad.txt / archi_modules.txt) in upstream.
+- The mid-level IR is `front_cfg/` (older Cfg/Dag/Mflow) and `front_zipcfg/`
+  (newer zipper-based Zipcfg), both plain CFGs over Rtl, not SSA.
+- Optimizations/analyses run as classic iterative dataflow over that CFG via
+  a generic `Dataflow` module/functor (forward/backward, may/must lattices;
+  see availpass, registerclass, dead-code elim — all integrated per
+  [[todo-dir-classification]] in memory).
+- Register allocation is Chaitin/Briggs-style graph coloring
+  (`regalloc/flowra.ml`, wired in as `Colorgraph.ralloc` at -O3 — see
+  [[colorgraph-hang]] memory) plus a separate linear-scan allocator
+  (`docs/architecture/index.nw` lists both `ocolorgraph` and `linscan`).
+  Neither is SSA-based register allocation (e.g. no SSA-form Briggs/Hack
+  style allocator).
+
+Inferred (from project history / the Ramsey-Dias line of later papers, not
+re-derived from this repo's code):
+- Quick C-- (Ramsey & Lindig) predates SSA's establishment as the default
+  mid-level IR in most production/research compilers. Its authors later
+  published the "zipper-based CFG" representation (and, in Haskell, Hoopl)
+  explicitly as their answer to "how do you get a generic, retargetable
+  dataflow-optimization framework without committing to SSA's construction/
+  destruction machinery." That design choice predates and likely explains
+  qc--'s own architecture.
+- qc-- is a retargetable *library/backend*, meant to let arbitrary clients
+  (originally Lua scripts; here `fork-tiger`) plug in custom analyses via a
+  shared generic dataflow functor operating directly on the CFG — simpler to
+  expose across clients than SSA, which needs dominance-frontier/phi-
+  placement machinery around every transform and out-of-SSA copy insertion
+  before codegen.
+- C-- itself is already low-level (explicit registers, calling conventions,
+  explicit stack-layout equations resolved early in `Fenv`/`front_target/`).
+  SSA's main wins (sparse def-use chains, trivial constant/copy propagation)
+  matter most for virtual-temporary-heavy high-level IRs; once you're already
+  reasoning about hardware registers and memory aliasing, much of that
+  benefit is undercut.
+- The project's own stated framing (`docs/architecture/index.nw`) and this
+  fork's CLAUDE.md priority ("simplify and get it working end-to-end" over
+  "maximally optimizing") both point the same direction: classic CFG +
+  dataflow + graph-coloring allocation is simpler to keep working across six
+  backends than SSA-based optimization would be, and peak optimization power
+  was never the goal.
+
+Net: not an oversight, a coherent (if dated) architectural choice — zipper-
+CFG + generic dataflow framework instead of SSA, chosen for retargetability
+and client-pluggability, consistent with this fork's own "simplification and
+end-to-end correctness over optimization sophistication" priority.

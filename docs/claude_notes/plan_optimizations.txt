@@ -1,0 +1,98 @@
+plan_optimizations.txt — what optimizations would improve generated-code
+performance, given opti/ is thin today
+Written 2026-08-17, against commit ec9f990.
+
+Prompted by: "then what optimizations we could to improve performance of the
+generated code? the optimizer/ directory does not contain much code yet"
+(the actual directory is `opti/`, not `optimizer/`).
+
+Verified: what opti/ (and its dataflow dependencies) already does
+--------------------------------------------------------------------
+From `opti/optimize.ml`, `opti/peephole.ml`, `cfg/dataflow/*`:
+
+- `simplify_exps` — local constant folding, one RTL at a time (`Simplify.rtl`).
+- `trim_unreachable_code` — postorder-DFS reachability, deletes unreached
+  blocks. Cleanup, not perf-critical.
+- `collapse_branch_chains` — jump-to-jump threading (chase a chain of
+  empty branch-only blocks to the final real target).
+- `remove_nops` — deletes `Kill`s and redundant self-stores.
+- `validate` — checks every RTL is a legal target instruction; not an
+  optimization, a well-formedness pass.
+- `elim_dead_assignments` — real backward dead-store elimination:
+  `Dataflow.B.a_t Live.live_in Dead.elim_assignments`, run to a fixpoint via
+  the generic `Dataflow.B.rewrite` (backward analysis, no entry_fact).
+- `Peephole.subst_forward` (opti/peephole.ml) — forward copy/constant
+  propagation: uses `Availpass` (a real available-expressions dataflow
+  analysis, `Dataflow.F`) to find a location's known value and substitutes
+  it into later RTLs, then re-simplifies with `Simplify.rtl`.
+- Register allocation: Chaitin/Briggs-style graph coloring
+  (`regalloc/flowra.ml`'s `Colorgraph.ralloc`, wired in at `-O3` for every
+  backend), with move-coalescing already present (a prior session found
+  and fixed unsound non-tmp/pseudo-register handling in that coalescing;
+  native-x86-O3 is 66/66 as of this writing).
+
+All of the above run per-backend, gated by `opt_level > 0`, invoked
+identically from every `arch/*/​*backend.ml` (`Optimize.trim_unreachable_code`
+unconditionally, then `simplify_exps` / `remove_nops` /
+`collapse_branch_chains` / `elim_dead_assignments` / final `remove_nops` if
+`opt_level > 0`) — see `driver/main.ml`'s `-O0`/`-O3` comment for the gating.
+
+Verified: what's conspicuously missing
+--------------------------------------------------------------------
+- No common-subexpression elimination. `Availpass` computes available
+  expressions already, but nothing in `opti/` uses that fact to *eliminate*
+  a redundant recomputation — `Peephole.subst_forward` only substitutes a
+  known value in order to re-fold it, not to skip recomputing a shared
+  subexpression.
+- No global/sparse constant propagation. `simplify_exps` is purely local
+  (per-RTL); there is no dataflow-driven propagation of constants across
+  block boundaries.
+- No loop/dominator analysis anywhere in the integrated tree.
+  `TODO/dominator.nw` is still unintegrated — grepped `TODO/*.nw` for
+  loop/dominance-related files and this is the only one left there
+  (`bcopy.nw`, `callcc.nw`, `cell.nw`, etc. are all unrelated to codegen
+  optimization). This blocks any loop-aware optimization outright.
+- No loop-invariant code motion, no strength reduction, no induction-
+  variable analysis — all three need loop/dominator info that doesn't
+  exist yet (see above).
+- No inlining anywhere in the pipeline — no call-graph representation
+  exists at all currently.
+- No SSA — see notes_ssa.txt; a deliberate, separate architectural choice,
+  not a gap.
+
+Proposed priority order (cheapest-given-existing-infra first)
+--------------------------------------------------------------------
+1. **CSE (common-subexpression elimination).** Shortest path to a real win:
+   `Availpass`'s dataflow scaffolding already exists and already works
+   (it's exercised today by the peephole pass) — this only needs a new
+   *use* of that analysis, not new analysis infrastructure. Add: when an
+   expression is available (already computed and live), replace a
+   recomputation with a reference to the existing temp instead of
+   re-evaluating.
+2. **Global/sparse constant propagation.** Same pattern as #1 — a new
+   client of the existing `Dataflow.F` functor, analogous to how
+   `Availpass` is built, propagating known-constant values across blocks
+   instead of only folding within one RTL.
+3. **Bring up `TODO/dominator.nw`.** This is the actual prerequisite for
+   everything below it, not a nice-to-have — nothing loop-aware is
+   possible without it.
+4. **Loop-invariant code motion / strength reduction**, once #3 exists.
+   Also enables loop-aware spill-cost weighting in `Colorgraph.ralloc`
+   (currently loop-nesting depth isn't part of the spill heuristic, as
+   far as verified).
+5. **Inlining.** Likely the single biggest win for small Tiger-style leaf
+   procedures (the actual client, per CLAUDE.md's "goal" section), but a
+   different layer of the compiler — it wants to happen earlier, around
+   `Ast2ir`/call sites, not in `opti/`, and needs call-graph info that
+   doesn't exist anywhere yet. Bigger design lift than 1-4.
+6. **Target-specific peephole/strength-reduction patterns** (e.g.
+   multiply/divide-by-constant-power-of-2 -> shifts). Lives in each
+   `arch/*/​*rec.mlb`, not `opti/`. Long tail of small, backend-local wins
+   rather than one big cross-backend one — lowest priority of this list,
+   but cheap to pick off backend by backend once 1-2 land.
+
+Why this order, tied to the fork's stated priorities: CLAUDE.md's "goal"
+section explicitly favors simplification and end-to-end correctness over
+optimization sophistication, and reusing dataflow machinery that already
+exists (#1, #2) fits that better than standing up new infrastructure
+(#3/#4) or a new compiler layer (#5) — do the cheap wins first.

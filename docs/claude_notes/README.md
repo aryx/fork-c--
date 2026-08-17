@@ -52,6 +52,24 @@ Index:
   the fix that unblocked it being a `Cmm_Word` (pcmap field width)
   bug in `qc--runtime.h` shared by every backend, not RV64-specific.
 
+- [notes_ssa.txt](notes_ssa.txt) — why qc-- doesn't use SSA internally:
+  verified there's no SSA anywhere in the tree (mid-level IR is the
+  zipper-CFG `front_zipcfg`/`Zipcfg`, optimizations run as classic
+  dataflow via a generic `Dataflow` functor, register allocation is
+  Chaitin/Briggs graph coloring, not SSA-based); inferred rationale tied
+  to the Ramsey/Dias zipper-CFG line of work (precursor to Hoopl) and this
+  fork's own "retargetable, simple, end-to-end" priority over peak
+  optimization power.
+- [plan_optimizations.txt](plan_optimizations.txt) — what's already in
+  `opti/` (constant folding, dead-block/branch-chain/nop cleanup, real
+  backward dead-store elimination, forward copy/constant propagation via
+  `Availpass`, Chaitin/Briggs register allocation) versus what's missing
+  (CSE, global constant propagation, anything loop-aware, inlining), with
+  a priority order: CSE and global constant-prop first (reuse the existing
+  `Dataflow` functor), then bring up `TODO/dominator.nw` (blocks all
+  loop-aware optimization until it lands), then LICM/strength-reduction,
+  then inlining (biggest win, but a different compiler layer with no
+  call-graph infra yet).
 - [notes_64bits.txt](notes_64bits.txt) — target-independent summary of what
   actually blocks a 64-bit backend (-alpha, -riscv64) from running real
   Tiger programs: three separately-owned bits32-hardcoding bugs (two in
