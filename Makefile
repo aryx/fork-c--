@@ -88,6 +88,17 @@ test-tiger-riscv32::
 test-tiger64-riscv64::
 	tests/run-tiger64-riscv64.sh
 
+# claude: the -alpha counterpart of test-tiger64-riscv64 just above - same
+# self-contained shape (tigermain-alpha.o/stdlib-alpha.a checked in,
+# regenerate-alpha.sh needs fork-tiger, run-tiger64-alpha.sh itself only
+# needs the alpha cross toolchain). 12/15 - only colmajor/merge/sieve
+# fail, all for the same reason (real integer division: alpha has no
+# hardware divide instruction at all, unlike riscv64's RV64M "div" -
+# needs a call to libgcc's __divq helper, not yet implemented, see
+# tests/tiger64/README).
+test-tiger64-alpha::
+	tests/run-tiger64-alpha.sh
+
 test-rt::
 	tests/run-rt.sh
 
@@ -138,7 +149,7 @@ test-optimizer::
 test-phases::
 	tests/run-phases.sh
 
-test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
+test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 build-docker:
 	docker build -t "cmm" .
 

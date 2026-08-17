@@ -194,38 +194,48 @@ module Post = struct
       rtl (R.store (tloc x) (R.app o [tval x]) wordsize)
     (* claude: logical negation of a clean 0/1 comparison result - NOT
      * "com" (bitwise complement): com(1) is -2 (0x...FE), still nonzero,
-     * so every "<:> com x" case below (ne/ge/le/geu) was silently wrong
-     * whenever the underlying comparison held (confirmed by hand: %le
-     * evaluated true unconditionally, including %le(7,3)). "alpha_bnot"
-     * is an internal-only operator (like "alpha_gp" below), not part of
-     * T.capabilities, recognized by alpharec.mlb as "xor x, 1, dst". *)
+     * so every "<:> bnot dst" case below (ne/ge/le/geu) was silently
+     * wrong whenever the underlying comparison held before this existed
+     * (confirmed by hand: %le evaluated true unconditionally, including
+     * %le(7,3)). "alpha_bnot" is an internal-only operator (like
+     * "alpha_gp" below), not part of T.capabilities, recognized by
+     * alpharec.mlb as "xor x, 1, dst". *)
     let bnot x =
       let o = R.opr "alpha_bnot" [wordsize] in
       rtl (R.store (tloc x) (R.app o [tval x]) wordsize)
     (*x: Alpha postexpander *)
-    (* claude: dst is explicit and separate from the underlying compare
-     * instruction's own x/y operand order - was "let relation op x y =
-     * ... R.store (tloc x) ...", storing into whichever of x/y happened
-     * to be passed FIRST to the underlying "op" instruction. That is
-     * correct only when the caller never swaps operands (eq/lt/ltu/leu
-     * above), but "gt"/"geu"/"gtu" (and "le", added just below) all
-     * swap x and y to reuse the "lt"/"ltu"/"leu" instruction, which
-     * silently left the boolean result sitting in y's register instead
-     * of x's - confirmed by hand (%gt(7,3) and %le(3,7), both swapped
-     * cases, evaluated as 0/false unconditionally; %ge, unswapped,
-     * already worked). Every caller below now passes ~dst:x explicitly,
-     * so the result always lands where the caller expects it regardless
-     * of which operand order the instruction itself needs. *)
-    let relation ~dst op x y =
+    (* claude: dst is a FRESH temp (talloc 't'), never x or y - was
+     * "R.store (tloc x) ...", storing the comparison result back into
+     * one of its own two source operands. Two separate bugs came from
+     * that, fixed in two stages: (1) for swapped-operand cases (gt/geu/
+     * gtu/le, which reuse lt/ltu/leu with x and y exchanged) the result
+     * landed in y's register instead of x's - fixed by passing ~dst:x
+     * explicitly; but (2) even with dst pinned to x, reusing x's own
+     * register as the destination corrupts x for any LATER comparison
+     * against the same value - confirmed by hand on
+     * tests/tiger64/exceptions.c--'s handler-dispatch chain ("handle ex1
+     * ... handle ex2 ... handle ex3"), which compares the same raised-
+     * exception-id register against three different constants in
+     * sequence: cmpeq against the first constant overwrote that register
+     * with its own 0/1 result, so the second comparison in the chain was
+     * silently comparing the FIRST comparison's boolean instead of the
+     * original exception id, matching every subsequent constant as false
+     * regardless of what was actually raised. x86/ppc's own compare
+     * instructions set flags/a condition register instead of overwriting
+     * a source operand, so they never had this problem to begin with -
+     * it is specific to Alpha's "materialize the boolean into a GPR"
+     * instruction shape. *)
+    let relation op x y =
+      let dst = talloc 't' wordsize in
       let o = R.opr op [wordsize] in
-      rtl (R.store (tloc dst) (R.app bit [R.app o [tval x;tval y]]) wordsize )
+      dst, rtl (R.store (tloc dst) (R.app bit [R.app o [tval x;tval y]]) wordsize)
     (*x: Alpha postexpander *)
     let cmp op x y = match op with
-        | "eq"          -> relation ~dst:x "eq"  x y
-        | "ne"          -> relation ~dst:x "eq"  x y <:> bnot x
-        | "lt"          -> relation ~dst:x "lt"  x y
-        | "gt"          -> relation ~dst:x "lt"  y x
-        | "ge"          -> relation ~dst:x "lt"  x y <:> bnot x
+        | "eq"          -> relation "eq"  x y
+        | "ne"          -> let d,s = relation "eq"  x y in d, s <:> bnot d
+        | "lt"          -> relation "lt"  x y
+        | "gt"          -> relation "lt"  y x
+        | "ge"          -> let d,s = relation "lt"  x y in d, s <:> bnot d
         (* claude: was missing entirely - alpharec.mlb's own "cmp" set
          * (eq/ge/geu/gt/gtu/le/leu/lt/ltu/ne) already recognizes "le",
          * and there is no "lea" alpha instruction, so any signed <=
@@ -233,20 +243,20 @@ module Post = struct
          * case below instead ("bad comparison in expanded Alpha
          * conditional branch"). x<=y is NOT(y<x), same derivation as
          * "ge" just above (x>=y is NOT(x<y)). *)
-        | "le"          -> relation ~dst:x "lt"  y x <:> bnot x
-        | "ltu"         -> relation ~dst:x "ltu" x y
-        | "leu"         -> relation ~dst:x "leu" x y
-        | "gtu"         -> relation ~dst:x "ltu" y x
-        | "geu"         -> relation ~dst:x "leu" y x
-        | "feq"         
-        | "fne"         
-        | "flt"         
-        | "fle"         
-        | "fgt"         
-        | "fge"         
-        | "fordered"    
+        | "le"          -> let d,s = relation "lt"  y x in d, s <:> bnot d
+        | "ltu"         -> relation "ltu" x y
+        | "leu"         -> relation "leu" x y
+        | "gtu"         -> relation "ltu" y x
+        | "geu"         -> relation "leu" y x
+        | "feq"
+        | "fne"
+        | "flt"
+        | "fle"
+        | "fgt"
+        | "fge"
+        | "fordered"
         | "funordered"  -> unimp "floating-point comparison"
-        | _             -> impossible 
+        | _             -> impossible
                           "bad comparison in expanded Alpha conditional branch"
     (*x: Alpha postexpander *)
     (* claude: split from the old single `bc` into bc_guard/bc_of_guard,
@@ -257,22 +267,23 @@ module Post = struct
      * there is no direct register-vs-register conditional branch in the
      * ISA, only "b<cond> $reg, target" testing a register against zero.
      * So a general `x op y` compare has to happen in two steps: first
-     * `cmp` computes the boolean into x itself (one of the special App
-     * cases alpharec.mlb's exp function recognizes - eq/ne/lt/../geu),
-     * then a second, separate zero-comparison of that result becomes the
-     * actual branch guard. claude: was "eq"-to-zero ("guard holds when
-     * cmp's result is 0, i.e. the comparison was FALSE") - the
-     * surrounding comment already flagged this exact line as unverified
-     * ("not re-derived from scratch... until a conditional actually
-     * runs"), and it was backwards: bc_of_guard's ~ifso/~ifnot convention
-     * takes the guard-true branch to ifso, so a guard that holds on
-     * FALSE sent every %gt/%le/%ge/%ne (the branch senses this exercises)
-     * to the wrong side - confirmed by hand (%gt(7,3) evaluated as 0,
-     * %gt(3,7) as -1, exactly inverted). "ne"-to-zero (guard holds when
-     * the comparison was TRUE) is correct. *)
+     * `cmp` computes the boolean into a fresh temp (one of the special
+     * App cases alpharec.mlb's exp function recognizes - eq/ne/lt/../
+     * geu), then a second, separate zero-comparison of that result
+     * becomes the actual branch guard. claude: was "eq"-to-zero ("guard
+     * holds when cmp's result is 0, i.e. the comparison was FALSE") -
+     * the surrounding comment already flagged this exact line as
+     * unverified ("not re-derived from scratch... until a conditional
+     * actually runs"), and it was backwards: bc_of_guard's ~ifso/~ifnot
+     * convention takes the guard-true branch to ifso, so a guard that
+     * holds on FALSE sent every %gt/%le/%ge/%ne (the branch senses this
+     * exercises) to the wrong side - confirmed by hand (%gt(7,3)
+     * evaluated as 0, %gt(3,7) as -1, exactly inverted). "ne"-to-zero
+     * (guard holds when the comparison was TRUE) is correct. *)
     let bc_guard x (opr, ws as op) y =
       assert (ws =*= [wordsize]);
-      cmp opr x y, R.app (R.opr "ne" [wordsize]) [tval x; R.bits (Bits.zero 64) 64]
+      let dst, setup = cmp opr x y in
+      setup, R.app (R.opr "ne" [wordsize]) [tval dst; R.bits (Bits.zero 64) 64]
     let bc_of_guard (setup, guard) ~ifso ~ifnot =
       let brtl cond tgt = R.guard cond (R.store pc_lhs tgt wordsize) in
       DG.Test (setup, (brtl guard, ifso, ifnot))
