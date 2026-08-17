@@ -1,12 +1,8 @@
 # claude: build and run the standalone hello-world demos (hello.c-- for
 # the x86 backend, also reused as-is for -mips since its default 32-bit
 # little-endian metrics already match mipsel; hello_ppc.c-- for ppc-elf;
-# hello_sparc.c-- for -sparc; hello_alpha.c-- for -alpha) end to end.
-#
-# This is deliberately separate from Makefile.old, which drives the much
-# bigger Tiger end-to-end milestone (tigerc -> C-- -> qc -> a linked
-# executable against the full runtime system); see that file if that is
-# what you want. This one only needs qc itself and a target C toolchain.
+# hello_sparc.c-- for -sparc; hello_alpha.c-- for -alpha; hello_arm.c--
+# for -arm) end to end.
 #
 # ---------------------------------------------------------------------------
 # REQUIREMENTS
@@ -29,28 +25,29 @@
 #      sudo apt install gcc-sparc64-linux-gnu libc6-dev-sparc64-cross # sparc (via -m32, see below)
 #      sudo apt install gcc-alpha-linux-gnu libc6.1-dev-alpha-cross   # alpha
 #      sudo apt install gcc-mipsel-linux-gnu libc6-dev-mipsel-cross   # mips (mipsel)
+#      sudo apt install gcc-arm-linux-gnueabihf libc6-dev-armhf-cross # arm (armhf)
 #
 #    sparc has no plain 32-bit sparc-linux-gnu cross compiler on Ubuntu -
 #    only sparc64, which targets 32-bit SPARC V8 via -m32 (same biarch
 #    trick x86_64 hosts use for -m32 i386; see hello_sparc.c--'s own
-#    comment). alpha and mips(el) are native cross toolchains, no -m32
-#    trick needed.
+#    comment). alpha, mips(el), and arm(hf) are native cross toolchains, no
+#    -m32 trick needed.
 #
 # 3. To *run* the results on a host that isn't natively x86/ppc/sparc/
-#    alpha/mips, qemu's user-mode emulators:
+#    alpha/mips/arm, qemu's user-mode emulators:
 #
 #      sudo apt install qemu-user
 #
-#    RUN32/RUNPPC/RUNSPARC/RUNALPHA/RUNMIPS below name qemu-i386/qemu-ppc/
-#    qemu-sparc32plus/qemu-alpha/qemu-mipsel explicitly rather than relying
-#    on binfmt_misc, which is a host-wide registration a container inherits
-#    only by accident - the kernel resolves the interpreter path in the
-#    container's own mount namespace, so the same image runs on one machine
-#    and not another. On a genuine host of that architecture, nothing is
-#    needed: "make RUN32= run-x86" (or RUNPPC=/RUNSPARC=/RUNALPHA=/RUNMIPS=
-#    with the matching run-* target). qemu-sparc32plus is required for
-#    sparc specifically, not plain qemu-sparc - see hello_sparc.c--'s own
-#    comment for why.
+#    RUN32/RUNPPC/RUNSPARC/RUNALPHA/RUNMIPS/RUNARM below name qemu-i386/
+#    qemu-ppc/qemu-sparc32plus/qemu-alpha/qemu-mipsel/qemu-arm explicitly
+#    rather than relying on binfmt_misc, which is a host-wide registration a
+#    container inherits only by accident - the kernel resolves the
+#    interpreter path in the container's own mount namespace, so the same
+#    image runs on one machine and not another. On a genuine host of that
+#    architecture, nothing is needed: "make RUN32= run-x86" (or
+#    RUNPPC=/RUNSPARC=/RUNALPHA=/RUNMIPS=/RUNARM= with the matching run-*
+#    target). qemu-sparc32plus is required for sparc specifically, not plain
+#    qemu-sparc - see hello_sparc.c--'s own comment for why.
 #
 #    We link -static, so no sysroot/-L argument is required to run either
 #    binary.
@@ -63,6 +60,7 @@ CCPPC   ?= powerpc-linux-gnu-gcc
 CCSPARC ?= sparc64-linux-gnu-gcc -m32
 CCALPHA ?= alpha-linux-gnu-gcc
 CCMIPS  ?= mipsel-linux-gnu-gcc
+CCARM   ?= arm-linux-gnueabihf-gcc
 
 B = build
 
@@ -71,11 +69,12 @@ RUNPPC   ?= $(shell command -v qemu-ppc        2>/dev/null)
 RUNSPARC ?= $(shell command -v qemu-sparc32plus 2>/dev/null)
 RUNALPHA ?= $(shell command -v qemu-alpha      2>/dev/null)
 RUNMIPS  ?= $(shell command -v qemu-mipsel     2>/dev/null)
+RUNARM   ?= $(shell command -v qemu-arm        2>/dev/null)
 
-.PHONY: all x86 ppc sparc alpha mips \
-        run run-x86 run-ppc run-sparc run-alpha run-mips clean
+.PHONY: all x86 ppc sparc alpha mips arm \
+        run run-x86 run-ppc run-sparc run-alpha run-mips run-arm clean
 
-all: x86 ppc sparc alpha mips
+all: x86 ppc sparc alpha mips arm
 
 $(B):
 	mkdir -p $(B)
@@ -146,7 +145,19 @@ mips: $(B)/hello_mips
 run-mips: mips
 	@$(RUNMIPS) ./$(B)/hello_mips; echo "[exit status $$?]"
 
-run: run-x86 run-ppc run-sparc run-alpha run-mips
+# ---------------------------------------------------------------------------
+# arm (hello_arm.c--, the -arm backend; needs its own demo file since it has
+# no FPU - see hello_arm.c--'s own comment on the explicit float "none")
+# ---------------------------------------------------------------------------
+$(B)/hello_arm: hello_arm.c-- | $(B)
+	QC_AS="$(CCARM)" QC_LD="$(CCARM) -static" $(QC) -arm -globals -o $@ $<
+
+arm: $(B)/hello_arm
+
+run-arm: arm
+	@$(RUNARM) ./$(B)/hello_arm; echo "[exit status $$?]"
+
+run: run-x86 run-ppc run-sparc run-alpha run-mips run-arm
 
 clean:
 	rm -rf $(B)
