@@ -2,6 +2,7 @@
 /LUA
 /TODO
 /OLD
+/.claude/
 
 # generated from ocamlburg
 *rec.ml
