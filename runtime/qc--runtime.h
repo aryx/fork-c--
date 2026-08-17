@@ -5,69 +5,35 @@
 #include <stdint.h>
 
 /*s: machine-dependent macro definitions for the public interface */
+/* claude: NUM_REGS/FP_REG must match the TARGET's own flat register-index
+ * numbering (target/target.ml's mk_reg_ix_map: every Reg/Fixed-classified
+ * space, sorted by space character, concatenated - see each arch's own
+ * Spaces module for its per-space counts/order). Cmm_Activation.regs[] is
+ * a fixed-size array with no bounds check in update_saved_regs, so if
+ * NUM_REGS is too small for a given target, writes past the end silently
+ * corrupt whatever follows it on the stack - this is what "ppc/sparc/
+ * riscv/alpha were all silently running with x86's NUM_REGS=12" actually
+ * meant each time it was found (see git log). A platform this chain
+ * doesn't recognize gets a #error instead of silently reusing x86's
+ * values, which would reintroduce exactly that bug for whatever's next. */
 #ifdef __powerpc__
-/* claude: ppc's flat register-index numbering (target/target.ml's
- * mk_reg_ix_map, applied to arch/ppc/ppc.ml's Spaces module) runs the
- * control space 'c' (7 registers -> indices 0-7), then 'f' (32 float
- * registers -> indices 8-40), then 'r' (32 int registers -> indices
- * 41-73) - confirmed empirically via gdb (a running program's own
- * pcmap entries), not just by reading the space declarations. The
- * x86-sized array below silently overflowed for every ppc register
- * above index 11 (i.e. almost all of them), corrupting whatever
- * memory follows a Cmm_Activation on the stack. 96 leaves headroom. */
-#define NUM_REGS 96
+#define NUM_REGS 96 /* c(7)->0-7, f(32)->8-40, r(32)->41-73 - confirmed via gdb */
 #elif defined(__sparc__)
-/* claude: same overflow bug as ppc's (see the comment above) - the
- * x86-sized array below silently overflowed for sparc too, since
- * update_saved_regs's "new->regs[regs[i].index] = ..." has no bounds
- * check. sparc's own flat register-index numbering (target/target.ml's
- * mk_reg_ix_map, spaces filtered to Reg/Fixed and taken in
- * arch/sparc/sparc.ml's own list order: r, f, c, k - m/t/u/q are
- * Memory/Temp classified and excluded) covers roughly 49 indices (32
- * general + 9 float + 6 control + 2 window-pointer registers); 128
- * leaves headroom the same way ppc's 96 does. Not yet pinned down to
- * the exact count the way ppc's was (still confirming FP_REG - see
- * gcc-linux.c), so generous rather than tight. */
-#define NUM_REGS 128
+#define NUM_REGS 128 /* r/f/c/k, ~49 indices - generous, not pinned down exactly */
 #elif defined(__riscv)
-/* claude: same overflow bug as ppc's/sparc's (see the comments above) -
- * the x86-sized array below silently overflowed for RISC-V too.
- * __riscv is defined by the compiler for both RV32 and RV64 - the flat
- * register-index numbering (target/target.ml's mk_reg_ix_map, which
- * sorts ALL Reg/Fixed-classified spaces by space CHARACTER, not by the
- * order they're listed in arch/riscv{32,64}/riscv{32,64}.ml's own
- * `spaces` list) is identical between the two widths: only register
- * VALUES differ in width, not the register-space topology. Sorted
- * alphabetically that's 'c' (6 registers: pc, npc, cc, _, fp_mode,
- * fp_fcmp -> flat indices 0-5), then 'f' (32 float registers, unused by
- * this backend but still Reg-classified -> flat indices 6-37), then 'r'
- * (32 general registers x0-x31 -> flat indices 38-69) = 70 total.
- * Cross-checked against ppc's own confirmed 96/72 numbers above: the
- * same sort-by-space-character derivation reproduces ppc's documented
- * layout exactly (c(7)->0-7, f(32)->8-40, r(32)->41-73, FP_REG=72 for
- * r31), which is why this is trusted without an ppc-style gdb probe of
- * its own. 96 leaves the same headroom margin as ppc's. */
-#define NUM_REGS 96
+#define NUM_REGS 96 /* c(6)->0-5, f(32)->6-37, r(32)->38-69 = 70; both RV32/RV64 */
 #elif defined(__alpha__)
-/* claude: same overflow bug as every other non-x86 backend above (the
- * x86-sized array silently overflowed for Alpha too) - and no __alpha__
- * branch existed here at all until this fix, so Alpha was silently
- * running with x86's NUM_REGS=12/FP_REG=9 the whole time. arch/alpha/
- * alpha.ml's Spaces module declares exactly the same c(6)/f(32)/r(32)
- * shape __riscv's own comment above derives from, right down to the
- * identical "pc, npc, cc, _, fp_mode, fp_fcmp" comment on its 'c' space -
- * so the same sort-by-space-character derivation applies unchanged: c
- * (6 -> flat indices 0-5), f (32 -> 6-37), r (32 -> 38-69) = 70 total,
- * 96 leaves the same headroom margin. Confirmed by hand: tests/tiger64/
- * arrays.c-- hung (infinite loop) and rb.c--/wff.c-- crashed under
- * -alpha before this fix, all consistent with Cmm_Activation.regs[]
- * overflow corrupting adjacent stack memory - fixed by this alone (no
- * other change), same as ppc/sparc/riscv's own histories. */
-#define NUM_REGS 96
-#else
+#define NUM_REGS 96 /* c(6)->0-5, f(32)->6-37, r(32)->38-69 = 70, same shape as riscv's */
+#elif defined(__mips__)
+#define NUM_REGS 96 /* c(6)->0-5, f(32)->6-37, r(32)->38-69 = 70, same shape as riscv/alpha */
+#elif defined(__arm__)
+#define NUM_REGS 32 /* c(3)->0-2, r(16)->3-18 = 19; no float space (arm.ml: no FPU) */
+#elif defined(__i386__) || defined(__x86_64__)
 /*s: machine-dependent macro definitions for the public interface ((x86-linux)) */
 #define NUM_REGS 12
 /*e: machine-dependent macro definitions for the public interface ((x86-linux)) */
+#else
+#error "NUM_REGS/FP_REG not defined for this platform - see qc--runtime.h/gcc-linux.c"
 #endif
 /*e: machine-dependent macro definitions for the public interface */
 

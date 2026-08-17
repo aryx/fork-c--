@@ -5,50 +5,39 @@
 #include <assert.h>
 #include <stdio.h>
 
-/* claude: FP_REG is the activation-index of whichever callee-saved
- * register real gcc-compiled C code (compiled -fno-omit-frame-pointer,
- * see runtime/regenerate-ppc.sh) uses as its own frame-pointer chain -
- * this is what lets the walk below continue from our outermost C--
- * frame into genuine C frames above it (main's caller, libc, ...).
- * x86: %ebp (index 9, see qc--runtime.h's NUM_REGS comment for how
- * ppc's own numbering was derived). ppc: r31 (index 72) - confirmed by
- * compiling a probe with powerpc-linux-gnu-gcc -fno-omit-frame-pointer
- * and seeing "mr 31,1" in the prologue, gcc's ppc equivalent of x86's
- * "push %ebp; mov %esp,%ebp". */
+/* claude: FP_REG is the activation-index (qc--runtime.h's NUM_REGS
+ * numbering) of whichever callee-saved register real gcc-compiled C code
+ * (compiled -fno-omit-frame-pointer) uses as its own frame-pointer chain
+ * - this is what lets the walk below continue from our outermost C--
+ * frame into genuine C frames above it (main's caller, libc, ...). Each
+ * value below was either confirmed by compiling a probe with the target
+ * cross-gcc -fno-omit-frame-pointer and reading which register its own
+ * prologue/.frame directive names, or derived from qc--runtime.h's own
+ * NUM_REGS numbering when a probe wasn't (yet) run - noted per case. An
+ * unrecognized platform gets a #error, not x86's FP_REG=9 by default -
+ * see qc--runtime.h's own NUM_REGS comment for why silently reusing
+ * another target's value is the bug this guards against. */
 #ifdef __powerpc__
-#define FP_REG 72 /* r31 */
+#define FP_REG 72 /* r31 - confirmed via "mr 31,1" in a probe's prologue */
 #elif defined(__sparc__)
-/* claude: on SPARC this index is never actually populated, by design -
- * see the graceful-bail comment on the assert below for why, and don't
- * bother hunting for "the right" FP_REG value here the way ppc's 72 was
- * found; any in-range placeholder works identically since the slot is
- * always NULL. */
-#define FP_REG 30 /* %fp/%i6, never saved via update_saved_regs on sparc */
+/* claude: never actually populated, by design - SPARC's register windows
+ * save everything in hardware, so update_saved_regs's "for each callee-
+ * saved register" loop never runs and a->regs[FP_REG] is always NULL
+ * (see the graceful-bail comment on the assert below) - any in-range
+ * placeholder works identically since the slot is always NULL. */
+#define FP_REG 30 /* %fp/%i6 */
 #elif defined(__riscv)
-/* claude: s0/x8, the register arch/riscv{32,64}/riscv{32,64}cc.ml
- * reserves out of nvl_int specifically so riscv{32,64}-*-gcc's own
- * -fno-omit-frame-pointer C code (see runtime/regenerate-riscv32.sh)
- * uses it as a real, walkable frame-pointer chain - same rationale as
- * arm.ml's own r11/fp reservation. Flat index derived the same way as
- * qc--runtime.h's own NUM_REGS comment: c(6)->0-5, f(32)->6-37, so x8
- * within r's 38-69 range is flat index 38+8=46. Not yet confirmed via
- * gdb the way ppc's 72 was (see qc--runtime.h) - the derivation is
- * trusted because it reproduces ppc's own confirmed 72 exactly when
- * applied to ppc's numbers, but this is the first thing to re-check if
- * a RISC-V GC-crossing test misbehaves. */
-#define FP_REG 46
+#define FP_REG 46 /* s0/x8, flat index 38+8 - derived, not probe-confirmed */
 #elif defined(__alpha__)
-/* claude: $15 (s6/fp) - confirmed directly (not just derived) by
- * compiling a probe with alpha-linux-gnu-gcc -fno-omit-frame-pointer and
- * reading its own ".frame $15,32,$26,0" directive, the Alpha ABI's
- * explicit declaration of which register it uses as frame pointer -
- * stronger evidence than riscv64's own FP_REG derivation, which was
- * formula-only. Flat index derived the same way as qc--runtime.h's own
- * NUM_REGS comment: c(6)->0-5, f(32)->6-37, so r15 within r's 38-69
- * range is flat index 38+15=53. */
-#define FP_REG 53
-#else
+#define FP_REG 53 /* $15/s6/fp, flat index 38+15 - confirmed via ".frame $15,..." */
+#elif defined(__mips__)
+#define FP_REG 68 /* $30/fp, flat index 38+30 - confirmed via ".frame $fp,..." */
+#elif defined(__arm__)
+#define FP_REG 10 /* r7, flat index 3+7 - confirmed via "push {r7}"/frame_needed=1 in a probe (this toolchain defaults to Thumb, where r7 is fp, not ARM mode's r11) */
+#elif defined(__i386__) || defined(__x86_64__)
 #define FP_REG 9 /* %ebp, r[5] */
+#else
+#error "NUM_REGS/FP_REG not defined for this platform - see qc--runtime.h/gcc-linux.c"
 #endif
 /*x: gcc-linux.c  */
 void Cmm_init_c_frame(Cmm_Activation *a, char *young_in_overflow) {
