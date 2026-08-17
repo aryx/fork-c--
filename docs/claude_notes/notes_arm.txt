@@ -1,0 +1,150 @@
+notes_arm.txt
+==============
+
+Written: 2026-08-17, against commit 9b7e407 (parent of the commit that adds
+this file and the ARM backend itself). All claims below are VERIFIED: read in
+the code, or observed by actually running `qc -arm ...` under qemu-arm, not
+inferred from upstream Lua.
+
+What this is
+------------
+ARM is the fifth non-x86 backend plugged into this fork, after ppc, sparc,
+alpha, and mips. Unlike those four, upstream qc-- never finished ARM: its
+src/ only ever had arm.nw (the Target.t description, ~466 lines). There is
+no armregs.nw, armcall.nw, armasm.nw, or armrec.nw anywhere upstream. So this
+was new development modeled on the sibling backends' *current* (post-fork)
+shape, not a port of existing .nw content - that's why every new file below
+is plain source with no syncweb (*s:*)/(*x:*)/(*e:*) markers, and why
+arch/arm/Makefile's SRCNW still lists only "arm".
+
+Target shape (verified in arch/arm/arm.ml)
+-------------------------------------------
+- 32-bit little-endian, 16 general registers r0-r15 (r13=sp, r14=lr/ra,
+  r15=pc). No FPU: T.float = Float.none, and Post.unrm/binrm/fcontext/
+  rcontext are all Impossible.unimp "no floating point on ARM".
+- Condition-code model, architecturally like SPARC and unlike MIPS: a single
+  `cc` pseudo-location set by arm_subcc, consumed by named condition
+  operators (arm_eq/arm_ne/arm_lt/arm_le/arm_gt/arm_ge/arm_ls/arm_hi).
+  sparcrec.mlb was the closer template than mipsrec.mlb for this reason,
+  even though mips*.ml files (which are complete and current) were the main
+  template for everything else.
+- arm.ml pre-existed this work but targeted a stale pre-fork interface (old
+  PX.Nop/PX.Rtl instead of Dag, a single bc instead of bc_guard/bc_of_guard,
+  call/callr that never stored ra, effect-list cut_to, a target record shaped
+  for the pre-Preast2ir.T Target.t). Fixed to match what mips/sparc/alpha
+  already migrated to. Every (*s:*)/(*x:*)/(*e:*) marker in the file was left
+  untouched - only chunk *contents* changed, never chunk boundaries.
+
+New files (arch/arm/), no upstream .nw counterpart
+----------------------------------------------------
+- armregs.ml/.mli    - Spaces (SS.c 3 id [32], "pc, _, cc" - no npc/delay
+                        slot unlike mips, no f/u FP spaces), pc/cc locations,
+                        rspace. Split out of arm.ml (mirrors mipsregs.ml)
+                        specifically to avoid a circular dependency with Arm.
+- armcc.ml           - T.cc_specs table: "C"/"C--"/"notail"/"C-- thread" all
+                        dispatch to one calling convention (modeled directly
+                        on mipscc.ml's shape).
+- armcall.ml/.mli    - Call.t builder. r0-r3 = args/volatile, r4-r11 =
+                        callee-saved, r12/ip = scratch, r13/r14 = sp/lr.
+                        sp_align = 8 (AAPCS). Same C.incoming/C.outgoing
+                        prolog/epilog/call_actuals/call_results structure as
+                        mipscall.ml's `c`.
+- armrec.mlb -> armrec.ml/.mli
+                     - camlburg instruction-selection grammar, generated via
+                       `bin/ocamlburg arch/arm/armrec.mlb > arch/arm/armrec.ml`
+                       (that generation command is not a dune rule - same as
+                       every other *rec.ml in the tree, regenerate by hand).
+                       Only a minimal operator set is covered: add/sub/and +
+                       comparisons, base+offset addressing. ldrsb/ldrb-style
+                       sign/zero-extending sub-word load rules exist in the
+                       grammar but are unreachable from any Expander call
+                       site actually exercised by hello_arm.c-- - the same
+                       latent gap mips's own Sx/Zx rules have.
+- armasm.ml/.mli     - Asm.assembler: GNU-as-syntax ELF emitter. No branch-
+                        delay slot (unlike mips/sparc), so #call has no
+                        trailing nop, closer to alphaasm.ml/ppcelfasm.ml's
+                        shape than mipsasm.ml's.
+- armbackend.ml      - the phase pipeline (trim_unreachable_code ->
+                        Placevar.context Arm.placevars -> ... -> Arm.X.cfg ->
+                        ... -> Colorgraph.ralloc/Flowra.ralloc -> layout ->
+                        Phases.rmvfp -> asm#cfg_instr -> Phases.emit_data),
+                        copied from mipsbackend.ml's structure.
+- dune               - new library cmm_arch_arm, same libraries list shape as
+                        arch/mips/dune.
+
+Modified files
+--------------
+- arch/arm/Makefile   - SRC extended with the new .ml files; SRCNW untouched
+                         (still just "arm" - the only file with real .nw
+                         content).
+- driver/dune         - added cmm_arch_arm to driver/main.exe's libraries.
+- driver/main.ml      - mirrored every -mips wiring site: use_arm ref,
+                         default_arm_cc, the `backend` variant Arm, the
+                         effective_cc/default_output_file/stop_at_of_flag
+                         matches, the compile_file dispatch arm (Armasm.make,
+                         Arm.target, Armbackend.optimizer), the backend-
+                         selection if-chain, the "-arm" CLI flag and its
+                         entry in -x86's reset list.
+- demos/hello_arm.c-- (new) - same program as demos/hello.c--, plus an
+                         explicit `float "none"` target pragma. Needed
+                         because hello.c-- relies on Metrics.default's
+                         implicit "ieee754", which every *other* backend
+                         here happens to match (they all set T.float =
+                         Float.ieee754) but arm's T.float = Float.none does
+                         not - driver/driver.ml's metrics_ok check rejects
+                         that mismatch before compilation starts.
+
+Toolchain
+---------
+Unlike sparc/mips (clang cross-assembles but there's no local sysroot for
+real static linking) and alpha (no default cc at all, must pass -as/-ld by
+hand), Ubuntu ships a real arm-linux-gnueabihf gcc cross toolchain on this
+machine, so default_arm_cc is just "arm-linux-gnueabihf-gcc" - both
+assembler and linker, no clang workaround needed. qemu-arm (user-mode
+emulation) runs the resulting static binary directly.
+
+Bugs found and fixed while bringing this up
+---------------------------------------------
+- arm-linux-gnueabihf-as's comment character is "@", so
+  `.section "x","a",@progbits` (the form mips/ppc/sparc/alpha all use) had
+  its @progbits silently swallowed as a comment. GNU as on ARM wants
+  %progbits instead. Without the ALLOC flag actually landing, pcmap/
+  pcmap_data data fell outside every PT_LOAD segment (same failure mode
+  documented for the other backends' #section fix).
+- ARM's data-processing instructions can only encode an 8-bit value rotated
+  by an even number of bits as an immediate operand - arbitrary 32-bit
+  constants (e.g. a large stack-frame size in `add sp, sp, #N`) don't fit
+  that encoding and the assembler rejected them. Fixed by materializing such
+  immediates through `ldr ip, =value` (an assembler pseudo-op that picks
+  mov/mvn/a PC-relative literal-pool load as appropriate) instead of trying
+  to emit them as literal #N operands. Same fix incidentally required
+  switching const32's printer to signed decimal, which also fixed negative
+  [reg, #imm] load/store offsets.
+
+Verification performed
+-----------------------
+  ./bin/qc -globals -arm -o hello_arm demos/hello_arm.c--
+  qemu-arm ./hello_arm
+    -> prints "hello, world!", exits 0
+
+Checked in three invocation styles: the plain default (no -as/-ld), and the
+one-shot `-ld "arm-linux-gnueabihf-gcc -static"` form. All three produce a
+binary that runs correctly under qemu-arm.
+
+Known remaining gaps (not attempted / out of scope for this pass)
+---------------------------------------------------------------------
+- -O3 hangs. Not investigated - -O0 (the default) is what's verified, same
+  bar the milestone asks for. Worth revisiting with the same kind of
+  systematic bisection that fixed the analogous -O3 hang on x86/ppc
+  (see [[colorgraph-hang]] in memory, if reading this alongside that fix).
+- Only a minimal operator set is wired: add/sub/and + comparisons, base+
+  offset addressing. No mul/div/shift/or/xor, no ARM barrel-shifter operand2
+  forms, no reachable sign/zero-extending sub-word load path.
+- Tiger backend tests (tests/run-tiger*.sh) were not attempted. They need a
+  prebuilt tigermain-<arch>.o/stdlib-<arch>.a per backend (mips/ppc/sparc
+  have these; alpha doesn't either), which in turn needs a new
+  runtime/armcont.s (mipscont.s/ppccont.s/sparccont.s/x86cont.s all exist,
+  armcont.s does not) and a full ARM build of fork-tiger's runtime/stdlib -
+  which would very likely also need the mul/div/shift support this grammar
+  doesn't have yet. A separate, larger undertaking than the hello.c--
+  milestone this pass targeted.

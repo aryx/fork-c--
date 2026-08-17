@@ -20,6 +20,10 @@ Index:
 - [plan_reorg.md](plan_reorg.md) — proposed directory layout to replace the
   `front_*` scheme, with the old->new file mapping, where `todo/` lands, and the
   mechanics of renaming across the literate program.
+- [notes_arm.txt](notes_arm.txt) — how the ARM backend (new development, no
+  upstream `.nw`) was built: file-by-file summary, toolchain choice, bugs
+  found and fixed, and known remaining gaps (`-O3` hang, missing ops, tiger
+  tests not attempted).
 
 Retired: `plan_tiger_hello.md` and `plan_end_to_end.md` planned the path to
 `tigerc demos/hello.tig | qc ... | ./hello` actually running. That milestone

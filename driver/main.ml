@@ -140,6 +140,11 @@ let use_alpha = ref false
  * GNU-as-compatible syntax. *)
 let use_mips = ref false
 
+(* claude: -arm, 32-bit little-endian ARM (ARMv7-ish, no Thumb, no FP -
+ * see arch/arm/arm.ml). Like -sparc/-alpha/-mips, no separate ELF sibling
+ * needed - arch/arm/armasm.ml already emits GNU-as-compatible syntax. *)
+let use_arm = ref false
+
 (* -stop .<ext>. Empty means "go all the way to an executable". *)
 let stop_after = ref ""
 
@@ -191,6 +196,13 @@ let default_alpha_cc () =
  * against glibc needs an explicit -as/-ld (or QC_AS/QC_LD) pointing at
  * "mipsel-linux-gnu-gcc" instead. *)
 let default_mips_cc = "clang -target mipsel-unknown-linux-gnu"
+(* claude: for -arm. Unlike -sparc/-mips (clang cross-assembles but has no
+ * sysroot here for real static linking), Ubuntu ships a real
+ * arm-linux-gnueabihf gcc cross toolchain on this machine, so it can be
+ * the plain default (both assembler and linker), same as -ppc-elf's
+ * default_powerpc_elf_cc pattern but with gcc directly instead of clang -
+ * confirmed empirically that "arm-linux-gnueabihf-gcc -static" links. *)
+let default_arm_cc = "arm-linux-gnueabihf-gcc"
 
 let getenv_or name default =
   match Sys.getenv_opt name with
@@ -345,6 +357,11 @@ type backend =
    * mipsasm.ml), same story as Sparc/Alpha above - no separate "-mips-elf"
    * sibling needed. *)
   | Mips
+  (* claude: 32-bit little-endian ARM, what qemu-arm targets. Emits
+   * GNU-as-compatible ELF/Linux assembly directly (arch/arm/armasm.ml),
+   * same story as Sparc/Alpha/Mips above - no separate "-arm-elf"
+   * sibling needed. *)
+  | Arm
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
    *)
@@ -362,6 +379,7 @@ let effective_cc backend cmd =
            | Sparc -> default_sparc_cc
            | Alpha -> default_alpha_cc ()
            | Mips -> default_mips_cc
+           | Arm -> default_arm_cc
            | Ppc -> failwith "-ppc: pass -as/-ld (or QC_AS/QC_LD) explicitly \
                                for the Mach-O assembler/linker to use"
            | Interp -> failwith "-interp has no assembler/linker step")
@@ -374,7 +392,7 @@ let effective_cc backend cmd =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips -> ".s"
+   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -402,6 +420,9 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     | Mips ->
         let asm = Mipsasm.make Cfgutil.emit chan in
         Mips.target, asm, Mipsbackend.optimizer ~opt_level:!opt_level asm, true
+    | Arm ->
+        let asm = Armasm.make Cfgutil.emit chan in
+        Arm.target, asm, Armbackend.optimizer ~opt_level:!opt_level asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
          * see TODO/lua/lualink.ml:234 *)
@@ -603,13 +624,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips) -> Assembly
+  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips) -> Object
+  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips) -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -641,6 +662,7 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     else if !use_sparc then Sparc
     else if !use_alpha then Alpha
     else if !use_mips then Mips
+    else if !use_arm then Arm
     else X86
   in
   let stop = stop_at_of_flag backend in
@@ -766,9 +788,11 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " generate 64-bit little-endian DEC Alpha Linux/ELF assembly instead of x86";
     "-mips", Arg.Unit (fun () -> use_mips := true),
     " generate 32-bit little-endian MIPS (mipsel) Linux/ELF assembly instead of x86";
+    "-arm", Arg.Unit (fun () -> use_arm := true),
+    " generate 32-bit little-endian ARM Linux/ELF assembly instead of x86";
     "-x86", Arg.Unit (fun () ->
       use_interp := false; use_ppc := false; use_ppc_elf := false; use_sparc := false;
-      use_alpha := false; use_mips := false),
+      use_alpha := false; use_mips := false; use_arm := false),
     " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
