@@ -81,9 +81,10 @@ test-tiger-riscv32::
 # toolchain). 13/15, not the 15/15 bar test-tiger/test-tiger-ppc/
 # test-tiger-riscv32 clear - two real, separately root-caused bugs remain
 # (a GC-triggered heap corruption on colmajor, and a wrong exit code on
-# merge with otherwise-correct stdout - see tests/tiger64/README) - so
-# this stays off test-all's list until they're fixed, same reasoning as
-# mips/sparc/arm's own run-tiger-*.sh.
+# merge with otherwise-correct stdout - see tests/tiger64/README). Still
+# in test-all below: like every other tier here, this compares against a
+# recorded baseline (expected/tiger64-riscv64.txt) rather than demanding
+# 100%, so it still catches regressions same as the rest.
 test-tiger64-riscv64::
 	tests/run-tiger64-riscv64.sh
 
@@ -137,7 +138,7 @@ test-optimizer::
 test-phases::
 	tests/run-phases.sh
 
-test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
+test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 build-docker:
 	docker build -t "cmm" .
 
