@@ -404,7 +404,19 @@ let optimizer ~opt_level ~regalloc (asm : Ast2ir.proc Asm.assembler) (proc : Ast
    * entry 27's addendum. Flowra forced at -O3 (`qc -O3 -regalloc
    * flowra`), by contrast, still passes tests/run-native.sh OPT=3
    * 66/66 - i.e. Flowra has not been shown to produce worse code than
-   * Colorgraph on this suite, only to be more robust (never hangs). *)
+   * Colorgraph on this suite, only to be more robust (never hangs).
+   *
+   * claude: regalloc/dls.ml (tangled from OLD/dls.nw - upstream's actual
+   * production allocator, see regalloc/ralloc_choice.ml) landed after
+   * all of the above and swept every case here cleanly: 66/66 at both
+   * -O0 and -O3 including tail_from_c.c--, plus tests/run-tiger.sh
+   * 15/15, with none of Colorgraph's hangs. Ralloc_choice.choose's
+   * opt_level-driven default is now Dls above opt_level 0, not
+   * Colorgraph - Colorgraph stays reachable via -regalloc colorgraph
+   * until its spill-cost bug is fixed, at which point it may be worth
+   * reconsidering (graph coloring is theoretically the higher code
+   * quality of the two, this switch is about robustness, not code
+   * quality - that hasn't been measured). *)
   let proc = run (Ralloc_choice.choose regalloc ~opt_level) proc in
   (* ralloc runs before freeze: it is what decides how many spill slots
    * the frame needs, and freeze is what turns that into offsets. *)

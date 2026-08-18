@@ -887,10 +887,12 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     "-regalloc", Arg.String (fun s -> regalloc := Some (match s with
       | "flowra" -> Ralloc_choice.Flowra
       | "colorgraph" -> Ralloc_choice.Colorgraph
+      | "dls" -> Ralloc_choice.Dls
       | s -> raise (Arg.Bad (Printf.sprintf
-               "unknown -regalloc %S (expected: flowra, colorgraph)" s)))),
-    " <flowra|colorgraph> force a register allocator, independent of -O0/-O3 \
-(default: flowra at -O0, colorgraph at -O3)";
+               "unknown -regalloc %S (expected: flowra, colorgraph, dls)" s)))),
+    " <flowra|colorgraph|dls> force a register allocator, independent of \
+-O0/-O3 (default: flowra at -O0, colorgraph at -O3; dls - upstream's \
+original DFS linear-scan allocator - is only ever picked explicitly)";
     "-stop", Arg.Set_string stop_after,
     " .<ext> stop after producing .s or .o (cc's -S and -c)";
     "-L", Arg.String (fun d -> libdirs := d :: !libdirs),
