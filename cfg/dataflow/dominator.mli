@@ -21,8 +21,30 @@ end
 type tree = 
     Leaf of Zipcfg.label option * Zipcfg.Rep.labelkind option
   | Node of Zipcfg.label option * Zipcfg.Rep.labelkind option * tree list
-module ZipGraph : GRAPHINFO with type t = Zipcfg.graph 
+module ZipGraph : GRAPHINFO with type t = Zipcfg.graph
                             and type result = tree
-module LengauerTarjan : DOMINATORTREE   
+module LengauerTarjan : DOMINATORTREE
 (*e: dominator.mli  *)
 (*e: dominator.mli *)
+
+(* claude: not part of TODO/dominator.nw - see the matching comment in
+ * dominator.ml. Appended unmarked, same reason as there. *)
+module Query : sig
+  type t = {
+    blocks : Zipcfg.Rep.block array;
+    idom   : int array;
+    succs  : int list array;
+    preds  : int list array;
+  }
+
+  val analyze : Zipcfg.graph -> t
+  val dominates_idx : t -> int -> int -> bool
+
+  type loop = {
+    header    : Zipcfg.Rep.block;
+    body      : Zipcfg.Rep.block list;
+    preheader : Zipcfg.Rep.block option;
+  }
+
+  val loops : t -> loop list
+end

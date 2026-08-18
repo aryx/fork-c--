@@ -169,6 +169,11 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = if opt_level > 0 then run Optimize.simplify_exps proc else proc in
   let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in
   (* claude: new integration, gated like the rest of opti/ - see
+   * arch/x86/x86backend.ml's optimizer and tests/optimizer/licm.c--,
+   * tests/optimizer/strength_reduction.c--. *)
+  let proc = if opt_level > 0 then run Licm.hoist_invariants proc else proc in
+  let proc = if opt_level > 0 then run Strength_reduction.reduce proc else proc in
+  (* claude: new integration, gated like the rest of opti/ - see
    * arch/x86/x86backend.ml's optimizer and tests/optimizer/
    * collapse_branch_chains.c--. *)
   let proc = if opt_level > 0 then run Optimize.collapse_branch_chains proc else proc in

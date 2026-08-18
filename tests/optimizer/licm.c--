@@ -1,0 +1,28 @@
+target byteorder little;
+
+// Toy example for Licm.hoist_invariants (opti/licm.ml), built on
+// cfg/dataflow/dominator.ml's Dominator.Query.loops.
+//
+// "t = x * 2" sits at the very top of the loop header L, ahead of the
+// "i < n" test that controls the loop - so it is a header instruction
+// (this pass's only hoist source, see licm.ml's header comment), it
+// defines t only once in the whole loop, and its one operand (x) is never
+// written anywhere in the loop. All three conditions hold, so it gets
+// moved once into the block right before "goto L" (that block's only
+// successor is L, so it is exactly the preheader Dominator.Query.loops
+// looks for) instead of being recomputed on every one of n iterations.
+// At -O0 the "imull $2" is inside the L: block; at -O3 it appears once,
+// above L, and the loop itself carries only the compare/branch/add.
+export licm;
+licm(bits32 x, bits32 n) {
+  bits32 i; bits32 t;
+  i = 0;
+  goto L;
+L:
+  t = x * 2;
+  if (i < n) {
+    i = i + t;
+    goto L;
+  }
+  return(i);
+}

@@ -299,6 +299,14 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = if opt_level > 0 then run Optimize.simplify_exps proc else proc in
   let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in
   (* claude: new integration, gated like the rest of opti/ - see
+   * tests/optimizer/licm.c-- and tests/optimizer/strength_reduction.c--
+   * (opti/licm.ml, opti/strength_reduction.ml, both built on
+   * cfg/dataflow/dominator.ml's Dominator.Query.loops). Machine-
+   * independent (they read/rewrite generic "add"/"mul"-opr RTLs), so like
+   * collapse_branch_chains below they run before instruction selection. *)
+  let proc = if opt_level > 0 then run Licm.hoist_invariants proc else proc in
+  let proc = if opt_level > 0 then run Strength_reduction.reduce proc else proc in
+  (* claude: new integration, gated like the rest of opti/ - see
    * tests/optimizer/collapse_branch_chains.c--. Runs here, machine-
    * independently, since it only rewrites Zipcfg Branch nodes and those
    * exist unchanged before and after instruction selection. *)

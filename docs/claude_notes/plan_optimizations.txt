@@ -47,14 +47,26 @@ Verified: what's conspicuously missing
 - No global/sparse constant propagation. `simplify_exps` is purely local
   (per-RTL); there is no dataflow-driven propagation of constants across
   block boundaries.
-- No loop/dominator analysis anywhere in the integrated tree.
-  `TODO/dominator.nw` is still unintegrated — grepped `TODO/*.nw` for
-  loop/dominance-related files and this is the only one left there
-  (`bcopy.nw`, `callcc.nw`, `cell.nw`, etc. are all unrelated to codegen
-  optimization). This blocks any loop-aware optimization outright.
-- No loop-invariant code motion, no strength reduction, no induction-
-  variable analysis — all three need loop/dominator info that doesn't
-  exist yet (see above).
+- ~~No loop/dominator analysis anywhere in the integrated tree.~~ Done as
+  of 2026-08-17: `TODO/dominator.nw` -> `cfg/dataflow/dominator.ml`
+  (Lengauer-Tarjan, ported to the current `Zipcfg` — the `.nw` predated
+  the fork's reorg and didn't compile as tangled; three real bugs fixed
+  along the way, see the file's own `claude:` comments) plus a new
+  `Dominator.Query` layer (not part of the `.nw`) giving `dominates`/
+  natural-loop/preheader queries a consumer actually wants, instead of
+  the raw dominator tree `ZipGraph.translate` builds.
+- ~~No loop-invariant code motion, no strength reduction~~ Done as of
+  2026-08-17, both narrowly scoped (see their own header comments for the
+  exact conditions each requires — deliberately conservative, not full
+  textbook LICM/induction-variable analysis): `opti/licm.ml`
+  (`Licm.hoist_invariants`) and `opti/strength_reduction.ml`
+  (`Strength_reduction.reduce`), sharing `opti/loopopt.ml`'s block-editing
+  helpers, both built on `Dominator.Query.loops`, wired into `~opt_level`
+  in both `arch/x86/x86backend.ml` and `arch/ppc/ppcbackend.ml`. Showcased
+  in `tests/optimizer/licm.c--` / `strength_reduction.c--`; full corpus
+  re-verified clean at -O3 (`native-x86-O3` 66/66, `native-ppc-O3` matches
+  its pre-existing baseline). No induction-variable analysis beyond
+  strength reduction's own narrow one (a general IV pass is still a gap).
 - No inlining anywhere in the pipeline — no call-graph representation
   exists at all currently.
 - No SSA — see notes_ssa.txt; a deliberate, separate architectural choice,
@@ -73,13 +85,12 @@ Proposed priority order (cheapest-given-existing-infra first)
    client of the existing `Dataflow.F` functor, analogous to how
    `Availpass` is built, propagating known-constant values across blocks
    instead of only folding within one RTL.
-3. **Bring up `TODO/dominator.nw`.** This is the actual prerequisite for
-   everything below it, not a nice-to-have — nothing loop-aware is
-   possible without it.
-4. **Loop-invariant code motion / strength reduction**, once #3 exists.
-   Also enables loop-aware spill-cost weighting in `Colorgraph.ralloc`
-   (currently loop-nesting depth isn't part of the spill heuristic, as
-   far as verified).
+3. ~~**Bring up `TODO/dominator.nw`.**~~ Done — see above.
+4. ~~**Loop-invariant code motion / strength reduction**~~ Done — see
+   above. Still open: loop-aware spill-cost weighting in
+   `Colorgraph.ralloc` (loop-nesting depth still isn't part of the spill
+   heuristic) — `Dominator.Query.loops` is now available for that too,
+   just not used there yet.
 5. **Inlining.** Likely the single biggest win for small Tiger-style leaf
    procedures (the actual client, per CLAUDE.md's "goal" section), but a
    different layer of the compiler — it wants to happen earlier, around
