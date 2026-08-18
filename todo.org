@@ -22,6 +22,12 @@ https://github.com/civp/tiger-compiler
 use Claude to automate the transformation
 or not worth it with deriving or atdgen doing most of what asdl was doing
 
+* Architectures
+
+** support amd64
+
+** support arm64
+
 * Code
 
 ** Code estet
@@ -101,4 +107,3 @@ so good starting point
 *** FUN use codemap on fork-c--, read Cminusminus_extra.nw, try to understand the codebase
 go through index.pdf, try to get all phases in
 read also the todos pdf
-
