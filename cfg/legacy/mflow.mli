@@ -1,5 +1,5 @@
 (*s: front_cfg/mflow.mli *)
-(*s: mflow.mli *)
+(*s: mflow.mli  *)
 (*s: signatures *)
 type ('em, 'pr) map' = ('em, 'pr) Ep.pre_map =
     { embed   : 'em
@@ -37,7 +37,7 @@ module type S = sig
     (* N.B. sp is a dynamic argument because it could differ among call conventions *)
 end
 (*e: signatures *)
-(*x: mflow.mli *)
+(*x: mflow.mli  *)
 module MakeStandard (Pc : PC) : S
-(*e: mflow.mli *)
+(*e: mflow.mli  *)
 (*e: front_cfg/mflow.mli *)

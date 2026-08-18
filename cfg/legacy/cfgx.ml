@@ -1,4 +1,3 @@
-(*s: front_cfg/cfgx.ml *)
 (*s: cfgx.ml *)
 module X = struct
   type jx = unit
@@ -10,4 +9,3 @@ module X = struct
 end
 module M = Cfg.Make(X)
 (*e: cfgx.ml *)
-(*e: front_cfg/cfgx.ml *)

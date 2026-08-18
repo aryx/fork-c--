@@ -1,5 +1,5 @@
 (*s: front_zipcfg/zipcfg.ml *)
-(*s: zipcfg.ml *)
+(*s: zipcfg.ml  *)
 open Nopoly
 
 module DG  = Dag
@@ -19,7 +19,7 @@ type label      = uid * string
 type exp_of_lbl = label -> Rtl.exp (* exp of code label *)
 type 'a machine = 'a * 'a Mflow.machine * exp_of_lbl (* useful pairing *)
 let uid         = U.uid
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 type regs = Register.SetX.t (* sets of regs for dataflow *)
 type contedge = { kills:regs; defs:regs; node:label; assertion: Rtl.rtl }
 
@@ -154,7 +154,7 @@ module Rep = struct
   (*e: definitions of [[Rep]]'s public functions *)
 end
 open Rep
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 module type BLOCKS = sig
   type t
   val empty  : t
@@ -180,7 +180,7 @@ module Blocks : BLOCKS with type t = block UM.t = struct
   let fold f blocks z = UM.fold (fun _ b z -> f b z) blocks z
   let iter = UM.iter
 end
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 type graph  = Blocks.t
 type zgraph = zblock * Blocks.t
 type nodes   = zgraph -> zgraph (* sequence of nodes in Hughes's representation *)
@@ -190,7 +190,7 @@ let of_blocks g = g
 let to_blocks g = g
 let openz z = z
 let tozgraph z = z
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let empty = Blocks.insert (Entry, Last Exit) Blocks.empty
 
 let focus uid blocks =
@@ -204,7 +204,7 @@ let exit g =
   ((h, Last l), bs)
 
 let unfocus (bz, bs) = Blocks.insert (zip bz) bs
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let consm middle ((h, t), blocks) = ((h, Tail (middle, t)), blocks)
 
 let instruction  rtl g = consm (Instruction  rtl) g
@@ -221,21 +221,21 @@ let unreachable = function
       warn t
 
 let consl last ((head, tail), blocks) = unreachable tail; ((head, Last last), blocks)
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let return  rtl ~exit ~uses  = consl (Return (exit, rtl, uses))
 let forbidden (_, machine,_) = consl (Forbidden machine.M.forbidden)
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let check_single_exit g =
   let check block found = match last (unzip block) with
   | Exit when not found -> true
   | _ -> found in
   if not (Blocks.fold check g false) then
     impossf "graph does not have an exit"
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let set_spans (bz, blocks) spans = match bz with
 | First (Label (l, u, r)), _ -> r := Some spans
 | _ -> impossf "setting spans on non-label"
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let iter_spans f g =
   let span s = match s with Some s -> f s | None -> () in
   let first = function Label (_, _, s) -> span (!s) | _ -> () in
@@ -245,7 +245,7 @@ let iter_spans f g =
     | Call c -> span c.cal_spans
     | _ -> () in
   Blocks.iter block g
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let fold_spans f g z =
   let span s z = match s with Some s -> f s z | None -> z in
   let first f z = match f with Label (_, _, s) -> span (!s) z | _ -> z in
@@ -255,7 +255,7 @@ let fold_spans f g z =
     | Call c -> span c.cal_spans z
     | _ -> z in
   Blocks.fold block g z
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let add_blocks blocks (focus, newblocks) =
   match focus with
   | First Entry, Last (Branch _ | Forbidden _ | Exit) ->
@@ -266,7 +266,7 @@ let add_blocks blocks (focus, newblocks) =
       Blocks.fold add newblocks blocks
   | First Entry, _ -> impossf "entry contains nontrivial code"
   | _ -> impossf "focus not on entry"
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let postorder_dfs g =
   let entry, blocks = entry g in
   let rec vnode block cont acc visited =
@@ -286,7 +286,7 @@ let postorder_dfs g =
       | n::rst -> vnode n (next rst) acc visited in
     next children acc visited in
   vnode (zip entry) (fun acc _visited -> acc) [] US.empty
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let fold_layout f z g =
   let nextlabel (f, t) = match f with
     | Entry -> impossf "entry as successor"
@@ -296,7 +296,7 @@ let fold_layout f z g =
   | [b] -> f b None z
   | b1 :: b2 :: bs -> fold (b2 :: bs) (f b1 (nextlabel b2) z) in
   fold (postorder_dfs g) z
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let iter_nodes first middle last g =
   let block (f, t) =
     let () = first f in
@@ -309,10 +309,10 @@ let iter_nodes first middle last g =
 let iter_rtls rfun g =
   iter_nodes
     (fun f -> ()) (fun m -> rfun (mid_instr m)) (fun l -> rfun (last_instr l)) g
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let fold_blocks f z bs = UM.fold (fun _ -> f) bs z
 let iter_blocks = UM.iter
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let new_rtll rtl l = match l with
 | Exit -> l
 | Branch  (r, l) -> Branch (rtl, l)
@@ -327,7 +327,7 @@ let new_rtll rtl l = match l with
 let new_rtlm rtl m = match m with
 | Instruction r  -> Instruction rtl
 | Stack_adjust r -> Stack_adjust rtl
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let map_rtll ~map_rtl ~map_assn l =
   let map_ces ces =
     List.map (fun ce -> { ce with assertion = map_assn ce.assertion }) ces in
@@ -354,7 +354,7 @@ let map_rtls map g =
     | Last l -> Last (map_rtll ~map_rtl:map ~map_assn:map l) in
     (f, tail t) in
   UM.map block g
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let map_nodes first middle last g =
   let block (f, t) =
     let rec tail t = match t with
@@ -362,7 +362,7 @@ let map_nodes first middle last g =
     | Last l -> Last (last l) in
     (first f, tail t) in
   UM.map block g
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 (* should this fn be defined on exi and ill?
    when there are cont edges, do we still need to cover the regular edges?*)
 let (++) = RSX.union
@@ -413,10 +413,10 @@ let add_live_spansl node regs = match node with
 let add_live_spansf node regs = match node with
 | Label (_, _, sp) -> span_add (!sp) regs
 | Entry -> regs
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let of_block_list blocks =
   List.fold_left (fun m b -> Blocks.insert b m) Blocks.empty blocks 
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let prepare_for_splicing graph single multi =
   let gentry, gblocks = Blocks.focus graph entry_uid in
   if UM.is_empty gblocks then
@@ -434,7 +434,7 @@ let _ = (prepare_for_splicing :
   (Rep.tail -> 'answer) -> 
   (entry:Rep.tail -> exit:Rep.head -> others:Rep.block Unique.Map.t -> 'answer) ->
   'answer)
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let splice_head head g =
   check_single_exit g;
   let splice_one_block tail' = match ht_to_last head tail' with
@@ -443,7 +443,7 @@ let splice_head head g =
   let splice_many_blocks ~entry ~exit ~others =
     Blocks.insert (zipht head entry) others, exit in
   prepare_for_splicing g splice_one_block splice_many_blocks
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let splice_tail g tail =
   check_single_exit g;
   let splice_one_block tail' =  (* return tail' .. tail *)
@@ -456,7 +456,7 @@ let splice_tail g tail =
   let splice_many_blocks ~entry ~exit ~others =
     (entry, Blocks.insert (zipht exit tail) others) in
   prepare_for_splicing g splice_one_block splice_many_blocks
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let splice_focus_entry ((head, tail), blocks) g =
   let tail, blocks' = splice_tail g tail in
   ((head, tail), Blocks.union blocks' blocks)
@@ -464,19 +464,19 @@ let splice_focus_entry ((head, tail), blocks) g =
 let splice_focus_exit ((head, tail), blocks) g =
   let blocks', head = splice_head head g in
   ((head, tail), Blocks.union blocks' blocks)
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let splice_head_only head graph =
   let gentry, gblocks = Blocks.focus graph entry_uid in
   match gentry with
   | Entry, tail -> Blocks.insert (zipht head tail) gblocks
   | _ -> impossf "splice graph does not start with entry"
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let remove_entry graph =
   let gentry, gblocks = Blocks.focus graph entry_uid in
   match gentry with
   | Entry, tail -> tail, gblocks
   | _ -> impossf "removing nonexistent entry"
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let expand expand_middle expand_last graph =
   let expand_block block expanded =
     let rec expand_tail h t expanded = match t with
@@ -488,7 +488,7 @@ let expand expand_middle expand_last graph =
     let (f, t) = block in
     expand_tail (First f) t expanded in
   Blocks.fold expand_block graph Blocks.empty 
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let single_middle m =
   let block = (Entry, Tail (m, Last Exit)) in
   Blocks.insert block Blocks.empty
@@ -496,9 +496,9 @@ let single_middle m =
 let single_last l =
   let block = (Entry, Last l) in
   Blocks.insert block Blocks.empty
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 let modified = ref false
-(*x: zipcfg.ml *)
+(*x: zipcfg.ml  *)
 (*s: mutually recursive graph construction *)
 let rec consl' m b last ((head, tail), blocks) =
   unreachable tail;
@@ -619,5 +619,5 @@ and cbranch2cfg m c ~ifso ~ifnot s =
   modified := false;
   (cbranch2cfg' m c ifso ifnot s, !modified)
 (*e: mutually recursive graph construction *)
-(*e: zipcfg.ml *)
+(*e: zipcfg.ml  *)
 (*e: front_zipcfg/zipcfg.ml *)

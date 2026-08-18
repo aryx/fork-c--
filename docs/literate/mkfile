@@ -88,29 +88,29 @@ SRC_VIEWS= \
  $TOP/fenv/rtleqn.mli\
  $TOP/fenv/rtleqn.ml\
  \
- $TOP/cfg/front_cfg/cfg.mli\
- $TOP/cfg/front_cfg/cfg.ml\
- $TOP/cfg/front_cfg/cfgx.mli\
- $TOP/cfg/front_cfg/cfgx.ml\
- $TOP/cfg/front_cfg/dag.mli\
- $TOP/cfg/front_cfg/dag.ml\
- $TOP/cfg/front_cfg/ep.mli\
- $TOP/cfg/front_cfg/ep.ml\
- $TOP/cfg/front_cfg/mflow.mli\
- $TOP/cfg/front_cfg/mflow.ml\
- $TOP/cfg/front_cfg/spans.mli\
- $TOP/cfg/front_cfg/spans.ml\
+ $TOP/cfg/legacy/cfg.mli\
+ $TOP/cfg/legacy/cfg.ml\
+ $TOP/cfg/legacy/cfgx.mli\
+ $TOP/cfg/legacy/cfgx.ml\
+ $TOP/cfg/legacy/dag.mli\
+ $TOP/cfg/legacy/dag.ml\
+ $TOP/cfg/legacy/ep.mli\
+ $TOP/cfg/legacy/ep.ml\
+ $TOP/cfg/legacy/mflow.mli\
+ $TOP/cfg/legacy/mflow.ml\
+ $TOP/cfg/legacy/spans.mli\
+ $TOP/cfg/legacy/spans.ml\
  \
- $TOP/cfg/front_zipcfg/zipcfg.mli\
- $TOP/cfg/front_zipcfg/zipcfg.ml\
- $TOP/cfg/front_zipcfg/avail.mli\
- $TOP/cfg/front_zipcfg/avail.ml\
- $TOP/cfg/front_zipcfg/property.mli\
- $TOP/cfg/front_zipcfg/property.ml\
- $TOP/cfg/front_zipcfg/unique.mli\
- $TOP/cfg/front_zipcfg/unique.ml\
- $TOP/cfg/front_zipcfg/varmap.mli\
- $TOP/cfg/front_zipcfg/varmap.ml\
+ $TOP/cfg/zipcfg/zipcfg.mli\
+ $TOP/cfg/zipcfg/zipcfg.ml\
+ $TOP/cfg/zipcfg/avail.mli\
+ $TOP/cfg/zipcfg/avail.ml\
+ $TOP/cfg/zipcfg/property.mli\
+ $TOP/cfg/zipcfg/property.ml\
+ $TOP/cfg/zipcfg/unique.mli\
+ $TOP/cfg/zipcfg/unique.ml\
+ $TOP/cfg/zipcfg/varmap.mli\
+ $TOP/cfg/zipcfg/varmap.ml\
  \
  $TOP/elab/nast.mli\
  $TOP/elab/nast.ml\

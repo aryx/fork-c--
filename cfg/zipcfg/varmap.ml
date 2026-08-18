@@ -1,5 +1,5 @@
 (*s: front_zipcfg/varmap.ml *)
-(*s: varmap.ml *)
+(*s: varmap.ml  *)
 open Nopoly
 
 type reg  = Register.t
@@ -24,7 +24,7 @@ module RS = Register.Set
 type t = loc_pair  RM.t * temp RM.t
 type y = loc_pair' RM.t * temp list RM.t
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
-(*x: varmap.ml *)
+(*x: varmap.ml  *)
 let empty_pair       = {reg = None; mem = None}
 let def_reg pair r   = {pair with reg = r}
 let def_mem pair m   = {pair with mem = m}
@@ -62,7 +62,7 @@ let remove_mem' t (vm, lm as m) =
       | None -> (RM.remove t vm, lm)
       | Some r as r' -> (RM.add t {reg' = r'; mem' = false} vm, lm)
   with Not_found -> m
-(*x: varmap.ml *)
+(*x: varmap.ml  *)
 let add_reg t r (vm, lm) =
   try let lp = RM.find t vm in
       let lm' = match lp.reg with
@@ -117,7 +117,7 @@ let filter f (vm, _ as maps) =
     if f temp then maps
     else (RM.remove temp vm, match reg with Some r -> RM.remove r lm | None -> lm) in
   RM.fold remove vm maps
-(*x: varmap.ml *)
+(*x: varmap.ml  *)
 let printReg ((s,_,_), i, Register.C n) =
   if n = 1 then Printf.sprintf "%c%d" s i
   else Printf.sprintf "%c%d:%d" s i n
@@ -141,7 +141,7 @@ let print' msg (_, lm as map) =
                          Printf.eprintf "\n") lm
   ; flush stderr
   )
-(*x: varmap.ml *)
+(*x: varmap.ml  *)
 let sync_maps inmap (om_vm,_ as outmap) =
   (RM.fold (fun temp loc_pair (im_vm',_ as inmap') ->
               match loc_pair.mem with
@@ -152,7 +152,7 @@ let sync_maps inmap (om_vm,_ as outmap) =
                   inmap'
               | None   -> inmap')
            om_vm inmap, outmap)
-(*x: varmap.ml *)
+(*x: varmap.ml  *)
 let free_reg_inregs defs live_in live_out (_, lm) regs_used t_live_past_uses r =
   let not_in set = not (RS.mem r set) in
   not (RM.mem r lm) && not_in regs_used && not_in live_in &&
@@ -208,7 +208,7 @@ printTempSet "defs: " defs;
           else r
         else try_regs rs bst in
   try_regs allregs NoneYet
-(*x: varmap.ml *)
+(*x: varmap.ml  *)
 let join (m1, _) (m2, _) =
   let upd t lp1 lp2 maps = match (lp1, lp2) with
   | ({reg' = Some r1; mem' = false}, {reg' = Some r2; mem' = false})
@@ -229,5 +229,5 @@ let eq' ~old:(m2, _) ~new':(m1, _) =
              (lp1.mem' =:= lp2.mem')
          with Not_found -> false in
   RM.fold (is_eq m2) m1 true (* only equality on a subset... *)
-(*e: varmap.ml *)
+(*e: varmap.ml  *)
 (*e: front_zipcfg/varmap.ml *)

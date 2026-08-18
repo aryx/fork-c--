@@ -1,4 +1,3 @@
-(*s: front_zipcfg/unique.mli *)
 (*s: unique.mli *)
 type uid
 val eq : uid -> uid -> bool
@@ -44,4 +43,3 @@ module Set : SET
 module Array : ARRAY
 module Prop : Property.S with type list = uid
 (*e: unique.mli *)
-(*e: front_zipcfg/unique.mli *)

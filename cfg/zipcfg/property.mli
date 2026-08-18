@@ -1,5 +1,5 @@
 (*s: front_zipcfg/property.mli *)
-(*s: property.mli *)
+(*s: property.mli  *)
 (*s: exposed representation *)
 type rep =
   | Live_in      of Register.SetX.t  (* to be extended... *)
@@ -30,7 +30,7 @@ module type S = sig
   val prop : 'a matcher -> 'a t
 end
 (*e: exported module types *)
-(*x: property.mli *)
+(*x: property.mli  *)
 module M : S
-(*e: property.mli *)
+(*e: property.mli  *)
 (*e: front_zipcfg/property.mli *)

@@ -8665,16 +8665,13 @@ let solve ~width sums =
 @
 
 %******************************************************************************
-\chapter{[[cfg/cfg]]}
+\chapter{[[cfg/legacy]]}
 %******************************************************************************
 
-\section{[[cfg/front_cfg/cfg.nw]]}
-<<front_cfg/cfg.ml>>=
-<<cfg.ml>>
-@
+\section{[[cfg/legacy/cfg.nw]]}
 
 <<front_cfg/cfg.mli>>=
-<<cfg.mli>>
+<<cfg.mli >>
 @
 
 %%% ------------------------------------------------------------------ 
@@ -8979,7 +8976,7 @@ let solve ~width sums =
 %%
 \section{Interface}
 %%
-<<cfg.mli>>=
+<<cfg.mli >>=
 <<exported signatures>>
 @ 
 %%
@@ -9012,7 +9009,7 @@ module type S = sig
   <<graph and node mutators>>
 end
 @ 
-<<cfg.mli>>=
+<<cfg.mli >>=
 module Make (X:X) : S with module X = X
 @
 \subsection{Interface summary}
@@ -10871,13 +10868,6 @@ let member n set          = IS.mem (num n) set
 %%\end{itemize}
 %%
 \section{[[front_cfg/cfgx.nw]]}
-<<front_cfg/cfgx.ml>>=
-<<cfgx.ml>>
-@
-
-<<front_cfg/cfgx.mli>>=
-<<cfgx.mli>>
-@
 
 <<cfgx.mli>>=
 module X : Cfg.X
@@ -10894,14 +10884,8 @@ module X = struct
 end
 module M = Cfg.Make(X)
 @ 
-\section{[[front_cfg/dag.nw]]}
-<<front_cfg/dag.ml>>=
-<<dag.ml>>
-@
 
-<<front_cfg/dag.mli>>=
-<<dag.mli>>
-@
+\section{[[cfg/legacy/dag.nw]]}
 
 %%% ------------------------------------------------------------------ 
 \section{Directed Acyclic Graph}
@@ -11207,14 +11191,8 @@ and pr_cbi pr c = match c with
 | a, p, Exit false -> sprintf "(%s && %s)" (pr a) (pr_cbranch pr p)
 | a, p, q -> sprintf "(%s ? %s : %s)" (pr a) (pr_cbranch pr p) (pr_cbranch pr q)
 @ 
-\section{[[front_cfg/ep.nw]]}
-<<front_cfg/ep.ml>>=
-<<ep.ml>>
-@
+\section{[[cfg/legacy/ep.nw]]}
 
-<<front_cfg/ep.mli>>=
-<<ep.mli>>
-@
 
 %%
 \section{Embedding-projection pairs}
@@ -11235,12 +11213,9 @@ type ('em, 'pr) pre_map =
 type ('lo, 'hi) map = ('lo -> 'hi, 'hi -> 'lo) pre_map
 @ 
 \section{[[front_cfg/mflow.nw]]}
-<<front_cfg/mflow.ml>>=
-<<mflow.ml>>
-@
 
 <<front_cfg/mflow.mli>>=
-<<mflow.mli>>
+<<mflow.mli >>
 @
 
 %%% vim: ts=8 et sw=4:
@@ -11298,7 +11273,7 @@ type ('lo, 'hi) map = ('lo -> 'hi, 'hi -> 'lo) pre_map
 %%Targets for such machines will have to define [[return]] on an
 %%individual basis.
 %%
-<<mflow.mli>>=
+<<mflow.mli >>=
 <<signatures>>
 @
 %%The nodes in the control-flow graph (module \module{cfg}) contain
@@ -11362,7 +11337,7 @@ module type S = sig
     (* N.B. sp is a dynamic argument because it could differ among call conventions *)
 end
 @
-<<mflow.mli>>=
+<<mflow.mli >>=
 module MakeStandard (Pc : PC) : S
 @ 
 <<mflow.ml>>=
@@ -11490,11 +11465,11 @@ let machine ~sp =
 @ 
 \section{[[front_cfg/spans.nw]]}
 <<front_cfg/spans.ml>>=
-<<spans.ml>>
+<<spans.ml >>
 @
 
 <<front_cfg/spans.mli>>=
-<<spans.mli>>
+<<spans.mli >>
 @
 
 %%% inc: \usepackage{alltt}
@@ -11508,7 +11483,7 @@ let machine ~sp =
 %%represntation very well. 
 %%All the truth about what the representation means lives off in the
 %%[[Runtimedata]] module.
-<<spans.mli>>=
+<<spans.mli >>=
 type t
 type label   = string
 type link    = Reloc.t
@@ -11541,10 +11516,10 @@ type rep =
 %%and return address live.
 %%We provide a function to fold over live locations in the span.
 %%Unfortunately, the [[CFG]] needs to call this function, so it goes here.
-<<spans.mli>>=
+<<spans.mli >>=
 val fold_live_locs : (Register.x -> 'a -> 'a) -> t -> 'a -> 'a
 @
-<<spans.ml>>=
+<<spans.ml >>=
 type label = string
 type link  = Reloc.t
 type aligned = int
@@ -11556,7 +11531,7 @@ let to_spans ~inalloc ~outalloc ~ra ~users ~csregs ~conts ~sds ~vars =
 let expose spans = spans
 @
 %%We apply the input function to each of the locations we need to maintain live.
-<<spans.ml>>=
+<<spans.ml >>=
 let fold_live_locs f spans z =
   let fold = Rtlutil.Fold.RegX.loc f in
   let foldcsreg z = function (_, Some l) -> fold l z | (_, None) -> z in
@@ -16337,11 +16312,11 @@ end
 
 \section{[[front_zipcfg/avail.nw]]}
 <<front_zipcfg/avail.ml>>=
-<<avail.ml>>
+<<avail.ml >>
 @
 
 <<front_zipcfg/avail.mli>>=
-<<avail.mli>>
+<<avail.mli >>
 @
 
 \section{Available expressions}
@@ -16359,7 +16334,7 @@ end
 %%If~[[a]] is the set of expressions available immediately before an
 %%RTL~[[r]], then [[forward a r]] is the set of expressions available
 %%immediately after~[[r]].
-<<avail.mli>>=
+<<avail.mli >>=
 type t   (* a set of available expressions *)
 val forward : Rtl.rtl -> t -> t
 val invalidate : Register.SetX.t -> t -> t  (* anything that depends on the set *)
@@ -16371,18 +16346,18 @@ val smaller : old:t -> new':t -> bool  (* has a set shrunk? (unknown at top) *)
 %%location holds.
 %%To observe for redundancy elimination, we need to know what location
 %%holds an expression.
-<<avail.mli>>=
+<<avail.mli >>=
 val in_loc  : t -> Rtl.Private.loc -> Rtl.Private.exp option
 val has_exp : t -> Rtl.Private.exp -> Rtl.Private.loc option
 @ 
 %%We can substitute for locations that are known to be available.
 %%When calling [[subst_exp a ls e]], it is a checked run-time error for
 %%list [[ls]] to contain a location that is not available in~[[a]].
-<<avail.mli>>=
+<<avail.mli >>=
 val subst_exp : t -> Rtl.Private.loc list -> Rtl.Private.exp -> Rtl.Private.exp
 @ 
 %%We can print a set for debugging:
-<<avail.mli>>=
+<<avail.mli >>=
 val to_string : t -> string
 @ 
 %%
@@ -16390,7 +16365,7 @@ val to_string : t -> string
 \subsection{Implementation}
 %%
 %%
-<<avail.ml>>=
+<<avail.ml >>=
 module R   = Rtl
 module RP  = Rtl.Private
 module RU  = Rtlutil
@@ -16404,7 +16379,7 @@ let debug = Debug.on "avail"
 %%allocation, not for fast lookup.
 %%Notice the lattice inversion!
 %%A~``smaller'' fact has \emph{more} equalities!
-<<avail.ml>>=
+<<avail.ml >>=
 type t = Unknown | Known of (RP.loc * RP.exp) list
 let unknown = Unknown
 let smaller ~old ~new' =
@@ -16415,7 +16390,7 @@ let smaller ~old ~new' =
       | Unknown -> false
       | Known news -> List.length news < List.length olds)
 @ 
-<<avail.ml>>=
+<<avail.ml >>=
 let in_loc t l = match t with
 | Unknown -> None
 | Known pairs -> try Some (List.assoc l pairs) with Not_found -> None
@@ -16426,7 +16401,7 @@ let has_exp t e = match t with
     try Some (fst (List.find (fun (_, e') -> RU.Eq.exp e e') pairs))
     with Not_found -> None
 @ 
-<<avail.ml>>=
+<<avail.ml >>=
 let join a a' = match a, a' with
 | Unknown, a' -> a'
 | a, Unknown  -> a
@@ -16441,7 +16416,7 @@ let join a a' = match a, a' with
 %%LHS OR WE NEED TO GIVE UP.
 %%(A less serious problem is that we may get multiple equivalents for
 %%the same expression, and it is not clear which one(s) to use.)
-<<avail.ml>>=
+<<avail.ml >>=
 <<kills>>
 <<substitution>>
 <<invalidation>>
@@ -16512,7 +16487,7 @@ let invalidate locs_killed t = match t with
     let aexps = List.map RU.MayAlias.exp'  locs in
     Known (invalidate_pairs alocs aexps pairs)
 @ 
-<<avail.ml>>=
+<<avail.ml >>=
 let to_string = function
   | Unknown -> "<?>"
   | Known [] -> "<nothing-available>"
@@ -16523,15 +16498,12 @@ let to_string = function
       String.concat "" (List.map print les)
 @ 
 \section{[[front_zipcfg/property.nw]]}
-<<front_zipcfg/property.ml>>=
-<<property.ml>>
-@
 
 <<front_zipcfg/property.mli>>=
-<<property.mli>>
+<<property.mli >>
 @
 
-<<property.mli>>=
+<<property.mli >>=
 <<exposed representation>>
 <<exported module types>>
 @ 
@@ -16567,7 +16539,7 @@ type rep =
 type 'a matcher = { embed : 'a -> rep; project : rep -> 'a option; is : rep -> bool; }
 @ 
 %%
-<<property.mli>>=
+<<property.mli >>=
 module M : S
 @ 
 <<property.ml>>=
@@ -16821,13 +16793,6 @@ fun 'a newProperty () =
 end
 @
 \section{[[front_zipcfg/unique.nw]]}
-<<front_zipcfg/unique.ml>>=
-<<unique.ml>>
-@
-
-<<front_zipcfg/unique.mli>>=
-<<unique.mli>>
-@
 
 %%% ------------------------------------------------------------------ 
 \section{Unique identifiers, maps, and sets}
@@ -16953,11 +16918,11 @@ end
 @ 
 \section{[[front_zipcfg/varmap.nw]]}
 <<front_zipcfg/varmap.ml>>=
-<<varmap.ml>>
+<<varmap.ml >>
 @
 
 <<front_zipcfg/varmap.mli>>=
-<<varmap.mli>>
+<<varmap.mli >>
 @
 
 %-------------------------------------------------------------------
@@ -16972,7 +16937,7 @@ end
 %%\subsubsection{Interface}
 %-------------------------------------------------------------------
 %%We have some simple types for temps, locations, and location sets.
-<<varmap.mli>>=
+<<varmap.mli >>=
 type reg  = Register.t
 type rset = Register.Set.t
 type temp = Register.t
@@ -16985,7 +16950,7 @@ type loc_pair' = { reg' : Register.t option; mem' : bool }
 %%
 %%We have simple constructors to create and empty map, add a temp to a map, and remove a
 %%temp from a map.
-<<varmap.mli>>=
+<<varmap.mli >>=
 type t
 val empty            : t
 val add_reg          : temp -> Register.t   -> t -> t
@@ -17008,7 +16973,7 @@ val eq'              : old:y -> new':y -> bool
 %%We can also fold over a map, fold over each location a temp is in (the range), observe
 %%the locations where a temp is stored, observe the temp stored in a register, or print a
 %%map.
-<<varmap.mli>>=
+<<varmap.mli >>=
 val fold             : (temp -> Register.t   -> 'a -> 'a) ->
                        (temp -> Rtlutil.aloc -> 'a -> 'a) -> t -> 'a -> 'a
 val fold'            : (temp -> Register.t   -> 'a -> 'a) ->
@@ -17024,7 +16989,7 @@ val print'           : string -> y -> unit
 @
 %%The variable map also provides functions to determine which registers are available at
 %%a given node.
-<<varmap.mli>>=
+<<varmap.mli >>=
 val free_reg_inregs  : rset -> rset -> rset -> t -> rset -> bool -> reg -> bool
 val free_reg_outregs : rset -> rset -> t -> rset -> bool -> reg -> bool
 val alloc_inreg  : reg list -> rset -> rset -> rset -> t -> rset -> bool ->
@@ -17037,7 +17002,7 @@ val alloc_outreg : reg list -> rset -> rset ->         t -> rset -> bool ->
 %%second map (the outmap) holds the variables that are live\_out of the node.
 %%Because the second map may require spills to be inserted before the node, the maps have
 %%to be synchronized.
-<<varmap.mli>>=
+<<varmap.mli >>=
 val sync_maps : t -> t -> t * t
 @
 %-------------------------------------------------------------------
@@ -17047,7 +17012,7 @@ val sync_maps : t -> t -> t * t
 %%This implementation allows each temp to be stored in only one location at a time.
 %%Our representation keeps a map from temps to locations and register locations to temps
 %%(to facilitate the spilling function, [[reg_contents]]).
-<<varmap.ml>>=
+<<varmap.ml >>=
 open Nopoly
 
 type reg  = Register.t
@@ -17064,7 +17029,7 @@ type y = loc_pair' RM.t * temp list RM.t
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 @
 %%The constructors and observers are simple.
-<<varmap.ml>>=
+<<varmap.ml >>=
 let empty_pair       = {reg = None; mem = None}
 let def_reg pair r   = {pair with reg = r}
 let def_mem pair m   = {pair with mem = m}
@@ -17110,7 +17075,7 @@ let remove_mem' t (vm, lm as m) =
 %%to the register -- that way, the add function need not change the [[lm]] map,
 %%possibly saving memory.
 %%location of the temp in the [[vm]] map
-<<varmap.ml>>=
+<<varmap.ml >>=
 let add_reg t r (vm, lm) =
   try let lp = RM.find t vm in
       let lm' = match lp.reg with
@@ -17168,7 +17133,7 @@ let filter f (vm, _ as maps) =
 @
 %%
 %%Printing is easy.
-<<varmap.ml>>=
+<<varmap.ml >>=
 let printReg ((s,_,_), i, Register.C n) =
   if n = 1 then Printf.sprintf "%c%d" s i
   else Printf.sprintf "%c%d:%d" s i n
@@ -17196,7 +17161,7 @@ let print' msg (_, lm as map) =
 %%If the outmap spills a temp that is assigned to a register in the inmap,
 %%then the spill must happen in the inmap.
 %%Note: We fold over the outmap, with the inmap as the accumulating parameter.
-<<varmap.ml>>=
+<<varmap.ml >>=
 let sync_maps inmap (om_vm,_ as outmap) =
   (RM.fold (fun temp loc_pair (im_vm',_ as inmap') ->
               match loc_pair.mem with
@@ -17211,7 +17176,7 @@ let sync_maps inmap (om_vm,_ as outmap) =
 %%Any registers explicitly allocated to hardware registers are unavailable.
 %%Otherwise, the availability of registers depends on whether they have been assigned to
 %%temps (as shown by the variable map).
-<<varmap.ml>>=
+<<varmap.ml >>=
 let free_reg_inregs defs live_in live_out (_, lm) regs_used t_live_past_uses r =
   let not_in set = not (RS.mem r set) in
   not (RM.mem r lm) && not_in regs_used && not_in live_in &&
@@ -17269,7 +17234,7 @@ printTempSet "defs: " defs;
   try_regs allregs NoneYet
 @
 %%A simple join, where a memory location is the join of two conflicting registers.
-<<varmap.ml>>=
+<<varmap.ml >>=
 let join (m1, _) (m2, _) =
   let upd t lp1 lp2 maps = match (lp1, lp2) with
   | ({reg' = Some r1; mem' = false}, {reg' = Some r2; mem' = false})
@@ -17326,13 +17291,13 @@ type def_dist = HW of hwdef
               | Temp of (int * int)
 
 @ 
-\section{[[front_zipcfg/zipcfg.nw]]}
+\section{[[cfg/zipcfg/zipcfg.nw]]}
 <<front_zipcfg/zipcfg.ml>>=
-<<zipcfg.ml>>
+<<zipcfg.ml >>
 @
 
 <<front_zipcfg/zipcfg.mli>>=
-<<zipcfg.mli>>
+<<zipcfg.mli >>
 @
 
 %%% ------------------------------------------------------------------ 
@@ -17374,7 +17339,7 @@ type def_dist = HW of hwdef
 %%Insert a new node at the focus, and maintain the focus on the current edge.
 %%\end{itemize}
 %%Here are some basic types and operations:
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 type uid = Unique.uid
 type label = uid * string
 
@@ -17402,13 +17367,13 @@ val unfocus : zgraph -> graph           (* lose focus *)
 %%%%  error. 
 %%%%  After replacement, the focus looks at the successor of the replacement
 %%%%  graph's entry node.
-%%%%  <zipcfg.mli>=
+%%%%  <zipcfg.mli >=
 %%%%  val replace_focus : zgraph -> graph -> zgraph
 %% 
 %%We can insert a single-entry, single-exit subgraph at
 %%the current focus.
 %%The new focus can be at either the entry edge or the exit edge.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val splice_focus_entry : zgraph -> graph -> zgraph
 val splice_focus_exit  : zgraph -> graph -> zgraph
 @ 
@@ -17421,7 +17386,7 @@ val splice_focus_exit  : zgraph -> graph -> zgraph
 %%This is pretty ugly; it's a consequence of our being willing to insert
 %%new nodes only following an entry node.  Maybe something less ugly is
 %%lurking somewhere.  
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val add_blocks : graph -> zgraph -> graph
 @ 
 %%Building a graph.
@@ -17436,7 +17401,7 @@ val add_blocks : graph -> zgraph -> graph
 %%that takes the successor~$S$ and produces the sequence~$LS$.
 %%This representation is inspired by John Hughes's similar
 %%representation of lists, which supports append in constant time.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val uid : unit -> uid
 type exp_of_lbl = label -> Rtl.exp (* exp of code label *)
 type 'a machine = 'a * 'a Mflow.machine * exp_of_lbl (* useful pairing *)
@@ -17462,12 +17427,12 @@ val forbidden    : 'a machine -> nodes
   (* control should not reach; causes checked RTE *)
 @ 
 %%As a convenience, we provide code generation for if-then-else and while-do.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val if_then_else : 'a machine -> cbranch -> t:nodes -> f:nodes -> nodes
 val while_do     : 'a machine -> cbranch -> body:nodes -> nodes
 @ 
 %%A limitcheck is a degenerate form of [[if]] with a special label.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val limitcheck : 'a machine -> cbranch -> t:nodes -> nodes
 @ 
 %%Sometimes we need to make the current focus (which must be the edge
@@ -17475,15 +17440,15 @@ val limitcheck : 'a machine -> cbranch -> t:nodes -> nodes
 %%a branch target to be used later.
 %%Calling [[make_target gz]] returns a new graph and a unique identifier
 %%to which the entry flows in.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val make_target : 'a machine -> zgraph -> label * zgraph
 @ 
 %%Mutation---ugh!
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val set_spans : zgraph -> Spans.t -> unit  (* set spans at node preceding focus *)
 @ 
 %%We can also make a graph out of a single [[middle]] or [[last]] node.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val single_middle : Rep.middle -> graph
 val single_last   : Rep.last   -> graph
 @ 
@@ -17570,21 +17535,21 @@ val zipht       : head -> tail -> block
 %%Splicing a tail is the dual operation.
 %%(In order to maintain the order-means-control-flow convention, the
 %%orders are reversed.)
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val splice_head : Rep.head -> graph -> graph * Rep.head
 val splice_tail : graph -> Rep.tail -> Rep.tail * graph
 @ 
 %%We can also splice a single-entry, no-exit graph into a head.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val splice_head_only : Rep.head -> graph -> graph
 @ 
 %%Finally, we can find the entry node of a graph and remove it, leaving
 %%a tail leading into the rest of the graph:
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val remove_entry : graph -> Rep.tail * graph
 @ 
 %%Access to the representation:
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val to_blocks : graph -> Rep.block Unique.Map.t
 val of_blocks : Rep.block Unique.Map.t -> graph  (* cheap *)
 val of_block_list : Rep.block list -> graph  (* expensive *)
@@ -17595,7 +17560,7 @@ val tozgraph : Rep.zblock * Rep.block Unique.Map.t -> zgraph
 %%the entry node.
 %%The postorder depth-first-search order means the list is in roughly
 %%first-to-last order, as suitable for use in a forward dataflow problem.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val postorder_dfs : graph -> Rep.block list
 @ 
 %%For layout, we fold over pairs of type [[block * label option]] in
@@ -17604,15 +17569,15 @@ val postorder_dfs : graph -> Rep.block list
 %%successor of the current block.
 %%This may be useful to help an emitter omit the final [[goto]] of a
 %%block that flows directly to its layout successor.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val fold_layout : (Rep.block -> label option -> 'a -> 'a) -> 'a -> graph -> 'a
 @ 
 %%We can also fold and iterate over blocks.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val fold_blocks : (Rep.block -> 'a -> 'a) -> 'a -> graph -> 'a
 val iter_blocks : (Rep.block -> unit) -> graph -> unit
 @ 
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val expand : (Rep.middle -> graph) -> (Rep.last -> graph) -> graph -> graph
 @ 
 %%
@@ -17632,7 +17597,7 @@ val last_instr : last -> Rtl.rtl  (* may be nop for, e.g., [[Exit]] *)
 <<declarations of [[Rep]]'s public functions>>=
 val is_executable : middle -> bool
 @ 
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val iter_spans : (Spans.t -> unit) -> graph -> unit
 val fold_spans : (Spans.t -> 'a -> 'a) -> graph -> 'a -> 'a
 @ 
@@ -17642,18 +17607,18 @@ val fold_fwd_block :
   (first -> 'a -> 'a) -> (middle -> 'a -> 'a) -> (last -> 'a -> 'a) ->
   block -> 'a -> 'a
 @ 
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val iter_nodes :
   (Rep.first -> unit) -> (Rep.middle -> unit) -> (Rep.last -> unit) -> graph -> unit
 val iter_rtls : (Rtl.rtl -> unit) -> graph -> unit
 @ 
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val map_rtls : (Rtl.rtl -> Rtl.rtl) -> graph -> graph
 val map_nodes :
   (Rep.first -> Rep.first) -> (Rep.middle -> Rep.middle) -> (Rep.last -> Rep.last) ->
   graph -> graph
 @ 
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val new_rtlm : Rtl.rtl -> Rep.middle -> Rep.middle
 val new_rtll : Rtl.rtl -> Rep.last   -> Rep.last
 val map_rtlm : (Rtl.rtl -> Rtl.rtl) -> Rep.middle -> Rep.middle
@@ -17672,13 +17637,13 @@ val map_rtll :
 %%edge bears no dataflow information; the [[flow]] continuation is used
 %%in the general case.  Clients must guarantee that
 %%[[noflow n = flow {node=n; defs=empty; kills=empty}]].
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val union_over_outedges :
   Rep.last -> noflow:(uid -> regs) -> flow:(contedge -> regs) -> regs
 @ 
 %%Function [[union_over_outedges]] is good for backward problems; the
 %%corresponding function for forward problems is [[iter_outedges]].
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val iter_outedges :
   Rep.last -> noflow:(uid -> unit) -> flow:(contedge -> unit) -> unit
 @
@@ -17690,7 +17655,7 @@ val iter_outedges :
 %%Calling [[add_live_spans n l]] returns the union of~[[l]] with any
 %%registers kept live in spans.
 %%Spans keep register live if they may be needed to walk the stack.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val add_inedge_uses : Rep.last  -> regs -> regs
 val add_live_spansl : Rep.last  -> regs -> regs
 val add_live_spansf : Rep.first -> regs -> regs
@@ -17699,7 +17664,7 @@ val add_live_spansf : Rep.first -> regs -> regs
 %%\paragraph{Conversion from a DAG}
 %%Parts of the compiler work with DAG's for convenience, but eventually we need to
 %%  convert the DAGs to CFGs.
-<<zipcfg.mli>>=
+<<zipcfg.mli >>=
 val block_before : 'a machine -> (Rtl.exp -> Rtl.rtl) Dag.block -> zgraph ->
                      (zgraph * bool)
 val block2cfg    : 'a machine -> (Rtl.exp -> Rtl.rtl) Dag.block -> (zgraph * bool)
@@ -17710,7 +17675,7 @@ val cbranch2cfg  : 'a machine -> (Rtl.exp -> Rtl.rtl) Dag.cbranch ->
 %%\clearpage
 \subsection{Implementation}
 %%
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 open Nopoly
 
 module DG  = Dag
@@ -17735,7 +17700,7 @@ let uid         = U.uid
 %%It is OK to open [[Rep]] because the definition is sitting right
 %%here---this [[open]] does not create the stereotypical problem of a
 %%mysterious [[open]] from a separately compiled module.
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 type regs = Register.SetX.t (* sets of regs for dataflow *)
 type contedge = { kills:regs; defs:regs; node:label; assertion: Rtl.rtl }
 
@@ -17804,7 +17769,7 @@ let first =
 %%For the graph, we want to be able to look up a block efficiently by
 %%its unique id.  
 %%For the time being, we use a list:
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 module type BLOCKS = sig
   type t
   val empty  : t
@@ -17831,7 +17796,7 @@ module Blocks : BLOCKS with type t = block UM.t = struct
   let iter = UM.iter
 end
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 type graph  = Blocks.t
 type zgraph = zblock * Blocks.t
 type nodes   = zgraph -> zgraph (* sequence of nodes in Hughes's representation *)
@@ -17842,7 +17807,7 @@ let to_blocks g = g
 let openz z = z
 let tozgraph z = z
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let empty = Blocks.insert (Entry, Last Exit) Blocks.empty
 
 let focus uid blocks =
@@ -17858,7 +17823,7 @@ let exit g =
 let unfocus (bz, bs) = Blocks.insert (zip bz) bs
 @ 
 %%
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let consm middle ((h, t), blocks) = ((h, Tail (middle, t)), blocks)
 
 let instruction  rtl g = consm (Instruction  rtl) g
@@ -17900,7 +17865,7 @@ and cut_to (p, machine, l2e as m) cut_args ~cuts_to ~aborts ~uses =
   consl' m b (Cut (r, cuts_to, uses))
 @ 
 %%
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let return  rtl ~exit ~uses  = consl (Return (exit, rtl, uses))
 let forbidden (_, machine,_) = consl (Forbidden machine.M.forbidden)
 @ 
@@ -17917,7 +17882,7 @@ and label        x = label' Userlabel x
 and privatelabel x = label' Genlabel x
 and limitlabel   x = label' Limitlabel x
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let check_single_exit g =
   let check block found = match last (unzip block) with
   | Exit when not found -> true
@@ -17976,12 +17941,12 @@ and call (p, machine,l2e as m) exp ~altrets ~unwinds_to ~cuts_to ~aborts
       fst (block_before m b ((First Entry, Last (Call call)), blocks))
   | _ -> impossf "internal error in call constructor"
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let set_spans (bz, blocks) spans = match bz with
 | First (Label (l, u, r)), _ -> r := Some spans
 | _ -> impossf "setting spans on non-label"
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let iter_spans f g =
   let span s = match s with Some s -> f s | None -> () in
   let first = function Label (_, _, s) -> span (!s) | _ -> () in
@@ -17992,7 +17957,7 @@ let iter_spans f g =
     | _ -> () in
   Blocks.iter block g
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let fold_spans f g z =
   let span s z = match s with Some s -> f s z | None -> z in
   let first f z = match f with Label (_, _, s) -> span (!s) z | _ -> z in
@@ -18003,7 +17968,7 @@ let fold_spans f g z =
     | _ -> z in
   Blocks.fold block g z
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let add_blocks blocks (focus, newblocks) =
   match focus with
   | First Entry, Last (Branch _ | Forbidden _ | Exit) ->
@@ -18040,7 +18005,7 @@ let fold_succs f t z = match t with
 
 let iter_succs f t = fold_succs (fun t () -> f t) t ()
 @
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let postorder_dfs g =
   let entry, blocks = entry g in
   let rec vnode block cont acc visited =
@@ -18061,7 +18026,7 @@ let postorder_dfs g =
     next children acc visited in
   vnode (zip entry) (fun acc _visited -> acc) [] US.empty
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let fold_layout f z g =
   let nextlabel (f, t) = match f with
     | Entry -> impossf "entry as successor"
@@ -18081,7 +18046,7 @@ let fold_fwd_block first middle last (f, t) z =
   tail t z
 @ 
 %%
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let iter_nodes first middle last g =
   let block (f, t) =
     let () = first f in
@@ -18095,11 +18060,11 @@ let iter_rtls rfun g =
   iter_nodes
     (fun f -> ()) (fun m -> rfun (mid_instr m)) (fun l -> rfun (last_instr l)) g
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let fold_blocks f z bs = UM.fold (fun _ -> f) bs z
 let iter_blocks = UM.iter
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let new_rtll rtl l = match l with
 | Exit -> l
 | Branch  (r, l) -> Branch (rtl, l)
@@ -18115,7 +18080,7 @@ let new_rtlm rtl m = match m with
 | Instruction r  -> Instruction rtl
 | Stack_adjust r -> Stack_adjust rtl
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let map_rtll ~map_rtl ~map_assn l =
   let map_ces ces =
     List.map (fun ce -> { ce with assertion = map_assn ce.assertion }) ces in
@@ -18144,7 +18109,7 @@ let map_rtls map g =
   UM.map block g
 @ 
 %%
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let map_nodes first middle last g =
   let block (f, t) =
     let rec tail t = match t with
@@ -18153,7 +18118,7 @@ let map_nodes first middle last g =
     (first f, tail t) in
   UM.map block g
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 (* should this fn be defined on exi and ill?
    when there are cont edges, do we still need to cover the regular edges?*)
 let (++) = RSX.union
@@ -18224,7 +18189,7 @@ let last_instr l = match l with
 | Jump    (r, _, _) -> r
 | Forbidden r -> r
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let of_block_list blocks =
   List.fold_left (fun m b -> Blocks.insert b m) Blocks.empty blocks 
 @ 
@@ -18234,7 +18199,7 @@ let of_block_list blocks =
 %%splicing purposes. 
 %%There are two useful cases: the graph is a single block or it isn't.
 %%We use continuation-passing style.
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let prepare_for_splicing graph single multi =
   let gentry, gblocks = Blocks.focus graph entry_uid in
   if UM.is_empty gblocks then
@@ -18253,7 +18218,7 @@ let _ = (prepare_for_splicing :
   (entry:Rep.tail -> exit:Rep.head -> others:Rep.block Unique.Map.t -> 'answer) ->
   'answer)
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let splice_head head g =
   check_single_exit g;
   let splice_one_block tail' = match ht_to_last head tail' with
@@ -18264,7 +18229,7 @@ let splice_head head g =
   prepare_for_splicing g splice_one_block splice_many_blocks
 @ 
 %%
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let splice_tail g tail =
   check_single_exit g;
   let splice_one_block tail' =  (* return tail' .. tail *)
@@ -18278,7 +18243,7 @@ let splice_tail g tail =
     (entry, Blocks.insert (zipht exit tail) others) in
   prepare_for_splicing g splice_one_block splice_many_blocks
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let splice_focus_entry ((head, tail), blocks) g =
   let tail, blocks' = splice_tail g tail in
   ((head, tail), Blocks.union blocks' blocks)
@@ -18287,14 +18252,14 @@ let splice_focus_exit ((head, tail), blocks) g =
   let blocks', head = splice_head head g in
   ((head, tail), Blocks.union blocks' blocks)
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let splice_head_only head graph =
   let gentry, gblocks = Blocks.focus graph entry_uid in
   match gentry with
   | Entry, tail -> Blocks.insert (zipht head tail) gblocks
   | _ -> impossf "splice graph does not start with entry"
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let remove_entry graph =
   let gentry, gblocks = Blocks.focus graph entry_uid in
   match gentry with
@@ -18306,7 +18271,7 @@ let remove_entry graph =
 %%
 %%This probably duplicates some other splicing stuff.
 %%And I'm not too happy even with the local redundancy.
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let expand expand_middle expand_last graph =
   let expand_block block expanded =
     let rec expand_tail h t expanded = match t with
@@ -18319,7 +18284,7 @@ let expand expand_middle expand_last graph =
     expand_tail (First f) t expanded in
   Blocks.fold expand_block graph Blocks.empty 
 @ 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let single_middle m =
   let block = (Entry, Tail (m, Last Exit)) in
   Blocks.insert block Blocks.empty
@@ -18341,7 +18306,7 @@ let single_last l =
 %%Free reference [[modified]] is set only if a new node is added to the graph.
 %%IT MAY BE NECESSARY TO REASSOCIATE TO AVOID REPLACING INSTRUCTION $i$
 %%WITH $i; \mathtt{Nop}$. 
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 let modified = ref false
 @ 
 %%
@@ -18393,7 +18358,7 @@ and cbranch2cfg m c ~ifso ~ifnot s =
   modified := false;
   (cbranch2cfg' m c ifso ifnot s, !modified)
 @
-<<zipcfg.ml>>=
+<<zipcfg.ml >>=
 <<mutually recursive graph construction>>
 @
 

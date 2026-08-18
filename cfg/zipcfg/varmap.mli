@@ -1,5 +1,5 @@
 (*s: front_zipcfg/varmap.mli *)
-(*s: varmap.mli *)
+(*s: varmap.mli  *)
 type reg  = Register.t
 type rset = Register.Set.t
 type temp = Register.t
@@ -16,7 +16,7 @@ type def_dist = HW of hwdef
               | Temp of (int * int)
 
 (*e: types for tracking defs and uses *)
-(*x: varmap.mli *)
+(*x: varmap.mli  *)
 type t
 val empty            : t
 val add_reg          : temp -> Register.t   -> t -> t
@@ -35,7 +35,7 @@ val remove_reg'      : temp -> y -> y
 val spill'           : temp -> y -> y
 val join             : y -> y -> y
 val eq'              : old:y -> new':y -> bool
-(*x: varmap.mli *)
+(*x: varmap.mli  *)
 val fold             : (temp -> Register.t   -> 'a -> 'a) ->
                        (temp -> Rtlutil.aloc -> 'a -> 'a) -> t -> 'a -> 'a
 val fold'            : (temp -> Register.t   -> 'a -> 'a) ->
@@ -48,14 +48,14 @@ val reg_contents     : t -> reg  -> temp option
 val reg_contents'    : y -> reg  -> temp list
 val print            : string -> t -> unit
 val print'           : string -> y -> unit
-(*x: varmap.mli *)
+(*x: varmap.mli  *)
 val free_reg_inregs  : rset -> rset -> rset -> t -> rset -> bool -> reg -> bool
 val free_reg_outregs : rset -> rset -> t -> rset -> bool -> reg -> bool
 val alloc_inreg  : reg list -> rset -> rset -> rset -> t -> rset -> bool ->
                    temp -> reg
 val alloc_outreg : reg list -> rset -> rset ->         t -> rset -> bool ->
                    temp -> reg
-(*x: varmap.mli *)
+(*x: varmap.mli  *)
 val sync_maps : t -> t -> t * t
-(*e: varmap.mli *)
+(*e: varmap.mli  *)
 (*e: front_zipcfg/varmap.mli *)

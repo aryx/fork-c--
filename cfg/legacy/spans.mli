@@ -1,5 +1,5 @@
 (*s: front_cfg/spans.mli *)
-(*s: spans.mli *)
+(*s: spans.mli  *)
 type t
 type label   = string
 type link    = Reloc.t
@@ -25,7 +25,7 @@ type rep =
   }
 (*e: regrettably exposed [[rep]] type *)
 val expose : t -> rep
-(*x: spans.mli *)
+(*x: spans.mli  *)
 val fold_live_locs : (Register.x -> 'a -> 'a) -> t -> 'a -> 'a
-(*e: spans.mli *)
+(*e: spans.mli  *)
 (*e: front_cfg/spans.mli *)

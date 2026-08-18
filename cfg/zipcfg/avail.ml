@@ -1,5 +1,5 @@
 (*s: front_zipcfg/avail.ml *)
-(*s: avail.ml *)
+(*s: avail.ml  *)
 module R   = Rtl
 module RP  = Rtl.Private
 module RU  = Rtlutil
@@ -8,7 +8,7 @@ module Dn  = Rtl.Dn
 module S   = RU.ToString
 let () = Debug.register "avail" "available expressions"
 let debug = Debug.on "avail"
-(*x: avail.ml *)
+(*x: avail.ml  *)
 type t = Unknown | Known of (RP.loc * RP.exp) list
 let unknown = Unknown
 let smaller ~old ~new' =
@@ -18,7 +18,7 @@ let smaller ~old ~new' =
       (match new' with
       | Unknown -> false
       | Known news -> List.length news < List.length olds)
-(*x: avail.ml *)
+(*x: avail.ml  *)
 let in_loc t l = match t with
 | Unknown -> None
 | Known pairs -> try Some (List.assoc l pairs) with Not_found -> None
@@ -28,7 +28,7 @@ let has_exp t e = match t with
 | Known pairs ->
     try Some (fst (List.find (fun (_, e') -> RU.Eq.exp e e') pairs))
     with Not_found -> None
-(*x: avail.ml *)
+(*x: avail.ml  *)
 let join a a' = match a, a' with
 | Unknown, a' -> a'
 | a, Unknown  -> a
@@ -36,7 +36,7 @@ let join a a' = match a, a' with
     let primed (l, e) =
       List.exists (fun (l', e') -> RU.Eq.loc l l' && RU.Eq.exp e e') ps' in
     Known (List.filter primed ps)
-(*x: avail.ml *)
+(*x: avail.ml  *)
 (*s: kills *)
 let locs_killed rtl =
   let add l locs = if List.mem l locs then locs else l :: locs in
@@ -100,7 +100,7 @@ let forward rtl t =
                                       (S.loc (Up.loc l)) (S.exp (Up.exp r))) pairs;
     end;
   Known pairs
-(*x: avail.ml *)
+(*x: avail.ml  *)
 let to_string = function
   | Unknown -> "<?>"
   | Known [] -> "<nothing-available>"
@@ -109,5 +109,5 @@ let to_string = function
         Printf.sprintf "\n  %s = %s"
           (RU.ToString.loc (Up.loc l)) (RU.ToString.exp (Up.exp e)) in
       String.concat "" (List.map print les)
-(*e: avail.ml *)
+(*e: avail.ml  *)
 (*e: front_zipcfg/avail.ml *)

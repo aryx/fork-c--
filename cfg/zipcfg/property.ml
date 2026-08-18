@@ -1,4 +1,3 @@
-(*s: front_zipcfg/property.ml *)
 (*s: property.ml *)
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 (*s: exposed representation *)
@@ -80,4 +79,3 @@ module M = struct
   (*e: implementation *)
 end
 (*e: property.ml *)
-(*e: front_zipcfg/property.ml *)

@@ -1,4 +1,3 @@
-(*s: front_zipcfg/unique.ml *)
 (*s: unique.ml *)
 module P = Property.M
 type uid = int * P.list
@@ -99,4 +98,3 @@ module Prop = struct
 end
 
 (*e: unique.ml *)
-(*e: front_zipcfg/unique.ml *)

@@ -1,4 +1,3 @@
-(*s: front_cfg/mflow.ml *)
 (*s: mflow.ml *)
 (*s: signatures *)
 type ('em, 'pr) map' = ('em, 'pr) Ep.pre_map =
@@ -138,4 +137,3 @@ module MakeStandard (P : PC) = struct
   (*e: standard machine-level control flow *)
 end
 (*e: mflow.ml *)
-(*e: front_cfg/mflow.ml *)

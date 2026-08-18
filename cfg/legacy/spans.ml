@@ -1,5 +1,5 @@
 (*s: front_cfg/spans.ml *)
-(*s: spans.ml *)
+(*s: spans.ml  *)
 type label = string
 type link  = Reloc.t
 type aligned = int
@@ -20,11 +20,11 @@ let to_spans ~inalloc ~outalloc ~ra ~users ~csregs ~conts ~sds ~vars =
   { inalloc = inalloc; outalloc = outalloc; ra = ra; users = users; csregs = csregs;
     conts = conts; sds = sds; vars = vars; }
 let expose spans = spans
-(*x: spans.ml *)
+(*x: spans.ml  *)
 let fold_live_locs f spans z =
   let fold = Rtlutil.Fold.RegX.loc f in
   let foldcsreg z = function (_, Some l) -> fold l z | (_, None) -> z in
   List.fold_left foldcsreg (fold spans.inalloc (fold spans.outalloc (fold spans.ra z)))
                            spans.csregs
-(*e: spans.ml *)
+(*e: spans.ml  *)
 (*e: front_cfg/spans.ml *)

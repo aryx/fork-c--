@@ -1,5 +1,5 @@
 (*s: front_cfg/cfg.mli *)
-(*s: cfg.mli *)
+(*s: cfg.mli  *)
 (*s: exported signatures *)
 module type X = sig
   type jx  (* extension at join point *)
@@ -165,7 +165,7 @@ module type S = sig
   (*e: graph and node mutators *)
 end
 (*e: exported signatures *)
-(*x: cfg.mli *)
+(*x: cfg.mli  *)
 module Make (X:X) : S with module X = X
-(*e: cfg.mli *)
+(*e: cfg.mli  *)
 (*e: front_cfg/cfg.mli *)
