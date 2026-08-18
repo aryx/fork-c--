@@ -75,23 +75,23 @@ SRC_VIEWS= \
  $TOP/rtl/space.mli\
  $TOP/rtl/space.ml\
  \
- $TOP/ir/fenv.mli\
- $TOP/ir/fenv.ml\
- $TOP/ir/asm.mli\
- $TOP/ir/asm.ml\
- $TOP/ir/block.mli\
- $TOP/ir/block.ml\
- $TOP/ir/eqn.mli\
- $TOP/ir/eqn.ml\
- $TOP/ir/metrics.mli\
- $TOP/ir/metrics.ml\
- $TOP/ir/rtleqn.mli\
- $TOP/ir/rtleqn.ml\
+ $TOP/fenv/fenv.mli\
+ $TOP/fenv/fenv.ml\
+ $TOP/fenv/asm.mli\
+ $TOP/fenv/asm.ml\
+ $TOP/fenv/block.mli\
+ $TOP/fenv/block.ml\
+ $TOP/fenv/eqn.mli\
+ $TOP/fenv/eqn.ml\
+ $TOP/fenv/metrics.mli\
+ $TOP/fenv/metrics.ml\
+ $TOP/fenv/rtleqn.mli\
+ $TOP/fenv/rtleqn.ml\
  \
- $TOP/ir/context.mli\
- $TOP/ir/context.ml\
- $TOP/ir/talloc.mli\
- $TOP/ir/talloc.ml\
+ $TOP/fenv/context.mli\
+ $TOP/fenv/context.ml\
+ $TOP/fenv/talloc.mli\
+ $TOP/fenv/talloc.ml\
  \
  $TOP/cfg/front_cfg/cfg.mli\
  $TOP/cfg/front_cfg/cfg.ml\
