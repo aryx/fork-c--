@@ -183,6 +183,9 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = run Ppc.X.cfg proc in
   dump_cfg "instrsel-cfg" "AFTER instruction selection (ppc):" proc;
   let proc = if opt_level > 0 then run Peephole.subst_forward proc else proc in
+  (* claude: opti/cse.ml deliberately NOT wired in - see
+   * arch/x86/x86backend.ml's optimizer comment and opti/cse.ml's own
+   * header comment for why. *)
   (* claude: new integration, gated like the rest of opti/ - see
    * arch/x86/x86backend.ml's optimizer and tests/optimizer/
    * elim_dead_assignments.c--. *)
