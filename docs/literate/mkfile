@@ -69,22 +69,25 @@ SRC_VIEWS= \
  $TOP/ast/astpp.mli\
  $TOP/ast/astpp.ml\
  \
- $TOP/ir/register.mli\
- $TOP/ir/register.ml\
- $TOP/ir/reloc.mli\
- $TOP/ir/reloc.ml\
- $TOP/ir/rtl.mli\
- $TOP/ir/rtl.ml\
- $TOP/ir/rtldebug.mli\
- $TOP/ir/rtldebug.ml\
- $TOP/ir/rtlop.mli\
- $TOP/ir/rtlop.ml\
- $TOP/ir/rtlutil.mli\
- $TOP/ir/rtlutil.ml\
- $TOP/ir/symbol.mli\
- $TOP/ir/symbol.ml\
- $TOP/ir/types.mli\
- $TOP/ir/types.ml\
+ $TOP/rtl/register.mli\
+ $TOP/rtl/register.ml\
+ $TOP/rtl/reloc.mli\
+ $TOP/rtl/reloc.ml\
+ $TOP/rtl/rtl.mli\
+ $TOP/rtl/rtl.ml\
+ $TOP/rtl/rtldebug.mli\
+ $TOP/rtl/rtldebug.ml\
+ $TOP/rtl/rtlop.mli\
+ $TOP/rtl/rtlop.ml\
+ $TOP/rtl/rtlutil.mli\
+ $TOP/rtl/rtlutil.ml\
+ $TOP/rtl/symbol.mli\
+ $TOP/rtl/symbol.ml\
+ $TOP/rtl/types.mli\
+ $TOP/rtl/types.ml\
+ $TOP/rtl/space.mli\
+ $TOP/rtl/space.ml\
+ \
  $TOP/ir/asm.mli\
  $TOP/ir/asm.ml\
  $TOP/ir/block.mli\
@@ -97,6 +100,11 @@ SRC_VIEWS= \
  $TOP/ir/metrics.ml\
  $TOP/ir/rtleqn.mli\
  $TOP/ir/rtleqn.ml\
+ \
+ $TOP/ir/context.mli\
+ $TOP/ir/context.ml\
+ $TOP/ir/talloc.mli\
+ $TOP/ir/talloc.ml\
  \
  $TOP/cfg/front_cfg/cfg.mli\
  $TOP/cfg/front_cfg/cfg.ml\
@@ -147,13 +155,6 @@ SRC_VIEWS= \
  $TOP/target/float.ml\
  $TOP/target/target.mli\
  $TOP/target/target.ml\
- \
- $TOP/ir/space.mli\
- $TOP/ir/space.ml\
- $TOP/ir/context.mli\
- $TOP/ir/context.ml\
- $TOP/ir/talloc.mli\
- $TOP/ir/talloc.ml\
  \
  $TOP/codegen/ast2ir.mli\
  $TOP/codegen/ast2ir.ml\
