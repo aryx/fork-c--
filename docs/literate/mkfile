@@ -88,11 +88,6 @@ SRC_VIEWS= \
  $TOP/fenv/rtleqn.mli\
  $TOP/fenv/rtleqn.ml\
  \
- $TOP/fenv/context.mli\
- $TOP/fenv/context.ml\
- $TOP/fenv/talloc.mli\
- $TOP/fenv/talloc.ml\
- \
  $TOP/cfg/front_cfg/cfg.mli\
  $TOP/cfg/front_cfg/cfg.ml\
  $TOP/cfg/front_cfg/cfgx.mli\
@@ -183,6 +178,11 @@ SRC_VIEWS= \
  $TOP/middle/codegen/rewrite.ml\
  $TOP/middle/codegen/runtimedata.mli\
  $TOP/middle/codegen/runtimedata.ml\
+ \
+ $TOP/middle/codegen/context.mli\
+ $TOP/middle/codegen/context.ml\
+ $TOP/middle/codegen/talloc.mli\
+ $TOP/middle/codegen/talloc.ml\
  \
  $TOP/middle/codegen/widen.mli\
  $TOP/middle/codegen/widen.ml\
