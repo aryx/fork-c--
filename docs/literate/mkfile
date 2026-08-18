@@ -211,6 +211,8 @@ SRC_VIEWS= \
  $TOP/regalloc/registerclass.ml\
  $TOP/regalloc/colorgraph.mli\
  $TOP/regalloc/colorgraph.ml\
+ $TOP/regalloc/dls.mli\
+ $TOP/regalloc/dls.ml\
  \
  $TOP/layout/mvalidate.mli\
  $TOP/layout/mvalidate.ml\
