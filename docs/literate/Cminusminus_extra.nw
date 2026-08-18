@@ -4666,25 +4666,14 @@ type width = int
 %%applied to values and return a value.
 <<types and functions exported at top level>>=
 
-(* pad: was originally abstrac types but it forbids to use
- * the debugger to inspect values.
- *
- * 
- * type exp          (* denotes a compile-time or run-time value *)
- * type loc          (* mutable container of a bit vector *)
- * type rtl          (* effect of a computation *)
- * type opr          (* a pure function on values *)
- * type assertion    (* a claim about the run-time value of an address *)
- *)
-
-type exp       = Private.exp     
+type exp          (* denotes a compile-time or run-time value *)
 [@@deriving show]
-type loc       = Private.loc   
+type loc          (* mutable container of a bit vector *)
 [@@deriving show]
-type rtl       = Private.rtl        
+type rtl          (* effect of a computation *)
 [@@deriving show]
-type opr       = Private.opr        
-type assertion = Private.assertion  
+type opr          (* a pure function on values *)
+type assertion    (* a claim about the run-time value of an address *)
 
 val bool      : bool -> exp                    
 val bits      : Bits.bits -> width -> exp      
