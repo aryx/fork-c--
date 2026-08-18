@@ -7413,13 +7413,13 @@ This optimization would insert a move instruction instead of a store.
 %-------------------------------------------------------------------
 \subsection{Shuffling Establishes Consistency}
 %-------------------------------------------------------------------
-\begin{alltt}
-  loads = in succ\_vm, but not in pred\_vm
-
-  moves = in both, but not in same place
-
-  stores = in pred\_vm, but not in succ\_vm; live into succ
-\end{alltt}
+%\begin{alltt}
+%  loads = in succ\_vm, but not in pred\_vm
+%
+%  moves = in both, but not in same place
+%
+%  stores = in pred\_vm, but not in succ\_vm; live into succ
+%\end{alltt}
 
 Hmmmm.... the aliasing call is okay only if we have registers on both sides of
   the assignment -- I should really do something more general about shuffling
