@@ -64,7 +64,7 @@ let parse (file:string) =
               )
 (*x: driver.ml content *)
 let emit_asdl (map,ast) =
-        AstUtil.sexp_wr_program ast stdout
+        failwith "OLD: AstUtil.sexp_wr_program ast stdout"
 (*x: driver.ml content *)
 let pretty (map,ast) = Astpp.program ast
 let print doc width channel = Pp.ppToFile channel width doc

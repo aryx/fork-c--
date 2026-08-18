@@ -8,18 +8,18 @@
  --view=OCaml
  *)
 (* module Ast*)
-  type name = (StdPrims.std_string)
-  and conv = (StdPrims.std_string)
-  and hint = (StdPrims.std_string)
-  and reg = (StdPrims.std_string)
-  and target = (StdPrims.std_string)
-  and alias_set = (StdPrims.std_string)
-  and size = (StdPrims.std_int)
-  and align = (StdPrims.std_int)
-  and aligned = (StdPrims.std_int)
-  and in_alias = (StdPrims.std_string)
-  and op = (StdPrims.std_string)
-  and region = (StdPrims.std_int * StdPrims.std_int)
+  type name = (string)
+  and conv = (string)
+  and hint = (string)
+  and reg = (string)
+  and target = (string)
+  and alias_set = (string)
+  and size = (int)
+  and align = (int)
+  and aligned = (int)
+  and in_alias = (string)
+  and op = (string)
+  and region = (int * int)
   (* coupling: Srcmap.rgn printer *)
   [@printer fun fmt _ -> Format.pp_print_string fmt "<>"]
   and ty =
@@ -35,17 +35,17 @@
   and actual = (hint option * expr * aligned option)
   and expr =
         E of (expr * region)
-      | Sint of (StdPrims.std_string * ty option)
-      | Uint of (StdPrims.std_string * ty option)
-      | Float of (StdPrims.std_string * ty option)
-      | Char of (StdPrims.std_int * ty option)
+      | Sint of (string * ty option)
+      | Uint of (string * ty option)
+      | Float of (string * ty option)
+      | Char of (int * ty option)
       | Fetch of (name_or_mem)
       | BinOp of (expr * op * expr)
       | UnOp of (op * expr)
       | PrimOp of (name * actual list)
   
-  and import = (StdPrims.std_string option * name)
-  and export = (name * StdPrims.std_string option)
+  and import = (string option * name)
+  and export = (name * string option)
   and variance =
         Invariant
       | Invisible
@@ -53,13 +53,13 @@
   
   and register = (variance * hint option * ty * name * reg option)
   and arch =
-        Memsize of (StdPrims.std_int)
+        Memsize of (int)
       | ByteorderBig
       | ByteorderLittle
-      | FloatRepr of (StdPrims.std_string)
-      | Charset of (StdPrims.std_string)
-      | WordSize of (StdPrims.std_int)
-      | PointerSize of (StdPrims.std_int)
+      | FloatRepr of (string)
+      | Charset of (string)
+      | WordSize of (int)
+      | PointerSize of (int)
   
   and decl =
         D of (decl * region)
@@ -81,8 +81,8 @@
   and init =
         I of (init * region)
       | InitExprs of (expr list)
-      | InitStr of (StdPrims.std_string)
-      | InitUStr of (StdPrims.std_string)
+      | InitStr of (string)
+      | InitUStr of (string)
   
   and datum =
         Da of (datum * region)
@@ -138,7 +138,7 @@
       | CutStmt of (expr * actual list * flow list)
       | ReturnStmt of (conv option * altcont option * actual list)
       | EmptyStmt
-      | CommentStmt of (StdPrims.std_string)
+      | CommentStmt of (string)
       | LimitcheckStmt of (expr * expr option)
   
   and body = B of (body * region)

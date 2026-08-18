@@ -32,13 +32,8 @@ let test_pp_cmm file  =
   ()
 
 let test_dump_cmm file  =
-  let ast = Parse_cmm.parse file in
-
-  let temp = UTmp.new_temp_file ~prefix:"cmm" ~suffix:"sexp" () in
-  UFile.with_open_out temp (fun (_, chan) ->
-    AstUtil.sexp_wr_toplevel_list ast chan;
-  );
-  failwith "TODO lib-sexp not here anymore"
+  let _ast = Parse_cmm.parse file in
+  failwith "OLD: AstUtil.sexp_wr_toplevel_list ast chan"
 (*
   let s = Common.read_file temp in
   (* Common.cat temp |> List.iter UCommon.pr2; *)
