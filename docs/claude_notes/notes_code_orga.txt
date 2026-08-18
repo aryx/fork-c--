@@ -59,7 +59,8 @@ them):
 
 ```
 ast/              (leaf)
-rtl/              (leaf)
+rtl/              -> ast/  (Rtlutil.ToAST: converts Rtl back to Ast, used by
+                             asm/astasm.ml to print assembly as C-- text)
 parsing/          -> ast/
 ir/               -> rtl/
 elab/             -> ir/  (+ ast/, currently transitive via parsing/)
@@ -84,35 +85,38 @@ Arrows point from a dependency down to whatever depends on it (top-to-bottom
 omitted again - everything below implicitly depends on both.
 
 ```
-    ast/                                rtl/
-     |                                   |
-     v                                   v
-  parsing/                              ir/
-     \                                 / |
-      \                               /  |
-       v                             v   v
-        elab/                     cfg/  (front_cfg -> front_zipcfg
-     (needs ir/; also ast/,       /|      -> dataflow)
-      via parsing/, see below)   / |
-          \                     /  |
-           \                   /   |
-            v                 v    v
-                   target/
-             (needs elab/, cfg/, ir/)
-                      |
-          .-----------+-----------.
-          |                       |
-          v                       v
-       middle/                 backend/
-  (codegen/, opti/,       (asm/, regalloc/,
-   layout/)                 arch/{x86,ppc,mips,arm,
-          |                  riscv32,riscv64,sparc,
-          |                  alpha,dummy,interpreter})
-          |                       |
-          '-----------+-----------'
-                       |
-                       v
-                    driver/
+                    ast/
+                   /    \
+                  v      v
+             parsing/    rtl/   (rtl/ -> ast/ is just Rtlutil.ToAST,
+                 |          |    used by asm/'s C-- text printer)
+                 |          v
+                 |         ir/
+                 |        /  |
+                 |       /   |
+                 v      v    v
+                 elab/      cfg/  (front_cfg -> front_zipcfg
+             (needs ir/;    /|      -> dataflow)
+              + ast/ via   / |
+              parsing/)   /  |
+                 \        /  |
+                  v      v   v
+                     target/
+               (needs elab/, cfg/, ir/)
+                        |
+            .-----------+-----------.
+            |                       |
+            v                       v
+         middle/                 backend/
+    (codegen/, opti/,       (asm/, regalloc/,
+     layout/)                 arch/{x86,ppc,mips,arm,
+            |                  riscv32,riscv64,sparc,
+            |                  alpha,dummy,interpreter})
+            |                       |
+            '-----------+-----------'
+                         |
+                         v
+                      driver/
 ```
 
 This is a hand-drawn, one-commit snapshot - it will rot the next time a
@@ -165,10 +169,15 @@ toplevel directories instead of being grouped and named.
 uses `Ast.variance` etc. But nothing outside `parsing/` uses its own
 `Scan`/`Parse`/`Parse_cmm` modules, even though several downstream dune
 files list `cmm_parsing` as a dependency - grep across rtl/, ir/, elab/,
-cfg/front_cfg/, codegen/ found zero uses. That's very likely dead/stale
-copy-paste in those `libraries` stanzas, not a real dependency edge - worth
-pruning during the move, but don't trust those specific lines at face
-value.)
+cfg/front_cfg/, codegen/ found zero such uses. `rtl/`'s case turned out not
+to be dead weight, just misdirected: `rtl/rtlutil.mli`'s `ToAST` module
+(`Rtl.exp -> Ast.expr`, `Rtl.rtl -> Ast.stmt`, used by `asm/astasm.ml` to
+print assembly as C-- text) genuinely needs `Ast`, it just got there via
+`cmm_parsing` instead of `cmm_ast` directly. Fixed 2026-08-18: `rtl/dune`
+now lists `cmm_ast` (see the dependency table/drawing above - `dune build`
+still green). `ir/`, `elab/`, `cfg/front_cfg/`, `codegen/` still list
+`cmm_parsing` unpruned - still worth checking each the same way during the
+move, don't assume they're all as harmless as `rtl/`'s turned out to be.)
 
 Why `ir/` and `target/` stay standalone (not folded into middle/ or
 front-ish stuff)
