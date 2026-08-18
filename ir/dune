@@ -5,7 +5,7 @@
     cmm_commons2 cmm_commons3
     cmm_error
     cmm_parsing
-    cmm_h_asdl
+
  )
  (preprocess (pps ppx_deriving.show))
 )

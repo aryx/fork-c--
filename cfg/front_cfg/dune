@@ -1,4 +1,4 @@
 (library
  (name cmm_front_cfg)
  (wrapped false)
- (libraries cmm_commons2 cmm_commons3 cmm_error cmm_ir cmm_parsing cmm_h_asdl))
+ (libraries cmm_commons2 cmm_commons3 cmm_error cmm_ir cmm_parsing))
