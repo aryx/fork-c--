@@ -80,20 +80,25 @@ fail=0
 
 # --- register allocation: QCDEBUG=ralloc-cfg, x86 only, one golden per
 # allocator - default (-O0, regalloc/flowra.ml's Flowra.ralloc) as
-# regalloc/<name>.trace, and -O3 (regalloc/colorgraph.ml's Colorgraph.ralloc,
-# see arch/x86/x86backend.ml's ~opt_level wiring) as
+# regalloc/<name>.trace, and -O3 -regalloc colorgraph
+# (regalloc/colorgraph.ml's Colorgraph.ralloc) as
 # regalloc/<name>.colorgraph.trace. Both allocators share the "ralloc-cfg"
 # QCDEBUG word (only flowra.ml calls Debug.register for it; colorgraph.ml
 # reuses it via Debug.on/Debug.eprintf only, since registering the same word
-# twice errors), so no flag is needed to pick which dump comes out - the -O3
-# flag alone picks the allocator.
+# twice errors), so no flag is needed to pick which dump comes out.
+#
+# claude: -regalloc colorgraph is passed explicitly rather than relying on
+# -O3's own default, since regalloc/ralloc_choice.ml's opt_level-driven
+# default no longer picks Colorgraph at -O3 (it picks Dls - see
+# arch/x86/x86backend.ml's history comment). This showcase specifically
+# wants Colorgraph's trace regardless of what the default is.
 for f in phases/regalloc/*.c--; do
   name=$(basename "$f" .c--)
   if [ -n "$want" ]; then
     case " $want " in *" $name "*) ;; *) continue ;; esac
   fi
 
-  for oflag in "" "-O3"; do
+  for oflag in "" "-O3 -regalloc colorgraph"; do
     if [ -z "$oflag" ]; then ext=trace; label="regalloc/$name"
     else ext=colorgraph.trace; label="regalloc/$name.colorgraph"
     fi

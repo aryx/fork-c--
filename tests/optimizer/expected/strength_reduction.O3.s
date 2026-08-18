@@ -8,10 +8,10 @@ strength_reduction:
 	leal 4294967292(%esp), %esp
 	leal 4(%esp), %ecx
 	movl (%ecx),%ecx
-	movl %ecx,(%esp)
 .Linitialize_continuations_l3:
 .Lproc_body_start_l2:
 	movl $0,%edx
+	movl %ecx,(%esp)
 	movl $0,%ecx
 L:
 .Lbranch_target_l7:
