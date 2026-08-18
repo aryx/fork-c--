@@ -74,13 +74,17 @@ Verified: what's conspicuously missing
 
 Proposed priority order (cheapest-given-existing-infra first)
 --------------------------------------------------------------------
-1. **CSE (common-subexpression elimination).** Shortest path to a real win:
-   `Availpass`'s dataflow scaffolding already exists and already works
-   (it's exercised today by the peephole pass) — this only needs a new
-   *use* of that analysis, not new analysis infrastructure. Add: when an
-   expression is available (already computed and live), replace a
-   recomputation with a reference to the existing temp instead of
-   re-evaluating.
+1. ~~**CSE (common-subexpression elimination).**~~ Implemented as of
+   2026-08-18 (`opti/cse.ml`, `Cse.eliminate`) but **not wired into either
+   backend** — it trips a real, pre-existing register-allocator hang in
+   `Colorgraph.ralloc`, verified to be a different mechanism than the
+   already-fixed loop-carried-value case. See
+   `notes_colorgraph_spillcost.txt` for the full investigation, options,
+   and how to re-enable it once fixed. (Turned out to need more new
+   analysis than expected too: `Availpass`'s existing scaffolding hangs
+   when driven this pass's way — see `opti/cse.ml`'s own header comment —
+   so this ended up as a from-scratch local, single-block scan instead of
+   a new client of the existing whole-procedure analysis.)
 2. **Global/sparse constant propagation.** Same pattern as #1 — a new
    client of the existing `Dataflow.F` functor, analogous to how
    `Availpass` is built, propagating known-constant values across blocks

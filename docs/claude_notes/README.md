@@ -70,6 +70,17 @@ Index:
   loop-aware optimization until it lands), then LICM/strength-reduction,
   then inlining (biggest win, but a different compiler layer with no
   call-graph infra yet).
+- [notes_colorgraph_spillcost.txt](notes_colorgraph_spillcost.txt) —
+  `opti/cse.ml` (a local common-subexpression pass) is implemented but not
+  wired into either backend: even narrowed to its safest form, it trips a
+  register-allocator hang in `Colorgraph.ralloc` on
+  `tests/cmm-pass/altret2.c--` — confirmed to be a *different* mechanism
+  than the already-fixed loop-carried-value case (this file has no loop at
+  all), same "diverging, never repeats" symptom but not yet root-caused
+  past "some value gets undercounted for spilling near a merge point,
+  probably around a `foreign \"C\"` call's argument setup." Options and a
+  reproduction recipe are in the note; picking one up is a fresh session's
+  job.
 - [notes_64bits.txt](notes_64bits.txt) — target-independent summary of what
   actually blocks a 64-bit backend (-alpha, -riscv64) from running real
   Tiger programs: three separately-owned bits32-hardcoding bugs (two in

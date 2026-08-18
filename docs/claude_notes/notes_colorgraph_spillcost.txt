@@ -1,0 +1,149 @@
+notes_colorgraph_spillcost.txt — why opti/cse.ml exists but isn't wired in,
+and what was found chasing the Colorgraph interaction that blocks it
+Written 2026-08-18, against commit 218adca.
+
+Status: opti/cse.ml (Cse.eliminate) is implemented, correct in isolation,
+and NOT wired into either backend's ~opt_level pipeline. This note is the
+handoff for finishing that: what's already ruled out, what's verified
+about the actual failure, and what a real fix likely needs to touch.
+
+Background — why CSE isn't wired in
+--------------------------------------------------------------------
+Cse.eliminate is a local (single-block, no-fixpoint) common-subexpression
+pass built on avail.ml's pure Avail.forward/has_exp/in_loc functions — see
+opti/cse.ml's own header comment for the full design history (two earlier
+attempts that reused the shared Dataflow.F/Availpass machinery directly
+each hit a genuine non-termination bug there; this local design sidesteps
+that class of bug by construction).
+
+Even in its narrowest correct form, wiring Cse.eliminate into
+arch/x86/x86backend.ml's optimizer made tests/cmm-pass/altret2.c-- (a
+previously-passing native-x86-O3 baseline test) hang. Not inside CSE
+itself — Cse.eliminate completes (verified with a print immediately
+before/after the function body) — the hang is downstream, inside
+Colorgraph.ralloc's build → … → selectSpill → assignColors → resetProgram
+→ build retry loop.
+
+Verified: this is NOT the already-fixed tail_from_c.c-- mechanism
+--------------------------------------------------------------------
+regalloc/colorgraph.ml already has a fix for one diverging-retry-loop
+mechanism, from a prior session (see its own comment above
+loop_carried_regs, and docs/claude_notes/notes_debugging_techniques.txt
+entry 27): spilling a value live across a loop back-edge inserts a
+reload that is *also* live across the back-edge, so it interferes with
+everything alive there and needs spilling itself next round —
+|get_regs cfg| (the interference graph's own register count) grows by
+exactly +1 every round forever. The fix heavily deprioritizes (1000x
+cost multiplier) any register live-out of a block whose last has a
+successor at or before its own postorder-DFS position — an approximate
+back-edge test — for exactly this reason.
+
+tests/cmm-pass/altret2.c-- has no loop at all: it's doread() (a function
+with an early-return if, called via foreign "C") called twice in
+sequence from main(), each call using "also returns to read_fail" (an
+alternate-return continuation, i.e. Zipcfg Call.cal_contedges — not a
+back edge). Re-enabling Cse.eliminate and tracing selectSpill's picks
+(add a print of loop_carried cardinality, the picked register's name,
+whether it's in loop_carried, and its numUses/liveRange/degreeMap;
+temporarily add `let proc = if opt_level > 0 then run Cse.eliminate proc
+else proc in` right after Peephole.subst_forward in
+arch/x86/x86backend.ml's optimizer to reproduce) shows:
+
+  DEBUG selectSpill: |loop_carried|=10 picked=t23 carried=false uses=4 range=2 deg=8
+  DEBUG selectSpill: |loop_carried|=10 picked=t6  carried=true  uses=2 range=16 deg=7
+  DEBUG selectSpill: |loop_carried|=9  picked=t39 carried=false uses=2 range=1 deg=7
+  DEBUG selectSpill: |loop_carried|=9  picked=t42 carried=false uses=2 range=1 deg=7
+  DEBUG selectSpill: |loop_carried|=9  picked=t44 carried=false uses=2 range=1 deg=7
+  ... (new temp every round, +2 each time, never repeats, 474 rounds before
+       the 8s timeout used to reproduce this)
+
+Same *symptom* as tail_from_c.c-- (a build()-level print of |get_regs cfg|
+confirms +1 growth per round, |blocks| constant at 9) but the picks are
+never flagged loop_carried after the second round. So this is a second,
+different mechanism producing an identical observable signature — the
+general lesson from notes_debugging_techniques.txt entry 27 (measure
+what grows, don't assume the shape) told the two apart, but this time
+both "diverging" cases turned out to need separate root causes too.
+
+Two things worth separating (neither fully chased down — this is where
+the trail stops)
+--------------------------------------------------------------------
+1. loop_carried_regs's back-edge test is only an approximation
+   ("successor at or before own postorder position"), and the trace above
+   shows it firing on t6 (carried=true) in a file with no real loop at
+   all — a false positive. That's consistent with it being unsound for
+   any CFG with converging-but-not-looping edges (a diamond, or a call's
+   normal-return + alternate-return continuations both reaching a common
+   successor) — postorder-DFS position comparison isn't a valid back-edge
+   test outside a single DFS tree with no other converging structure.
+   cfg/dataflow/dominator.ml's Dominator.Query (built this session, not
+   available when loop_carried_regs was written — its own comment
+   explicitly says "would need dominator/natural-loop analysis this file
+   doesn't have (see TODO/dominator.nw, still unintegrated)", which was
+   true then and isn't now) gives an exact test:
+   Dominator.Query.dominates_idx t h n for whether an edge n→h is a real
+   back edge. Swapping that in is a contained, clearly-correct
+   improvement regardless of the rest of this note — but verified NOT
+   sufficient on its own: altret2.c-- has no back edges, real or
+   approximate, to detect.
+
+2. The repeatedly-spilled temps (t39, t42, t44, …) all show range=1 (the
+   narrowest possible live range) and degree=7, and their replacement
+   reload — inserted at the same program point — comes back with the
+   identical profile the very next round. That's the actual puzzle: a
+   value with the shortest possible live range should not need spilling
+   at all unless there are genuinely more simultaneously-live values at
+   that one program point than available colors, in which case spilling
+   any one of them cannot help by itself (its reload is live at that same
+   point too). Not verified yet: which specific program point this is
+   (likely one of the argument-marshalling sequences before a `foreign
+   "C"` call — read()/close()/printf() each build several stack-argument
+   addresses in a row just before <call> in the AFTER-instruction-
+   selection dump, QCDEBUG=instrsel-cfg) and whether the true cause is
+   (a) genuinely irreducible pressure at that instruction (would need
+   fewer simultaneously-live temps generated there, a codegen/expander
+   fix, not a colorgraph one), or (b) cg.liveRange/degreeMap being
+   computed wrong at merge points generally. The existing code comment
+   above selectSpill already flags the mechanism for (b): "cg.liveRange/
+   numUses... are accumulated by addInterference's single linear
+   backward walk over each block... seeded from the real (correctly
+   fixed-pointed) Live.live_out_last" — i.e. only the per-block *boundary*
+   fact is a real fixed point; the walk that turns that into a liveRange/
+   degree *count* is a single linear pass, which is exactly the kind of
+   approximation that undercounts a value reachable from multiple
+   predecessors the same way it undercounts one that spans a back edge.
+   This was inferred from reading the code, not confirmed by tracing
+   which specific instruction produces degree=7 — that's the next step,
+   not yet done.
+
+Options for whoever picks this up (not decided — deferred to a fresh
+session on 2026-08-18 per pad's own call)
+--------------------------------------------------------------------
+a. Generalize the "heavily deprioritize for spilling" set beyond
+   back-edge-carried values to any value live into a block reached from
+   multiple predecessors (a merge point) — same shape as the existing
+   fix, using Dominator.Query for the exact back-edge case too. Heuristic,
+   not a proof it can't recur under some other CFG shape; contained
+   change.
+b. Make cg.liveRange/degreeMap themselves fixed-point-accurate instead of
+   a single linear per-block pass, so the cost heuristic doesn't need
+   case-by-case patching. Correct fix, but touches the allocator's core —
+   larger and riskier given how much of this session went into finding
+   sharp edges in code nothing else exercises quite this way (see
+   opti/cse.ml's header comment for the parallel story with
+   Dataflow.F.run_anal).
+c. First nail down which exact instruction has the genuine degree-7
+   pressure (per point 2 above) before choosing (a) or (b) — if it turns
+   out to be irreducible pressure at one instruction rather than a
+   liveRange-undercounting bug, neither (a) nor (b) fixes it and the real
+   fix is elsewhere (codegen/expander, or the calling-convention lowering
+   for foreign calls).
+
+Once whichever fix lands and tests/cmm-pass/altret2.c-- passes at -O3
+with Cse.eliminate wired in, re-add it: `let proc = if opt_level > 0 then
+run Cse.eliminate proc else proc in` right after Peephole.subst_forward
+in both arch/x86/x86backend.ml and arch/ppc/ppcbackend.ml (see the
+"deliberately NOT wired in" comment at that exact spot in x86backend.ml
+for the wiring this replaces), and re-verify the full suite (native-x86,
+native-x86-O3, native-ppc-O3, tests/run-optimizer.sh, tiger) still
+matches its recorded baselines.

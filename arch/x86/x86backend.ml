@@ -339,13 +339,13 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = if opt_level > 0 then run Peephole.subst_forward proc else proc in
   (* claude: opti/cse.ml (Cse.eliminate) is implemented but deliberately
    * NOT wired in here - it is sound on its own, but its register-pressure
-   * trade-off (freeing a
-   * recomputation costs a longer live range) can trip Colorgraph.ralloc's
-   * known, already-documented spill-cost blind spot for loop-carried
-   * values (see that function's own comment on tail_from_c.c--), which
-   * hung tests/cmm-pass/altret2.c-- when this was enabled. See
-   * opti/cse.ml's header comment for the full story and what it would
-   * take to wire this in safely. *)
+   * trade-off (freeing a recomputation costs a longer live range) can
+   * trip a spill-cost blind spot in Colorgraph.ralloc (see that
+   * function's own comment on tail_from_c.c--) that turned out to be
+   * broader than just loop-carried values - it also hung on
+   * tests/cmm-pass/altret2.c--, which has no loop at all. See opti/cse.ml's
+   * header comment for the full story and what it would take to wire
+   * this in safely. *)
   let proc = if opt_level > 0 then run Optimize.validate proc else proc in
   (* claude: new integration, gated like the rest of opti/ - see
    * tests/optimizer/elim_dead_assignments.c--. Runs its own backward
