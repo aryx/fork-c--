@@ -43,8 +43,6 @@ SRC_VIEWS= \
  $TOP/libs/bitops/cell.ml\
  $TOP/libs/bitops/ctypes.mli\
  $TOP/libs/bitops/ctypes.ml\
- $TOP/libs/bitops/tx.mli\
- $TOP/libs/bitops/tx.ml\
  \
  $TOP/error/debug.mli\
  $TOP/error/debug.ml\
@@ -198,6 +196,8 @@ SRC_VIEWS= \
  $TOP/cfg/dataflow/dead.ml\
  $TOP/cfg/dataflow/dominator.mli\
  $TOP/cfg/dataflow/dominator.ml\
+ $TOP/cfg/dataflow/tx.mli\
+ $TOP/cfg/dataflow/tx.ml\
  \
  $TOP/regalloc/flowra.mli\
  $TOP/regalloc/flowra.ml\
