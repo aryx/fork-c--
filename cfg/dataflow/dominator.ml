@@ -210,16 +210,14 @@ module ZipGraph : GRAPHINFO with type t = Zipcfg.graph
     build 0
 
 end
-(*e: dominator.ml  *)
-(*e: dominator.ml *)
 
 (* claude: not part of TODO/dominator.nw - a friendlier query layer on top
  * of [[ZipGraph]]/[[LengauerTarjan]] for consumers that want dominance
  * questions answered ("does A dominate B?", "what are this loop's back
  * edges?") rather than the label tree [[ZipGraph.translate]] builds, e.g.
  * opti/licm.ml and opti/strength_reduction.ml's natural-loop detection.
- * Appended here, unmarked (no syncweb chunk), since it postdates the
- * original .nw and isn't part of any of its chunks. *)
+ * Spliced into the tail of the existing "dominator.ml" chunk (no new
+ * chunk of its own) since it postdates the original .nw. *)
 module Query = struct
   module A = Array
   module L = List
@@ -306,3 +304,5 @@ module Query = struct
         preheader } :: acc)
       by_header []
 end
+(*e: dominator.ml  *)
+(*e: dominator.ml *)

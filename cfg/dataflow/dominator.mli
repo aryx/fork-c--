@@ -24,11 +24,10 @@ type tree =
 module ZipGraph : GRAPHINFO with type t = Zipcfg.graph
                             and type result = tree
 module LengauerTarjan : DOMINATORTREE
-(*e: dominator.mli  *)
-(*e: dominator.mli *)
 
 (* claude: not part of TODO/dominator.nw - see the matching comment in
- * dominator.ml. Appended unmarked, same reason as there. *)
+ * dominator.ml. Spliced into the tail of the existing "dominator.mli"
+ * chunk (no new chunk of its own) since it postdates the original .nw. *)
 module Query : sig
   type t = {
     blocks : Zipcfg.Rep.block array;
@@ -48,3 +47,5 @@ module Query : sig
 
   val loops : t -> loop list
 end
+(*e: dominator.mli  *)
+(*e: dominator.mli *)
