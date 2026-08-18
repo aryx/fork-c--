@@ -328,7 +328,7 @@ let dls _ (cfg, ({Proc.cc = cc; Proc.target = PA.T tgt} as proc)) =
       List.iter (fun n -> Printf.eprintf "%d " (G.num n))
                 (List.filter (is_allocated ) (G.preds succ));
       Printf.eprintf "\n";
-    	*)
+     *)
 
       let handle_pred blockmap pred_id =
         let pred = UM.find pred_id blockmap in
@@ -341,7 +341,7 @@ let dls _ (cfg, ({Proc.cc = cc; Proc.target = PA.T tgt} as proc)) =
              impossf "shuffling: pred node with no outmap") in
         if Debug.on "dls" then VM.print "pred:" pred_vm;
         if Debug.on "dls" then VM.print "succ:" succ_vm;
-    		(* printTempSet "pred_live_out\n" (get_live_out pred); *)
+      (* printTempSet "pred_live_out\n" (get_live_out pred); *)
         (* printTempSet "succ_live_in\n"  (get_live_in  succ); *)
         let stores =
           RS.fold (fun t stores ->
