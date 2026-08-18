@@ -17,9 +17,19 @@ Conventions for this directory:
 
 Index:
 
-- [plan_reorg.md](plan_reorg.md) — proposed directory layout to replace the
-  `front_*` scheme, with the old->new file mapping, where `todo/` lands, and the
-  mechanics of renaming across the literate program.
+- [notes_code_orga.txt](notes_code_orga.txt) — proposed grouping of the ~16
+  flat toplevel code directories into acyclic layers (`middle/` =
+  codegen+opti+layout, `backend/` = asm+regalloc+arch, etc.), derived from
+  each directory's actual `dune` `(libraries ...)` edges rather than guessed;
+  explains why `regalloc/` must sit in `backend/` (it depends on `asm/`, which
+  would otherwise create a cycle with `middle/`), why `layout/` stays in
+  `middle/` despite sounding backend-y, and why no toplevel `front/` group was
+  created (reads as contradicting this repo's own "we are tiger's backend"
+  framing). Status: agreed on, not yet executed. Includes an ASCII drawing of
+  the DAG; `scripts/dependencies_dune_graphviz.py` regenerates the real thing
+  (a Graphviz `.dot`, colored/clustered by toplevel directory) mechanically
+  from every `dune` file's `(libraries ...)` fields, so it won't rot the way
+  the ASCII snapshot will.
 - [notes_arm.txt](notes_arm.txt) — how the ARM backend (new development, no
   upstream `.nw`) was built: file-by-file summary, toolchain choice, bugs
   found and fixed, and known remaining gaps (`-O3` hang). Follow-up:
@@ -96,3 +106,12 @@ was met (2026-08-10) and is now a standing regression test
 (`tests/run-tiger.sh`, `make test-tiger`) rather than a plan to execute by
 hand, so both were removed rather than left to rot — see `CLAUDE.md`'s "The
 goal" section for the current one-paragraph status instead.
+
+Retired: `plan_reorg.md` proposed the directory layout that replaced the
+`front_*` naming scheme. Executed 2026-08-06, and the tree has kept moving
+by hand since (`ast/` split out of `parsing/`, `commons2`/`commons3` renamed
+to `libs/prelude`/`libs/bitops`, etc.) — its still-relevant content (the
+"what a module actually depends on, not what kind of thing it is" lesson
+from its postmortem, and the git-mv/sed/`make sync` mechanics) is recapped
+in [notes_code_orga.txt](notes_code_orga.txt), which is the current
+proposal for the next layer of grouping.

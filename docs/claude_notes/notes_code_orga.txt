@@ -1,0 +1,250 @@
+Toplevel directory layout: grouping into clear, acyclic layers
+================================================================
+
+Written 2026-08-18, against commit 127d230. Status: proposed layout, agreed
+on in conversation with pad; pad is doing the actual `git mv`s and dune/
+Makefile/SRC_VIEWS updates by hand rather than Claude doing it. Re-verify
+this note's claims about `(libraries ...)` edges before relying on them if
+much time has passed - directories keep moving in this repo.
+
+Relation to plan_reorg.md (now deleted)
+----------------------------------------
+plan_reorg.md (written 2026-08-05, executed 2026-08-06) took the tree from
+the `front_*` naming scheme to the current flat layout: `ir/`, `cfg/`,
+`elab/`, `target/`, `codegen/`, `layout/`, `asm/`, `arch/`, `parsing/`,
+`error/`, plus `todo/`'s eventual landing spots. Its postmortem section is
+worth remembering even after deletion: the only thing that actually
+constrains where a module can live is *what it depends on*, not what kind of
+thing it is (data structure vs. pass vs. helper) - three rows of its own
+proposed table turned out to be wrong for exactly that reason.
+
+Since that reorg landed, the tree has moved further, by hand, in small
+steps: `ast/` was split out of `parsing/` into its own directory;
+`commons2/`/`commons3/` were renamed to `libs/prelude/` and `libs/bitops/`
+rather than merged into one `commons/` as originally planned; `opt/` and
+`regalloc/` (from `todo/`) landed as `opti/` and `regalloc/`; a standalone
+`analysis/` never materialized - `todo/dataflow/*` folded into
+`cfg/dataflow/` instead.
+
+This note is the next increment: with ~16 flat toplevel code directories,
+there was no visible layering left - `ls` at the top level couldn't tell you
+what depended on what. This is a proposed grouping into layers, derived the
+same way plan_reorg.md's DAG was: reading the actual `(libraries ...)`
+field of every `dune` file, not guessing from directory names or file
+content alone.
+
+The rule: no cycles across toplevel groups
+--------------------------------------------
+A grouping is only valid if, once you replace "which specific library" with
+"which toplevel group", the dependency graph between groups stays acyclic.
+This caught a real mistake mid-design: an early proposal put `regalloc/` in
+a `middle/` group and `asm/`+`target/`+`arch/` in a `backend/` group. But
+`regalloc/dune` lists `cmm_assembler` (asm/) as a dependency, and
+`asm/dune` lists `cmm_front_ir` (codegen/, in `middle/`) - so `middle/` ->
+`backend/` (via regalloc -> asm) and `backend/` -> `middle/` (via asm ->
+codegen) at the same time. Moving `regalloc/` into `backend/` fixed it.
+
+Proposed grouping: a dependency table, not a numbered stack
+-----------------------------------------------------------------
+An earlier draft of this note presented the result as "layer 0, layer 1,
+... layer 7" - a single flat, numbered list. That was a mistake, and not
+just cosmetic: it flattened a DAG with real branching into a fake strict
+chain, and that framing is exactly what let the elab/ir ordering error
+below slip through undetected. The graph has genuine parallel structure
+(`ast/` and `rtl/` are independent leaves; `opti/`, `layout/`, `asm/` are
+mutual siblings), so it is presented here as a table of direct dependencies
+instead - every directory listing only what it *directly* depends on
+(`libs/`+`error/` omitted from every row since literally everything uses
+them):
+
+```
+ast/              (leaf)
+rtl/              (leaf)
+parsing/          -> ast/
+ir/               -> rtl/
+elab/             -> ir/  (+ ast/, currently transitive via parsing/)
+cfg/front_cfg     -> ir/
+cfg/front_zipcfg  -> cfg/front_cfg
+cfg/dataflow      -> cfg/front_cfg, cfg/front_zipcfg
+target/           -> ir/, elab/, cfg/front_cfg
+codegen/          -> ir/, cfg/*, elab/, target/
+opti/             -> codegen/, cfg/*, target/, elab/
+layout/           -> codegen/, cfg/*, target/, elab/
+asm/              -> codegen/, target/, cfg/*
+regalloc/         -> opti/, layout/, asm/, codegen/, target/, elab/, cfg/*
+arch/*            -> regalloc/, asm/, layout/, opti/, codegen/, target/,
+                      cfg/*, elab/, ir/  (+ h_camlburg for instruction selection)
+driver/           -> arch/* (+ everything transitively)
+```
+
+The same table, drawn
+------------------------
+Arrows point from a dependency down to whatever depends on it (top-to-bottom
+= build order: infra at the top, `driver/` at the bottom). `libs/`+`error/`
+omitted again - everything below implicitly depends on both.
+
+```
+    ast/                                rtl/
+     |                                   |
+     v                                   v
+  parsing/                              ir/
+     \                                 / |
+      \                               /  |
+       v                             v   v
+        elab/                     cfg/  (front_cfg -> front_zipcfg
+     (needs ir/; also ast/,       /|      -> dataflow)
+      via parsing/, see below)   / |
+          \                     /  |
+           \                   /   |
+            v                 v    v
+                   target/
+             (needs elab/, cfg/, ir/)
+                      |
+          .-----------+-----------.
+          |                       |
+          v                       v
+       middle/                 backend/
+  (codegen/, opti/,       (asm/, regalloc/,
+   layout/)                 arch/{x86,ppc,mips,arm,
+          |                  riscv32,riscv64,sparc,
+          |                  alpha,dummy,interpreter})
+          |                       |
+          '-----------+-----------'
+                       |
+                       v
+                    driver/
+```
+
+This is a hand-drawn, one-commit snapshot - it will rot the next time a
+`dune` file's `(libraries ...)` list changes. `scripts/dependencies_dune_graphviz.py`
+regenerates the real thing mechanically from every `dune` file's actual
+`(libraries ...)` fields (colored/clustered by toplevel directory, same idea
+as this drawing), so that one stays correct across future reorgs without
+another by-hand pass:
+
+```
+scripts/dependencies_dune_graphviz.py -o /tmp/qc-deps.dot
+dot -Tsvg /tmp/qc-deps.dot -o /tmp/qc-deps.svg
+```
+
+Grouping this into toplevel directories (still acyclic - every group's
+listed dependents above resolve to *other* groups strictly below it, never
+back up):
+
+```
+libs/ (prelude, bitops), error/           - infra
+ast/, parsing/, elab/, rtl/               - standalone, NOT grouped (see below)
+ir/                                       - standalone (Fenv)
+cfg/  = front_cfg + front_zipcfg + dataflow   (already grouped)
+target/                                   - standalone
+middle/  = codegen/ + opti/ + layout/
+backend/ = asm/ + regalloc/ + arch/{x86,ppc,mips,arm,riscv32,riscv64,
+                                     sparc,alpha,dummy,interpreter}
+driver/
+```
+Unchanged, non-pipeline: bin/, caps/, demos/, docs/, runtime/, scripts/,
+tests/, tools/, TODO/, OLD/, LUA/, principia/, semgrep-pfff-libs/.
+
+Net: 16 toplevel code dirs -> 12. The grouping itself is unaffected by the
+elab/ir fix (elab/ was never going to be grouped with ir/ anyway - both are
+in the "standalone, not grouped" bucket) - what changed is only the
+explanation of *why* elab/ isn't just "the same layer as ast/ and rtl/".
+
+Why layer 1 is NOT called `front/`
+-------------------------------------
+The whole point of this repo (per CLAUDE.md's "What this is") is to *be the
+backend* for fork-tiger. A toplevel `front/` sitting next to a toplevel
+`backend/` reads as "this project has its own frontend", which contradicts
+that framing and invites confusion about which "front" is meant. Shortening
+the name doesn't fix it - the pairing with `backend/` is what causes the
+reading. So `ast/`, `parsing/`, `elab/`, `rtl/` stay as four standalone
+toplevel directories instead of being grouped and named.
+
+(For the record: `parsing/` does belong logically with this cluster -
+`parsing/dune` genuinely depends on `cmm_ast`, and `elab/nelab.ml` genuinely
+uses `Ast.variance` etc. But nothing outside `parsing/` uses its own
+`Scan`/`Parse`/`Parse_cmm` modules, even though several downstream dune
+files list `cmm_parsing` as a dependency - grep across rtl/, ir/, elab/,
+cfg/front_cfg/, codegen/ found zero uses. That's very likely dead/stale
+copy-paste in those `libraries` stanzas, not a real dependency edge - worth
+pruning during the move, but don't trust those specific lines at face
+value.)
+
+Why `ir/` and `target/` stay standalone (not folded into middle/ or
+front-ish stuff)
+------------------------------------------------------------------------
+Both are consulted symmetrically by many later stages rather than being
+scoped to one:
+
+- `ir/` (Fenv - Block, Eqn, Metrics, Talloc, Vfp, the Asm interface type)
+  is a direct dependency of `elab/`, `cfg/*`, `target/`, `codegen/`,
+  `opti/`, `layout/`, `asm/`, `regalloc/`, and every `arch/*` - i.e.
+  everything from elaboration onward, not just one stage. (`elab/` itself
+  depends on it too - see the dependency table above - which is also why
+  `ir/` cannot be grouped with `ast/`/`parsing/`/`elab/`/`rtl/`: those four
+  aren't a clean layer below `ir/`, `elab/` is above it.)
+- `target/` (`Target.t`, `Automaton` calling-convention specs) is a direct
+  dependency of every single library in both `middle/` and `backend/`
+  (checked all six: codegen, opti, layout, asm, regalloc, arch/x86 all list
+  `cmm_front_target`). Folding it into either group would make the other
+  group depend on it transitively for no reason, or - worse - introduce the
+  same kind of cycle the regalloc/asm case did.
+
+Why `layout/` is in `middle/`, not `backend/`
+------------------------------------------------
+It's tempting to think "frame layout" sounds like backend work. The actual
+distinction that matters here: does a pass commit to a *real* machine
+register or emit *real* output, or does it only ever rewrite the abstract
+RTL/CFG representation?
+
+- `middle/` (codegen/, opti/, layout/): `codegen/` lowers AST to RTL
+  procedures still using pseudo-registers; `opti/` runs dataflow
+  optimizations over that CFG; `layout/` solves the stack-frame equations
+  (Placevar, Vfp, Framelayout, Mvalidate) and rewrites RTLs to reference
+  offsets from a *virtual* frame pointer - still symbolic. None of their
+  three `dune` files list `cmm_assembler` or `cmm_regalloc`.
+- `backend/` (asm/, regalloc/, arch/): `regalloc/` replaces pseudo-registers
+  with real machine registers - and needs `cmm_assembler` specifically
+  because spilling means emitting real load/store instructions through the
+  `Asm` interface, which is exactly why `regalloc/dune` lists it. `asm/`
+  implements `Asm.assembler` - i.e. produces concrete output. `arch/` plugs
+  in one machine's real register set, calling convention, and instruction
+  selection.
+
+So the dividing line is "committed to a real register or real emitted
+output" vs. "still abstract", not "sounds like backend work".
+
+Why `arch/` nests inside `backend/` rather than staying a toplevel peer
+----------------------------------------------------------------------------
+`arch/` is a different *kind* of directory from everything else here: every
+other toplevel entry is one shared library, while `arch/` is ~10 per-target
+implementations (x86, ppc, mips, arm, riscv32, riscv64, sparc, alpha,
+dummy, interpreter) that each *consume* `asm/`+`regalloc/`+`target/`'s
+generic interfaces (confirmed via `arch/x86/dune`: it lists `cmm_regalloc`,
+`cmm_assembler`, `cmm_front_last`, `cmm_opti`, `cmm_front_ir` - i.e.
+everything in both `middle/` and the rest of `backend/`). Nesting it as
+`backend/arch/x86/` etc., rather than pulling it out to toplevel, gets two
+things at once: it reads as "arch is backend work" (true, and useful to see
+at a glance), and the "different kind of directory" distinction is just
+naturally expressed as a subdirectory of subdirectories - the same pattern
+`cfg/` already established by holding `front_cfg/`, `front_zipcfg/`, and
+`dataflow/` as three subdirs side by side.
+
+Mechanics (same playbook plan_reorg.md used for the front_* -> flat move)
+------------------------------------------------------------------------------
+- `git mv` each directory into place.
+- `sed` the `<<dir/file>>` chunk names in `Cminusminus.nw` and
+  `Cminusminus_extra.nw` (definitions and uses share the same prefix, so one
+  substitution per directory covers both).
+- Update `SRC_VIEWS` in the top `Makefile` (docs/literate/mkfile) the same
+  way.
+- Update each moved library's `dune` `(name cmm_...)` and every
+  `(libraries ...)` field mentioning it, plus the legacy
+  `MAKESUBDIRS`/`LIBS`/`INCLUDEDIRS` lists in the top and per-directory
+  `Makefile`s.
+- Run `dune build` then `make sync` immediately after, before anything else
+  lands on top - `.md5sum_*` files travel with `git mv` (keyed on content),
+  but confirm rather than assume.
+- Do this as one atomic sweep with nothing else in flight, same reasoning
+  as plan_reorg.md gave: it touches every `dune` and both `.nw` files, so it
+  conflicts with any parallel work.
