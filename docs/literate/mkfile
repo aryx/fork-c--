@@ -3,11 +3,11 @@ TOP=../..
 SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml 
 #SYNCWEBFLAGS=-debug
 
-DOC=Cminusminus
+DOC=Cmm
 VERSION=1
 
 # must be in the same order of the #include
-SRC_ORIG=Cminusminus.nw Cminusminus_extra.nw
+SRC_ORIG=Cmm.nw Cmm_extra.nw
 
 #TODO: sync also ast.asdl (or ast.ml generated code)
 #TODO: ir/vfp.ml split from layout/vfprewrite.ml

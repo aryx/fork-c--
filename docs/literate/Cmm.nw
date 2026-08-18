@@ -12557,7 +12557,7 @@ let popcnt ~notok ~ok =
 %******************************************************************************
 
 %\ifallcode
-#include "Cminusminus_extra.nw"
+#include "Cmm_extra.nw"
 %\fi
 
 \chapter{Changelog}
