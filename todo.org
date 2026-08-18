@@ -47,15 +47,6 @@ remove Private intermediate? worth it?
 use regular Arg, Fpath, Logs
 maybe just add a light Common.ml
 
-**** `front_rtl -> parsing`** exists *only* for `front_rtl/rtlutil.mli:158-159`:
-   ```ocaml
-   val expr : Rtl.exp -> Ast.expr
-   val rtl  : Rtl.rtl -> Ast.stmt
-   ```
-   a back-conversion (`Rtlutil.ToAst`) used by `Astasm` to print assembly as
-   C-- text. Move `ToAst` into the asm layer and **the core IR stops depending
-   on the parser**.
-
 **** `front_target -> front_nelab`** exists *only* for
    `front_target/target.mli:95` — `tx_ast : Nelab.compunit -> Nelab.compunit`,
    one hook field — and `Memalloc.growth` in `automaton.mli:53`, a
@@ -63,7 +54,7 @@ maybe just add a light Common.ml
    relocate or parameterize `tx_ast`, and **the machine description stops
    depending on the elaborator**.
 
-**** Where `todo/` lands
+**** still? Where `todo/` lands
 
 This is the real test of the scheme — every `todo/` directory gets an obvious
 home, which is why the reorg is worth doing *before* integrating any of it:
