@@ -14,7 +14,6 @@
  ; and `dune install` has nothing to do for it.
  (public_name qc)
  (libraries
-  num bigarray str unix
   commons ; pull lots of deps
   profiling
   cmm_commons2 cmm_error cmm_commons3
