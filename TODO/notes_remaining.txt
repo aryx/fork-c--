@@ -1,0 +1,171 @@
+Remaining TODO/*.nw: lifetime.nw and liveset.nw
+================================================
+(analysis done 2026-08-18, see also archi_modules.txt for other module
+index cards; this one only covers these two since they needed digging)
+
+Status: confirmed dead/orphaned, not just here but in upstream qc-- too.
+
+Checked upstream (/home/pad/software-src/dev-toolchain/qc--/src/):
+lifetime.ml and liveset.ml ARE listed in the upstream mkfile's ML= list
+(so they compiled as part of upstream's build), but grep across every
+.nw file in upstream src/ turns up ZERO references to Lifetime.* or
+Liveset.* outside their own files. They were dead weight upstream too,
+not something this fork dropped by accident.
+
+What each one was probably for:
+
+- lifetime.nw (Interval / Lifetime modules): a generic disjoint-
+  interval-set library. interval = half-open [x,y) over abstract
+  points; lifetime = disjoint union of intervals = the vocabulary of a
+  LINEAR-SCAN register allocator (lifetime = live range as a set of
+  intervals over program points). qc-- never shipped linear scan --
+  it went with graph coloring (Colorgraph, already wired in this fork
+  at -O3, native-x86-O3 66/66). Looks like an abandoned alternative
+  allocator design that never got a caller.
+
+- liveset.nw (Liveset module): a BIT-PRECISE sub-register liveness
+  set. Tracks individual bit ranges per register cell (via Bitset64),
+  so e.g. a write to AH doesn't spuriously kill liveness of EAX. The
+  liveness actually used everywhere in this fork (cfg/dataflow/live.ml,
+  regalloc/flowra.ml, Colorgraph) is Register.SetX (ir/register.ml) --
+  checked it: it's a plain Set.Make over whole-registers-or-slices,
+  compared structurally, with NO bit-level overlap merging. Liveset
+  looks like a more-precise replacement that was designed but never
+  actually swapped in, upstream or here.
+
+Why not worth integrating right now:
+Unlike dominator.nw (a clean drop-in with an obvious immediate use --
+LICM/strength reduction), these two aren't small extractions. Using
+them for real means picking one of two actual design projects:
+
+  1. Write a linear-scan allocator using Lifetime as an alternative to
+     Colorgraph. Large effort, and Colorgraph already works -- low
+     payoff against this repo's "simplify, don't multiply backends/
+     allocators" goal.
+
+  2. Swap Register.SetX for Liveset in live.ml/dead.ml/flowra.ml to
+     fix sub-register-alias liveness (AH/AL/AX/EAX). Smaller, but only
+     matters if SetX's imprecision is actually causing a wrong-code
+     bug on x86 8-bit-register aliasing. No evidence of such a bug so
+     far -- native-x86-O3 is 66/66.
+
+Verdict: leave both in TODO/ (or move to OLD/ alongside the other
+confirmed-dead modules) unless a concrete failing test is found that
+traces back to sub-register aliasing. Don't invest here speculatively;
+this project favors "end-to-end beats breadth" -- see CLAUDE.md.
+
+If a real AH/AL-aliasing bug ever surfaces: option 2 above is the
+targeted fix, and liveset.nw is already-written code to base it on
+(bit-set per register cell with a B.All | B.Slice of BS.t sum type;
+BS = Bitset64). Re-read liveset.nw's full listing before starting,
+it's short (140 lines).
+
+
+TODO/bcopy.nw
+==============
+Generic `block_copy` (a Dag-based unrolled memcpy loop, "stolen from
+lcc") for the postexpander's block-copy hook. CONFIRMED SUPERSEDED, not
+just unused: `Postexpander.block_copy` / `Expander` do have a real,
+wired-in caller (codegen/expander.ml:844 calls `Post.block_copy`), and
+every backend implements it -- but each does so with its OWN
+target-specific code, not bcopy.ml's generic loop. E.g. arch/x86/x86.ml
+uses `rep movsb` for large/unknown widths and direct load/store for
+16/32/64-bit widths. So this is a case where the *interface* bcopy.nw
+defines was kept and used, but the *generic implementation* was
+replaced per-backend with something better. Nothing to integrate here;
+bcopy.ml itself would just be dead code if tangled in.
+Verdict: leave in TODO/, effectively OLD/-grade dead code.
+
+TODO/pic.nw
+============
+Position-independent code (PIC) support: a pass that rewrites label
+references `L` into `wkr + (L - wkl)` (well-known-register plus an
+assembly-time-constant diff) so code needs no link-time relocations.
+`Rtl`'s `RP.Diff` constant constructor (the "L - wkl" building block)
+is a general part of the RTL representation and is used generically
+elsewhere (ir/rtlutil.ml comparison/printing code) -- but the actual
+PIC *transformation pass*, `Pic.transform`, only has ONE caller in the
+whole tree: `LUA/lua-cmm-driver/lualink.ml`. LUA/ has no `dune` files
+anywhere under it -- it is parked, unbuilt source (the Lua-driven
+compiler/linker CLAUDE.md describes as dropped in favor of
+main.ml/driver.ml). So `Pic.transform`'s only caller is itself dead.
+Also orthogonal to the tiger-backend goal: PIC only matters for shared
+libraries / position-independent executables, and the tiger milestone
+links static, non-PIC binaries.
+Verdict: leave in TODO/, no realistic near-term use.
+
+TODO/runtime/overflow/directreturn/invokeclosure.nw
+======================================================
+x86-32 assembly (`.s`, not OCaml) implementing `invokeclosure`: part of
+the PAL calling convention's stack-overflow/segment-switching runtime
+machinery (when a function's stack segment overflows, it cuts to an
+overflow handler that builds a closure and reinvokes it on a fresh
+stack segment). This is qc--'s own *segmented-stack runtime*, unrelated
+to fork-tiger's runtime (fork-tiger has its own runtime/runtime.o with
+conventional stacks, per CLAUDE.md's milestone command). Nothing in
+runtime/ currently references `invokeclosure`, `overflow_handler`, or
+`directreturn` (checked: no hits). Pure runtime-support asm for a
+calling-convention variant the tiger milestone doesn't use.
+Verdict: leave in TODO/; would only matter if some future qc-- client
+wanted segmented-stack / cactus-stack semantics, which is not
+fork-tiger's model.
+
+TODO/tests/{opgen,optest,copgen,testdrv}.nw
+==============================================
+All four are the old Lua-driven regression-test *tooling*, not compiler
+code:
+- testdrv.nw: the 1120-line Lua test driver itself (`Test.qc = ...
+  "../bin/qc--"`, runs `.tst` config files under `mk`).
+- opgen.nw / copgen.nw: Lua machinery that generates, for every RTL
+  operator, a matching pair of PAL and C test functions plus a
+  dispatch table, so random inputs can be run through both and
+  compared (copgen.nw is the C-macro-to-Lua-call translation layer
+  opgen.nw's generator uses).
+- optest.nw: the plain C driver (`optest.c`) that walks the generated
+  table and does the actual PAL-vs-C comparison on random bits.
+CLAUDE.md already documents that this whole apparatus doesn't run in
+this fork ("tests/ holds the original .tst regression suite driven by
+testdrv.lua under mk, which does not run in this fork"). Reviving it
+would mean reviving Lua-as-driver, which is the exact thing this fork
+deliberately removed (see "Dropping the embedded Lua interpreter" in
+CLAUDE.md). The fork's actual regression coverage
+(tests/run-tiger.sh / tests/run-tiger-ppc.sh, tests/expected/*.txt,
+the -<action> flags) is a from-scratch replacement for what this
+directory did, not something waiting on it.
+Verdict: leave in TODO/, superseded by design.
+
+TODO/tdpe/ (24 files -- one category)
+=======================================
+Type-Directed Partial Evaluation: a self-contained research subsystem
+(own index.nw says "type-directed partial evaluation of the
+machine-level optimization layer of qc--") for specializing/optimizing
+RTL-to-machine-code translation via TDPE rather than mlburg-style
+pattern matching. It has its own utility library (myList, cell,
+generic), its own TDPE core library (tdpe.ml, spec, syntax), a
+residualizing layer re-using qc--'s Rtl/Rtlutil, and machine-dependent
+back-end pieces (MachineSyntax, layout, sledlib, opOps). This is a
+parallel/alternate instruction-selection technology, not a library the
+existing mlburg-based `*rec.ml` backends could casually call into --
+adopting it would mean replacing instruction selection wholesale for
+whichever backend, which is a research project in itself, orthogonal
+to "get x86/ppc/tiger working end to end." Already flagged in an
+earlier memory pass as an "out-of-scope research tangent."
+Verdict: leave in TODO/ untouched; lowest priority of everything in
+this file. Only worth revisiting if someone specifically wants to
+explore TDPE-based instruction selection as its own project, not as a
+step toward the tiger-backend milestone.
+
+
+Overall summary
+=================
+Every remaining TODO/*.nw file is either (a) confirmed superseded by
+code that already ships (bcopy.nw), (b) infrastructure with a caller
+that only exists in parked/unbuilt code (pic.nw via LUA/), (c) tooling
+for a testing approach this fork deliberately replaced (tests/*.nw),
+(d) runtime support for a calling-convention variant fork-tiger doesn't
+use (invokeclosure.nw), (e) two designed-but-never-wired-in
+alternatives to allocator/liveness code that already works
+(lifetime.nw, liveset.nw), or (f) a whole separate research project
+(tdpe/). None of them are "ready to integrate" in the way dominator.nw
+was. Re-run this analysis (or at least re-grep for new callers) before
+trusting it if a lot of time has passed -- this repo moves fast.

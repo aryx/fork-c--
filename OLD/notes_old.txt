@@ -1,0 +1,142 @@
+OLD/ directory analysis
+=========================
+(analysis done 2026-08-18, same pass that produced TODO/notes_remaining.txt)
+
+Unlike TODO/ (staging area: "not yet integrated"), OLD/ is where pad
+explicitly moves things he has already judged dead/superseded -- see
+git log messages below, several of which state the reasoning directly
+in the commit itself. This file exists so that reasoning doesn't have
+to be re-derived by grepping git log again later.
+
+OLD/aug99/  (asm.nw, ast.nw, atomize.nw, calling.nw, cmmir.nw, error.nw,
+             index.nw, iRFuns.nw, mkrtl.nw, primops.nw, ralloc.nw,
+             reglike.nw, rti.nw, rtlFuns.nw, rtl.nw, sourcemap.nw,
+             util.nw, doc.nw/doc.bbl, Makefile, mkfile)
+-----------------------------------------------------------------------
+A complete 1999-era prototype/design-notes snapshot of the compiler --
+predates the CFG/zipcfg rewrite entirely (index.nw opens with "Here's a
+somewhat lengthy suggestion about a structure for the code generator",
+i.e. design musings, not a finished module). Its own module names
+(cmmir, iRFuns, reglike, rti) don't correspond to anything in the
+current pipeline. Superseded wholesale by the current front_cfg/
+front_zipcfg/front_ir/ tree. Historical-interest only.
+Verdict: leave as-is, pure archive.
+
+OLD/build_system/  (config/, debian/, old2/, commons2/mkfile,
+                     configure, configure.log, grades, mkdirs, todo.txt)
+-----------------------------------------------------------------------
+An even older build system than the mk-based Makefile.common this fork
+still keeps reachable via `allold`/`optold`/`rec` (see CLAUDE.md). This
+one has its own autoconf-style `configure`/`configure.log`, Lua/OCaml
+"autodefs", and Debian packaging (debian/control, debian/rules, etc.)
+for shipping qc-- as a .deb. All superseded by dune (root dune-project,
+per-dir dune files). Nothing here has any relationship to fork-tiger's
+milestone.
+Verdict: leave as-is, pure archive.
+
+OLD/dead_for_lindig/  (asdlasm.nw, base.nw, reladdr.nw, rtlasdl.*,
+                        rtlasdlUtil.*, rtlx.nw, mkfile)
+-----------------------------------------------------------------------
+Directory name says it outright: dead code kept around for Christian
+Lindig (upstream co-author). Purpose: export Rtl.t values via ASDL
+(rtlasdl.asdl defines an ASDL mirror of the Rtl type) so external
+tools could read compiler-internal RTLs. Doubly dead now: not only was
+it unused when moved here, but this fork has since been actively
+*removing* ASDL entirely from the live tree (recent commits "remove
+ast.asdl, let's just use ast.ml directly", "remove libs/asdl_pickle/",
+"CEs on dune with removal of asdl_pickle") -- i.e. the exact mechanism
+this directory depends on (h_asdl/ pickling) is being deleted from the
+active codebase, not just left unused. Reviving this would mean
+reviving infrastructure pad is deliberately removing elsewhere.
+Verdict: leave as-is, actively anti-goal to revive.
+
+OLD/ia64/  (ia64.ml/.mli, ia64asm.ml/.mli, ia64call.ml/.mli,
+            ia64rec.mlb/.mli, ia64.nw/ia64asm.nw/ia64call.nw/ia64rec.nw,
+            Makefile)
+-----------------------------------------------------------------------
+Different from the rest of OLD/: this is a real, substantially-ported
+IA64 (Itanium) backend (585 lines of .ml across ia64.ml/ia64call.ml/
+ia64asm.ml, comparable in shape to the alpha/sparc/mips backends that
+*were* successfully revived from TODO/ into working backends). It was
+moved out with its own explicit reasoning in the commit message
+(547ac27): "not maintained by Linux, no qemu for it, not worth it.
+Fully dead archi." I.e. this wasn't a code-quality judgment like the
+rest of OLD/ -- it's an infra/hardware-availability judgment: no qemu
+target exists to verify it (every other backend in this fork,
+alpha/arm/mips/ppc/riscv32/riscv64/sparc/x86, was verified end-to-end
+under qemu per the per-arch memory notes), and Itanium is commercially
+and kernel-support dead. Unlike aug99/build_system/dead_for_lindig,
+this ISN'T superseded by something else in the tree -- it's just not
+worth the verification cost for a dead architecture family.
+Verdict: leave as-is. Only reconsider if IA64 emulation becomes
+available and there's an actual reason to target it (there currently
+isn't one for fork-tiger).
+
+OLD/ocolorgraph.nw, OLD/odead.nw, OLD/olive.nw, OLD/zipncfg.nw
+-----------------------------------------------------------------------
+Earlier ("o"-prefixed = "old") versions of modules that were
+independently re-integrated fresh from TODO/ under their current
+names: colorgraph.nw -> regalloc/colorgraph.ml, dead.nw ->
+cfg/dataflow/dead.ml, live.nw -> cfg/dataflow/live.ml, and the zipper
+CFG itself -> cfg/front_zipcfg/zipcfg.ml. Confirmed already in an
+earlier memory pass (see [[todo-dir-classification]] equivalent
+project memory) that moving these here rather than reintegrating them
+directly was correct -- the live versions are real, wired-in, and
+passing (native-x86-O3 66/66). These o*.nw files are the *previous*
+iteration upstream itself had superseded before this fork even started.
+Verdict: leave as-is, confirmed genuinely superseded by code that ships.
+
+OLD/dls.nw
+-----------
+"DFS Linear Scan Register Allocation" -- yet another *alternative*
+register allocator design (distinct from both Colorgraph, which is
+wired in and working, and from lifetime.nw/Interval-based linear scan
+sitting in TODO/, see TODO/notes_remaining.txt). Two-pass DFS-order
+liveness-driven allocator, no interference-graph construction. This is
+the third different allocator design found across TODO/+OLD/
+(Colorgraph = graph coloring, live & shipped; lifetime.nw = generic
+interval-based linear scan, unused; dls.nw = DFS-order linear scan,
+unused). None of the linear-scan variants have ever had a caller in
+either upstream or this fork.
+Verdict: leave as-is; same reasoning as lifetime.nw in
+TODO/notes_remaining.txt -- Colorgraph already does the job.
+
+OLD/prop.nw
+------------
+A generic extensible "property list" abstraction (`Prop.M : S`,
+`'a prop = { get; set; remove }`, attach arbitrary typed properties to
+an opaque `t`). Superseded by `Unique.Prop`, the module actually used
+throughout the live pipeline (cfg/dataflow/live.ml, availpass.ml,
+dataflow.ml, regalloc/flowra.ml, layout/vfprewrite.ml all do
+`Unique.Prop.prop`/`.get`/`.set`) together with
+cfg/front_zipcfg/property.mli's closed `rep` variant (`Live_in`, `Vfp`,
+`Avail`, `VarInMap`, ... one fixed sum type) rather than prop.nw's
+open/generic property-record design. Same shape of idea, different
+(simpler, closed-variant) implementation actually shipped.
+Verdict: leave as-is, confirmed superseded by Unique.Prop +
+front_zipcfg/property.ml.
+
+OLD/tests/
+-----------
+Just a bare `mkfile`, no substantial content. Vestige of the old
+mk-based test harness alongside OLD/build_system/. Nothing to assess.
+Verdict: leave as-is.
+
+
+Overall summary
+=================
+OLD/ is, unlike TODO/, already a settled archive -- every subdirectory
+either (a) predates the current architecture wholesale (aug99/,
+build_system/), (b) is dead code whose *dependency* (ASDL pickling) is
+itself being actively removed from the live tree (dead_for_lindig/),
+(c) is a superseded earlier version of something that now ships under
+a different name (ocolorgraph/odead/olive/zipncfg.nw, prop.nw), (d) is
+one of several never-used alternative allocator designs alongside a
+working one (dls.nw, and lifetime.nw over in TODO/), or (e) is a real
+backend deliberately parked for lack of verification hardware, not for
+code-quality reasons (ia64/). Nothing here is a near-term candidate
+for revival for the fork-tiger milestone. The one item worth
+remembering if priorities ever shift is ia64/ -- it's parked for an
+external-availability reason (no qemu), not a design judgment, so it's
+the one entry in this file that could become "worth it" again if that
+external fact changes.
