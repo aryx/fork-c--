@@ -141,7 +141,7 @@ let reduce _ (g, proc) =
                               incr changed;
                               let update =
                                 GR.Instruction
-                                  (RU.store (RP.Reg t) (RU.addk w (RU.fetch (RP.Reg t)) (c * k))) in
+                                  (RU.store (Rtl.reg t) (RU.addk w (RU.fetch (Rtl.reg t)) (c * k))) in
                               (LO.replace_middle m update btail, m :: inits)
                             end)
                         (btail0, []) candidates
