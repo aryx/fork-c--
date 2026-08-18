@@ -17,19 +17,23 @@ Conventions for this directory:
 
 Index:
 
-- [notes_code_orga.txt](notes_code_orga.txt) — proposed grouping of the ~16
-  flat toplevel code directories into acyclic layers (`middle/` =
-  codegen+opti+layout, `backend/` = asm+regalloc+arch, etc.), derived from
-  each directory's actual `dune` `(libraries ...)` edges rather than guessed;
-  explains why `regalloc/` must sit in `backend/` (it depends on `asm/`, which
-  would otherwise create a cycle with `middle/`), why `layout/` stays in
-  `middle/` despite sounding backend-y, and why no toplevel `front/` group was
-  created (reads as contradicting this repo's own "we are tiger's backend"
-  framing). Status: agreed on, not yet executed. Includes an ASCII drawing of
-  the DAG; `scripts/dependencies_dune_graphviz.py` regenerates the real thing
-  (a Graphviz `.dot`, colored/clustered by toplevel directory) mechanically
-  from every `dune` file's `(libraries ...)` fields, so it won't rot the way
-  the ASCII snapshot will.
+- [notes_code_orga.txt](notes_code_orga.txt) — grouping of the ~16 flat
+  toplevel code directories into acyclic layers, derived from each
+  directory's actual `dune` `(libraries ...)` edges rather than guessed.
+  Mostly executed as of commit db5179c: `middle/` (codegen+opti+layout),
+  `backend/` (asm+regalloc+arch), `ir/` renamed to `fenv/` (it never held an
+  IR - `Ast`/`Rtl`/`Cfg` already have their own directories; `Fenv`'s the
+  only thing that was actually in there), `cfg/front_cfg`/`front_zipcfg` ->
+  `cfg/legacy`/`cfg/zipcfg`. Explains why `regalloc/` must sit in `backend/`
+  (depends on `asm/`, which would otherwise cycle with `middle/`), why
+  `layout/` stays in `middle/` despite sounding backend-y, why no toplevel
+  `front/` group was created (reads as contradicting this repo's own "we
+  are tiger's backend" framing), and proposes (not yet done) splitting
+  `codegen/` into `proc/`/`translate/`/`expand/`. Includes an ASCII drawing
+  of the DAG; `scripts/dependencies_dune_graphviz.py` regenerates the real
+  thing (a transitively-reduced Graphviz `.dot`, colored/clustered by
+  toplevel directory) mechanically from every `dune` file, so it won't rot
+  the way the ASCII snapshot will.
 - [notes_arm.txt](notes_arm.txt) — how the ARM backend (new development, no
   upstream `.nw`) was built: file-by-file summary, toolchain choice, bugs
   found and fixed, and known remaining gaps (`-O3` hang). Follow-up:
