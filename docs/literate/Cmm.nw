@@ -13823,6 +13823,7 @@ let popcnt ~notok ~ok =
 
 \begin{verbatim}
 AST Abstract Syntax Tree
+CFG Control-Flow Graph
 NAST Normalized Abstract Syntax Tree
 RTL Register Transfer List
 IR Intermediate Representation

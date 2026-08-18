@@ -1,5 +1,5 @@
 (*s: commons2/pp.ml *)
-(*s: pp.ml *)
+(*s: pp.ml  *)
 (*s: auxiliaries(pp.nw) *)
 let debug   = false 
 let strlen  = String.length
@@ -25,7 +25,7 @@ type doc =
     | DocBreak          of string
     | DocGroup          of gmode * doc
 
-(*x: pp.ml *)
+(*x: pp.ml  *)
 
 let (^^) x y            = DocCons(x,y)
 let empty               = DocNil
@@ -43,13 +43,13 @@ let fgrp d              = if   debug
                           then DocGroup(GFill, text "{" ^^ d ^^ text "}")
                           else DocGroup(GFill, d)
                           
-(*x: pp.ml *)
+(*x: pp.ml  *)
 type sdoc =
     | SNil
     | SText             of string * sdoc
     | SLine             of int    * sdoc    (* newline + spaces *)
 
-(*x: pp.ml *)
+(*x: pp.ml  *)
 let sdocToString sdoc =
     let buf = Buffer.create 256 in
     let rec loop = function
@@ -79,13 +79,13 @@ let sdocToFile oc doc =
     in
         loop doc
 
-(*x: pp.ml *)
+(*x: pp.ml  *)
 type mode =
     | Flat
     | Break
     | Fill
 
-(*x: pp.ml *)
+(*x: pp.ml  *)
 (*s: fits *)
 let rec fits w = function
     | _ when w < 0                   -> false
@@ -122,10 +122,10 @@ let rec format w k l post = match l with
     | (i,m,DocGroup(GAuto, x))  :: z -> if fits (w-k) ((i,Flat,x)::z)
                                         then format w k ((i,Flat ,x)::z) post
                                         else format w k ((i,Break,x)::z) post
-(*x: pp.ml *)
+(*x: pp.ml  *)
 let ppToString  w doc = format w 0 [0,Flat,agrp(doc)] sdocToString
 let ppToFile oc w doc = format w 0 [0,Flat,agrp(doc)] (sdocToFile oc) 
-(*x: pp.ml *)
+(*x: pp.ml  *)
 let rec list sep f xs =
     let rec loop acc = function
         | []    -> acc
@@ -147,5 +147,5 @@ let block f xs =
        end 
     ^/ text "}"
 
-(*e: pp.ml *)
+(*e: pp.ml  *)
 (*e: commons2/pp.ml *)

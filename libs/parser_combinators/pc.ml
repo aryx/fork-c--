@@ -1,10 +1,10 @@
 (*s: commons2/pc.ml *)
-(*s: pc.ml *)
+(*s: pc.ml  *)
 exception Error of string
 let error s = raise (Error s)
 
 type ('t,'v) par = 't list -> 'v * ('t list)
-(*x: pc.ml *)
+(*x: pc.ml  *)
 let succeed v ts = (v,ts)
 let fail msg     = error msg
 
@@ -23,7 +23,7 @@ let satisfy f = function
                    else fail "token does not satisfy predicate"
 
 let literal x = satisfy (Pervasives.(=) x)
-(*x: pc.ml *)
+(*x: pc.ml  *)
 let ( ||| ) p1 p2 = fun ts ->
     try p1 ts with 
     Error _ ->  try p2 ts with
@@ -57,5 +57,5 @@ let opt p =
 
 let some p =
     p *** many p --> (fun (x,y) -> x::y)
-(*e: pc.ml *)
+(*e: pc.ml  *)
 (*e: commons2/pc.ml *)

@@ -1,5 +1,5 @@
 (*s: commons2/auxfuns.mli *)
-(*s: auxfuns.mli *)
+(*s: auxfuns.mli  *)
 val round_up_to : multiple_of:int -> int -> int
   (* round_up_to n k rounds k up to the nearest multiple of n.
      n must be positive and k must be nonnegative *)
@@ -34,7 +34,7 @@ module String : sig
 end
 
 type void = Void of void (* used as placeholder for polymorphic variable *)
-(*x: auxfuns.mli *)
+(*x: auxfuns.mli  *)
 val substr: int -> int -> string -> string
-(*e: auxfuns.mli *)
+(*e: auxfuns.mli  *)
 (*e: commons2/auxfuns.mli *)

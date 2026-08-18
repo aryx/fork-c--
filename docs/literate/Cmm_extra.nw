@@ -14,10 +14,10 @@
 \section{[[commons2/auxfuns.nw]]}
 
 <<commons2/auxfuns.ml>>=
-<<auxfuns.ml>>
+<<auxfuns.ml >>
 @
 <<commons2/auxfuns.mli>>=
-<<auxfuns.mli>>
+<<auxfuns.mli >>
 @
 
 %%% ------------------------------------------------------------------ 
@@ -28,7 +28,7 @@
 %%specific module. They are usually small and generic and one could
 %%argue that we found them missing in {\ocaml} standard library.
 
-<<auxfuns.mli>>=
+<<auxfuns.mli >>=
 val round_up_to : multiple_of:int -> int -> int
   (* round_up_to n k rounds k up to the nearest multiple of n.
      n must be positive and k must be nonnegative *)
@@ -72,7 +72,7 @@ type void = Void of void (* used as placeholder for polymorphic variable *)
 %%is best to think about the [[start]] and [[stop]] indices as pointing
 %%between the characters; some examples makes this clear:
 
-<<auxfuns.mli>>=
+<<auxfuns.mli >>=
 val substr: int -> int -> string -> string
 @
 
@@ -94,7 +94,7 @@ val substr: int -> int -> string -> string
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 
-<<auxfuns.ml>>=
+<<auxfuns.ml >>=
 type void = Void of void (* used as placeholder for polymorphic variable *)
 
 module Option = struct
@@ -106,10 +106,10 @@ module Option = struct
     let map f = function Some x -> Some (f x) | None -> None
 end
 @ 
-<<auxfuns.ml>>=
+<<auxfuns.ml >>=
 let round_up_to ~multiple_of:n k = n * ((k+(n-1)) / n)
 @ 
-<<auxfuns.ml>>=
+<<auxfuns.ml >>=
 let foldri f l z =
   let rec next n = function
     | [] -> z
@@ -124,7 +124,7 @@ let substr start stop str =
     let stop  = if stop  <= 0 then String.length str + stop  else stop  in
         String.sub str start (stop - start)
 @
-<<auxfuns.ml>>=
+<<auxfuns.ml >>=
 module String = struct
   let foldr f s z =
     let rec down_from n z =
@@ -132,13 +132,13 @@ module String = struct
     down_from (String.length s - 1) z
 end
 @
-<<auxfuns.ml>>=
+<<auxfuns.ml >>=
 let rec last = function
   | [] -> raise (Invalid_argument "empty list")
   | [x] -> x
   | x :: xs -> last xs
 @ 
-<<auxfuns.ml>>=
+<<auxfuns.ml >>=
 let rec map_partial f = function
   | [] -> []
   | x :: xs ->
@@ -146,7 +146,7 @@ let rec map_partial f = function
       | Some y -> y :: map_partial f xs
       | None -> map_partial f xs
 @
-<<auxfuns.ml>>=
+<<auxfuns.ml >>=
 let rec compare_list cmp x y = match x, y with
 | [], [] -> 0
 | [], _ :: _ -> -1
@@ -156,7 +156,7 @@ let rec compare_list cmp x y = match x, y with
     | 0 -> compare_list cmp xs ys
     | diff -> diff
 @ 
-<<auxfuns.ml>>=
+<<auxfuns.ml >>=
 module List = struct
   let rec take n xs = match xs with
   | [] -> []
@@ -166,11 +166,12 @@ end
 @ 
 
 \section{[[commons2/lc.nw]]}
+
 <<commons2/lc.ml>>=
-<<lc.ml>>
+<<lc.ml >>
 @
 <<commons2/lc.mli>>=
-<<lc.mli>>
+<<lc.mli >>
 @
 
 \section{Lexer Combinators}
@@ -189,14 +190,14 @@ end
 \subsection{Interface}
 %%% ------------------------------------------------------------------ 
 
-<<lc.mli>>=
+<<lc.mli >>=
 exception Error of string
 @
 
 %%[[Error]] reports the failure of a lexer with a message which is not
 %%too descriptive but may help finding unexpected failures. 
 
-<<lc.mli>>=
+<<lc.mli >>=
 type 'a lexer
 @
 %%A lexer scans a string to check that it matches a syntactic structure. 
@@ -206,47 +207,47 @@ type 'a lexer
 %%scanner store substrings from the scanned string and thus [['a]] is
 %%[[string]]. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val succeed : 'a lexer
 @
 %%[[succeed]] is a lexer that always succeeds.  
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val fail : string -> 'a
 @
 %%[[fail]] always fails with a descriptve error message. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val any : 'a lexer
 @
 %%[[any]] consumes just one character when availabe and fails when the
 %%end of string is reached. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val eof : 'a lexer
 @
 %%[[eof]] succeeds when the end of input (i.e.  string) is reached.  It
 %%does not consume any character. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val satisfy : (char -> bool) -> 'a lexer
 @
 %%[[satisfy f]] consumes the next characters successfully when it
 %%satisfies predicate [[f]]. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val chr : char -> 'a lexer
 @
 %%[[chr c]] consumes the next character when it equals [[c]]; fails
 %%otherwise. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val str : string -> 'a lexer
 @
 %%[[str s]] succeeds when the input starts with string [[s]] - in this
 %%case it consumes as many characters as [[s]] is long. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val ( *** ) : 'a lexer -> 'a lexer -> 'a lexer
 val seq     : 'a lexer -> 'a lexer -> 'a lexer
 @
@@ -255,14 +256,14 @@ val seq     : 'a lexer -> 'a lexer -> 'a lexer
 %%[[y]] fail.
 %%   
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val ( ||| ) : 'a lexer -> 'a lexer -> 'a lexer
 val alt     : 'a lexer -> 'a lexer -> 'a lexer
 @
 %%[[x ||| y]] scans the input using lexer [[x]]; if [[x]] fails it scans
 %%the input again using [[y]].  The lexer fails when [[y]] fails. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val many : 'a lexer -> 'a lexer
 @
 %%[[many l]] scans the input using lexer [[l]] as many (including zero)
@@ -270,19 +271,19 @@ val many : 'a lexer -> 'a lexer
 %%[[many any *** chr 'x']] will always fail because the [['x']] in the
 %%input will be consumed by [[many any]]. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val some : 'a lexer -> 'a lexer
 @
 %%[[some l]] scans the input using lexer one or more times.  [[some]] is
 %%greedy -- see also [[many]]. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val opt : 'a lexer -> 'a lexer
 @
 %%[[opt l]] scans the input using lexer [[l]] when possible; when [[l]]
 %%fails the lexer does not consume input and succeeds. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val save : (string -> int -> int -> 'a) -> 'a lexer -> 'a lexer
 @
 %%
@@ -320,21 +321,21 @@ val save : (string -> int -> int -> 'a) -> 'a lexer -> 'a lexer
 %%[[List.rev]] applied to the result list will reorder the result list
 %%into the more intuitive order of opening parentheses.  
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val saveStr : string lexer -> string lexer
 @
 %%[[saveStr l]] uses lexer [[l]] to scan the input.  The substring [[l]]
 %%matches is stored in the result list which can be obtained with
 %%[[scan]].  See [[save]] for the order of the result list.  
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val scan: string -> 'a lexer -> (int * 'a list)
 @
 %%[[scan str l]] scans string [[str]] using lexer [[l]]. The result is a
 %%pair: the number of characters successfully consumed and the list of
 %%stored results. [[scan]] raises [[Error]] when scanning fails. 
 %%
-<<lc.mli>>=
+<<lc.mli >>=
 val scanFrom : int -> string -> 'a lexer -> (int * 'a list)
 @
 %%
@@ -346,7 +347,7 @@ val scanFrom : int -> string -> 'a lexer -> (int * 'a list)
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 
-<<lc.ml>>=
+<<lc.ml >>=
 let (=<=) (x:char)   (y:char)   = (=) x y
 
 exception Error of string
@@ -364,7 +365,7 @@ type region             = int * int
 %%characters successfully consumed and a new region list. All lexers
 %%except [save] pass the region list just trough 
 
-<<lc.ml>>=
+<<lc.ml >>=
 type 'a lexer           = string -> int -> 'a list -> (int * 'a list)
 
 (* naming convention: str=actual input, x=current position in str,
@@ -373,36 +374,36 @@ type 'a lexer           = string -> int -> 'a list -> (int * 'a list)
 let succeed str x r     = (0,r)
 @ 
 
-<<lc.ml>>=
+<<lc.ml >>=
 
 let fail msg            = error msg
 @ 
 
-<<lc.ml>>=
+<<lc.ml >>=
 let any                 = fun str x r -> 
                           if x < strlen str 
                           then (1,r)
                           else fail "unexpected eof"
 @ 
 
-<<lc.ml>>=
+<<lc.ml >>=
 let eof                 = fun str x r ->         
                           if x = strlen str
                           then (0,r)
                           else fail "eof expected"
 @ 
 
-<<lc.ml>>=
+<<lc.ml >>=
 let satisfy f           = fun str x r ->
                           if x < strlen str && f (get str x)
                           then (1,r)
                           else fail "predicate failed"
 @ 
-<<lc.ml>>=
+<<lc.ml >>=
 let chr c               = satisfy ((=<=) c)
  
 @ 
-<<lc.ml>>=
+<<lc.ml >>=
 let str s               = fun st x r ->    
                           let l = strlen s in
                           let rec loop i =
@@ -414,7 +415,7 @@ let str s               = fun st x r ->
                               in 
                                   loop 0
 @ 
-<<lc.ml>>=
+<<lc.ml >>=
 let seq  l1 l2          = fun str x r ->
                           let (i1,r1) = l1 str  x     r    in
                           let (i2,r2) = l2 str (x+i1) r1   in
@@ -422,7 +423,7 @@ let seq  l1 l2          = fun str x r ->
 let ( *** ) = seq
 
 @                               
-<<lc.ml>>=
+<<lc.ml >>=
 let alt l1 l2           = fun str x r ->
                           try l1 str x r with
                               Error _ -> try l2 str x r with
@@ -436,26 +437,26 @@ let alt l1 l2           = fun str x r ->
 let (|||) = alt
 @ 
 
-<<lc.ml>>=
+<<lc.ml >>=
 let rec many l          = fun str x r ->
                           (l *** many l ||| succeed) str x r 
 
 @ 
-<<lc.ml>>=
+<<lc.ml >>=
 let some l              = l *** many l
 
 @ 
-<<lc.ml>>=
+<<lc.ml >>=
 let opt l               = l ||| succeed
 
 @ 
-<<lc.ml>>=
+<<lc.ml >>=
 let save f l            = fun str x r ->
                           let (i,r') = l str x r   in
                               (i,f str x i :: r')
 @ 
 
-<<lc.ml>>=
+<<lc.ml >>=
 let saveStr l           = save String.sub l
                               
 (* auxilary functions *)
@@ -466,29 +467,14 @@ let scan str lexer          = lexer str 0 []
 
 
 \section{[[commons2/pc.nw]]}
+
 <<commons2/pc.ml>>=
-<<pc.ml>>
+<<pc.ml >>
 @
 <<commons2/pc.mli>>=
-<<pc.mli>>
+<<pc.mli >>
 @
 
-
-%%% l2h substitution cfg CFG
-%%% l2h substitution dots ...
-%%% l2h substitution AST AST
-%%% l2h substitution ast AST
-%%% l2h substitution rtl RTL
-%%% l2h substitution ir IR
-%%% l2h substitution noweb NOWEB
-%%% l2h substitution qcc QC--
-%%% l2h substitution C C--
-%%% l2h substitution PAL C--
-%%% l2h substitution pal C--
-%%% l2h substitution asdl ASDL
-%%% l2h substitution ocaml OCaml
-%%% l2h substitution forall forall
-%%% l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
 
 %%% ------------------------------------------------------------------  
 \section{Parser Combinators}\label{sec:pc}
@@ -522,7 +508,7 @@ let scan str lexer          = lexer str 0 []
 %%
 %%We use the following convention for type variables:  [[t]] for token,
 %%[[v]] for semantic value, and [[p]] for parser. 
-<<pc.mli>>=
+<<pc.mli >>=
 type ('t, 'v) par   = 't list -> 'v * 't list
 
 exception Error     of string
@@ -535,25 +521,25 @@ exception Error     of string
 %%The [[fail msg]] parser consumes no input and fails with message [[msg]].  The
 %%[[succeed x]] parser also does not consume any input and returns the
 %%semantic value [[x]].
-<<pc.mli>>=
+<<pc.mli >>=
 val fail:       string -> 'a
 val succeed:    'v -> ('t,'v) par 
 @ 
 %%The [[any]] parser consumes the next token and returns it as
 %%semantic value. It fails when there is no next token. 
-<<pc.mli>>=
+<<pc.mli >>=
 val any: ('t,'t) par
 @ 
 %%The [[eof]] parser succeeds when the list of tokens is empty and
 %%returns unit as semantic value. 
-<<pc.mli>>=
+<<pc.mli >>=
 val eof: ('t,unit) par
 @ 
 %%The [[satisfy f]] parser uses a user supplied predicate [[f]] to
 %%check the next token in the input.  It succeeds when [[f]] is
 %%fulfilled and returns the token as semantic value.  The parser fails
 %%when either the input is empty or [[f]] is not fulfilled.
-<<pc.mli>>=
+<<pc.mli >>=
 val satisfy: ('t -> bool) -> ('t,'t) par
 @ 
 %%The [[literal x]] parser expects [[x]] as the next token and fails in
@@ -561,7 +547,7 @@ val satisfy: ('t -> bool) -> ('t,'t) par
 %%[[x]] as semantic value. The type of [[x]] must be an equality type.
 %%The [[literal]] parser can be easily implemented with [[satisfy]] and
 %%is a handy shortcut.
-<<pc.mli>>=
+<<pc.mli >>=
 val literal: 't -> ('t,'t) par
 @ 
 %%% ------------------------------------------------------------------  
@@ -601,7 +587,7 @@ val literal: 't -> ('t,'t) par
 %%and [[y]] succeed and returns a pair of semantic values. Since [[***]]
 %%is right associative [[x *** y *** z]] would return a [[(x,(y,z))]]
 %%pair as a semantic value.
-<<pc.mli>>=
+<<pc.mli >>=
 val ( *** ): ('t,'v1) par -> ('t,'v2) par -> ('t,('v1*'v2)) par 
 @ 
 %%When using a parser like [[literal "-" *** literal any]] the
@@ -610,7 +596,7 @@ val ( *** ): ('t,'v1) par -> ('t,'v2) par -> ('t,('v1*'v2)) par
 %%right semantic value only:  [[literal "-" **> any]] returns the right
 %%semantic value.  The [[**<]] combinators creates a parser that returns
 %%only the left semantic value. 
-<<pc.mli>>=
+<<pc.mli >>=
 val ( **< ): ('t,'v1) par -> ('t,'v2) par -> ('t,'v1) par 
 val ( **> ): ('t,'v1) par -> ('t,'v2) par -> ('t,'v2) par 
 @ 
@@ -618,7 +604,7 @@ val ( **> ): ('t,'v1) par -> ('t,'v2) par -> ('t,'v2) par
 %%[[x]]. If this fails it tries [[y]]; [[x ||| y]] fails when both [[x]]
 %%and [[y]] fail. On success the semantic value of the first successful
 %%parser is returned.
-<<pc.mli>>=
+<<pc.mli >>=
 val ( ||| ): ('t,'v)  par -> ('t,'v)  par -> ('t,'v)  par 
 @ 
 %%To manipulate semantic values returned by a parser use the
@@ -627,14 +613,14 @@ val ( ||| ): ('t,'v)  par -> ('t,'v)  par -> ('t,'v)  par
 %%[[f]] and the value returned by [[f]] is the result of [[p --> f]]. 
 %%The [[-->]] combinator models semantic actions in a traditional Yacc
 %%parser. 
-<<pc.mli>>=
+<<pc.mli >>=
 val ( --> ): ('t,'v1) par -> ('v1 -> 'v2) -> ('t,'v2) par
 @ 
 %%When the semantic value for a parser is fixed one could use
 %%[[ p --> (fun _ -> x)]]. The [[return]] function does just this:
 %%[[p --> return x]]. So [[return]] is not a parser or parser combinator but a
 %%function intended to be used on the rigth hand side of [[-->]].
-<<pc.mli>>=
+<<pc.mli >>=
 val return: 'v1 -> 'v2 -> 'v1
 @ 
 %%The precedences of the infix operators are chosen that typical
@@ -646,14 +632,14 @@ val return: 'v1 -> 'v2 -> 'v1
 %%The [[opt p]] parser tries to use [[p]] to parse the input and returns
 %%[[Some x]] when [[p]] succeeds,  where [[x]] is the semantic value of
 %%[[p]]. In case [[p]] fails [[None]] is returned by [[opt p]].
-<<pc.mli>>=
+<<pc.mli >>=
 val opt: ('t,'v)  par -> ('t,'v option) par
 @ 
 %%The [[many p]] parser tries to apply parser [[p]] as often as
 %%possible to the input and returns the list of semantic values produced
 %%by [[p]]. When [[p]] fails for the first token the returned list is
 %%empty. Thus, this parser never fails. 
-<<pc.mli>>=
+<<pc.mli >>=
 val many : ('t, 'v) par -> ('t, 'v list) par
 @ 
 %%Note that [[many]] is greedy
@@ -667,7 +653,7 @@ val many : ('t, 'v) par -> ('t, 'v list) par
 %%The [[some p]] parser works exactly like [[many p]] but expects at
 %%least one token to parse and fails otherwise. It thus returns a non
 %%empty list of semantic values.
-<<pc.mli>>=
+<<pc.mli >>=
 val some: ('t,'v)  par -> ('t,'v list) par
 @ 
 %%The parsers [[many]], [[some]], and [[opt]] resemble the [[*]],
@@ -683,7 +669,7 @@ val some: ('t,'v)  par -> ('t,'v list) par
 %%[[t]] for token, [[ts]] for token list, [[v]] for semantic value, and
 %%[[p]] for parser. 
 %%
-<<pc.ml>>=
+<<pc.ml >>=
 exception Error of string
 let error s = raise (Error s)
 
@@ -694,7 +680,7 @@ type ('t,'v) par = 't list -> 'v * ('t list)
 %%\subsubsection{Primitive Parsers}
 %%% ------------------------------------------------------------------  
 
-<<pc.ml>>=
+<<pc.ml >>=
 let succeed v ts = (v,ts)
 let fail msg     = error msg
 
@@ -745,7 +731,7 @@ many any = any *** many any
      %left  INFIXOP0 EQUAL LESS GREATER      /* = < > | ^ $  */
 @
 %$
-<<pc.ml>>=
+<<pc.ml >>=
 let ( ||| ) p1 p2 = fun ts ->
     try p1 ts with 
     Error _ ->  try p2 ts with
@@ -781,12 +767,6 @@ let some p =
     p *** many p --> (fun (x,y) -> x::y)
 @
 \section{[[commons2/pc2.nw]]}
-<<commons2/pc2.ml>>=
-<<pc2.ml>>
-@
-<<commons2/pc2.mli>>=
-<<pc2.mli>>
-@
 
 %%% ------------------------------------------------------------------ 
 \section{Alternative Parser Combinators}
@@ -996,10 +976,10 @@ let some p =
 \section{[[commons2/pp.nw]]}
 
 <<commons2/pp.ml>>=
-<<pp.ml>>
+<<pp.ml >>
 @
 <<commons2/pp.mli>>=
-<<pp.mli>>
+<<pp.mli >>
 @
 
 %%
@@ -1042,14 +1022,14 @@ let some p =
 %%word.  Functions combine small documents to larger ones which then can
 %%be pretty printed.
 
-<<pp.mli>>=
+<<pp.mli >>=
 type doc
 
 @ 
 %%The empty document is pretty printed to the empty string. Typically
 %%[[empty]] is used in one branch of an [[if]] statement.
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val empty : doc
 
 @ 
@@ -1057,7 +1037,7 @@ val empty : doc
 %%[[y]] into a larger one.  It does not introduce any space or other
 %%separation between the two original documents. 
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val (^^) : doc -> doc -> doc
 
 @ 
@@ -1065,7 +1045,7 @@ val (^^) : doc -> doc -> doc
 %%representation of the resulting document is exactly the string [[text]]
 %%was applied to. 
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val text : string -> doc
 
 @ 
@@ -1077,7 +1057,7 @@ val text : string -> doc
 %%enough flexibility documents must be joined with [[break]]s:
 %%[[x ^^ break ^^ y]].
 %%   
-<<pp.mli>>=
+<<pp.mli >>=
 val break : doc
 
 @ 
@@ -1085,7 +1065,7 @@ val break : doc
 %%The function [[breakWith s]] behaves like [[break]] except that it
 %%uses a user supplied string [[s]] instead of the space.
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val breakWith : string -> doc
 
 @ 
@@ -1101,7 +1081,7 @@ val breakWith : string -> doc
 %%[[nest]] operator nests properly such that it takes the spaces
 %%introduced by [[nest]]s on the outer level also into account.
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val nest : int -> doc -> doc
 
 @ 
@@ -1116,7 +1096,7 @@ val nest : int -> doc -> doc
 %%spaces.  This group has a very limited usefulness because it easily
 %%overruns any given line length. 
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val hgrp : doc -> doc
     
 @ 
@@ -1128,7 +1108,7 @@ val hgrp : doc -> doc
 %%group.  Because of the fixed pretty printing strategy [[vgrp]]s are
 %%used mostly at the top level of documents only.
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val vgrp : doc -> doc
 
 @ 
@@ -1150,7 +1130,7 @@ val vgrp : doc -> doc
 %%room for the smaller inner groups.  Chances are good that these
 %%will fit into a line and thus their [[break]]s come out as spaces.
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val agrp : doc -> doc
 
 @ 
@@ -1160,7 +1140,7 @@ val agrp : doc -> doc
 %%fits into the current line the [[break]] comes out as space. 
 %%Otherwise it comes out as newline followed by spaces. 
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val fgrp : doc -> doc
 
 @ 
@@ -1184,7 +1164,7 @@ val fgrp : doc -> doc
 %%easily wrap your document on the outer level with another group such
 %%that the [[agrp]] will have no effect.
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val ppToString : int -> doc -> string
 val ppToFile : out_channel -> int -> doc -> unit
 @
@@ -1205,7 +1185,7 @@ val ppToFile : out_channel -> int -> doc -> unit
 %%[[f]].  For the common case where commas are used for separating we
 %%also provide an extra definition.
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val list      : doc -> ('a -> doc) -> 'a list -> doc 
 val commalist :        ('a -> doc) -> 'a list -> doc
 
@@ -1214,7 +1194,7 @@ val commalist :        ('a -> doc) -> 'a list -> doc
 %%convenient to define an operator for this: [[x ^/ y]] joins [[x]] and
 %%[[y]] with a [[break]].
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val (^/)      : doc -> doc -> doc
 
 @ 
@@ -1222,7 +1202,7 @@ val (^/)      : doc -> doc -> doc
 %%by curly braces.  Its body will be indented in case it does not fit on
 %%a single line. 
 %%
-<<pp.mli>>=
+<<pp.mli >>=
 val block     : ('a -> doc) -> 'a list -> doc
 @
 
@@ -1233,7 +1213,7 @@ val block     : ('a -> doc) -> 'a list -> doc
 %%Users buld document of type [[doc]].  The different kinds of documents
 %%are mapped to different constructors. 
 %%
-<<pp.ml>>=
+<<pp.ml >>=
 <<auxiliaries(pp.nw)>>
 <<gmode>>
 
@@ -1263,7 +1243,7 @@ type gmode =
 %%When [[debug]] is [[true]] additional markup for the groups with
 %%run time computed pretty printing is added.
 %%
-<<pp.ml>>=
+<<pp.ml >>=
 
 let (^^) x y            = DocCons(x,y)
 let empty               = DocNil
@@ -1295,7 +1275,7 @@ let fgrp d              = if   debug
 %%text followed by some [[sdoc]] ([[SText]]), or a newline, followed by
 %%a number of spaces and another [[sdoc]] value. 
 %%
-<<pp.ml>>=
+<<pp.ml >>=
 type sdoc =
     | SNil
     | SText             of string * sdoc
@@ -1315,7 +1295,7 @@ let rec sdocToString = function
                             in  nl ^ prefix ^ sdocToString d
 @
 %%
-<<pp.ml>>=
+<<pp.ml >>=
 let sdocToString sdoc =
     let buf = Buffer.create 256 in
     let rec loop = function
@@ -1357,7 +1337,7 @@ let sdocToFile oc doc =
 %%                 newline and as space otherwise. 
 %%\end{itemize}
 %%
-<<pp.ml>>=
+<<pp.ml >>=
 type mode =
     | Flat
     | Break
@@ -1385,7 +1365,7 @@ type mode =
 %%contents of an [[agrp]] [[format]] uses [[fit]] to check, whether the
 %%whole group fits into the rest of the line.  In case it does, the mode
 %%will be [[Flat]] which means its [[break]]s will be spaces. 
-<<pp.ml>>=
+<<pp.ml >>=
 <<fits>>
 
 (* format is cps to avoid stack overflow *)
@@ -1436,7 +1416,7 @@ let rec fits w = function
 %%The pretty printing functions called by the user just enclose the
 %%user document with a virtual [[agrp]] and start [[format]]'ing.
 %%
-<<pp.ml>>=
+<<pp.ml >>=
 let ppToString  w doc = format w 0 [0,Flat,agrp(doc)] sdocToString
 let ppToFile oc w doc = format w 0 [0,Flat,agrp(doc)] (sdocToFile oc) 
 @ 
@@ -1445,7 +1425,7 @@ let ppToFile oc w doc = format w 0 [0,Flat,agrp(doc)] (sdocToFile oc)
 %%\subsubsection{Useful functions}
 %%% ------------------------------------------------------------------ 
 %%
-<<pp.ml>>=
+<<pp.ml >>=
 let rec list sep f xs =
     let rec loop acc = function
         | []    -> acc
@@ -1830,10 +1810,10 @@ and string = parse
 \section{[[commons2/rx.nw]]}
 
 <<commons2/rx.ml>>=
-<<rx.ml>>
+<<rx.ml >>
 @
 <<commons2/rx.mli>>=
-<<rx.mli>>
+<<rx.mli >>
 @
 
 %%% ------------------------------------------------------------------ 
@@ -1856,13 +1836,13 @@ and string = parse
 
 %%The type of a regular expression over symbols of type [['a]]:
 
-<<rx.mli>>=
+<<rx.mli >>=
 type 'a rx 
 @
 %%
 %%Construtor functions for regular expressions:
 %%
-<<rx.mli>>=
+<<rx.mli >>=
 val zero : 'a rx                                (* never matches       *)
 val unit : 'a rx                                (* matches empty input *)
 val sym : 'a -> 'a rx                           (* 'x'                 *)
@@ -1878,14 +1858,14 @@ val ( *** ) : 'a rx -> 'a rx -> 'a rx           (* e1 e2               *)
 %%[[matches e syms]] is true, iff the word [[syms]] is an element of $L(e)$, i.e. 
 %%[[e]] matches the symbols [[syms]].
 %%
-<<rx.mli>>=
+<<rx.mli >>=
 val matches : 'a rx -> 'a list -> bool
 @
 %%
 %%[[[matchstr e str]] is true, iff string [[str]] is matched by 
 %%regular expression [[e]]. 
 %%
-<<rx.mli>>=
+<<rx.mli >>=
 val matchstr : char rx -> string -> bool
 @
 
@@ -1893,7 +1873,7 @@ val matchstr : char rx -> string -> bool
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 
-<<rx.ml>>=
+<<rx.ml >>=
 let (=*=) = (=)
 
 type 'a rx      = 
@@ -1907,7 +1887,7 @@ type 'a rx      =
                 | RXalt         of ('a rx) * ('a rx)    (* e1 | e2      *)
 @ 
 
-<<rx.ml>>=
+<<rx.ml >>=
 let zero        = RXzero
 let unit        = RXunit
 let sym x       = RXsym x
@@ -1935,7 +1915,7 @@ let alt x y     = match (x,y) with
                 | x     , y     -> RXalt(x,y)
 @ 
 
-<<rx.ml>>=
+<<rx.ml >>=
 let ( ||| ) = alt
 let ( *** ) = seq
 @
@@ -1943,7 +1923,7 @@ let ( *** ) = seq
 %%[[nullable e]] is true, iff the empty sequence ([[RXzero]]) is recognized 
 %%by [[e]]. 
 %%
-<<rx.ml>>=
+<<rx.ml >>=
 let rec nullable = function
     | RXzero            -> false
     | RXunit            -> true
@@ -1958,7 +1938,7 @@ let rec nullable = function
 %%[[residual e x]] returns a regular expression [[e']] that recognizes the
 %%language $L(e') = \{ w | xw \in L(e)\}$. 
 %%
-<<rx.ml>>=
+<<rx.ml >>=
 let rec residual e' x = match e' with
     | RXzero            -> RXzero
     | RXunit            -> RXzero
@@ -1977,14 +1957,14 @@ let rec residual e' x = match e' with
 %%[[matches e syms]] is true, iff the word [[syms]] is an element of $L(e)$, i.e. 
 %%[[e]] matches the symbols [[syms]]
 %%
-<<rx.ml>>=
+<<rx.ml >>=
 let matches e syms      = nullable (List.fold_left residual e syms)
 @
 %%
 %%[[matchstr e str]] is true, iff string [[str]] is matched by 
 %%regular expression [[e]].
 %% 
-<<rx.ml>>=
+<<rx.ml >>=
 let matchstr e str =
     let len = String.length str         in
     let rec loop e i =

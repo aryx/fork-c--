@@ -17,16 +17,17 @@ SRC_ORIG=Cmm.nw Cmm_extra.nw
 #TODO: arch/ppc/ppcelfasm.ml
 
 SRC_VIEWS= \
- $TOP/libs/commons2/lc.mli\
- $TOP/libs/commons2/lc.ml\
- $TOP/libs/commons2/pc.mli\
- $TOP/libs/commons2/pc.ml\
- $TOP/libs/commons2/pc2.mli\
- $TOP/libs/commons2/pc2.ml\
+ $TOP/libs/parser_combinators/lc.mli\
+ $TOP/libs/parser_combinators/lc.ml\
+ $TOP/libs/parser_combinators/pc.mli\
+ $TOP/libs/parser_combinators/pc.ml\
+ $TOP/libs/parser_combinators/pc2.mli\
+ $TOP/libs/parser_combinators/pc2.ml\
+ $TOP/libs/parser_combinators/rx.mli\
+ $TOP/libs/parser_combinators/rx.ml\
+ \
  $TOP/libs/commons2/pp.mli\
  $TOP/libs/commons2/pp.ml\
- $TOP/libs/commons2/rx.mli\
- $TOP/libs/commons2/rx.ml\
  $TOP/libs/commons2/auxfuns.mli\
  $TOP/libs/commons2/auxfuns.ml\
  $TOP/libs/commons2/strutil.mli\

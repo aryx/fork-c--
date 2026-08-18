@@ -1,5 +1,5 @@
 (*s: commons2/rx.ml *)
-(*s: rx.ml *)
+(*s: rx.ml  *)
 let (=*=) = (=)
 
 type 'a rx      = 
@@ -11,7 +11,7 @@ type 'a rx      =
                 | RXopt         of ('a rx)              (* e?           *)
                 | RXseq         of ('a rx) * ('a rx)    (* e1 e2        *)
                 | RXalt         of ('a rx) * ('a rx)    (* e1 | e2      *)
-(*x: rx.ml *)
+(*x: rx.ml  *)
 let zero        = RXzero
 let unit        = RXunit
 let sym x       = RXsym x
@@ -37,10 +37,10 @@ let alt x y     = match (x,y) with
                 | RXzero, x     -> x
                 | x     , RXzero-> x
                 | x     , y     -> RXalt(x,y)
-(*x: rx.ml *)
+(*x: rx.ml  *)
 let ( ||| ) = alt
 let ( *** ) = seq
-(*x: rx.ml *)
+(*x: rx.ml  *)
 let rec nullable = function
     | RXzero            -> false
     | RXunit            -> true
@@ -50,7 +50,7 @@ let rec nullable = function
     | RXopt e           -> true
     | RXseq(e1,e2)      -> nullable e1 && nullable e2
     | RXalt(e1,e2)      -> nullable e1 || nullable e2
-(*x: rx.ml *)
+(*x: rx.ml  *)
 let rec residual e' x = match e' with
     | RXzero            -> RXzero
     | RXunit            -> RXzero
@@ -64,9 +64,9 @@ let rec residual e' x = match e' with
                            then alt (seq (residual e1 x) e2) (residual e2 x)
                            else seq (residual e1 x) e2
     | RXalt(e1,e2)      -> alt (residual e1 x) (residual e2 x)
-(*x: rx.ml *)
+(*x: rx.ml  *)
 let matches e syms      = nullable (List.fold_left residual e syms)
-(*x: rx.ml *)
+(*x: rx.ml  *)
 let matchstr e str =
     let len = String.length str         in
     let rec loop e i =
@@ -75,5 +75,5 @@ let matchstr e str =
         else loop (residual e (String.get str i)) (i+1)
     in
         loop e 0
-(*e: rx.ml *)
+(*e: rx.ml  *)
 (*e: commons2/rx.ml *)
