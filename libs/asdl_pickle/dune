@@ -1,5 +1,0 @@
-(library
- (name cmm_h_asdl)
- (wrapped false)
- (preprocess (pps ppx_deriving.show))
-)
