@@ -9,7 +9,7 @@ VERSION=1
 # must be in the same order of the #include
 SRC_ORIG=Cmm.nw Cmm_extra.nw
 
-#TODO: sync also ast.asdl (or ast.ml generated code)
+#TODO: sync also ast.ml!
 #TODO: ir/vfp.ml split from layout/vfprewrite.ml
 #TODO? rc.ml rc_ast.ml rc_scan.mll rc_parser.mly?
 #TODO: main.ml
