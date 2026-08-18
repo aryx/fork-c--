@@ -804,6 +804,27 @@ increasing, bounded vs. unbounded) decide which of "stuck" or
 fixes, and guessing wrong wastes exactly the kind of time this entry is
 trying to save.
 
+claude: third reproduction found later, via the -regalloc flag
+(driver/main.ml / regalloc/ralloc_choice.ml) that forces an allocator
+independent of opt_level. Colorgraph forced at -O0 (`qc -O0 -regalloc
+colorgraph`, i.e. with none of the other -O3 opti/ passes trimming live
+ranges first) hangs the same way on tests/cmm-pass/ratail.c-- - caught
+live at 99% CPU and killed. This shows the hang is not an -O3-specific
+interaction (add.c-- and tail_from_c.c-- were both only ever observed
+at -O3, where Colorgraph is wired in by default): it is a property of
+Colorgraph's spill-cost heuristic under enough register pressure,
+period, and plain -O0 code (more live temps, since
+Optimize.elim_dead_assignments/CSE/etc. never ran) reaches that
+threshold just as easily as -O3 code does. Root cause not
+re-investigated for this file specifically, but selectSpill's
+liveRange-undercounts-loop-carried-values mechanism (the tail_from_c.c--
+paragraph above) is the prime suspect - ratail.c-- (register-allocation
+tail-recursion torture test, by its name) almost certainly has the same
+back-edge-spanning-value shape. -regalloc is generally the fastest way
+to get more Colorgraph repro cases: it decouples "which allocator runs"
+from "which other passes also ran," which the add.c--/tail_from_c.c--
+investigation couldn't do before this flag existed.
+
 
 28. Rebuild a stripped-of-debug-info library with -g just for the session
 ---------------------------------------------------------------------------

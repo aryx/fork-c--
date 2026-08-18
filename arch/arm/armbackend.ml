@@ -87,7 +87,7 @@ let dump_cfg word label (proc : Ast2ir.proc) : unit =
  * Same shape/gating as arch/mips/mipsbackend.ml's/arch/alpha/
  * alphabackend.ml's optimizer - see their header comments for the
  * opt_level rationale. *)
-let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
+let optimizer ~opt_level ~regalloc (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
   let proc = run Optimize.trim_unreachable_code proc in
   let proc = run (Placevar.context Arm.placevars) proc in
   let proc = if opt_level > 0 then run Optimize.simplify_exps proc else proc in
@@ -99,7 +99,10 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
   let proc = if opt_level > 0 then run Peephole.subst_forward proc else proc in
   let proc = if opt_level > 0 then run Optimize.elim_dead_assignments proc else proc in
   let proc = run Phases.liveness proc in
-  let proc = if opt_level > 0 then run Colorgraph.ralloc proc else run Flowra.ralloc proc in
+  (* claude: -regalloc overrides opt_level-driven allocator choice, for
+   * A/B comparison at a fixed optimization level - see
+   * regalloc/ralloc_choice.ml and driver/main.ml's regalloc ref. *)
+  let proc = run (Ralloc_choice.choose regalloc ~opt_level) proc in
   let proc = run layout proc in
   let proc = run Phases.rmvfp proc in
   let proc = if opt_level > 0 then run Optimize.remove_nops proc else proc in

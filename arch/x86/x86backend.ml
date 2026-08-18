@@ -286,7 +286,7 @@ let dump_cfg word label (proc : Ast2ir.proc) : unit =
  * codegen/ast2ir.ml's comment at the "definition of [[proc]]" chunk for
  * why it has to be called from here instead of there.
  *)
-let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
+let optimizer ~opt_level ~regalloc (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) : unit =
   let proc = run Optimize.trim_unreachable_code proc in
   let proc = run update_gamma_counts proc in
   let proc = run create_gamma proc in
@@ -385,8 +385,27 @@ let optimizer ~opt_level (asm : Ast2ir.proc Asm.assembler) (proc : Ast2ir.proc) 
    * in here - a hang during compilation has no timeout anywhere in this
    * pipeline to catch it (tests/run-native.sh itself only times out the
    * emulated *run* step, not the qc compile step).
-   *)
-  let proc = if opt_level > 0 then run Colorgraph.ralloc proc else run Flowra.ralloc proc in
+   *
+   * claude: Colorgraph is in fact wired in below now (gated on opt_level,
+   * same as the rest of opti/) - that comment predates this. -regalloc
+   * (Ralloc_choice.choose) lets the choice below be overridden
+   * independent of opt_level, for A/B comparison at a fixed optimization
+   * level.
+   *
+   * claude: that A/B comparison found a third hang, beyond the two
+   * above - `qc -O0 -regalloc colorgraph` (i.e. Colorgraph with none of
+   * the other -O3 opti/ passes trimming live ranges first) hangs on
+   * tests/cmm-pass/ratail.c-- the same way. So the hang is not specific
+   * to -O3's interaction with Colorgraph; it is a property of
+   * selectSpill's spill-cost heuristic under enough register pressure,
+   * full stop, and plain -O0 code (more live temps, since
+   * elim_dead_assignments/CSE/etc. never ran) reaches that threshold
+   * just as easily. See docs/claude_notes/notes_debugging_techniques.txt
+   * entry 27's addendum. Flowra forced at -O3 (`qc -O3 -regalloc
+   * flowra`), by contrast, still passes tests/run-native.sh OPT=3
+   * 66/66 - i.e. Flowra has not been shown to produce worse code than
+   * Colorgraph on this suite, only to be more robust (never hangs). *)
+  let proc = run (Ralloc_choice.choose regalloc ~opt_level) proc in
   (* ralloc runs before freeze: it is what decides how many spill slots
    * the frame needs, and freeze is what turns that into offsets. *)
   let proc = run layout proc in

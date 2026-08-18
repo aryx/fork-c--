@@ -287,6 +287,17 @@ let exportglobals = ref false
  * -O0 baseline on the same input. *)
 let opt_level = ref 0
 
+(* claude: which register allocator each backend's optimizer uses, independent
+ * of opt_level. Historically upstream's Backend.* configs all used
+ * Ralloc.dls (src/luacompile.nw) - Flowra and Colorgraph were both
+ * available as named Lua stages but never selected by any shipped
+ * backend. This fork instead defaults to opt_level-driven selection
+ * (Flowra at -O0, Colorgraph at -O3+, see each backend's optimizer) since
+ * neither was ever head-to-head compared against the other upstream. None
+ * preserves that default; -regalloc overrides it so the two can be
+ * compared at a fixed opt_level. *)
+let regalloc : Ralloc_choice.t option ref = ref None
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -464,31 +475,31 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     match backend with
     | X86 ->
         let asm = X86asm.make Cfgutil.emit chan in
-        X86.target, asm, X86backend.optimizer ~opt_level:!opt_level asm, true
+        X86.target, asm, X86backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Ppc ->
         let asm = Ppcasm.make Cfgutil.emit chan in
-        Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level asm, true
+        Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | PpcElf ->
         let asm = Ppcelfasm.make Cfgutil.emit chan in
-        Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level asm, true
+        Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Sparc ->
         let asm = Sparcasm.make Cfgutil.emit chan in
-        Sparc.target, asm, Sparcbackend.optimizer ~opt_level:!opt_level asm, true
+        Sparc.target, asm, Sparcbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Alpha ->
         let asm = Alphaasm.make Cfgutil.emit chan in
-        Alpha.target, asm, Alphabackend.optimizer ~opt_level:!opt_level asm, true
+        Alpha.target, asm, Alphabackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Mips ->
         let asm = Mipsasm.make Cfgutil.emit chan in
-        Mips.target, asm, Mipsbackend.optimizer ~opt_level:!opt_level asm, true
+        Mips.target, asm, Mipsbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Arm ->
         let asm = Armasm.make Cfgutil.emit chan in
-        Arm.target, asm, Armbackend.optimizer ~opt_level:!opt_level asm, true
+        Arm.target, asm, Armbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Riscv64 ->
         let asm = Riscv64asm.make Cfgutil.emit chan in
-        Riscv64.target, asm, Riscv64backend.optimizer ~opt_level:!opt_level asm, true
+        Riscv64.target, asm, Riscv64backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Riscv32 ->
         let asm = Riscv32asm.make Cfgutil.emit chan in
-        Riscv32.target, asm, Riscv32backend.optimizer ~opt_level:!opt_level asm, true
+        Riscv32.target, asm, Riscv32backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
          * see TODO/lua/lualink.ml:234 *)
@@ -873,6 +884,13 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " disable the opti/ passes (default)";
     "-O3", Arg.Unit (fun () -> opt_level := 3),
     " enable the opti/ passes (simplify_exps, remove_nops, validate, peephole)";
+    "-regalloc", Arg.String (fun s -> regalloc := Some (match s with
+      | "flowra" -> Ralloc_choice.Flowra
+      | "colorgraph" -> Ralloc_choice.Colorgraph
+      | s -> raise (Arg.Bad (Printf.sprintf
+               "unknown -regalloc %S (expected: flowra, colorgraph)" s)))),
+    " <flowra|colorgraph> force a register allocator, independent of -O0/-O3 \
+(default: flowra at -O0, colorgraph at -O3)";
     "-stop", Arg.Set_string stop_after,
     " .<ext> stop after producing .s or .o (cc's -S and -c)";
     "-L", Arg.String (fun d -> libdirs := d :: !libdirs),
