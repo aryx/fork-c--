@@ -1,5 +1,5 @@
 (*s: commons3/ctypes.ml *)
-(*s: ctypes.ml *)
+(*s: ctypes.ml  *)
 (*s: types *)
 type 'a ctypes = { char               : 'a
                  ; double             : 'a
@@ -49,7 +49,7 @@ let ct_foldi f ct z =
    (f "unsigned char" (f "unsigned long" (f "unsigned short"
    (f "unsigned int" (f "unsigned long long" (f "address" z))))))))))))))
 let ct_fold f = ct_foldi (fun _ x -> f x)
-(*x: ctypes.ml *)
+(*x: ctypes.ml  *)
 let x86_ctypes =
   { char               = {w = 8 ; va_w = 32}
   ; double             = {w = 64; va_w = 64}
@@ -67,7 +67,7 @@ let x86_ctypes =
   ; unsigned_long_long = {w = 64; va_w = 64}
   ; address            = {w = 32; va_w = 32}
   }
-(*x: ctypes.ml *)
+(*x: ctypes.ml  *)
 let enum_ct =
   { char               = ("CHAR"            , 0)
   ; double             = ("DOUBLE"          , 1)
@@ -89,5 +89,5 @@ let ctypes_vararg_enum ct =
   let str_lst = ct_fold (fun (s,id) rst -> (sprintf "%s = %d" s id)::rst) enum_ct [] in
   Printf.sprintf "{ %s }" (String.concat ", " str_lst)
 let enum_int h = snd (fetch_ct enum_ct h)
-(*e: ctypes.ml *)
+(*e: ctypes.ml  *)
 (*e: commons3/ctypes.ml *)

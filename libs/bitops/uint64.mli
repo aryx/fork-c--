@@ -1,5 +1,5 @@
 (*s: commons3/uint64.mli *)
-(*s: uint64.mli *)
+(*s: uint64.mli  *)
 (*s: [[Uint64]] external functions *)
 (* external of_int:     int   -> int64                  = "uint64_i2i" *)
 (*x: [[Uint64]] external functions *)
@@ -22,10 +22,10 @@ val ge:              int64 -> int64 -> bool     (* greater equal *)
 val shl:             int -> int64 -> int64      (* shift left  *)
 val shr:             int -> int64 -> int64      (* shift right *)
 (*e: internal functions *)
-(*x: uint64.mli *)
+(*x: uint64.mli  *)
 module Cast : sig
  external float64 :   float -> int64 = "uint64_float64"
  external float32 :   float -> int64 = "uint64_float32"
 end
-(*e: uint64.mli *)
+(*e: uint64.mli  *)
 (*e: commons3/uint64.mli *)

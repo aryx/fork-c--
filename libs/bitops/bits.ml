@@ -1,17 +1,17 @@
 (*s: commons3/bits.ml *)
-(*s: bits.ml *)
+(*s: bits.ml  *)
 let (=*=) = (=)
 let (=<=) (x:char)   (y:char)   = (=) x y
 
 module I = Int64        (* signed   operations *)
 exception Overflow
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
-(*x: bits.ml *)
+(*x: bits.ml  *)
 let (<=) = Pervasives.(<=)
 let (>=) = Pervasives.(>=)
 let (<)  = Pervasives.(<)
 let (>)  = Pervasives.(>)
-(*x: bits.ml *)
+(*x: bits.ml  *)
 
 type width      = int
 [@@deriving show]
@@ -23,19 +23,19 @@ type t          = bits
 let width (_,w) = w
 let check w = if w <= 0 || w > 64 then impossf "unsupported bitwidth %d" w
 let zero w  = check w; (I.zero, w)
-(*x: bits.ml *)
+(*x: bits.ml  *)
 let sx64 i w =
   if w = 64 then i
   else
     let w' = 64-w in
     I.shift_right (I.shift_left i w') w'
-(*x: bits.ml *)
+(*x: bits.ml  *)
 let zx64 i w =
   if w = 64 then i
   else
     let w' = 64-w in
     I.shift_right_logical (I.shift_left i w') w'
-(*x: bits.ml *)
+(*x: bits.ml  *)
 let to_string (i,w) = Printf.sprintf "0x%Lx::bits%d" i w 
 let to_decimal_string (i,w) = Printf.sprintf "%Ld" i
 let to_hex_or_decimal_string ~declimit (i,w) =
@@ -44,7 +44,7 @@ let to_hex_or_decimal_string ~declimit (i,w) =
     Printf.sprintf "%Ld" i
   else
     Printf.sprintf "0x%Lx" (zx64 i w)
-(*x: bits.ml *)
+(*x: bits.ml  *)
 module Ops = struct
   (*s: bitwise operators *)
   let add (b, w) (b', w') =
@@ -147,7 +147,7 @@ let compare (b, w) (b', w') =
   | 0 -> Pervasives.compare (sx64 b w) (sx64 b' w)
   | diff -> diff
 let is_zero (b, w) = zx64 b w =*= I.zero
-(*x: bits.ml *)
+(*x: bits.ml  *)
 (*s: string scanning *)
 (*s: parse int *)
 let sint str w =
@@ -350,5 +350,5 @@ module U = struct
         i 
     (*e: implementation U *)
 end
-(*e: bits.ml *)
+(*e: bits.ml  *)
 (*e: commons3/bits.ml *)

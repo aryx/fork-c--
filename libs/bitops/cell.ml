@@ -1,4 +1,3 @@
-(*s: commons3/cell.ml *)
 (*s: cell.ml *)
 type count = C of int   (* a number of cells *)
 [@@deriving show]
@@ -27,4 +26,3 @@ let of_size n = match n with
 | 64 -> c64
 |  _ -> (n, (fun (C c) -> n * c), (fun w -> C (w / n)), (fun w -> w mod n = 0))
 (*e: cell.ml *)
-(*e: commons3/cell.ml *)

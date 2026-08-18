@@ -1,5 +1,5 @@
 (*s: commons3/bits.mli *)
-(*s: bits.mli *)
+(*s: bits.mli  *)
 type width = int
 
 (* pad: this was previously an abstract type, but it's less convenient
@@ -14,10 +14,10 @@ type t = bits
 val width : t -> width         (* observer *)
 val zero  : width -> t         (* constructor *)
 val is_zero : t -> bool
-(*x: bits.mli *)
+(*x: bits.mli  *)
 val compare : t -> t -> int
 val eq      : t -> t -> bool
-(*x: bits.mli *)
+(*x: bits.mli  *)
 exception Overflow
 module S: sig  (* signed *) 
     (*s: interface S *)
@@ -49,11 +49,11 @@ module U: sig (* unsigned *)
     val fits : width -> t -> bool    (* fits w b == (b = zxlo w b) *)
     (*e: interface U *)
 end
-(*x: bits.mli *)
+(*x: bits.mli  *)
 val to_string         : bits -> string
 val to_decimal_string : bits -> string
 val to_hex_or_decimal_string : declimit:int -> bits -> string
-(*x: bits.mli *)
+(*x: bits.mli  *)
 module Ops : sig
   val add       : bits -> bits -> bits
   val and'      : bits -> bits -> bits
@@ -79,5 +79,5 @@ module Ops : sig
   val ltu       : bits -> bits -> bool
   val gtu       : bits -> bits -> bool
 end
-(*e: bits.mli *)
+(*e: bits.mli  *)
 (*e: commons3/bits.mli *)

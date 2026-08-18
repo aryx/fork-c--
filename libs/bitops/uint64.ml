@@ -1,5 +1,5 @@
 (*s: commons3/uint64.ml *)
-(*s: uint64.ml *)
+(*s: uint64.ml  *)
 module I = Int64
 (*s: [[Uint64]] external functions *)
 (* external of_int:     int   -> int64                  = "uint64_i2i" *)
@@ -17,7 +17,7 @@ module Cast = struct
  external float64 :   float -> int64 = "uint64_float64"
  external float32 :   float -> int64 = "uint64_float32"
 end
-(*x: uint64.ml *)
+(*x: uint64.ml  *)
 let eq  x y =    (cmp x y) = 0
 let lt  x y =    (cmp x y) < 0
 let gt  x y =    (cmp x y) > 0
@@ -26,8 +26,8 @@ let ge  x y =    (gt x y) || (eq x y)
 
 let le  x y =    not (gt x y)
 let ge  x y =    not (lt x y)
-(*x: uint64.ml *)
+(*x: uint64.ml  *)
 let shl n x =    I.shift_left x n
 let shr n x =    I.shift_right_logical x n  
-(*e: uint64.ml *)
+(*e: uint64.ml  *)
 (*e: commons3/uint64.ml *)

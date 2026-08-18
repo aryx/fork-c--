@@ -1,4 +1,3 @@
-(*s: commons3/idgen.mli *)
 (*s: idgen.mli *)
 type generator = string -> string
 val label:      generator       (* denotes pc value *)
@@ -15,4 +14,3 @@ module ContEntry : sig
 end
 (* add more as needed *)
 (*e: idgen.mli *)
-(*e: commons3/idgen.mli *)

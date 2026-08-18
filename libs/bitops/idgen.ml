@@ -1,13 +1,13 @@
 (*s: commons3/idgen.ml *)
-(*s: idgen.ml *)
+(*s: idgen.ml  *)
 type generator = string -> string
 let count = Reinit.ref 0
-(*x: idgen.ml *)
+(*x: idgen.ml  *)
 let id kind s =
     ( incr count
     ; Printf.sprintf "%s%s:%c%d" (if kind == 'l' then ".L" else "") s kind !count
     )
-(*x: idgen.ml *)
+(*x: idgen.ml  *)
 let label   = id 'l' 
 let offset  = id 'o'
 let exit    = id 'x'
@@ -20,5 +20,5 @@ module ContEntry = struct
   let return = id 'R'
 end
 (* add more here as needed *)
-(*e: idgen.ml *)
+(*e: idgen.ml  *)
 (*e: commons3/idgen.ml *)

@@ -1,4 +1,3 @@
-(*s: commons3/idcode.ml *)
 (*s: idcode.ml *)
 let codes = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_."
 let () = assert (String.length codes = 64)
@@ -21,4 +20,3 @@ let encode s =
     Buffer.contents b
   end
 (*e: idcode.ml *)
-(*e: commons3/idcode.ml *)

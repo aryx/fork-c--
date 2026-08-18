@@ -1,4 +1,3 @@
-(*s: commons3/bitset64.mli *)
 (*s: bitset64.mli *)
 type elt = int   (* range 0..63 *)
 type t           (* set of elements *)
@@ -19,4 +18,3 @@ val subset: t -> t -> bool
 val eq: t -> t -> bool
 val overlap: t -> t -> bool (* nonempty intersection *)
 (*e: bitset64.mli *)
-(*e: commons3/bitset64.mli *)

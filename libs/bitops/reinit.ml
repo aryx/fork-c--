@@ -1,4 +1,3 @@
-(*s: commons3/reinit.ml *)
 (*s: reinit.ml *)
 let tasks = ref ([] : (unit -> unit) list)
 let at f = tasks := f :: !tasks
@@ -8,4 +7,3 @@ let ref x =
   at (fun () -> r := x);
   r
 (*e: reinit.ml *)
-(*e: commons3/reinit.ml *)

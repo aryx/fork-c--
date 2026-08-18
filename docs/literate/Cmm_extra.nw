@@ -8,10 +8,10 @@
 %%% Example (at beginning of line): %%Grades: B Central Soon
 
 %******************************************************************************
-\chapter{[[commons2]]}
+\chapter{[[prelude]]}
 %******************************************************************************
 
-\section{[[commons2/auxfuns.nw]]}
+\section{[[prelude/auxfuns.nw]]}
 
 <<commons2/auxfuns.ml>>=
 <<auxfuns.ml >>
@@ -165,815 +165,8 @@ module List = struct
 end
 @ 
 
-\section{[[commons2/lc.nw]]}
 
-<<commons2/lc.ml>>=
-<<lc.ml >>
-@
-<<commons2/lc.mli>>=
-<<lc.mli >>
-@
-
-\section{Lexer Combinators}
-
-%%This module provides lexer combinators (LCs). They can be used for
-%%similar purposes as regular expressions: verifying that a string
-%%obeys a specified syntax and extracting parts from it.  LCs are
-%%not as powerful as regular expression (REs) but do not require
-%%preprocessing like REs.
-%%  
-%%The implementation aims to be reasonable efficient by using
-%%indices into the scanned string during the whole scan. However,
-%%scanning of long strings (> 1000 chars) should be avoided.       
-
-%%% ------------------------------------------------------------------ 
-\subsection{Interface}
-%%% ------------------------------------------------------------------ 
-
-<<lc.mli >>=
-exception Error of string
-@
-
-%%[[Error]] reports the failure of a lexer with a message which is not
-%%too descriptive but may help finding unexpected failures. 
-
-<<lc.mli >>=
-type 'a lexer
-@
-%%A lexer scans a string to check that it matches a syntactic structure. 
-%%It fails when the string does not match the expected syntactic
-%%structure.  A scanner can store results while scanning to a result
-%%list.  The type of a single result is [['a]].  Typically will a
-%%scanner store substrings from the scanned string and thus [['a]] is
-%%[[string]]. 
-%%
-<<lc.mli >>=
-val succeed : 'a lexer
-@
-%%[[succeed]] is a lexer that always succeeds.  
-%%
-<<lc.mli >>=
-val fail : string -> 'a
-@
-%%[[fail]] always fails with a descriptve error message. 
-%%
-<<lc.mli >>=
-val any : 'a lexer
-@
-%%[[any]] consumes just one character when availabe and fails when the
-%%end of string is reached. 
-%%
-<<lc.mli >>=
-val eof : 'a lexer
-@
-%%[[eof]] succeeds when the end of input (i.e.  string) is reached.  It
-%%does not consume any character. 
-%%
-<<lc.mli >>=
-val satisfy : (char -> bool) -> 'a lexer
-@
-%%[[satisfy f]] consumes the next characters successfully when it
-%%satisfies predicate [[f]]. 
-%%
-<<lc.mli >>=
-val chr : char -> 'a lexer
-@
-%%[[chr c]] consumes the next character when it equals [[c]]; fails
-%%otherwise. 
-%%
-<<lc.mli >>=
-val str : string -> 'a lexer
-@
-%%[[str s]] succeeds when the input starts with string [[s]] - in this
-%%case it consumes as many characters as [[s]] is long. 
-%%
-<<lc.mli >>=
-val ( *** ) : 'a lexer -> 'a lexer -> 'a lexer
-val seq     : 'a lexer -> 'a lexer -> 'a lexer
-@
-%%[[x *** y]] is a lexer that first uses lexer [[x]] and then scans the
-%%remaining input using lexer [[y]].  It fails when any of [[x]] and
-%%[[y]] fail.
-%%   
-%%
-<<lc.mli >>=
-val ( ||| ) : 'a lexer -> 'a lexer -> 'a lexer
-val alt     : 'a lexer -> 'a lexer -> 'a lexer
-@
-%%[[x ||| y]] scans the input using lexer [[x]]; if [[x]] fails it scans
-%%the input again using [[y]].  The lexer fails when [[y]] fails. 
-%%
-<<lc.mli >>=
-val many : 'a lexer -> 'a lexer
-@
-%%[[many l]] scans the input using lexer [[l]] as many (including zero)
-%%times as possible; always succeeds.  Beware:  [[many]] is greedy; i.e.
-%%[[many any *** chr 'x']] will always fail because the [['x']] in the
-%%input will be consumed by [[many any]]. 
-%%
-<<lc.mli >>=
-val some : 'a lexer -> 'a lexer
-@
-%%[[some l]] scans the input using lexer one or more times.  [[some]] is
-%%greedy -- see also [[many]]. 
-%%
-<<lc.mli >>=
-val opt : 'a lexer -> 'a lexer
-@
-%%[[opt l]] scans the input using lexer [[l]] when possible; when [[l]]
-%%fails the lexer does not consume input and succeeds. 
-%%
-<<lc.mli >>=
-val save : (string -> int -> int -> 'a) -> 'a lexer -> 'a lexer
-@
-%%
-%%[[save f l]] is a lexer [[l]] which uses a function [[f]] to store
-%%results to a result list.  Whenever [[l]] sucessfully matches a
-%%substring [[f]] is called as [[f str pos len]] where [[str]] is the
-%%string actually scanned, [[pos]] is the character in that string that
-%%[[l]] matched, and [[len]] is the number of characters [[l]] matched. 
-%%The result of [[f]] will be stored in the result list which can be
-%%obtained by the [[scan]] function. 
-%%   
-%%Since lexers built with [[save]] can be arbitrarily nested the
-%%order of results in the result list is somewhat counter intuitive. 
-%%This is best illustrated by an example:
-%%
-%%Given a string where the following 4 regions are saved (regions can
-%%be nested):
-%%        
-%%\begin{quote}
-%%\begin{verbatim}
-%%        O b j e c t i v e C a m l
-%%         ( (   )   (   ( ) )   )
-%%         1 2   2   3   4 4 3   1 <--- look from here
-%%
-%%   region 1 = bjectivecam
-%%   region 2 =  je
-%%   region 3 =      ivec
-%%   region 4 =        e
-%%\end{verbatim}
-%%\end{quote}
-%%
-%%The result list obtained by [[scan]] is:  region1, region3, region4,
-%%region2.  This list ordered by the numbers of the closing
-%%parentheses above.  When the matched regions do not nest a
-%%[[List.rev]] applied to the result list will reorder the result list
-%%into the more intuitive order of opening parentheses.  
-%%
-<<lc.mli >>=
-val saveStr : string lexer -> string lexer
-@
-%%[[saveStr l]] uses lexer [[l]] to scan the input.  The substring [[l]]
-%%matches is stored in the result list which can be obtained with
-%%[[scan]].  See [[save]] for the order of the result list.  
-%%
-<<lc.mli >>=
-val scan: string -> 'a lexer -> (int * 'a list)
-@
-%%[[scan str l]] scans string [[str]] using lexer [[l]]. The result is a
-%%pair: the number of characters successfully consumed and the list of
-%%stored results. [[scan]] raises [[Error]] when scanning fails. 
-%%
-<<lc.mli >>=
-val scanFrom : int -> string -> 'a lexer -> (int * 'a list)
-@
-%%
-%%[[scanFrom x str l]] scans string [[str]] using lexer [[l]] starting at
-%%character [[x]] of [[str]] (first character is 0) and returns the
-%%number of characters successfully scanned and the list of results. 
-
-%%% ------------------------------------------------------------------ 
-\subsection{Implementation}
-%%% ------------------------------------------------------------------ 
-
-<<lc.ml >>=
-let (=<=) (x:char)   (y:char)   = (=) x y
-
-exception Error of string
-let error msg           = raise (Error msg)
-
-let strlen              = String.length     (* string -> int         *)
-let get                 = String.get        (* string -> int -> char *)
-
-
-type region             = int * int
-@
-
-%%A lexer takes: the string to scan, the current position in the
-%%string, and the list of saved regions. It returns: the number of
-%%characters successfully consumed and a new region list. All lexers
-%%except [save] pass the region list just trough 
-
-<<lc.ml >>=
-type 'a lexer           = string -> int -> 'a list -> (int * 'a list)
-
-(* naming convention: str=actual input, x=current position in str,
-   r=region list (all regions saved by the [save] lexer) *)
-
-let succeed str x r     = (0,r)
-@ 
-
-<<lc.ml >>=
-
-let fail msg            = error msg
-@ 
-
-<<lc.ml >>=
-let any                 = fun str x r -> 
-                          if x < strlen str 
-                          then (1,r)
-                          else fail "unexpected eof"
-@ 
-
-<<lc.ml >>=
-let eof                 = fun str x r ->         
-                          if x = strlen str
-                          then (0,r)
-                          else fail "eof expected"
-@ 
-
-<<lc.ml >>=
-let satisfy f           = fun str x r ->
-                          if x < strlen str && f (get str x)
-                          then (1,r)
-                          else fail "predicate failed"
-@ 
-<<lc.ml >>=
-let chr c               = satisfy ((=<=) c)
- 
-@ 
-<<lc.ml >>=
-let str s               = fun st x r ->    
-                          let l = strlen s in
-                          let rec loop i =
-                              if   i = l 
-                              then (l,r)
-                              else if s.[i] =<= st.[x+i]
-                                  then loop (i+1)
-                                  else fail "str failed"
-                              in 
-                                  loop 0
-@ 
-<<lc.ml >>=
-let seq  l1 l2          = fun str x r ->
-                          let (i1,r1) = l1 str  x     r    in
-                          let (i2,r2) = l2 str (x+i1) r1   in
-                              (i1+i2,r2)
-let ( *** ) = seq
-
-@                               
-<<lc.ml >>=
-let alt l1 l2           = fun str x r ->
-                          try l1 str x r with
-                              Error _ -> try l2 str x r with
-                                  Error _ -> fail "(x ||| y) failed"
-
-                          (* the fun below seems superficial but it is
-                             not: it prevents endless recursion in 
-                             definitions like "let word = many any"
-                             which are caused by strict evaluation
-                             *)
-let (|||) = alt
-@ 
-
-<<lc.ml >>=
-let rec many l          = fun str x r ->
-                          (l *** many l ||| succeed) str x r 
-
-@ 
-<<lc.ml >>=
-let some l              = l *** many l
-
-@ 
-<<lc.ml >>=
-let opt l               = l ||| succeed
-
-@ 
-<<lc.ml >>=
-let save f l            = fun str x r ->
-                          let (i,r') = l str x r   in
-                              (i,f str x i :: r')
-@ 
-
-<<lc.ml >>=
-let saveStr l           = save String.sub l
-                              
-(* auxilary functions *)
-
-let scanFrom x str lexer    = lexer str x []    
-let scan str lexer          = lexer str 0 [] 
-@
-
-
-\section{[[commons2/pc.nw]]}
-
-<<commons2/pc.ml>>=
-<<pc.ml >>
-@
-<<commons2/pc.mli>>=
-<<pc.mli >>
-@
-
-
-%%% ------------------------------------------------------------------  
-\section{Parser Combinators}\label{sec:pc}
-%%% ------------------------------------------------------------------ 
-
-%%This module provides parser combinators for light weight parsing tasks
-%%like parsing a unix command line.  Parser combinators are higher order
-%%functions that implement basic parsing tasks.  By combining simple
-%%parsers complex parsers can be built easily.  By the use of infix
-%%operators the source code of such a parser resembles the grammar that
-%%it recognizes.  
-%%
-%%The parser combinators implemented by this module are inspired by
-%%Hutton's article \textit{Higher-Order Functions for Parsing}
-%%\cite{hutton:92:jfp}.  The parser described by Hutton use backtracking
-%%in case of an unsuccessfull parse and report all possible parses.  For
-%%efficiency the parses in this module are greedy:  there is at most one
-%%successful parse.  This requires to construct parsers a bit more
-%%carefully.
-
-%%% ------------------------------------------------------------------  
-\subsection{Interface}
-%%% ------------------------------------------------------------------ 
-
-%%A parser takes a list of tokens [['t]] and returns a semantic value
-%%[['v]] together with the list of remaining tokens in the input. A
-%%successful parse typically means that a parser succeeds and
-%%returns with an empty list of remaining tokens.  Since [[parser]] is a
-%%keyword in \ocaml~the corresponding type was named [[par]].  When a
-%%parser fails it raises the [[Error]] exception. 
-%%
-%%We use the following convention for type variables:  [[t]] for token,
-%%[[v]] for semantic value, and [[p]] for parser. 
-<<pc.mli >>=
-type ('t, 'v) par   = 't list -> 'v * 't list
-
-exception Error     of string
-@ 
-%%% ------------------------------------------------------------------  
-%%\subsubsection{Primitive Parsers}
-%%% ------------------------------------------------------------------ 
-%%
-%%The two simplest parsers are [[fail]] and [[succeed]].  
-%%The [[fail msg]] parser consumes no input and fails with message [[msg]].  The
-%%[[succeed x]] parser also does not consume any input and returns the
-%%semantic value [[x]].
-<<pc.mli >>=
-val fail:       string -> 'a
-val succeed:    'v -> ('t,'v) par 
-@ 
-%%The [[any]] parser consumes the next token and returns it as
-%%semantic value. It fails when there is no next token. 
-<<pc.mli >>=
-val any: ('t,'t) par
-@ 
-%%The [[eof]] parser succeeds when the list of tokens is empty and
-%%returns unit as semantic value. 
-<<pc.mli >>=
-val eof: ('t,unit) par
-@ 
-%%The [[satisfy f]] parser uses a user supplied predicate [[f]] to
-%%check the next token in the input.  It succeeds when [[f]] is
-%%fulfilled and returns the token as semantic value.  The parser fails
-%%when either the input is empty or [[f]] is not fulfilled.
-<<pc.mli >>=
-val satisfy: ('t -> bool) -> ('t,'t) par
-@ 
-%%The [[literal x]] parser expects [[x]] as the next token and fails in
-%%case the input is empty or not [[x]]. When it succeeds it returns
-%%[[x]] as semantic value. The type of [[x]] must be an equality type.
-%%The [[literal]] parser can be easily implemented with [[satisfy]] and
-%%is a handy shortcut.
-<<pc.mli >>=
-val literal: 't -> ('t,'t) par
-@ 
-%%% ------------------------------------------------------------------  
-\subsection{Combinators}
-%%% ------------------------------------------------------------------ 
-
-%%Parser combinators take parsers, combine them, and return a new
-%%parser. When these combinators are defined as infix operators the
-%%source code of complex parsers very much looks like a grammar. 
-%%
-%%The precedence and associativity of infix operators in \ocaml~is
-%%determined by the first one or two symbols in an operator.  The
-%%precedence and fixity of any operator thus is fixed.  This makes it a
-%%bit harder to find operators that look good and have the right fixity. 
-%%Table \ref{tab:pc:infix} show the precedence and associativity of the
-%%operators used in this module.
-%%
-%%\begin{table}
-%%    \centering
-%%
-%%    \begin{tabular}{cl}
-%%        Operator                    & Associativity \\
-%%        \hline
-%%
-%%        [[***]]  [[**>]]  [[**<]]   & right \\
-%%        [[-->]]                     & left  \\
-%%        [[|||]]                     & left  \\
-%%    \end{tabular}
-%%    
-%%    \caption{Associativity and relative precedence of some operators.
-%%    The precedence of the operators decreases to the bottom of the table}
-%%    \label{tab:pc:infix}
-%%\end{table}
-%%
-%%The parser [[x *** y]] parses the input first using [[x]] and then
-%%using [[y]] for the remaining input. The parser succeeds when [[x]]
-%%and [[y]] succeed and returns a pair of semantic values. Since [[***]]
-%%is right associative [[x *** y *** z]] would return a [[(x,(y,z))]]
-%%pair as a semantic value.
-<<pc.mli >>=
-val ( *** ): ('t,'v1) par -> ('t,'v2) par -> ('t,('v1*'v2)) par 
-@ 
-%%When using a parser like [[literal "-" *** literal any]] the
-%%semantic value of the first parser is of little interest.  Therefor
-%%two variations of [[***]] are provided that return either the left or
-%%right semantic value only:  [[literal "-" **> any]] returns the right
-%%semantic value.  The [[**<]] combinators creates a parser that returns
-%%only the left semantic value. 
-<<pc.mli >>=
-val ( **< ): ('t,'v1) par -> ('t,'v2) par -> ('t,'v1) par 
-val ( **> ): ('t,'v1) par -> ('t,'v2) par -> ('t,'v2) par 
-@ 
-%%The [[x ||| y]] parser tries to parse the input using parser
-%%[[x]]. If this fails it tries [[y]]; [[x ||| y]] fails when both [[x]]
-%%and [[y]] fail. On success the semantic value of the first successful
-%%parser is returned.
-<<pc.mli >>=
-val ( ||| ): ('t,'v)  par -> ('t,'v)  par -> ('t,'v)  par 
-@ 
-%%To manipulate semantic values returned by a parser use the
-%%[[p --> f]] combinator.  It takes a parser [[p]] on the left and a function
-%%[[f]] on the right.  The semantic value returned by [[p]] is passed to
-%%[[f]] and the value returned by [[f]] is the result of [[p --> f]]. 
-%%The [[-->]] combinator models semantic actions in a traditional Yacc
-%%parser. 
-<<pc.mli >>=
-val ( --> ): ('t,'v1) par -> ('v1 -> 'v2) -> ('t,'v2) par
-@ 
-%%When the semantic value for a parser is fixed one could use
-%%[[ p --> (fun _ -> x)]]. The [[return]] function does just this:
-%%[[p --> return x]]. So [[return]] is not a parser or parser combinator but a
-%%function intended to be used on the rigth hand side of [[-->]].
-<<pc.mli >>=
-val return: 'v1 -> 'v2 -> 'v1
-@ 
-%%The precedences of the infix operators are chosen that typical
-%%parsers can be written with few extra brackets:
-<<example(pc.nw)>>=
-        literal "--file" **> any --> fun f -> File(f) 
-    ||| literal "--help"         --> return Help
-@ 
-%%The [[opt p]] parser tries to use [[p]] to parse the input and returns
-%%[[Some x]] when [[p]] succeeds,  where [[x]] is the semantic value of
-%%[[p]]. In case [[p]] fails [[None]] is returned by [[opt p]].
-<<pc.mli >>=
-val opt: ('t,'v)  par -> ('t,'v option) par
-@ 
-%%The [[many p]] parser tries to apply parser [[p]] as often as
-%%possible to the input and returns the list of semantic values produced
-%%by [[p]]. When [[p]] fails for the first token the returned list is
-%%empty. Thus, this parser never fails. 
-<<pc.mli >>=
-val many : ('t, 'v) par -> ('t, 'v list) par
-@ 
-%%Note that [[many]] is greedy
-%%and thus the following parser will never succeed:
-<<example(pc.nw)>>=
-    many p *** p
-@ 
-%%All tokens suitable for [[p]] are already consumed by [[many p]] and
-%%thus none is left for the following [[p]].
-%%
-%%The [[some p]] parser works exactly like [[many p]] but expects at
-%%least one token to parse and fails otherwise. It thus returns a non
-%%empty list of semantic values.
-<<pc.mli >>=
-val some: ('t,'v)  par -> ('t,'v list) par
-@ 
-%%The parsers [[many]], [[some]], and [[opt]] resemble the [[*]],
-%%[[+]], and [[?]] operator in regular expressions. But due to the greedy
-%%nature of [[many]] and [[some]] their behaviour is not quite the same.
-%%
-%%% ------------------------------------------------------------------  
-\subsection{Implementation}
-%%% ------------------------------------------------------------------ 
-%%
-%%Every parser returns a pair of its result and the list of remaining
-%%tokens.  We use the following convention for type and value variables: 
-%%[[t]] for token, [[ts]] for token list, [[v]] for semantic value, and
-%%[[p]] for parser. 
-%%
-<<pc.ml >>=
-exception Error of string
-let error s = raise (Error s)
-
-type ('t,'v) par = 't list -> 'v * ('t list)
-@
-
-%%% ------------------------------------------------------------------  
-%%\subsubsection{Primitive Parsers}
-%%% ------------------------------------------------------------------  
-
-<<pc.ml >>=
-let succeed v ts = (v,ts)
-let fail msg     = error msg
-
-let any = function
-    | []        -> fail "token expected but none found"
-    | t::ts     -> succeed t ts
-
-let eof = function
-    | []        -> succeed () []
-    | _         -> fail "end of input expected but token found"
-
-let satisfy f = function 
-    | []        -> fail "satisfy parser: no input" 
-    | t::ts     -> if f t 
-                   then succeed t ts
-                   else fail "token does not satisfy predicate"
-
-let literal x = satisfy (Pervasives.(=) x)
-@
-
-%%% ------------------------------------------------------------------  
-%%\subsubsection{Parser combinators}
-%%% ------------------------------------------------------------------ 
-
-%%Complex parsers are built by combining simpler ones using the parser
-%%combinators like this: [[let word = many any]]. We have to be careful
-%%about the strict evaluation of \ocaml~when defining combinators in
-%%terms of other combinators. For example [[many]] could be defined like this:
-<<example(pc.nw)>>=
-let rec many p =     p *** (many p) --> (fun (x,y) -> x::y  
-                 ||| succeed []
-@
-%%Defining [[word]] as [[many any]] will then lead to endless recursion
-%%when the module containing the definition of [[word]] is loaded.
-<<example(pc.nw)>>=
-many any = any *** many any
-@
-%%Because of this we introduce extra abstractions at [[***]] and [[many]].
-%%
-%%The precedence and associativity of infix operators on \ocaml;
-%%operators with higher precedence come first. The table was extracted
-%%from the \ocaml~scanner source code
-<<precedence>>=
-     %right INFIXOP4                         /* **           */
-     %left  INFIXOP3 STAR                    /* * / %        */
-     %left  INFIXOP2 SUBTRACTIVE             /* + -          */
-     %right INFIXOP1                         /* @ ^          */
-     %left  INFIXOP0 EQUAL LESS GREATER      /* = < > | ^ $  */
-@
-%$
-<<pc.ml >>=
-let ( ||| ) p1 p2 = fun ts ->
-    try p1 ts with 
-    Error _ ->  try p2 ts with
-                Error _ -> fail "all alternatives failed"
-
-let ( --> ) p f = fun ts ->
-    let (v,ts') = p ts 
-    in (f v, ts')
-
-let return x = fun _ -> x
-
-let ( *** ) p1 p2 = fun ts -> 
-    let (v1,ts1) = p1 ts  in
-    let (v2,ts2) = p2 ts1 in
-        ((v1,v2),ts2)
-
-let ( **> ) p1 p2 =
-    p1 *** p2 --> snd
-
-let ( **< ) p1 p2 =
-    p1 *** p2 --> fst
-
-let rec many p = fun ts ->
-    (      p *** (many p) --> (fun (x,y)->x::y)
-        ||| succeed []
-    ) ts 
-
-let opt p =
-        p --> (fun x -> Some x)
-    ||| succeed None
-
-let some p =
-    p *** many p --> (fun (x,y) -> x::y)
-@
-\section{[[commons2/pc2.nw]]}
-
-%%% ------------------------------------------------------------------ 
-\section{Alternative Parser Combinators}
-%%% ------------------------------------------------------------------ 
-
-<<pc2.mli>>=
-(*  ------------------------------------------------------------------ 
-
-    This module provides parser combinators.  Parsers are build from
-    primitive parsers which can be combined to larger paresers by
-    parser combinators.  Parser combinators are described in the
-    following article:
-  
-        Graham Hutton, Higher-Order Functions for Parsing, J of
-        Functional Programming 2(3):323-343, July 1992
-  
-    Parsers in this implementation do not return a list of results but
-    only one result for efficency reasons.
-    ------------------------------------------------------------------ *)
-    
-
-exception Error of string
-(* [Error] reports parse errors *)
-
-type ('t, 'v) par   = 't list -> 'v * 't list
-
-(* A parser [par] takes a list of tokens ['t] and returns a value ['v]
-   together with a remaining ['t list] of unconsumed tokens.  BTW: 
-   "parser" is a keyword in OCaml and so could not be used for the
-   type declaration.
-
-   This module provides functions to create primitve parsers and
-   parser combinators which combine parsers to new parsers. The
-   primitive parsers are declared first.
-
-   All parsers are greedy - so beware: although they look much like
-   regular expressiones they have different semantics. 
-*)
-
-
-val succeed: 'v -> ('t,'v) par 
-(* [succeed] consumes no token and returns result v *)
-
-val fail: string -> 'a
-(* [fail] raises [Error] with a descriptive message *)
-
-val any: ('t,'t) par
-(* [any] consumes the next token and returns it as result.  Fails if
-   there is no next token *)
-
-val eof: ('t,bool) par
-(* [eof] succeeds when the end of input is reached, that is, there
-   are no more tokens to consume *)
-
-val satisfy: ('t -> bool) -> ('t,'t) par
-(* [satisfy f] returns the next token as result if it satisfies
-   predicate [f], fails otherwise *)
-
-val literal: 't -> ('t,'t) par
-(* [literal x] succeeds if the next token is [x], fails otherwise *)
-
-(*
- *  Parser combinators - they combine existing parsers to new ones.
- *  Precedence of the new operators; operators that bind more tightly 
- *  (have higher precedence) come first:
- *
- *  p1 *-* p2, f % p    both left associative
- *  p1 <|> p2           left associative
- *
- *  A typical production looks like this:
- *
- *  let plus =    (fun left _ right -> left + right)
- *              % mult *-* literal "+" *-* mult
- *  
- *  First comes the semantic action with a parameter for each 
- *  parser in the following sequence (*-*) of parsers.
- *  Semantic actions (%) and sequences (*-*) interact very closely with
- *  each other. It is nearly impossible to have a sequence without a
- *  semantic action. 
- *)  
- 
-val (<|>) : ('t,'v) par -> ('t,'v) par -> ('t,'v)  par
-(* [p1 <|> p2] succeeds when either [p1] or [p2] succeeds. [p1] is tried 
- * first and only when it fails [p2] is tried. Both parsers must
- * return a semantic value of the same type.  
- *)
- 
-val ( *-* ) : ('t, 'y -> 'z) par -> ('t, 'y) par -> ('t, 'z) par
-(* [p1] is used to parse the input and then
- * [p2] the remaining input.  [p1 *-* p2] applies the function
- * returned by parser [p1] to the result of parser [p2]. This operator 
- * interacts with the [%] operator which helps to provide the right
- * functions for [p1].
- *)
-
-val (%) : ('x -> 'y) -> ('t, 'x) par -> ('t, 'y) par
-(* [f % p] applies [f] to the semantic value returned by parser [p].
- * See above for the interaction with the sequence operator [*-*].
- *)  
-
- val many: ('t,'v)  par -> ('t,'v list)   par
-(* [many p] applies p as often as possible to the input and 
- * returns a list of results *)
-   
-val some: ('t,'v)  par -> ('t,'v list) par
-(* [some p] tries to apply [p] as often as possible to the input, at
- * least one time.  Returns a list of length >= 1 on success.  *)
-
-val opt: ('t,'v)  par -> 'v -> ('t,'v) par
-(* [opt p v] tries to apply [p] to the input and returns its sementic value on success
- * and [v] if [p] fails.  *)
-@
-
-<<pc2.ml>>=
-(*  ------------------------------------------------------------------ 
-
-    Copyright (c) 1999 Christian Lindig <lindig@ips.cs.tu-bs.de>. All
-    rights reserved. See COPYING for details.
-  
-    This module provides parser combinators.  Parsers are build from
-    primitive parsers which can be combined to larger paresers by
-    parser combinators.  Parser combinators are described in the
-    following articles:
-  
-        Graham Hutton, Higher-Order Functions for Parsing, J of
-        Functional Programming 2(3):323-343, July 1992
-
-        Deterministic, Error-Correcting Combinator Parsers, 
-        S. Doaitse Swierstra and Luc Dupomched, Dept. of Computer
-        Science, Utrecht University, http://www.cs.ruu.nl 
-        
-    The parsers and combinators in this module are a mixture of the 
-    above cited approaches.
-    ------------------------------------------------------------------  *)
-
-(* error reporting, used for parse errors *)
-    
-exception Error of string
-let error s = raise (Error s)
-
-(*  ------------------------------------------------------------------ 
-    Every parser returns a pair: result * (remaining_token list) 
-    Naming conventions: t=token, ts=token list, v=value, p=parser
-    ------------------------------------------------------------------  *)
-
-type ('t,'v) par = 't list -> 'v * ('t list)
-
-(*  ------------------------------------------------------------------ 
-    Primitive parsers - they can be combined to larger parsers using
-    the parser combinators from below.
-    ------------------------------------------------------------------  *)
-
-let succeed v ts = (v,ts)
-let fail msg     = error msg
-
-let any = function
-    | []        -> fail "token expected but none found"
-    | t::ts     -> succeed t ts
-
-let eof = function
-    | []        -> succeed true []
-    | _         -> fail "end of input expected but token found"
-
-let satisfy f = function 
-    | []        -> fail "satisfy parser: no input" 
-    | t::ts     -> if f t 
-                   then succeed t ts
-                   else fail "token does not satisfy predicate"
-
-let literal x = satisfy ((=) x)
-
-(* ------------------------------------------------------------------  
-    From the OCaml lexer: all infix operators. Operators with
-    lower precedence come first
-    
-    %left  INFIXOP0 EQUAL LESS GREATER      /* = < > | ^ $  */
-    %right INFIXOP1                         /* @ ^          */
-    %left  INFIXOP2 SUBTRACTIVE             /* + -          */
-    %left  INFIXOP3 STAR                    /* * / %        */
-    %right INFIXOP4                         /* **           */
-    ------------------------------------------------------------------ *) 
-
-let (<|>) p1 p2 = fun ts ->
-    try p1 ts with 
-    Error _ ->  try p2 ts with
-                Error _ -> fail "all alternatives failed"
-
-let ( *-* ) p1 p2 = fun ts0 ->
-    let (f,ts1)  = p1 ts0 in
-    let (v,ts2)  = p2 ts1 in
-     (f v, ts2)
-
-let (%) f p = (succeed f) *-* p 
-
-let opt p v = p <|> succeed v
-
-let rec many p = fun ts ->
-    ((fun x xs -> x::xs) 
-  % p *-* (many p <|> succeed [])) ts
-    
-let some p = 
-    (fun x xs -> x::xs) 
-  % p *-* many p
-@
-%$
-
-\section{[[commons2/pp.nw]]}
+\section{[[prelude/pp.nw]]}
 
 <<commons2/pp.ml>>=
 <<pp.ml >>
@@ -1470,517 +663,10 @@ let strlen  = String.length
 let nl      = "\n"
 
 @
-\section{[[commons2/rc.nw]]}
-
-%%% ------------------------------------------------------------------ 
-\section{Generic Configuration Files}
-%%% ------------------------------------------------------------------ 
-
-%%This module provides a parser for generic configuration files.  A
-%%configuration file binds names to values, where values can be
-%%integers, floats, booleans, strings and lists of the mentioned simple
-%%types. 
-%%        
-%%\begin{verbatim}
-%%        rcfile  : rclines EOF
-%%
-%%        rclines :
-%%                | rclines rcline
-%%
-%%        rcline  : ID EQUAL value
-%%                | ID EQUAL values
-%%
-%%        value   : ID
-%%                | STR
-%%                | TRUE
-%%                | FALSE
-%%                | INT
-%%                | FLOAT
-%%
-%%        values  : value COMMA value
-%%                | values COMMA value
-%%
-%%        digit       = ['0'-'9']
-%%        letter      = ['a'-'z' 'A'-'Z' '_']
-%%        ID          = letter (letter|digit)*
-%%        INT         = digit+
-%%        FLOAT       = integer '.' integer ('E' ('+'|'-')? integer)? 
-%%        TRUE        = "true"
-%%        FALSE       = "false" 
-%%        STR         = '"' .... '"'      
-%%\end{verbatim}
-%%
-%%Comments start with a [[#]] and reach to the line end.  The
-%%representation of values is defined in the module [[Rc_ast]].  Both
-%%strings and id values are represented as [[RCstr]]; this means, that
-%%string values made up from digits and letters don't need to be
-%%included into double quotes.
-
-%%% ------------------------------------------------------------------ 
-\subsection{Interface}
-%%% ------------------------------------------------------------------         
-
-<<rc.mli>>=
-type id         = Rc_ast.id
-type rc         = Rc_ast.rc
-type rcdict     = Rc_ast.rcdict
-
-exception       Error of string         (* reports parse/scan errors *)
-@
-%%
-%%[[find id dict]] returns the value bound to [[id]] or raises [[Not_found]]
-%%in case there is no binding.
-%%
-<<rc.mli>>=
-val find        : id -> rcdict -> rc 
-@
-%%
-%%[[read file]] reads onfiguration from [[file]].
-%%
-<<rc.mli>>=
-val read        : string -> rcdict
-@
-%%
-%%% ------------------------------------------------------------------ 
-\subsection{Implementation}
-%%% ------------------------------------------------------------------ 
-
-<<rc.ml>>=
-type id         = Rc_ast.id
-type rc         = Rc_ast.rc
-type rcdict     = Rc_ast.rcdict
-
-exception Error of string
-let error msg   = raise (Error msg)
-@
-%%
-%%[[find id rcdict]] looks up a value for [[id]]; raises [[Not_found]] in
-%%case [[id]] is undefined.
-%%
-<<rc.ml>>=
-let find   = Rc_ast.find
-let asList = Rc_ast.asList
-@
-%%
-%%[[read file]] reads rcfile [[file]], parses it, and returns it contents 
-%%as value of type [[rcfile]].
-%%
-<<rc.ml>>=
-let read file = 
-    let file_ic         = try open_in file with 
-                          Sys_error msg -> error msg            in
-    let lexbuf          = Lexing.from_channel file_ic           in
-    let finally ()      = close_in file_ic                      in
-    let rc              = try 
-                                Rc_parse.rcfile Rc_scan.scan lexbuf
-                          with
-                          | Parsing.Parse_error ->
-                                finally ();
-                                error ("parse error in `" ^ file ^ "'")
-                          | Rc_scan.ScanError msg -> error msg
-                          | e                   ->
-                                finally ();
-                                raise e                         in
-        finally ();
-        rc
-@
-
-%%% ------------------------------------------------------------------ 
-\subsection{Abstract Syntax}
-%%% ------------------------------------------------------------------ 
-
-<<rc_ast.mli>>=
-type id         = string
-
-type rc         =
-                | RCstr         of string
-                | RCbool        of bool
-                | RCint         of int
-                | RCfloat       of float
-                | RClist        of rc list
-@
-%%
-%%[[rcdict]] is a dictionary that maps [[id]]s to [[rc]] values. It captures 
-%%a configuration read from a file using the [[read]] function. 
-%%
-<<rc_ast.mli>>=
-type rcdict
-@
-%%
-%%[[find id dict]] returns the value bound to [[id]] or raises [[Not_found]]
-%%in case there is no binding *)
-%%   
-<<rc_ast.mli>>=
-val find        : id -> rcdict -> rc 
-@
-%%
-%%The following functions are used by the parser and are not for
-%%clients of [[Rc]].
-%%
-%%[[empty]] - an empty [[rcdict]]
-%%
-<<rc_ast.mli>>=
-val empty       : rcdict 
-@
-%%
-%%[[add id rc dict]] adds binding [[id]] $\to$ [[rc]] to [[dict]].
-%%
-<<rc_ast.mli>>=
-val add         : id -> rc -> rcdict -> rcdict 
-@
-%%
-%%[[asList dict]] returns all bindings of [[dict]] in a list; for debugging.
-%%
-<<rc_ast.mli>>=
-val asList      : rcdict -> (id * rc) list
-@
-%%
-<<rc_ast.ml>>=
-type id         =       string
-
-type rc         =
-                | RCstr of string
-                | RCbool of bool
-                | RCint of int
-                | RCfloat of float
-                | RClist of rc list
-
-module IdMap    = 
-    Map.Make(struct type t=id let compare=Pervasives.compare end)
-
-(* rc files are maps (or dictinoaries) which map identifiers 
-   to values (of type rc from above) *)
-                
-type rcdict     =       rc IdMap.t
 
 
-let empty               = IdMap.empty
-let find                = IdMap.find
-let add                 = IdMap.add
 
-(* [asList dictfile] returns the contents of [dictfile] as a lsit of
-   id/rc pairs. This is for debugging only *)
-
-let asList dict =
-    let insert id rc list = (id,rc)::list       in
-        IdMap.fold insert dict []
-@
-
-%%% ------------------------------------------------------------------ 
-\subsection{Parser}
-%%% ------------------------------------------------------------------ 
-
-<<rc_parse.mly>>=
-%{
-open Rc_ast 
-%}
-
-%token <string> STR
-%token <string> ID
-%token <bool>   BOOL
-%token <float>  FLOAT
-%token <int>    INT
-
-%token COMMA EQUAL TRUE FALSE EOF 
-
-
-%start                  rcfile
-%type  <Rc_ast.rcdict>  rcfile
-
-%%
-
-rcfile          : rclines EOF                   { $1            }
-
-rclines         : /**/                          { empty         }
-                | rclines rcline                { let (id,rc) = $2 in
-                                                  add id rc $1
-                                                } 
-
-rcline          : ID EQUAL value                { ($1,$3)       }
-                | ID EQUAL values               { ($1,RClist(List.rev $3))  }
-
-value           : ID                            { RCstr($1)     }
-                | STR                           { RCstr($1)     }
-                | TRUE                          { RCbool(true)  }
-                | FALSE                         { RCbool(false) }
-                | INT                           { RCint($1)     }
-                | FLOAT                         { RCfloat($1)   }
-
-values          : value  COMMA value            { [$3  ; $1]    }
-                | values COMMA value            {  $3 :: $1     }
-@
-%$
-
-%%% ------------------------------------------------------------------ 
-\subsection{Scanner}
-%%% ------------------------------------------------------------------ 
-
-<<rc_scan.mll>>=
-{
-    
-    open Rc_parse       (* tokens are defined here *)
-
-    exception ScanError of string
-
-    let error msg = raise (ScanError msg)
-
-    let keywords = Hashtbl.create 127
-    let keyword s = Hashtbl.find keywords s
-    let _ = Array.iter (fun (x,y) -> Hashtbl.add keywords x y)
-        [|
-             ("true"        ,TRUE);
-             ("false"       ,FALSE);
-        |]
-
-    let get = Lexing.lexeme
-
-    (* buffer for string literals *)
-    let strBuffer = Buffer.create 80
-
-    let debug msg = print_endline msg
-
-    let init () =
-        Buffer.clear strBuffer
-}
-@
-
-<<rc_scan.mll>>=
-let digit       = ['0'-'9']
-let letter      = ['a'-'z' 'A'-'Z' '_']
-let ident       = letter (letter|digit)*
-let integer     = digit+
-let float       = integer '.' integer ('E' ('+'|'-')? integer)? 
-let ws          = [' ' '\r' '\011' '\012' ]
-let nl          = '\n'
-let tab         = '\t'
-@
-
-<<rc_scan.mll>>=
-rule scan = parse
-    | eof               { EOF }
-    | ws                { scan lexbuf }
-    | nl                { scan lexbuf }
-    | tab               { scan lexbuf }
-    | '#' [^'\n']* nl   { scan lexbuf } 
-
-    | ident             { let s = get lexbuf in
-                          try  keyword s 
-                          with Not_found -> debug "id"; ID(s) 
-                        }
-    | integer           { try 
-                            INT   (int_of_string (get lexbuf)) 
-                          with Failure _ -> 
-                            let msg = "illegal integer `" ^ (get lexbuf) ^ "'"
-                            in  error msg 
-                        }
-    | float             { try
-                            FLOAT (float_of_string (get lexbuf)) 
-                          with Failure _ -> 
-                            let msg = "illegal float `" ^ (get lexbuf) ^ "'"
-                            in  error msg 
-                        }
-    | '"'               { Buffer.clear strBuffer
-                        ; string lexbuf 
-                        ; STR(Buffer.contents strBuffer)
-                        }
-                        
-    | '='               { EQUAL }
-    | ','               { COMMA }
-    
-    |  _                { let c = get lexbuf in
-                            error ("illegal character `" ^ c ^ "'")
-                        }    
-
-@
-
-<<rc_scan.mll>>=
-and string = parse
-    | eof               { error "unterminated string" }
-    | '"'               { (* return *) }
-
-    | '\\' _            { let c = String.get (get lexbuf) 1 in
-                            Buffer.add_char strBuffer c;
-                            string lexbuf
-                        }
-    | _                 { Buffer.add_string strBuffer (get lexbuf)
-                        ; string lexbuf
-                        }  
-@
-
-\section{[[commons2/rx.nw]]}
-
-<<commons2/rx.ml>>=
-<<rx.ml >>
-@
-<<commons2/rx.mli>>=
-<<rx.mli >>
-@
-
-%%% ------------------------------------------------------------------ 
-\section{Regular Expressions}
-%%% ------------------------------------------------------------------ 
-
-%%This module provides regular expression matching.  Regular expressions
-%%don't need to be compiled before they can be matched against some
-%%input.  Instead the automaton is build while the input is consumed. 
-%%The drawback of this method is that no subexpression matching is
-%%possible to extract matching substrings.
-%%
-%%This algorithm used here is by Mark Hopkins who posted it once to
-%%[[comp.compiles]].  Search the [[comp.compilers]] archive for a
-%%detailed article and an implementation in C.
-
-%%% ------------------------------------------------------------------ 
-\subsection{Interface}
-%%% ------------------------------------------------------------------ 
-
-%%The type of a regular expression over symbols of type [['a]]:
-
-<<rx.mli >>=
-type 'a rx 
-@
-%%
-%%Construtor functions for regular expressions:
-%%
-<<rx.mli >>=
-val zero : 'a rx                                (* never matches       *)
-val unit : 'a rx                                (* matches empty input *)
-val sym : 'a -> 'a rx                           (* 'x'                 *)
-val many : 'a rx -> 'a rx                       (* e*                  *)
-val some : 'a rx -> 'a rx                       (* e+                  *)
-val opt : 'a rx -> 'a rx                        (* e?                  *)
-val seq : 'a rx -> 'a rx -> 'a rx               (* e1 e2               *)
-val alt : 'a rx -> 'a rx -> 'a rx               (* e1 | e2             *)
-val ( ||| ) : 'a rx -> 'a rx -> 'a rx           (* e1 | e2             *)
-val ( *** ) : 'a rx -> 'a rx -> 'a rx           (* e1 e2               *)
-@
-%%
-%%[[matches e syms]] is true, iff the word [[syms]] is an element of $L(e)$, i.e. 
-%%[[e]] matches the symbols [[syms]].
-%%
-<<rx.mli >>=
-val matches : 'a rx -> 'a list -> bool
-@
-%%
-%%[[[matchstr e str]] is true, iff string [[str]] is matched by 
-%%regular expression [[e]]. 
-%%
-<<rx.mli >>=
-val matchstr : char rx -> string -> bool
-@
-
-%%% ------------------------------------------------------------------ 
-\subsection{Implementation}
-%%% ------------------------------------------------------------------ 
-
-<<rx.ml >>=
-let (=*=) = (=)
-
-type 'a rx      = 
-                | RXzero                                (* {}           *)
-                | RXunit                                (* ""           *)
-                | RXsym         of 'a                   (* 'x'          *)
-                | RXmany        of ('a rx)              (* e*           *)
-                | RXsome        of ('a rx)              (* e+           *)
-                | RXopt         of ('a rx)              (* e?           *)
-                | RXseq         of ('a rx) * ('a rx)    (* e1 e2        *)
-                | RXalt         of ('a rx) * ('a rx)    (* e1 | e2      *)
-@ 
-
-<<rx.ml >>=
-let zero        = RXzero
-let unit        = RXunit
-let sym x       = RXsym x
-let many        = function
-                | RXunit        -> RXunit
-                | RXzero        -> RXunit
-                | x             -> RXmany x
-let some        = function
-                | RXunit        -> RXunit
-                | RXzero        -> RXzero
-                | x             -> RXsome x
-let opt         = function
-                | RXunit        -> RXunit
-                | RXzero        -> RXunit
-                | x             -> RXopt x
-let seq x y     = match (x,y) with
-                | RXzero, x     -> RXzero
-                | RXunit, x     -> x
-                | x     , RXzero-> RXzero
-                | x     , RXunit-> x
-                | x     , y     -> RXseq(x,y)
-let alt x y     = match (x,y) with
-                | RXzero, x     -> x
-                | x     , RXzero-> x
-                | x     , y     -> RXalt(x,y)
-@ 
-
-<<rx.ml >>=
-let ( ||| ) = alt
-let ( *** ) = seq
-@
-%%
-%%[[nullable e]] is true, iff the empty sequence ([[RXzero]]) is recognized 
-%%by [[e]]. 
-%%
-<<rx.ml >>=
-let rec nullable = function
-    | RXzero            -> false
-    | RXunit            -> true
-    | RXsym x           -> false
-    | RXmany e          -> true
-    | RXsome e          -> nullable e
-    | RXopt e           -> true
-    | RXseq(e1,e2)      -> nullable e1 && nullable e2
-    | RXalt(e1,e2)      -> nullable e1 || nullable e2
-@
-%%
-%%[[residual e x]] returns a regular expression [[e']] that recognizes the
-%%language $L(e') = \{ w | xw \in L(e)\}$. 
-%%
-<<rx.ml >>=
-let rec residual e' x = match e' with
-    | RXzero            -> RXzero
-    | RXunit            -> RXzero
-    | RXsym x'          -> if   x' =*= x 
-                           then RXunit
-                           else RXzero
-    | RXmany e          -> seq (residual e x) (many e)
-    | RXsome e          -> seq (residual e x) (many e)
-    | RXopt e           -> residual e x
-    | RXseq(e1,e2)      -> if   nullable e1
-                           then alt (seq (residual e1 x) e2) (residual e2 x)
-                           else seq (residual e1 x) e2
-    | RXalt(e1,e2)      -> alt (residual e1 x) (residual e2 x)
-@
-%%    
-%%[[matches e syms]] is true, iff the word [[syms]] is an element of $L(e)$, i.e. 
-%%[[e]] matches the symbols [[syms]]
-%%
-<<rx.ml >>=
-let matches e syms      = nullable (List.fold_left residual e syms)
-@
-%%
-%%[[matchstr e str]] is true, iff string [[str]] is matched by 
-%%regular expression [[e]].
-%% 
-<<rx.ml >>=
-let matchstr e str =
-    let len = String.length str         in
-    let rec loop e i =
-        if   i = len 
-        then nullable e
-        else loop (residual e (String.get str i)) (i+1)
-    in
-        loop e 0
-@
-%%
-<<rx-examples.ml>>=
-let e1 = many (sym 'a') *** some (sym 'b')
-let e2 = sym 'a' *** opt (sym 'b') *** some (sym 'a')
-@
-
-\section{[[commons2/strutil.nw]]}
+\section{[[prelude/strutil.nw]]}
 
 %%% ------------------------------------------------------------------ 
 \section{String Utilities}
@@ -2058,7 +744,7 @@ let assoc2map pairs =
 let from_list xs = List.fold_left (fun set x -> Set.add x set) Set.empty xs
 @
 
-\section{[[commons2/verbose.nw]]}
+\section{[[prelude/verbose.nw]]}
 %TODO: replace by Logs. instead
 
 \section{Diagnostic output}
@@ -2080,18 +766,13 @@ let rec ign x = Obj.magic ign
 let eprintf k = if verbosity >= k then Printf.eprintf else ign
 @ 
 
+
 %******************************************************************************
-\chapter{[[commons3]]}
+\chapter{[[bitops/]]}
 %******************************************************************************
 
-\section{[[commons3/alignment.nw]]}
+\section{[[bitops/alignment.nw]]}
 
-<<commons3/alignment.ml>>=
-<<alignment.ml>>
-@
-<<commons3/alignment.mli>>=
-<<alignment.mli>>
-@
 
 %%% ------------------------------------------------------------------ 
 \section{Interface to manipulate alignment constraints}
@@ -2118,8 +799,7 @@ val gcd : int -> int -> int
 %%alignment type is the last enforced alignment boundary.
 <<alignment.ml>>=
 type t = int * int
-@
-<<alignment.ml>>=
+
 let init k = (0, k)
 let add i (n, k) = (n + i, k)
 let align k (n', k') = (0, k)
@@ -2133,10 +813,10 @@ let alignment (n, k) = gcd n k
 \section{[[commons3/bits.nw]]}
 
 <<commons3/bits.ml>>=
-<<bits.ml>>
+<<bits.ml >>
 @
 <<commons3/bits.mli>>=
-<<bits.mli>>
+<<bits.mli >>
 @
 
 %%% TODO: parsing a floating point number from a string to a bits value.
@@ -2170,7 +850,7 @@ let alignment (n, k) = gcd n k
 %%A [[bits]] value has an observable fixed [[width]] that is the number of
 %%bits it can hold. The simplest [[bits]] value is [[zero]], a [[width]]
 %%long bit vector of zeros. 
-<<bits.mli>>=
+<<bits.mli >>=
 type width = int
 
 (* pad: this was previously an abstract type, but it's less convenient
@@ -2189,7 +869,7 @@ val is_zero : t -> bool
 %%Comparison is safe even on bit vectors of different widths.
 %%However, its results are not necessarily meaningful aside from their
 %%use in constructing hash tables.
-<<bits.mli>>=
+<<bits.mli >>=
 val compare : t -> t -> int
 val eq      : t -> t -> bool
 @ 
@@ -2200,7 +880,7 @@ val eq      : t -> t -> bool
 %%The
 %%syntax for numbers follows the {\PAL} syntax. For the details of
 %%strings, see below.
-<<bits.mli>>=
+<<bits.mli >>=
 exception Overflow
 module S: sig  (* signed *) 
     <<interface S>>
@@ -2220,7 +900,7 @@ end
 %%Function [[to_hex_or_decimal_string]] converts to decimal if the
 %%argument is ``unsigned less then'' [[declimit]]; otherwise it converts
 %%to form [["0x%x"]].
-<<bits.mli>>=
+<<bits.mli >>=
 val to_string         : bits -> string
 val to_decimal_string : bits -> string
 val to_hex_or_decimal_string : declimit:int -> bits -> string
@@ -2235,7 +915,7 @@ val to_hex_or_decimal_string : declimit:int -> bits -> string
 %%[[and]] and [[or]], not [[logand]] and [[logor]].
 %%Except that because [[and]] and [[or]] are reserved words, it's
 %%[[and']] and [[or']].
-<<bits.mli>>=
+<<bits.mli >>=
 module Ops : sig
   val add       : bits -> bits -> bits
   val and'      : bits -> bits -> bits
@@ -2452,7 +1132,7 @@ val fits : width -> t -> bool    (* fits w b == (b = zxlo w b) *)
 \subsection{Implementation}
 %%% ------------------------------------------------------------------ 
 
-<<bits.ml>>=
+<<bits.ml >>=
 let (=*=) = (=)
 let (=<=) (x:char)   (y:char)   = (=) x y
 
@@ -2461,7 +1141,7 @@ exception Overflow
 let impossf fmt = Printf.kprintf Impossible.impossible fmt
 @ 
 %%Here, we want our polymorphism.
-<<bits.ml>>=
+<<bits.ml >>=
 let (<=) = Pervasives.(<=)
 let (>=) = Pervasives.(>=)
 let (<)  = Pervasives.(<)
@@ -2471,7 +1151,7 @@ let (>)  = Pervasives.(>)
 %%value. Whenever for the width $k < 64$ holds, we maintain the
 %%following invariant: the $64-k$ most significant bits equal the sign
 %%bit $k-1$ of $b$.
-<<bits.ml>>=
+<<bits.ml >>=
 
 type width      = int
 [@@deriving show]
@@ -2494,7 +1174,7 @@ let zero w  = check w; (I.zero, w)
 %%significant bit are equal to bit $w-1$, the sign bit of a vector of
 %%length $w$. We use this to establish our invariant that unused bits
 %%equal the sign bit.
-<<bits.ml>>=
+<<bits.ml >>=
 let sx64 i w =
   if w = 64 then i
   else
@@ -2502,7 +1182,7 @@ let sx64 i w =
     I.shift_right (I.shift_left i w') w'
 @ 
 %%
-<<bits.ml>>=
+<<bits.ml >>=
 let zx64 i w =
   if w = 64 then i
   else
@@ -2512,7 +1192,7 @@ let zx64 i w =
 \subsection{Strings}
 %%
 %%Conversion rules seem a bit idiosyncratic...
-<<bits.ml>>=
+<<bits.ml >>=
 let to_string (i,w) = Printf.sprintf "0x%Lx::bits%d" i w 
 let to_decimal_string (i,w) = Printf.sprintf "%Ld" i
 let to_hex_or_decimal_string ~declimit (i,w) =
@@ -2526,7 +1206,7 @@ let to_hex_or_decimal_string ~declimit (i,w) =
 \subsection{Arithmetic}
 %%% ------------------------------------------------------------------ 
 
-<<bits.ml>>=
+<<bits.ml >>=
 module Ops = struct
   <<bitwise operators>>
 end
@@ -2634,7 +1314,7 @@ let com (b,w) = (Int64.lognot (zx64 b w), w)
 @
 %%
 %%
-<<bits.ml>>=
+<<bits.ml >>=
 <<string scanning>>
 module S = struct
     <<implementation S>>
@@ -3182,14 +1862,8 @@ let zero w =
 @
 
 
-\section{[[commons3/bitset64.nw]]}
+\section{[[bitops/bitset64.nw]]}
 
-<<commons3/bitset64.ml>>=
-<<bitset64.ml>>
-@
-<<commons3/bitset64.mli>>=
-<<bitset64.mli>>
-@
 
 \section{Small sets of bits}
 
@@ -3260,14 +1934,7 @@ let eq = B.eq
 let subset s s' = B.eq (inter s s') s
 @ 
 
-\section{[[commons3/cell.nw]]}
-
-<<commons3/cell.ml>>=
-<<cell.ml>>
-@
-<<commons3/cell.mli>>=
-<<cell.mli>>
-@
+\section{[[bitops/cell.nw]]}
 
 \section{Cells}
 
@@ -3320,13 +1987,10 @@ let of_size n = match n with
 | 64 -> c64
 |  _ -> (n, (fun (C c) -> n * c), (fun w -> C (w / n)), (fun w -> w mod n = 0))
 @ 
-\section{[[commons3/ctypes.nw]]}
+\section{[[bitops/ctypes.nw]]}
 
 <<commons3/ctypes.ml>>=
-<<ctypes.ml>>
-@
-<<commons3/ctypes.mli>>=
-<<ctypes.mli>>
+<<ctypes.ml >>
 @
 
 %%% inc: \usepackage{alltt}
@@ -3373,7 +2037,7 @@ type width   = int
 type metrics = { w : width; va_w : width}
 @
 %%
-<<ctypes.ml>>=
+<<ctypes.ml >>=
 <<types>>
 module SM = Strutil.Map
 let sprintf = Printf.sprintf
@@ -3405,7 +2069,7 @@ let ct_foldi f ct z =
 let ct_fold f = ct_foldi (fun _ x -> f x)
 @
 %%This description of the X86's types should probably fit somewhere in the [[Target.t]].
-<<ctypes.ml>>=
+<<ctypes.ml >>=
 let x86_ctypes =
   { char               = {w = 8 ; va_w = 32}
   ; double             = {w = 64; va_w = 64}
@@ -3424,7 +2088,7 @@ let x86_ctypes =
   ; address            = {w = 32; va_w = 32}
   }
 @
-<<ctypes.ml>>=
+<<ctypes.ml >>=
 let enum_ct =
   { char               = ("CHAR"            , 0)
   ; double             = ("DOUBLE"          , 1)
@@ -3448,14 +2112,7 @@ let ctypes_vararg_enum ct =
 let enum_int h = snd (fetch_ct enum_ct h)
 @
 
-\section{[[commons3/idcode.nw]]}
-
-<<commons3/idcode.ml>>=
-<<idcode.ml>>
-@
-<<commons3/idcode.mli>>=
-<<idcode.mli>>
-@
+\section{[[codegen/idcode.nw]]}
 
 \section{Code arbitrary string as an identifier}
 
@@ -3490,13 +2147,10 @@ let encode s =
   end
 @ 
 
-\section{[[commons3/idgen.nw]]}
+\section{[[codegen/idgen.nw]]}
 
 <<commons3/idgen.ml>>=
-<<idgen.ml>>
-@
-<<commons3/idgen.mli>>=
-<<idgen.mli>>
+<<idgen.ml >>
 @
 
 %%%%Grades: B Peripheral Later
@@ -3565,7 +2219,7 @@ end
 %%not include a colon ``[[:]]'' character; we include such a character
 %%into the generated names to avoid name clashes with existing names.
 %%
-<<idgen.ml>>=
+<<idgen.ml >>=
 type generator = string -> string
 let count = Reinit.ref 0
 @
@@ -3575,14 +2229,14 @@ let count = Reinit.ref 0
 %%causes the GNU assembler, linker and debugger to ignore the symbol.
 %%(Contrary to the documentation, which claims that a bare~\texttt{L} is
 %%the magic prefix.)
-<<idgen.ml>>=
+<<idgen.ml >>=
 let id kind s =
     ( incr count
     ; Printf.sprintf "%s%s:%c%d" (if kind == 'l' then ".L" else "") s kind !count
     )
 @
 %%The kind of a name is encoded by a single letter in the name.
-<<idgen.ml>>=
+<<idgen.ml >>=
 let label   = id 'l' 
 let offset  = id 'o'
 let exit    = id 'x'
@@ -3597,13 +2251,10 @@ end
 (* add more here as needed *)
 @
 
-\section{[[commons3/reinit.nw]]}
+\section{[[prelude/reinit.nw]]}
 
-<<commons3/reinit.ml>>=
-<<reinit.ml>>
-@
 <<commons3/reinit.mli>>=
-<<reinit.mli>>
+<<reinit.mli >>
 @
 
 
@@ -3616,14 +2267,14 @@ end
 %%
 %%A module can ask to be reinitialized when the driver is reinitialized.
 %%Any function registered with [[at]] is called by [[reset]].
-<<reinit.mli>>=
+<<reinit.mli >>=
 val at : (unit -> unit) -> unit
 val reset : unit -> unit
 @ 
 %%
 %%The common case is to create a ref cell that is automatically
 %%reinitialized when [[reset]] is called.
-<<reinit.mli>>=
+<<reinit.mli >>=
 val ref : 'a -> 'a ref
 @ 
 <<reinit.ml>>=
@@ -3636,15 +2287,7 @@ let ref x =
   r
 @ 
 
-\section{[[commons3/tx.nw]]}
-
-<<commons3/tx.ml>>=
-<<tx.ml>>
-@
-<<commons3/tx.mli>>=
-<<tx.mli>>
-@
-
+\section{[[regalloc/tx.nw]]}
 
 <<tx.mli>>=
 val decrement : name:string -> from:int -> to':int -> unit
@@ -3683,10 +2326,10 @@ let last _ = ts.last
 \section{[[commons3/uint64.nw]]}
 
 <<commons3/uint64.ml>>=
-<<uint64.ml>>
+<<uint64.ml >>
 @
 <<commons3/uint64.mli>>=
-<<uint64.mli>>
+<<uint64.mli >>
 @
 
 %%% l2h substitution C C--
@@ -3716,7 +2359,7 @@ let last _ = ts.last
 %%
 %%Primitive functions, called \textit{external}, are implemented in C,
 %%\textit{internal} functions use them and are implemented in {\ocaml}. 
-<<uint64.mli>>=
+<<uint64.mli >>=
 <<[[Uint64]] external functions>>
 <<internal functions>>
 @
@@ -3727,7 +2370,7 @@ let last _ = ts.last
 %%Function [[Cast.float32]] takes a 64-bit floating-point value,
 %%converts it to a 32-bit floating-point value, and returns those bits
 %%in the least significant 32~bits of a 64-bit integer.
-<<uint64.mli>>=
+<<uint64.mli >>=
 module Cast : sig
  external float64 :   float -> int64 = "uint64_float64"
  external float32 :   float -> int64 = "uint64_float32"
@@ -3791,7 +2434,7 @@ val shr:             int -> int64 -> int64      (* shift right *)
 %%The implementation is imostly done in C like the implementation of
 %%[[Int64]].  It simply provides some additional operations in the same
 %%style as the [[Int64]] implementation. 
-<<uint64.ml>>=
+<<uint64.ml >>=
 module I = Int64
 <<[[Uint64]] external functions>>
 module Cast = struct
@@ -3801,7 +2444,7 @@ end
 @
 %%Comparison functions are implemented with the help of the [[cmp]]
 %%primitive. 
-<<uint64.ml>>=
+<<uint64.ml >>=
 let eq  x y =    (cmp x y) = 0
 let lt  x y =    (cmp x y) < 0
 let gt  x y =    (cmp x y) > 0
@@ -3814,7 +2457,7 @@ let ge  x y =    not (lt x y)
 %%The shift operations can be taken from the [[Int64]] module because
 %%they are the same for signed and unsigned values.  This applies to
 %%many other operations as well.
-<<uint64.ml>>=
+<<uint64.ml >>=
 let shl n x =    I.shift_left x n
 let shr n x =    I.shift_right_logical x n  
 @
