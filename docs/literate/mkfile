@@ -26,6 +26,11 @@ SRC_VIEWS= \
  $TOP/libs/prelude/verbose.mli\
  $TOP/libs/prelude/verbose.ml\
  \
+ $TOP/libs/prelude/reinit.mli\
+ $TOP/libs/prelude/reinit.ml\
+ $TOP/libs/prelude/idgen.mli\
+ $TOP/libs/prelude/idgen.ml\
+ \
  $TOP/libs/bitops/alignment.mli\
  $TOP/libs/bitops/alignment.ml\
  $TOP/libs/bitops/bits.mli\
@@ -38,12 +43,6 @@ SRC_VIEWS= \
  $TOP/libs/bitops/cell.ml\
  $TOP/libs/bitops/ctypes.mli\
  $TOP/libs/bitops/ctypes.ml\
- $TOP/libs/bitops/idcode.mli\
- $TOP/libs/bitops/idcode.ml\
- $TOP/libs/bitops/idgen.mli\
- $TOP/libs/bitops/idgen.ml\
- $TOP/libs/bitops/reinit.mli\
- $TOP/libs/bitops/reinit.ml\
  $TOP/libs/bitops/tx.mli\
  $TOP/libs/bitops/tx.ml\
  \
@@ -148,6 +147,8 @@ SRC_VIEWS= \
  $TOP/target/target.mli\
  $TOP/target/target.ml\
  \
+ $TOP/codegen/idcode.mli\
+ $TOP/codegen/idcode.ml\
  $TOP/codegen/ast2ir.mli\
  $TOP/codegen/ast2ir.ml\
  $TOP/codegen/automatongraph.mli\
