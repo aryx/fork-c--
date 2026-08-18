@@ -1982,13 +1982,6 @@ let e2 = sym 'a' *** opt (sym 'b') *** some (sym 'a')
 
 \section{[[commons2/strutil.nw]]}
 
-<<commons2/strutil.ml>>=
-<<strutil.ml>>
-@
-<<commons2/strutil.mli>>=
-<<strutil.mli>>
-@
-
 %%% ------------------------------------------------------------------ 
 \section{String Utilities}
 %%% ------------------------------------------------------------------ 
@@ -2067,13 +2060,6 @@ let from_list xs = List.fold_left (fun set x -> Set.add x set) Set.empty xs
 
 \section{[[commons2/verbose.nw]]}
 %TODO: replace by Logs. instead
-
-<<commons2/verbose.ml>>=
-<<verbose.ml>>
-@
-<<commons2/verbose.mli>>=
-<<verbose.mli>>
-@
 
 \section{Diagnostic output}
 

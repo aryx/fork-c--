@@ -26,14 +26,14 @@ SRC_VIEWS= \
  $TOP/libs/parser_combinators/rx.mli\
  $TOP/libs/parser_combinators/rx.ml\
  \
- $TOP/libs/commons2/pp.mli\
- $TOP/libs/commons2/pp.ml\
- $TOP/libs/commons2/auxfuns.mli\
- $TOP/libs/commons2/auxfuns.ml\
- $TOP/libs/commons2/strutil.mli\
- $TOP/libs/commons2/strutil.ml\
- $TOP/libs/commons2/verbose.mli\
- $TOP/libs/commons2/verbose.ml\
+ $TOP/libs/prelude/pp.mli\
+ $TOP/libs/prelude/pp.ml\
+ $TOP/libs/prelude/auxfuns.mli\
+ $TOP/libs/prelude/auxfuns.ml\
+ $TOP/libs/prelude/strutil.mli\
+ $TOP/libs/prelude/strutil.ml\
+ $TOP/libs/prelude/verbose.mli\
+ $TOP/libs/prelude/verbose.ml\
  \
  $TOP/libs/commons3/alignment.mli\
  $TOP/libs/commons3/alignment.ml\
