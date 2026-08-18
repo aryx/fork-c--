@@ -154,38 +154,38 @@ SRC_VIEWS= \
  $TOP/target/target.mli\
  $TOP/target/target.ml\
  \
- $TOP/middle/codegen/idcode.mli\
- $TOP/middle/codegen/idcode.ml\
- $TOP/middle/codegen/ast2ir.mli\
- $TOP/middle/codegen/ast2ir.ml\
- $TOP/middle/codegen/automatongraph.mli\
- $TOP/middle/codegen/automatongraph.ml\
- $TOP/middle/codegen/call.mli\
- $TOP/middle/codegen/call.ml\
- $TOP/middle/codegen/contn.mli\
- $TOP/middle/codegen/contn.ml\
- $TOP/middle/codegen/postexpander.mli\
- $TOP/middle/codegen/postexpander.ml\
- $TOP/middle/codegen/expander.mli\
- $TOP/middle/codegen/expander.ml\
- $TOP/middle/codegen/opshape.mli\
- $TOP/middle/codegen/opshape.ml\
- $TOP/middle/codegen/preast2ir.mli\
- $TOP/middle/codegen/preast2ir.ml\
- $TOP/middle/codegen/proc.mli\
- $TOP/middle/codegen/proc.ml\
- $TOP/middle/codegen/rewrite.mli\
- $TOP/middle/codegen/rewrite.ml\
- $TOP/middle/codegen/runtimedata.mli\
- $TOP/middle/codegen/runtimedata.ml\
+ $TOP/middle/proc/proc.mli\
+ $TOP/middle/proc/proc.ml\
+ $TOP/middle/proc/call.mli\
+ $TOP/middle/proc/call.ml\
+ $TOP/middle/proc/contn.mli\
+ $TOP/middle/proc/contn.ml\
+ $TOP/middle/proc/preast2ir.mli\
+ $TOP/middle/proc/preast2ir.ml\
+ $TOP/middle/proc/context.mli\
+ $TOP/middle/proc/context.ml\
+ $TOP/middle/proc/talloc.mli\
+ $TOP/middle/proc/talloc.ml\
+ $TOP/middle/proc/automatongraph.mli\
+ $TOP/middle/proc/automatongraph.ml\
  \
- $TOP/middle/codegen/context.mli\
- $TOP/middle/codegen/context.ml\
- $TOP/middle/codegen/talloc.mli\
- $TOP/middle/codegen/talloc.ml\
+ $TOP/middle/expand/expander.mli\
+ $TOP/middle/expand/expander.ml\
+ $TOP/middle/expand/postexpander.mli\
+ $TOP/middle/expand/postexpander.ml\
+ $TOP/middle/expand/opshape.mli\
+ $TOP/middle/expand/opshape.ml\
+ $TOP/middle/expand/rewrite.mli\
+ $TOP/middle/expand/rewrite.ml\
  \
- $TOP/middle/codegen/widen.mli\
- $TOP/middle/codegen/widen.ml\
+ $TOP/middle/translate/ast2ir.mli\
+ $TOP/middle/translate/ast2ir.ml\
+ $TOP/middle/translate/idcode.mli\
+ $TOP/middle/translate/idcode.ml\
+ $TOP/middle/translate/runtimedata.mli\
+ $TOP/middle/translate/runtimedata.ml\
+ $TOP/middle/translate/widen.mli\
+ $TOP/middle/translate/widen.ml\
  \
  $TOP/middle/layout/mvalidate.mli\
  $TOP/middle/layout/mvalidate.ml\
