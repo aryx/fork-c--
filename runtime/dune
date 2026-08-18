@@ -36,6 +36,14 @@
   gcc-linux.c
   x86cont.s
   ppccont.s
+  sparccont.s
+  alphacont.s
+  mipscont.s
+  armcont.s
+  riscv32cont.s
+  riscv32_crt0.s
+  riscv64cont.s
+  riscv32_syscalls.c
   cut.c--
   thread.c--
   yield.c--
