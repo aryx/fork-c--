@@ -151,6 +151,17 @@ let use_arm = ref false
  * arch/riscv64/riscv64asm.ml already emits GNU-as-compatible syntax. *)
 let use_riscv64 = ref false
 
+(* claude: -arm64, 64-bit little-endian AArch64 (see arch/arm64/arm64.ml).
+ * Unlike every other -<arch> flag, this is the machine's own native
+ * architecture (this fork is developed on an Apple Silicon Mac), so it
+ * needs no cross toolchain and no qemu - see default_arm64_cc below.
+ * Mach-O/Darwin assembly only for now (arch/arm64/arm64asm.ml), same
+ * "-ppc"-shaped situation ppc's own Mach-O default is in, minus the "no
+ * usable default on this host" caveat since the host and target now
+ * genuinely match; a Linux/ELF "-arm64-elf" sibling, if ever added, would
+ * follow arch/ppc/ppcelfasm.ml's precedent. *)
+let use_arm64 = ref false
+
 (* claude: -riscv32, 32-bit little-endian RISC-V (RV32IMAC - see
  * arch/riscv32/riscv32.ml). Unlike every other -<arch> flag, there is no
  * Linux-userspace glibc cross-toolchain for it on this machine (Ubuntu
@@ -250,6 +261,13 @@ let default_riscv64_cc = "riscv64-linux-gnu-gcc"
  * this one IS usable end to end - just not self-sufficient the way every
  * other -<arch> default is (it always needs that extra _start object). *)
 let default_riscv32_cc = "riscv64-linux-gnu-gcc -march=rv32imac -mabi=ilp32 -nostdlib"
+(* claude: for -arm64. This machine IS arm64-apple-darwin, so plain "clang"
+ * (no -target override, no cross-sysroot workaround) assembles AND links
+ * correctly - empirically verified (a hand-assembled hello-world .s calling
+ * printf assembled with "clang -c" and linked with plain "clang", no
+ * -static: Apple does not support statically linking against libSystem,
+ * unlike every Linux-hosted backend's own default_*_cc above). *)
+let default_arm64_cc = "clang"
 
 let getenv_or name default =
   match Sys.getenv_opt name with
@@ -431,6 +449,11 @@ type backend =
    * "-riscv32-elf" sibling needed. Verified freestanding only (no glibc for
    * this width on this machine - see use_riscv32's comment). *)
   | Riscv32
+  (* claude: 64-bit little-endian AArch64, this machine's own native
+   * architecture. Emits Mach-O/Darwin assembly (arch/arm64/arm64asm.ml),
+   * macOS only for now - no "-arm64-elf" sibling yet (see use_arm64's own
+   * comment). *)
+  | Arm64
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
    *)
@@ -451,6 +474,7 @@ let effective_cc backend cmd =
            | Arm -> default_arm_cc
            | Riscv64 -> default_riscv64_cc
            | Riscv32 -> default_riscv32_cc
+           | Arm64 -> default_arm64_cc
            | Ppc -> failwith "-ppc: pass -as/-ld (or QC_AS/QC_LD) explicitly \
                                for the Mach-O assembler/linker to use"
            | Interp -> failwith "-interp has no assembler/linker step")
@@ -463,7 +487,7 @@ let effective_cc backend cmd =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 -> ".s"
+   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -500,6 +524,9 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     | Riscv32 ->
         let asm = Riscv32asm.make Cfgutil.emit chan in
         Riscv32.target, asm, Riscv32backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
+    | Arm64 ->
+        let asm = Arm64asm.make Cfgutil.emit chan in
+        Arm64.target, asm, Arm64backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
          * see TODO/lua/lualink.ml:234 *)
@@ -701,13 +728,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32) -> Assembly
+  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32) -> Object
+  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32) -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -742,6 +769,7 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     else if !use_arm then Arm
     else if !use_riscv64 then Riscv64
     else if !use_riscv32 then Riscv32
+    else if !use_arm64 then Arm64
     else X86
   in
   let stop = stop_at_of_flag backend in
@@ -873,10 +901,13 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " generate 64-bit little-endian RISC-V (RV64GC) Linux/ELF assembly instead of x86";
     "-riscv32", Arg.Unit (fun () -> use_riscv32 := true),
     " generate 32-bit little-endian RISC-V (RV32IMAC) Linux/ELF assembly instead of x86";
+    "-arm64", Arg.Unit (fun () -> use_arm64 := true),
+    " generate 64-bit little-endian AArch64 Mach-O assembly instead of x86 \
+(this machine's own native architecture - no cross toolchain needed)";
     "-x86", Arg.Unit (fun () ->
       use_interp := false; use_ppc := false; use_ppc_elf := false; use_sparc := false;
       use_alpha := false; use_mips := false; use_arm := false; use_riscv64 := false;
-      use_riscv32 := false),
+      use_riscv32 := false; use_arm64 := false),
     " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";

@@ -23,7 +23,7 @@
   cmm_assembler cmm_front_last
   cmm_opti
   cmm_h_camlburg_engine
-  cmm_arch_ppc cmm_arch_x86 cmm_arch_interpreter cmm_arch_dummy cmm_arch_sparc cmm_arch_alpha cmm_arch_mips cmm_arch_arm cmm_arch_riscv64 cmm_arch_riscv32
+  cmm_arch_ppc cmm_arch_x86 cmm_arch_interpreter cmm_arch_dummy cmm_arch_sparc cmm_arch_alpha cmm_arch_mips cmm_arch_arm cmm_arch_riscv64 cmm_arch_riscv32 cmm_arch_arm64
   )
  (preprocess (pps ppx_deriving.show))
 )

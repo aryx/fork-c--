@@ -2,7 +2,11 @@
 # the x86 backend, also reused as-is for -mips since its default 32-bit
 # little-endian metrics already match mipsel; hello_ppc.c-- for ppc-elf;
 # hello_sparc.c-- for -sparc; hello_alpha.c-- for -alpha; hello_arm.c--
-# for -arm; hello_riscv64.c-- for -riscv64) end to end.
+# for -arm; hello_riscv64.c-- for -riscv64; hello_arm64.c-- for -arm64) end
+# to end. -arm64 is the odd one out: it is this machine's own native
+# architecture, so it needs no cross toolchain, no QC_AS/QC_LD override, no
+# qemu, and no -static (Apple does not support static-linking libSystem) -
+# see hello_arm64.c--'s own comment.
 #
 # ---------------------------------------------------------------------------
 # REQUIREMENTS
@@ -81,10 +85,10 @@ RUNARM   ?= $(shell command -v qemu-arm        2>/dev/null)
 RUNRISCV64 ?= $(shell command -v qemu-riscv64  2>/dev/null)
 RUNRISCV32 ?= $(shell command -v qemu-riscv32  2>/dev/null)
 
-.PHONY: all x86 ppc sparc alpha mips arm riscv64 riscv32 \
-        run run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 clean
+.PHONY: all x86 ppc sparc alpha mips arm riscv64 riscv32 arm64 \
+        run run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 run-arm64 clean
 
-all: x86 ppc sparc alpha mips arm riscv64 riscv32
+all: x86 ppc sparc alpha mips arm riscv64 riscv32 arm64
 
 $(B):
 	mkdir -p $(B)
@@ -198,7 +202,19 @@ riscv32: $(B)/hello_riscv32
 run-riscv32: riscv32
 	@$(RUNRISCV32) ./$(B)/hello_riscv32; echo "[exit status $$?]"
 
-run: run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32
+# ---------------------------------------------------------------------------
+# arm64 (hello_arm64.c--, 64-bit little-endian, the -arm64 backend; this
+# machine's own native architecture, so no QC_AS/QC_LD/qemu wrapper needed)
+# ---------------------------------------------------------------------------
+$(B)/hello_arm64: hello_arm64.c-- | $(B)
+	$(QC) -arm64 -globals -o $@ $<
+
+arm64: $(B)/hello_arm64
+
+run-arm64: arm64
+	@./$(B)/hello_arm64; echo "[exit status $$?]"
+
+run: run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 run-arm64
 
 clean:
 	rm -rf $(B)

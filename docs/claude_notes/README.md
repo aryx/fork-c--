@@ -66,6 +66,23 @@ Index:
   the fix that unblocked it being a `Cmm_Word` (pcmap field width)
   bug in `qc--runtime.h` shared by every backend, not RV64-specific.
 
+- [notes_arm64.txt](notes_arm64.txt) — how the AArch64/macOS backend (new
+  development, no upstream `.nw`) was built: the machine's own native
+  architecture, so no cross toolchain/qemu is needed, and the only backend
+  whose Mach-O output has actually been linked-and-run end to end (ppc's own
+  Mach-O default has existed for a long time but was never testable - no
+  PowerPC Mac exists). Reached the `hello.c--` milestone
+  (`./bin/qc -arm64 -globals -o hello_arm64 demos/hello_arm64.c--`, verified
+  5x in a row for flakiness). Notable finds: ARM32's "ldr rX, =imm"
+  immediate-materialization trick is broken for the 64-bit register form on
+  Apple's LLVM assembler (mis-sized literal-pool entry, confirmed via
+  `otool -tv`) - replaced with an explicit movz+movk sequence; Apple's ld64
+  is stricter than every ELF linker this fork otherwise targets and rejects
+  an unaligned pointer relocation in a freshly-opened Mach-O section unless
+  it is explicitly `.align`ed first. Scoped to `T.memory = [64]` only (no
+  sub-word load/store - AArch64's ldrb/ldrh/etc. need a W-register-vs-
+  X-register distinction not verified here) and no float. Follow-up (not
+  done): sub-word memory access, tests/tiger/ suite, a Linux/ELF sibling.
 - [notes_ssa.txt](notes_ssa.txt) — why qc-- doesn't use SSA internally:
   verified there's no SSA anywhere in the tree (mid-level IR is the
   zipper-CFG `front_zipcfg`/`Zipcfg`, optimizations run as classic

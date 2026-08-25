@@ -1,0 +1,322 @@
+%head {:
+  (* claude: no upstream arm64rec.nw exists to port - qc-- predates AArch64
+   * entirely (see arm64.ml's header comment). Modeled on arch/arm/
+   * armrec.mlb's shape (%head/%tail structure, single flags-pseudo-location
+   * cc model - AArch64 keeps ARM32's NZCV design) crossed with arch/riscv64/
+   * riscv64rec.mlb's 64-bit width. Only the subset of AArch64 actually
+   * needed by demos/hello_arm64.c-- is covered: base+offset addressing at
+   * the full 64-bit width only (no sub-word loads/stores - see arm64.ml's
+   * T.capabilities comment, T.memory is [64] only, not [8;16;32;64] the way
+   * arm.ml's/riscv64.ml's own are, specifically because getting AArch64's
+   * W-register-vs-X-register distinction right for ldrb/ldrh/ldrsb/ldrsh/
+   * ldrsw sub-word loads needs care this pass doesn't verify empirically -
+   * left uncovered rather than risk a silently-wrong rule), add/sub/and/
+   * mul/quot, the ten eq/ne/lt/le/gt/ge/ltu/leu/gtu/geu comparisons, and
+   * plain direct/indirect calls and branches.
+   *
+   * Immediate materialization: unlike armrec.mlb's "ldr rX, =imm" (a GNU-as
+   * pseudo-op that, for the 64-bit register form on Apple's LLVM-based
+   * assembler, was empirically confirmed to mis-size its literal-pool entry
+   * - see arm64.ml's header comment for the `otool -tv` evidence), every
+   * immediate here is built explicitly via a movz + up to three movk
+   * instructions (li64 below) - always correct, needs no assembler pseudo-
+   * op cooperation, and works identically on both GNU as and LLVM's
+   * integrated assembler. No native 12-bit add/sub-immediate encoding is
+   * used either (AArch64 does have one, unlike ARM32's fully rotated 8-bit
+   * encoding) - every arithmetic immediate goes through the same li64 +
+   * x16-scratch materialization, matching armrec.mlb's original "always
+   * materialize, no direct-encode fast path" simplicity; worth revisiting
+   * once real programs (not just hello_arm64.c--) exercise this backend.
+   *)
+  open Nopoly
+  module RP = Rtl.Private
+  module RU = Rtlutil
+  module Up = Rtl.Up
+  module Dn = Rtl.Dn
+  module SS = Space.Standard64
+
+  exception Error of string
+  let error msg = raise (Error msg)
+  let sprintf   = Printf.sprintf
+
+  let guard p = if p then 0 else Camlburg.inf_cost
+
+  (* claude: signed decimal - used only for the "[reg, #imm]" load/store
+   * offset field (a real AArch64 immediate operand, needs to print
+   * negative offsets as "-8" not a huge unsigned value) and as the "next"
+   * witness match below (whose string value is never actually used). *)
+  let const64 b =
+      assert (Bits.width b = 64);
+      Int64.to_string (Bits.S.to_int64 b)
+
+  let cat     = String.concat ""
+  let sprintf = Printf.sprintf
+
+  let reg n   = if n = 31 then "sp" else "x" ^ string_of_int n
+
+  (* claude: AArch64's load/store size suffixes for the sub-word case are
+   * NOT used here (see the %head comment above on why sub-word memory
+   * access is out of scope for this pass) - kept only as a placeholder in
+   * case that gap gets picked up later.
+   *)
+
+  (* claude: builds a movz + up to three movk instructions materializing an
+   * arbitrary 64-bit constant into `dst` - see the %head comment above for
+   * why this replaces armrec.mlb's "ldr rX, =imm" trick here. Always
+   * correct: movz sets the first non-zero 16-bit chunk (or #0 if the whole
+   * value is zero) and clears the rest, each subsequent non-zero chunk is
+   * folded in with movk (which does not disturb the other bits). *)
+  let li64 dst v =
+    let chunk i = Int64.to_int (Int64.logand (Int64.shift_right_logical v (i*16)) 0xFFFFL) in
+    let chunks = [ chunk 0; chunk 1; chunk 2; chunk 3 ] in
+    if Int64.equal v 0L then sprintf "movz %s, #0" dst
+    else
+      let lines = ref [] in
+      let first = ref true in
+      List.iteri (fun i c ->
+        if c <> 0 then begin
+          if !first then begin
+            lines := sprintf "movz %s, #%d, lsl #%d" dst c (i*16) :: !lines;
+            first := false
+          end else
+            lines := sprintf "movk %s, #%d, lsl #%d" dst c (i*16) :: !lines
+        end) chunks;
+      String.concat "\n\t" (List.rev !lines)
+
+  (* claude: maps arm64.ml's Post.arm64_cond names (arm64_eq/arm64_ne/.../
+   * arm64_hi - the exact operator names Post.subflags/bc_guard build, see
+   * arm64.ml lines ~190-230) to AArch64's real b.<cond> mnemonics. LO/LS/
+   * HI/HS are AArch64's own spelling of the four unsigned comparisons
+   * (arm.ml's ARM32 equivalent used LS/HI too, but under the CS/CC naming
+   * AArch64 replaced with HS/LO for the carry-based pair - only LTU/GEU
+   * map differently here, via arm64.ml's bc_guard swap to GTU/LEU exactly
+   * as arm.ml's own does, so only LE u/GTu ever need a direct mnemonic). *)
+  let arm64_bcond = function
+      | "arm64_eq" -> "b.eq"
+      | "arm64_ne" -> "b.ne"
+      | "arm64_lt" -> "b.lt"
+      | "arm64_le" -> "b.le"
+      | "arm64_gt" -> "b.gt"
+      | "arm64_ge" -> "b.ge"
+      | "arm64_ls" -> "b.ls"
+      | "arm64_hi" -> "b.hi"
+      | op       -> error (sprintf "not an AArch64 condition: %s" op)
+:}
+%tail {:
+  let const = function
+      | RP.Bool _                 -> error "boolean found"
+      | RP.Link(s,_,w)            -> conLink s w
+      | RP.Diff _                 -> error "PIC not supported"
+      | RP.Bits(b)                -> conBits b
+      | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
+
+  let rec exp = function
+      | RP.Const(k)               -> const k
+      | RP.Fetch(l,w)             -> conFetch (loc l) w
+      | RP.App(("add", [w]), [x; y])  -> conAdd (exp x) (exp y)
+      | RP.App(("sub", [w]), [x; y])  -> conSub (exp x) (exp y)
+      | RP.App(("and", [w]), [x; y])  -> conAnd (exp x) (exp y)
+      | RP.App(("mul", [w]), [x; y])  -> conMul (exp x) (exp y)
+      | RP.App(("quot", [w]), [x; y]) -> conQuot (exp x) (exp y)
+      | RP.App((("arm64_subcc"), [w]), [x; y]) -> conSubcc (exp x) (exp y)
+      | RP.App((("arm64_eq"|"arm64_ne"|"arm64_lt"|"arm64_le"|"arm64_gt"|"arm64_ge"
+                |"arm64_ls"|"arm64_hi") as op, [w]), [c]) ->
+          conCond op (exp c)
+      | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
+
+  and loc = function
+      | RP.Reg((sp,_,_),i,w)      -> conReg sp i
+      | RP.Mem(('m',_,_),w,e,ass) -> conMem (exp e)
+      | RP.Mem((sp,_,_),_,_,_)    -> error (sprintf "mem-space space %c" sp)
+      | RP.Var   (s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Global(s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Slice _                -> error "cannot handle slice"
+
+  let effect = function
+      | RP.Store(RP.Reg(('c',_,_),i,w),r,_)
+        when i = SS.indices.SS.pc  -> conGoto (exp r)
+      | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+      | RP.Kill(l)                -> error "cannot handle kill"
+
+  let guarded g stmt = match g with
+      | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
+      | _                         -> conGuarded (exp g) (effect stmt)
+
+  let rec geffects = function
+      | []                        -> conNop ()
+      | [g, s]                    -> guarded g s
+      | (g, s) :: t               -> conPar (guarded g s) (geffects t)
+
+  let rtl (RP.Rtl es) = geffects es
+
+  let rtl_to_string = RU.ToString.rtl
+
+  let dump msg rtl =
+      List.iter prerr_string
+      [ "error in recognizer: "
+      ; msg
+      ; " on "
+      ; rtl_to_string rtl
+      ; "\n"
+      ]
+
+  let to_string r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          Printf.sprintf "\t%s" (plan.inst.Camlburg.action ())
+      with
+          | Camlburg.Uncovered -> cat ["not an instruction: "
+                                      ; rtl_to_string r
+                                      ]
+          | Error msg          -> ( dump msg r
+                                  ; sprintf "error: %s" (rtl_to_string r)
+                                  )
+
+  let is_instruction r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          plan.inst.Camlburg.cost < 100
+      with
+          | Camlburg.Uncovered -> false
+          | Error msg          -> ( dump msg r
+                                  ; false
+                                  )
+:}
+%term
+  bits n x w
+%%
+const:      Bits(bits) [{: guard (Bits.width bits = 64) :}]{: const64 bits :}
+constv:     Bits(bits) [{: guard (Bits.width bits = 64) :}]{: Bits.U.to_int64 bits :}
+symbol:     Link(x, w:int)      {: x#mangled_text :}
+
+r:          Reg('r', n:int)  {: n :}
+regl:       r   {: reg r :}
+reg:        Fetch(regl,w:int)   {: regl :}
+
+pcl:        Reg('c',  0) {: () :}
+ccl:        Reg('c',  2) {: () :}
+spl:        Reg('r', 31) {: () :}
+ral:        Reg('r', 30) {: () :}
+
+pc:         Fetch(pcl,64)       {: () :}
+ccval:      Fetch(ccl,64)       {: () :}
+sp:         Fetch(spl,64)       {: () :}
+ra:         Fetch(ral,64)       {: () :}
+
+meml:       Mem(addr)     {: addr :}
+mem:        Fetch(meml,w:int)   {: meml :}
+
+(* claude: AArch64's "[base]" / "[base, #offset]" load/store addressing - only the 64-bit-wide, register-plus-immediate-offset case (see %head comment: no scaled/shifted register-offset forms, no sub-word access). *)
+addr:       reg                 {: cat ["["; reg; "]"] :}
+addr:       Add(const,reg)      {: cat ["["; reg; ", #"; const; "]"] :}
+addr:       Add(reg,const)      {: cat ["["; reg; ", #"; const; "]"] :}
+
+inst:       Store(regl, symbol, 64)
+            {: sprintf "adrp %s, %s@PAGE\n\tadd %s, %s, %s@PAGEOFF" regl symbol regl regl symbol :}
+
+inst:       Store(regl, constv, 64)
+            {: li64 regl constv :}
+
+inst:       Store(regl, mem, 64)
+            {: cat ["ldr"; " "; regl; ", "; mem] :}
+
+inst:       Store(meml, reg, 64)
+            {: cat ["str"; " "; reg; ", "; meml] :}
+
+inst:       Store(regl, reg, 64)
+            {: cat ["mov"; " "; regl; ", "; reg] :}
+
+inst:       Goto(symbol)
+            {: cat ["b"; " "; symbol] :}
+
+inst:       Goto(reg)
+            {: cat ["br"; " "; reg] :}
+
+(* claude: bl/blr's rd(=x30) := pc+4 is a hardware-guaranteed side effect (see arm64.ml's ra_offset comment) - "next" just recognizes the RTL shape Post.do_call builds, same role as armrec.mlb's/riscv64rec.mlb's own "next" rule. *)
+next:       Add(pc,const)       {: () :}
+inst:       Par(Goto(symbol),Store(ral,next,64))
+            {: cat ["bl"; " "; symbol] :}
+
+inst:       Par(Goto(target:reg),Store(ral,next,64))
+            {: cat ["blr"; " "; target] :}
+
+(* claude: recognizes Arm64.Post.cut_to's jump-through-register-while-updating-sp RTL; AArch64 has no delay slot, so the sp update must come first (once "br" fires control has left), same discipline as armrec.mlb's/riscv64rec.mlb's analogous rule. *)
+inst:       Par(Goto(target:reg), Store(spl, nsp:reg, 64))
+            {: cat ["mov sp, "; nsp; "\n\tbr "; target] :}
+
+(* claude: Post.subflags's "cmp"-equivalent: x - y into the flags pseudo-location (arm64.ml's cc), matching AArch64's real "cmp" (an alias for "subs xzr, x, y", which only updates NZCV). *)
+inst:       Store(ccl, Subcc(x:reg,y:reg), 64)
+            {: cat ["cmp"; " "; x; ", "; y] :}
+inst:       Store(ccl, Subcc(x:reg,y:constv), 64)
+            {: sprintf "%s\n\tcmp %s, x16" (li64 "x16" y) x :}
+
+(* claude: the conditional-branch half - Post.bc_of_guard wraps the (setup, guard) pair into "Guarded(guard,Store(pcl,tgt,64))", which the tail turns into "Guarded(cond,Goto(addr))", same shape as armrec.mlb's/riscv64rec.mlb's own. *)
+cond:       Cond(op:string, ccval) {: op :}
+inst:       Guarded(cond,Goto(symbol))
+            {: cat [arm64_bcond cond; " "; symbol] :}
+
+inst:       Store(dst:regl, Add(x:reg,y:reg), 64)
+            {: cat ["add"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, Add(x:reg,y:constv), 64)
+            {: sprintf "%s\n\tadd %s, %s, x16" (li64 "x16" y) dst x :}
+
+inst:       Store(dst:regl, Sub(x:reg,y:reg), 64)
+            {: cat ["sub"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, Sub(x:reg,y:constv), 64)
+            {: sprintf "%s\n\tsub %s, %s, x16" (li64 "x16" y) dst x :}
+
+inst:       Store(dst:regl, And(x:reg,y:reg), 64)
+            {: cat ["and"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, And(x:reg,y:constv), 64)
+            {: sprintf "%s\n\tand %s, %s, x16" (li64 "x16" y) dst x :}
+
+(* claude: "mul"/"sdiv" only take register operands (no immediate forms on AArch64), so the immediate variant materializes y into x16 first, same trick as add/sub/and's own immediate rules above. *)
+inst:       Store(dst:regl, Mul(x:reg,y:reg), 64)
+            {: cat ["mul"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, Mul(x:reg,y:constv), 64)
+            {: sprintf "%s\n\tmul %s, %s, x16" (li64 "x16" y) dst x :}
+
+inst:       Store(dst:regl, Quot(x:reg,y:reg), 64)
+            {: cat ["sdiv"; " "; dst; ", "; x; ", "; y] :}
+
+inst:       Store(dst:regl, Quot(x:reg,y:constv), 64)
+            {: sprintf "%s\n\tsdiv %s, %s, x16" (li64 "x16" y) dst x :}
+
+inst:       Nop() {: "nop" :}
+
+inst: any [100]         {: cat ["<";any;">"] :}
+
+any : True  ()          {: cat [ "True"  ] :}
+any : False ()          {: cat [ "False" ] :}
+any : Link(x, w:int)    {: cat [ "Link(";x#mangled_text;",";string_of_int w;")" ] :}
+any : Late(string,w:int){: cat [ "Late(";string;",";string_of_int w;")" ] :}
+any : Bits(bits)        {: cat [ "Bits(b)" ] :}
+
+any : Fetch (any, w:int){: cat [ "Fetch(";any;",";string_of_int w;")" ] :}
+
+any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
+any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
+any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : Quot(x:any, y:any){: cat [ "Quot(";x;", ";y;")" ] :}
+any : Subcc(x:any,y:any){: cat [ "Subcc(";x;", ";y;")" ] :}
+any : Cond(op:string,any) {: cat [ "Cond(";op;",";any;")" ] :}
+any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
+any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
+any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
+
+any : Mem(any)   {: cat [ "Mem(";any;")" ] :}
+any : Reg(char, n:int)  {: cat [ "Reg('";Char.escaped char;"',"; string_of_int n;")" ] :}
+
+any : Store (dst:any, src:any, w:int)
+                        {: cat [ "Store(";dst;",";src;",";string_of_int w;")" ] :}
+any : Kill(any)         {: cat [ "Kill(";any;")" ] :}
+
+any : Guarded(guard:any, any)
+                        {: cat [ "Guarded(";guard;",";any;")" ] :}
+any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
+any : Goto(any)         {: cat [ "Goto(";any;")" ] :}

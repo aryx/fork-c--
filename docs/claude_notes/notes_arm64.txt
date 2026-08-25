@@ -1,0 +1,327 @@
+notes_arm64.txt
+================
+
+Written: 2026-08-25, against commit 8443865 (parent of the commit that adds
+this file and the AArch64/macOS backend itself). All claims below are
+VERIFIED: read in the code, or observed by actually running `qc -arm64 ...`
+NATIVELY on this machine (no qemu, no cross toolchain - see "Toolchain"
+below), not inferred from upstream Lua (there is no upstream to infer from
+here - see "What this is").
+
+What this is
+------------
+AArch64 is the eighth non-x86 backend plugged into this fork, after ppc,
+sparc, alpha, mips, arm, riscv64, and riscv32. Like ARM32/RISC-V, upstream
+qc-- has no AArch64 code at all (AArch64 postdates upstream qc--'s active
+development), so this is new development with no .nw counterpart anywhere -
+every file in arch/arm64/ is plain source with no syncweb (*s:*)/(*x:*)/
+(*e:*) markers, and arch/arm64/Makefile's SRCNW is empty, same situation as
+arch/arm/ and arch/riscv64/.
+
+What makes this backend different from every other one in this fork: it
+targets this development machine's OWN architecture (Apple Silicon,
+arm64-apple-darwin). Every other backend needs a cross toolchain and/or
+qemu to assemble, link, and run its output. This one just needs "clang" -
+no -target override, no QC_AS/QC_LD, no -static (Apple does not support
+static-linking libSystem at all), no emulator. It is also, for that same
+reason, the only backend whose Mach-O output has actually been verified end
+to end on Mach-O's own real hardware/linker - arch/ppc/ppcasm.ml's Mach-O
+output has existed in this codebase for a long time but (per its own
+driver/main.ml comment) could never be tested end to end, since no PowerPC
+Mac exists to run it on.
+
+Target shape (verified in arch/arm64/arm64.ml)
+-----------------------------------------------
+- 64-bit little-endian, Space.Standard64 (like riscv64.ml/alpha.ml, unlike
+  arm.ml's Standard32). 31 general registers x0-x30 plus a stack pointer
+  modeled as index 31 within the same 'r' space (unlike RISC-V, where sp is
+  just an ordinary numbered register with an alias - AArch64 assembly has NO
+  "x31" spelling for sp at all; the literal mnemonic "sp" must be used, so
+  arm64rec.mlb's register printer special-cases index 31).
+- Condition-code model, architecturally identical to ARM32 (a single flags
+  pseudo-location - AArch64 kept ARM32's NZCV design, unlike RISC-V's
+  register-vs-register branches): arm64_subcc sets `cc`, named condition
+  operators (arm64_eq/arm64_ne/arm64_lt/arm64_le/arm64_gt/arm64_ge/
+  arm64_ls/arm64_hi) consume it. arm.ml was the direct template for this
+  half of Post; riscv64.ml was the template for everything 64-bit-width-
+  related and the no-branch-delay-slot do_call/cut_to ordering (both
+  arm.ml's and riscv64.ml's are the same "no delay slot" shape anyway).
+- T.float = Float.ieee754 is declared (matching Metrics.default, so
+  demos/hello_arm64.c-- needs no explicit float pragma - unlike arm.ml's
+  Float.none, which forced demos/hello_arm.c-- to add one), even though
+  Post.unrm/binrm/dblop are still Impossible.unimp/Unsupported - same
+  deferral riscv64.ml's own T.float makes.
+- T.memory = [64] only, NOT [8;16;32;64] the way every other integer
+  backend here declares. AArch64's sub-word load/store forms (ldrb/ldrh/
+  ldrsb/ldrsh/ldrsw) need a W-register-vs-X-register distinction (a 32-bit
+  register write implicitly zero-extends into the corresponding 64-bit
+  register - "ldrb w0, [...]" not "ldrb x0, [...]") that this pass did not
+  verify empirically, so arm64rec.mlb has no grammar rules for them at all
+  and the capability is not declared. Not reachable by demos/hello_arm64.c--
+  (its only memory access is the string literal, addressed as a pointer,
+  never loaded byte-by-byte at the C-- IR level - printf does that in C).
+  A real gap for future programs; see "Known remaining gaps" below.
+
+Immediate materialization: NOT "ldr rX, =imm"
+-------------------------------------------------
+armrec.mlb's "ldr rX, =imm" trick (a GNU-as pseudo-op that builds a literal
+pool + PC-relative load) does NOT carry over to the 64-bit register form on
+Apple's LLVM-based integrated assembler - empirically confirmed broken:
+
+    ldr x0, =0x123456789
+
+assembled with no error, but `otool -tv` on the resulting object showed it
+reserved only 4 bytes in the literal pool (a ".long", not a ".quad") for
+what should be an 8-byte load, silently truncating the high byte and then
+reading the next instruction's own encoding as high-order garbage. This is
+specific to the 64-bit register form on THIS assembler - not investigated
+whether GNU binutils' aarch64-linux-gnu-as gets it right, since this
+backend has no ELF sibling to test that against yet (see "Not attempted").
+
+Fixed by not using it at all: arm64rec.mlb's `li64` instead builds a movz +
+up to three movk instructions explicitly (movz sets the first non-zero
+16-bit chunk, or #0 if the whole value is zero; each subsequent non-zero
+chunk folds in via movk, which does not disturb the other bits). Always
+correct, needs no assembler pseudo-op cooperation, and would work
+identically against GNU as if an ELF sibling is ever added. Costs up to 4
+instructions per immediate where "ldr rX, =imm" would have cost 1 (plus a
+literal-pool entry) - a real code-size/speed tradeoff against arm.ml's own
+approach, not revisited here since demos/hello_arm64.c--'s immediates are
+all small (single movz suffices for all of them in practice).
+
+No native 12-bit add/sub-immediate encoding is used either, even though
+AArch64 has one (unlike ARM32's fully-rotated 8-bit encoding, which really
+does need the ldr-pseudo-op fallback for most values) - every arithmetic
+immediate goes through the same li64 + x16-scratch materialization,
+matching armrec.mlb's original "always materialize, no direct-encode fast
+path" simplicity. Worth revisiting once real programs (not just
+demos/hello_arm64.c--) exercise this backend - see "Not attempted".
+
+Register roles (verified in arm64cc.ml/arm64call.ml)
+------------------------------------------------------
+AAPCS64 crossed with Apple's own platform-ABI addendum where it is
+stricter:
+  x0-x7     argument/return registers, volatile (results use only x0 -
+              no struct-return/multi-value-return support yet)
+  x8        indirect-result register, volatile (not modeled - no struct
+              return)
+  x9-x15    volatile temporaries
+  x16/x17   IP0/IP1 - x16 reserved as this backend's own scratch register
+              (arm64rec.mlb's li64/immediate-materialization rules
+              unconditionally clobber it), NOT in vol_int/nvl_int - same
+              reservation class as arm.ml's r12/ip, riscv64.ml's x5/t0.
+              x17 also excluded, unused but reserved defensively (linker
+              veneers may clobber it).
+  x18       reserved - Apple's platform register. MUST NOT be used by any
+              code on Apple platforms (verified: this is a hard Apple ABI
+              rule, unlike plain AAPCS64/Linux where x18 is sometimes
+              available) - excluded from every pool.
+  x19-x28   non-volatile (callee-saved) - the allocatable nvl_int pool.
+  x29/fp    reserved, NOT in nvl_int - same frame-pointer-chain reservation
+              class as arm.ml's r11/riscv64.ml's x8/s0, if anything
+              stricter here: Apple's own unwinder/crash reporter relies on
+              a valid frame-record chain, not just fork-tiger's gc.c (as on
+              ARM32/RISC-V) - not yet verified whether this backend
+              actually maintains a conventional stp/ldp frame record (see
+              "Not attempted" - the generated code today does NOT emit one;
+              it manages its own stack layout via qc--'s own Call.t/
+              Framelayout machinery, same as every other backend here, none
+              of which construct a standard frame-pointer chain either).
+  x30/lr    return address, handled specially (arm64call.ml's ra/
+              ra_on_entry/ra_on_exit), not a general allocatable register.
+  sp        stack pointer, 16-byte aligned always - Apple enforces this in
+              hardware (a misaligned SP faults), stricter than plain
+              AAPCS64's "only at public interfaces". Arm64call.ml's
+              sp_align = 16 (vs. ARM32's 8) - verified in the one real test
+              this pass ran: the generated hello_arm64 prologue/epilogue
+              both allocate/deallocate exactly 16 bytes via "add sp, sp,
+              x16" with x16 materialized to -16/16, and it ran correctly
+              on real hardware without a SP-alignment fault.
+
+Toolchain
+---------
+Just "clang" (driver/main.ml's default_arm64_cc), no -target override:
+this machine IS arm64-apple-darwin25.6.0 (confirmed via `uname -a`/`clang
+-dumpmachine`), so clang's default target already matches. No QC_AS/QC_LD
+override needed in demos/Makefile's arm64 rule (every other backend's rule
+sets both). No -static: Apple's ld64 refuses to statically link against
+libSystem at all (unlike every Linux-hosted backend here, which all pass
+-static). No qemu: the binary runs directly.
+
+Bugs found and fixed while bringing this up
+---------------------------------------------
+- ld64 ("pointer not aligned in 'anon-13'") rejected the generated object
+  at LINK time (not assembly time) - it infers each Mach-O section's
+  alignment from what is actually emitted at its start, and refuses to
+  place an 8-byte pointer relocation (every ".quad symbol" this backend's
+  own `addr` method and the shared pcmap-emission code produce) into a
+  section whose inferred alignment is 1. Hit against demos/hello_arm64.c--'s
+  own pcmap section, which - like every other backend's generic pcmap
+  emission - opens with a bare ".quad" and no preceding ".align". This is
+  Mach-O/ld64-specific: none of the ELF-targeting backends here have ever
+  hit it, since their linkers don't do this alignment inference the same
+  way. Fixed generically in arm64asm.ml's `section` method: every non-text
+  (__DATA) section now gets an unconditional ".align 3" (8 bytes)
+  immediately after its ".section __DATA,%s" directive - safe and never
+  wasteful, since every value this backend ever emits is .byte or .quad
+  (T.memory = [64], see above).
+- Confirmed (NOT a bug, but worth recording since it contradicts
+  arch/ppc/ppcasm.ml's own untested assumption): ppcasm.ml's generic
+  ".section __DATA,%s" pattern (using the qc---internal section name like
+  "data"/"pcmap"/"pcmap_data" literally as the Mach-O section name, not the
+  conventional "__data" double-underscore form) DOES assemble and link
+  correctly on this machine's real toolchain - hand-verified with a
+  standalone test .s before writing arm64asm.ml (`.section __DATA,data`,
+  `.section __DATA,pcmap` both linked and ran fine). Reused unchanged from
+  ppcasm.ml. Likewise ".align n" taking a log2 exponent (not a byte count)
+  was hand-verified with `otool -s` against a test object before trusting
+  ppcasm.ml's own `align` method's log2 computation.
+- Confirmed (also not a backend bug, a toolchain fact worth recording): a
+  plain "bl _printf"/"bl _foo" referencing a libSystem symbol assembles AND
+  links correctly with no PIC-stub machinery at all (no
+  .indirect_symbol/.lazy_symbol_pointer/.picsymbol_stub, the dance
+  ppcasm.ml's own `import` method does for the classic 32-bit Mach-O PIC
+  ABI) - ld64 synthesizes whatever stub islands an arm64 call actually
+  needs. arm64asm.ml's `import` is therefore trivial (`this#new_symbol s`),
+  matching riscv64asm.ml's/x86asm.ml's own shape, not ppcasm.ml's.
+
+Verification performed
+-----------------------
+    ./bin/qc -arm64 -globals -o hello_arm64 demos/hello_arm64.c--
+    ./hello_arm64
+      -> prints "hello, world!", exits 0
+
+Run 5 times in a row with no variation (checking for a borderline SP-
+alignment or register-allocation issue that might only manifest
+intermittently - none observed). Also verified via `demos/Makefile`'s new
+`arm64`/`run-arm64` targets (`make -C demos run-arm64`), and confirmed the
+existing x86 backend (`qc -globals -stop .s demos/hello.c--`) still compiles
+after this session's driver/main.ml changes (a `backend` variant/CLI-flag
+addition touching a closed match in several places - see "Modified files").
+
+New files (arch/arm64/), no upstream .nw counterpart
+--------------------------------------------------------------
+- arm64regs.ml/.mli  - Spaces (SS.r 32 id [64], SS.c 3 id [64] - "pc, _,
+                        cc", no npc unlike riscv64regs.ml's 6-register c
+                        space, since AArch64 like ARM32 has no branch-delay
+                        slot to need one for). Split out of arm64.ml to
+                        avoid a circular dependency, mirrors riscv64regs.ml/
+                        armregs.ml.
+- arm64cc.ml         - T.cc_specs table: "C"/"C--"/"notail"/"C-- thread"
+                        all dispatch to one calling convention (modeled on
+                        riscv64cc.ml's shape, register numbers per AAPCS64/
+                        Apple - see "Register roles" above).
+- arm64call.ml/.mli  - Call.t builder. x0-x15 = vol_int, x19-x28 = nvl_int,
+                        x16/x17/x18/x29/x30/sp all excluded from both pools
+                        (see "Register roles"). sp_align = 16.
+- arm64rec.mlb -> arm64rec.ml/.mli
+                     - camlburg instruction-selection grammar, generated via
+                       `bin/ocamlburg arch/arm64/arm64rec.mlb >
+                       arch/arm64/arm64rec.ml` (not a dune rule, same as
+                       every other *rec.ml here - regenerate by hand).
+                       Covers: 64-bit-only base+offset addressing, add/sub/
+                       and/mul/quot (mul/sdiv are register-only on AArch64,
+                       so their immediate forms materialize through x16
+                       like everything else), the ten eq/ne/lt/le/gt/ge/
+                       ltu/leu/gtu/geu comparisons, plain direct/indirect
+                       calls and branches, li64 immediate materialization
+                       (see above). No sub-word memory access, no or/xor/
+                       shift, no float. One ocamlburg-specific gotcha hit
+                       while writing this: the %% grammar-rule section's
+                       comment lexer does NOT support a (* ... *) comment
+                       spanning multiple lines the way %head/%tail's plain-
+                       OCaml blocks do ("illegal character `*` in
+                       specification" pointing at a continuation line's
+                       leading " *") - every %%-section comment in this
+                       file (and, on inspection, in every existing
+                       *rec.mlb) is a single (possibly very long) line.
+- arm64asm.ml/.mli   - Asm.assembler: Mach-O/Darwin emitter. Modeled on
+                        ppcasm.ml's section/align/value/addr/mangle
+                        conventions (empirically re-verified against this
+                        machine's real toolchain rather than trusted blind -
+                        see "Bugs found and fixed"), riscv64asm.ml's
+                        simpler #call/#cfg_instr plumbing and trivial
+                        `import` (no PIC stub needed - see above).
+- arm64backend.ml    - the phase pipeline, copied from riscv64backend.ml's
+                        structure verbatim (module names swapped only).
+- dune               - new library cmm_arch_arm64, same libraries list
+                        shape as arch/riscv64/dune (still accurate for the
+                        current tree despite the directory reorganization
+                        notes_code_orga.txt describes - library *names*
+                        didn't change, only which directory holds each
+                        library).
+
+Modified files
+--------------
+- driver/main.ml     - mirrored every -riscv64 wiring site: use_arm64 ref,
+                        default_arm64_cc ("clang", no cross-target - see
+                        "Toolchain"), the `backend` variant Arm64, the
+                        effective_cc/default_output_file/stop_at_of_flag
+                        matches, the compile_file dispatch arm64
+                        (Arm64asm.make, Arm64.target, Arm64backend.optimizer),
+                        the backend-selection if-chain, the "-arm64" CLI
+                        flag and its entry in -x86's reset list.
+- driver/dune         - added cmm_arch_arm64 to driver/main.exe's libraries.
+- demos/hello_arm64.c-- (new) - same program as demos/hello.c--, adapted to
+                        bits64 (byteorder little wordsize 64 pointersize 64)
+                        like hello_riscv64.c--/hello_alpha.c--; no float
+                        pragma needed (see arm64.ml's T.float comment).
+- demos/Makefile      - new arm64/run-arm64 targets; unlike every other
+                        backend's rule, no QC_AS/QC_LD override (plain
+                        "clang" is already right) and no qemu wrapper (runs
+                        the binary directly).
+
+Not kept in sync: the legacy per-directory Makefile build (Makefile's
+MAKESUBDIRS) - it was already stale before this session (missing arch/
+sparc, arch/alpha, arch/mips, arch/arm, arch/riscv64, arch/riscv32 too, none
+of which any prior session's notes mention adding there either), so
+arch/arm64 was not added there either, consistent with how every backend
+since ppc/x86 has actually been maintained in practice (dune is "the
+default" per CLAUDE.md; the legacy path is reachable via allold/optold/rec
+but evidently not treated as needing every new backend). arch/arm64/Makefile
+itself (the per-directory one, for that legacy path if ever revived) was
+still written with a correct SRC list, matching CLAUDE.md's stated
+convention for *that* file even though the top-level aggregator was left
+alone.
+
+Known remaining gaps
+---------------------
+- Sub-word memory access (T.memory = [64] only) - see "Target shape" above
+  for exactly why (W-register-vs-X-register correctness risk, not
+  verified). The next real program this backend is pointed at will very
+  likely need this.
+- No float support at all (same deferral every other new-development
+  backend here makes on its first pass).
+- No native AArch64 add/sub 12-bit-immediate encoding (always materializes
+  through movz/movk + x16 instead) - correct but larger/slower code than
+  necessary; a real backend would want a guarded direct-encode rule the way
+  a fits_imm12-style check could add.
+- Whether this backend maintains a conventional Apple-ABI frame-pointer
+  chain (stp x29,x30 at entry / ldp at exit) has NOT been verified either
+  way - the generated hello_arm64 code does not appear to (it manages RA
+  via arm64call.ml's ra_on_entry/where_to_save_ra/ra_on_exit hooks onto
+  qc--'s own stack layout, same as every other backend), which may or may
+  not matter until something needs Apple's own unwinder (crash reporter,
+  Instruments, lldb backtraces) to walk through this backend's frames.
+- -O3 not tried against this backend at all yet (every other new-
+  development backend here hits a known, shared, cross-backend -O3 hang -
+  see notes_arm.txt's/notes_riscv.txt's own "Known remaining gaps" - very
+  likely the same story here, not re-diagnosed).
+- Tiger test suite (tests/tiger/) not attempted yet - this session stopped
+  at the hello.c-- milestone per explicit scope (the user asked for
+  hello.c-- first, tiger64 later - see also notes_64bits.txt, whose
+  Cmm_Word/pcmap-width fix already generalizes to this backend for free
+  since it targets every 64-bit backend, not just riscv64).
+- No Linux/ELF sibling ("-arm64-elf" or similar) - macOS/Mach-O only, per
+  the user's explicit "for now macOS" scope. Would follow arch/ppc/
+  ppcelfasm.ml's precedent: same arm64.ml/arm64rec.mlb, a second
+  Asm.assembler class.
+
+Not attempted
+-------------
+- Verifying whether armrec.mlb's "ldr rX, =imm" trick is ALSO broken (not
+  just this backend's own attempt at reusing it) against a real GNU
+  aarch64-linux-gnu-as, which would matter if a "-arm64-elf" sibling is
+  ever added and wanted to reuse armrec.mlb-style code more directly - this
+  backend sidesteps the question entirely via li64 instead.
+- Any of the "Known remaining gaps" above.

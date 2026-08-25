@@ -1,0 +1,35 @@
+/* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
+ *
+ * claude: same program as hello.c--, adapted to AArch64's 64-bit, little-
+ * endian metrics (wordsize/pointersize 64 - Driver.compile checks the
+ * source's declared metrics against the target's and refuses to proceed on
+ * a mismatch, which is why this needs its own file rather than reusing
+ * hello.c--'s bits32 one, same reason hello_riscv64.c--/hello_alpha.c--
+ * needed their own). Exercises qc's AArch64/macOS backend end to end,
+ * natively - no cross toolchain, no qemu, since this machine IS
+ * arm64-apple-darwin:
+ *
+ *   qc -arm64 -globals -o hello_arm64 demos/hello_arm64.c--
+ *   ./hello_arm64                 # prints "hello, world!", exits 0
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag. Unlike every other
+ * -<arch> demo, no QC_AS/QC_LD override and no -static are needed: qc's
+ * -as/-ld default (plain "clang", see driver/main.ml's default_arm64_cc)
+ * already assembles and links directly on this host, and Apple does not
+ * support statically linking against libSystem at all.
+ */
+
+target byteorder little wordsize 64 pointersize 64;
+
+import bits64 printf;
+export main, my_data;
+
+section "data" {
+  my_data: bits8 [] "hello, world!\n\0";
+}
+
+foreign "C" main("unsigned" bits64 iargc, "address" bits64 iargv) {
+  foreign "C" printf("address" my_data);
+  foreign "C" return(0);
+}
