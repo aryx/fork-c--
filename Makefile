@@ -99,6 +99,18 @@ test-tiger64-riscv64::
 test-tiger64-alpha::
 	tests/run-tiger64-alpha.sh
 
+# claude: the -arm64 counterpart of test-tiger64-riscv64 above - same
+# self-contained shape (tigermain-arm64.o/stdlib-arm64.a checked in,
+# regenerate-arm64.sh needs fork-tiger, run-tiger64-arm64.sh itself needs
+# no cross toolchain at all - this machine's own native architecture, on
+# an Apple Silicon Mac). 13/15, matching riscv64's own bar exactly, with
+# the SAME two failures (colmajor's GC-triggered heap corruption; merge's
+# wrong exit code with otherwise-correct stdout) - see
+# docs/claude_notes/notes_arm64.txt's own follow-up section for why
+# neither is arm64-specific.
+test-tiger64-arm64::
+	tests/run-tiger64-arm64.sh
+
 test-rt::
 	tests/run-rt.sh
 
@@ -149,7 +161,7 @@ test-optimizer::
 test-phases::
 	tests/run-phases.sh
 
-test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
+test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha test-tiger64-arm64 test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 build-docker:
 	docker build -t "cmm" .
 

@@ -480,36 +480,81 @@ Modified files (arch/arm64/, widening operator/memory coverage)
   ([wordsize;8]/[wordsize;16]/[wordsize;32], mirroring arm.ml's/
   riscv64.ml's own).
 
-Known remaining gaps, tiger64-specific
-------------------------------------------
-- 10/15 still fail. Not individually root-caused this session (out of
-  scope - see "Goal" above). Grouped by symptom for a future session:
-    - "Assertion failed: (size > 0), function internal_alloc, file gc.c,
-      line 77" (colmajor, rb, wf, wff): a real allocation-size bug, seen
-      immediately at startup, not after some number of successful
-      allocations - worth checking first whether this is the SAME shared
-      GC/register-allocator liveness bug notes_arm.txt's ARM32 section
-      already root-caused (a GC-required temp, e.g. saved_ra, not kept
-      live across every call site - see that note's "Root cause
-      CONFIRMED" section) before assuming it is arm64-specific.
-    - "Tiger program took ord of string of length <huge>" (merge, rc4):
-      looks like a string/pointer value corrupted into a huge integer -
-      could be the same class of bug, could be something else (e.g. a
-      calling-convention argument-passing bug specific to string
-      arguments); not investigated.
-    - stdout-differs-but-no-crash (arrays, forloop, qsort, rbshort):
-      not investigated at all - could be anything from a narrow-store
-      correctness bug (this session's own new code) to an unrelated
-      codegen gap.
-  Given arm.ml's own tiger-suite investigation found its remaining
-  failures were a SINGLE shared, pre-existing, cross-backend bug (not
-  ARM32-specific), the first thing worth checking here is whether fixing
-  that shared bug (still not fixed anywhere, per notes_arm.txt's own
-  "Not attempted") would move arm64's number too, before assuming these
-  10 failures are arm64-specific bugs needing 10 separate diagnoses.
-- No `test-tiger64-arm64` Makefile target added (and not added to
-  test-all) - deliberately following the same precedent as arm/mips/
-  sparc's own tiger suites (1/15-6/15, all excluded from the Makefile's
-  test-tiger* targets and test-all; only ppc/riscv32/riscv64/alpha, which
-  clear a much higher bar, get one). tests/run-tiger64-arm64.sh remains
-  directly runnable by hand.
+===============================================================================
+Follow-up pass: 5/15 to 13/15 - a real ABI bug, a sed portability bug, and a
+dead-code regression (2026-08-25, same day)
+===============================================================================
+
+The three symptom clusters this note originally left as "not investigated"
+(the internal_alloc assertion, the "ord of string of length <huge>"
+corruption, and the silent stdout-differs failures) turned out to be TWO
+real, general bugs plus one self-inflicted regression from this same
+session's own earlier work - not ten separate arm64-specific mysteries.
+
+1. macOS's BSD sed does not support \b (word boundary) at all - a GNU sed
+   extension this file's own flip64() and the EOF-sentinel rewrite both
+   relied on ("+[ ]*4\b" -> "+8", "0xFFFFFFFF\b" -> "...FFFF"). Silently
+   matched nothing rather than erroring. The first (undetected "+4")
+   corrupted fork-tiger's own tig_alloc: it returns "alloc_ptr + 4" as the
+   pointer past its own 8-byte (under -64) size header, so every
+   allocated object's data overlapped the last 4 bytes of its own header -
+   this alone explains most of the internal_alloc/heap-corruption
+   symptoms. Fixed by replacing "\b" with a portable capture-and-preserve
+   group, "+[ ]*4\([^0-9]\)" -> "+8\1" (verified: neither GNU nor BSD sed
+   treats a bracket expression specially, unlike "\b"). The SECOND
+   "0xFFFFFFFF\b" case turned out to need the OPPOSITE fix once actually
+   traced through (see fork-tiger's own docs/claude_notes/notes_64bits.txt
+   for why AArch64's zero-extension convention means this literal must
+   stay UNCHANGED, not widened to all-Fs, unlike riscv64's sign-extending
+   convention) - left unrewritten for arm64 specifically.
+2. A real, general ABI mismatch, not sed-related: fork-tiger's tigerc
+   declares every imported runtime helper's C-- return type at native
+   word width unconditionally, which is wrong for tig_compare_str (a
+   plain 32-bit C `int`). AArch64 architecturally zero-extends a 32-bit
+   register write into its 64-bit register (unlike RISC-V64's LP64 ABI,
+   which sign-extends), so a negative compare result came back as a huge
+   positive 64-bit number - every string comparison silently returned
+   "greater than" regardless of the actual strings. This explains the
+   "ord of string of length <huge>" corruption too (a comparison result
+   feeding into further arithmetic). Fixed entirely on fork-tiger's side
+   (Translate.compare_str, a self-contained arithmetic correction, no
+   qc---side change) - see that repo's own notes_64bits.txt for the full
+   story and why an IR-level fix (a genuine bits32 type) was tried first
+   and deliberately reverted as disproportionate to one occurrence.
+3. Self-inflicted: while chasing fix #2, an arm64rec.mlb grammar rule for
+   a genuine 32->64 sign-extend (AArch64's "sxtw") was added, then made
+   unnecessary by fix #2's final (arithmetic, not IR-widening) shape - but
+   left in place, unused, for a while. Confirmed by direct A/B testing
+   that its mere PRESENCE in the compiler used to build tigermain-
+   arm64.o/stdlib-arm64.a caused a real miscompilation of unrelated
+   runtime code (tests/tiger64/wf's own hang went away the moment the
+   dead rule was removed and the runtime artifacts rebuilt, with no other
+   change) - almost certainly a camlburg cost-table interaction, not
+   re-derived further since the fix (delete the now-unused rule and its
+   capability declaration) is unambiguous. Lesson: an "obviously inert"
+   grammar addition in a camlburg-based recognizer is not guaranteed
+   inert - rebuild and re-test the whole suite after removing one, don't
+   assume.
+
+Result: tests/expected/tiger64-arm64.txt went from 5/15 to 13/15. Only
+colmajor and merge remain, and neither is new or arm64-specific:
+- colmajor needs a bigger heap than the 8192-byte default to avoid a real
+  GC-cycle-triggered crash (confirmed with TIGER_HEAPSIZE=1000000: exit 0,
+  byte-for-byte correct) - the exact same shape of failure already
+  documented here for -riscv64's own colmajor, believed to be the shared,
+  not-yet-root-caused GC/register-allocator liveness bug this note's ARM32
+  section describes (a GC-required temp not always kept live across every
+  call site under high register pressure) - NOT fixed by increasing the
+  heap, which only avoids triggering it, see the "Not attempted" section
+  below for what the real fix would need to touch.
+- merge exits 0 instead of the expected 1, with byte-for-byte correct
+  stdout - the exact "wrong exit code, correct output" shape already
+  documented here for -riscv64's own merge (a suspected calling-
+  convention/tail-call return-value bug in a recursive printlist-style
+  chain), not re-investigated separately for arm64.
+
+Given both remaining failures already have a name and a cross-backend
+precedent, and fixing either means touching shared regalloc/codegen
+machinery with real regression risk to every other backend, they were
+left as documented, known gaps rather than chased further this session -
+consistent with the user's own explicit call on this point.

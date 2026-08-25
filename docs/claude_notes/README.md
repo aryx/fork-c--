@@ -91,9 +91,23 @@ Index:
   in qc--runtime.h/gcc-linux.c, values confirmed via a throwaway harness
   calling the real Target.mk_reg_ix_map rather than hand-derived; narrow-
   width memory *stores* newly implemented in arm64rec.mlb, unblocking
-  fork-tiger's stdlib). Full suite: 5/15 (tests/expected/tiger64-arm64.txt),
-  comparable to arm's own first-pass 6/15. Follow-up (not done): the
-  remaining 10/15, sub-word *loads*, a Linux/ELF sibling.
+  fork-tiger's stdlib). Full suite: 5/15 initially (tests/expected/
+  tiger64-arm64.txt), comparable to arm's own first-pass 6/15. Second
+  follow-up (same day): 5/15 to 13/15, from three fixes, not ten separate
+  arm64-specific bugs - macOS's BSD sed silently no-ops `\b` (word
+  boundary), breaking fork-tiger's own `+4`->`+8`/EOF-sentinel rewrites
+  (corrupted tig_alloc's returned pointer); a real ABI mismatch in
+  fork-tiger's tigerc (tig_compare_str declared at native width when it's
+  really a 32-bit C `int` - AArch64 zero-extends a 32-bit register write
+  where RISC-V64 sign-extends, so every string comparison silently
+  returned "greater than"), fixed on fork-tiger's side; and a dead
+  arm64rec.mlb grammar rule (added, then made unnecessary, mid-fix) that
+  was still causing a real miscompilation of unrelated runtime code by
+  its mere presence - removing it fixed a hang. Remaining 2/15 (colmajor,
+  merge) are not new: both match already-documented -riscv64 failures
+  exactly (a shared GC/liveness bug; a tail-call return-value bug), not
+  re-investigated. Follow-up (not done): sub-word *loads*, a Linux/ELF
+  sibling.
 - [notes_ssa.txt](notes_ssa.txt) — why qc-- doesn't use SSA internally:
   verified there's no SSA anywhere in the tree (mid-level IR is the
   zipper-CFG `front_zipcfg`/`Zipcfg`, optimizations run as classic

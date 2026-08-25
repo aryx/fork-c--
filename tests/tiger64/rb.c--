@@ -25,15 +25,15 @@ bits64 alloc_ptr;
 import space_end;
 
 section "data" { align 8;
- Lgbl_289: bits64 { 0 }; bits8[] "\000";
- Lgbl_264: bits64 { 1 }; bits8[] "a\000";
- Lgbl_271: bits64 { 1 }; bits8[] "z\000";
- Lgbl_240: bits64 { 1 }; bits8[] "\t\000";
- Lgbl_208: bits64 { 6 }; bits8[] "error!\000";
- Lgbl_255: bits64 { 1 }; bits8[] "Z\000";
+ Lgbl_324: bits64 { 0 }; bits8[] "\000";
+ Lgbl_289: bits64 { 1 }; bits8[] "a\000";
+ Lgbl_301: bits64 { 1 }; bits8[] "z\000";
+ Lgbl_255: bits64 { 1 }; bits8[] "\t\000";
+ Lgbl_223: bits64 { 6 }; bits8[] "error!\000";
+ Lgbl_275: bits64 { 1 }; bits8[] "Z\000";
  Lgbl_52: bits64 { 2 }; bits8[] "? \000";
  Lgbl_57: bits64 { 1 }; bits8[] "\n\000";
- Lgbl_252: bits64 { 1 }; bits8[] "A\000";
+ Lgbl_267: bits64 { 1 }; bits8[] "A\000";
 }
 
 err_43(bits64 pfp,bits64 s) {
@@ -454,36 +454,42 @@ ins_45(bits64 pfp,bits64 word,bits64 p) {
   bits64[fp+0] = pfp;
   bits64[fp+8] = word;
   bits64[fp+16] = p;
-  bits64 temp_326;
-  bits64 temp_325;
-  bits64 temp_324;
-  bits64 temp_323;
-  bits64 temp_322;
-  bits64 temp_321;
-  bits64 temp_320;
-  bits64 temp_319;
-  bits64 temp_318;
-  bits64 temp_317;
-  bits64 temp_316;
+  bits64 temp_371;
+  bits64 temp_370;
+  bits64 temp_369;
+  bits64 temp_368;
+  bits64 temp_367;
+  bits64 temp_366;
+  bits64 temp_365;
+  bits64 temp_364;
+  bits64 temp_363;
+  bits64 temp_362;
+  bits64 temp_361;
+  bits64 temp_246;
+  bits64 temp_242;
+  bits64 temp_238;
+  bits64 temp_234;
   bits64 temp_231;
-  bits64 temp_227;
-  bits64 temp_223;
+  bits64 temp_230;
+  bits64 temp_226;
+  bits64 temp_225;
+  bits64 temp_224;
   bits64 temp_219;
+  bits64 temp_218;
+  bits64 temp_217;
   bits64 temp_216;
-  bits64 temp_215;
+  bits64 temp_212;
   bits64 temp_211;
   bits64 temp_210;
   bits64 temp_209;
-  bits64 temp_207;
-  bits64 temp_206;
   bits64 temp_205;
   bits64 temp_204;
   bits64 temp_203;
   bits64 temp_202;
   bits64 temp_198;
   bits64 temp_197;
-  if(%eq(bits64[%add(fp, 16)], 0)) {goto LifTrue_228;} else {goto LifFalse_229;}
-  LifTrue_228:
+  if(%eq(bits64[%add(fp, 16)], 0)) {goto LifTrue_243;} else {goto LifFalse_244;}
+  LifTrue_243:
   if(%gt(%add(alloc_ptr, 48), bits64[space_end])) {goto Lalc_gc_199;} else {goto Lalc_200;}
   Lalc_gc_199:
    call_gc() also aborts ;
@@ -497,77 +503,101 @@ ins_45(bits64 pfp,bits64 word,bits64 p) {
   bits64[%add(temp_197, 16)] = bits64[%add(fp, 8)];
   bits64[%add(temp_197, 24)] = 0;
   bits64[%add(temp_197, 32)] = 0;
-  temp_227 = temp_197;
-  goto LifEnd_230;
-  LifFalse_229:
+  temp_242 = temp_197;
+  goto LifEnd_245;
+  LifFalse_244:
   temp_202 = alloc_ptr;
   temp_203 = foreign "C"  compare_str(bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 16)]) also aborts ;
   alloc_ptr = temp_202;
-  if(%lt(temp_203, 0)) {goto LifTrue_224;} else {goto LifFalse_225;}
-  LifTrue_224:
-  temp_326 = bits64[fp];
-  temp_325 = bits64[%add(bits64[%add(fp, 16)], 0)];
-  temp_324 = bits64[%add(bits64[%add(fp, 16)], 8)];
-  temp_323 = bits64[%add(bits64[%add(fp, 16)], 16)];
-  temp_322 =  ins_45(bits64[fp],bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 24)]) also aborts ;
-  temp_223 =  balance_44(temp_326,temp_325,temp_324,temp_323,temp_322,bits64[%add(bits64[%add(fp, 16)], 32)]) also aborts ;
-  goto LifEnd_226;
-  LifFalse_225:
-  temp_204 = alloc_ptr;
-  temp_205 = foreign "C"  compare_str(bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 16)]) also aborts ;
-  alloc_ptr = temp_204;
-  if(%gt(temp_205, 0)) {goto LifTrue_220;} else {goto LifFalse_221;}
-  LifTrue_220:
-  temp_321 = bits64[fp];
-  temp_320 = bits64[%add(bits64[%add(fp, 16)], 0)];
-  temp_319 = bits64[%add(bits64[%add(fp, 16)], 8)];
-  temp_318 = bits64[%add(bits64[%add(fp, 16)], 16)];
-  temp_317 = bits64[%add(bits64[%add(fp, 16)], 24)];
-  temp_316 =  ins_45(bits64[fp],bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 32)]) also aborts ;
-  temp_219 =  balance_44(temp_321,temp_320,temp_319,temp_318,temp_317,temp_316) also aborts ;
-  goto LifEnd_222;
-  LifFalse_221:
-  temp_206 = alloc_ptr;
-  temp_207 = foreign "C"  compare_str(bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 16)]) also aborts ;
-  alloc_ptr = temp_206;
-  if(%ne(temp_207, 0)) {goto LifTrue_212;} else {goto LifFalse_213;}
-  LifTrue_212:
+  temp_204 = temp_203;
+  if(%ge(temp_204, 2147483648)) {goto LnegCorrect_206;} else {goto LnoCorrect_207;}
+  LnegCorrect_206:
+  temp_205 = %sub(temp_204, 4294967296);
+  goto LcorrectEnd_208;
+  LnoCorrect_207:
+  temp_205 = temp_204;
+  LcorrectEnd_208:
+  if(%lt(temp_205, 0)) {goto LifTrue_239;} else {goto LifFalse_240;}
+  LifTrue_239:
+  temp_371 = bits64[fp];
+  temp_370 = bits64[%add(bits64[%add(fp, 16)], 0)];
+  temp_369 = bits64[%add(bits64[%add(fp, 16)], 8)];
+  temp_368 = bits64[%add(bits64[%add(fp, 16)], 16)];
+  temp_367 =  ins_45(bits64[fp],bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 24)]) also aborts ;
+  temp_238 =  balance_44(temp_371,temp_370,temp_369,temp_368,temp_367,bits64[%add(bits64[%add(fp, 16)], 32)]) also aborts ;
+  goto LifEnd_241;
+  LifFalse_240:
   temp_209 = alloc_ptr;
-  temp_210 = foreign "C"  print(Lgbl_208) also aborts ;
+  temp_210 = foreign "C"  compare_str(bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 16)]) also aborts ;
   alloc_ptr = temp_209;
-  /* eliminated: temp_210 */
-  temp_211 = 0;
-  goto LifEnd_214;
-  LifFalse_213:
-  temp_211 = 0;
-  LifEnd_214:
-  /* eliminated: temp_211 */
-  if(%gt(%add(alloc_ptr, 48), bits64[space_end])) {goto Lalc_gc_217;} else {goto Lalc_218;}
-  Lalc_gc_217:
+  temp_211 = temp_210;
+  if(%ge(temp_211, 2147483648)) {goto LnegCorrect_213;} else {goto LnoCorrect_214;}
+  LnegCorrect_213:
+  temp_212 = %sub(temp_211, 4294967296);
+  goto LcorrectEnd_215;
+  LnoCorrect_214:
+  temp_212 = temp_211;
+  LcorrectEnd_215:
+  if(%gt(temp_212, 0)) {goto LifTrue_235;} else {goto LifFalse_236;}
+  LifTrue_235:
+  temp_366 = bits64[fp];
+  temp_365 = bits64[%add(bits64[%add(fp, 16)], 0)];
+  temp_364 = bits64[%add(bits64[%add(fp, 16)], 8)];
+  temp_363 = bits64[%add(bits64[%add(fp, 16)], 16)];
+  temp_362 = bits64[%add(bits64[%add(fp, 16)], 24)];
+  temp_361 =  ins_45(bits64[fp],bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 32)]) also aborts ;
+  temp_234 =  balance_44(temp_366,temp_365,temp_364,temp_363,temp_362,temp_361) also aborts ;
+  goto LifEnd_237;
+  LifFalse_236:
+  temp_216 = alloc_ptr;
+  temp_217 = foreign "C"  compare_str(bits64[%add(fp, 8)],bits64[%add(bits64[%add(fp, 16)], 16)]) also aborts ;
+  alloc_ptr = temp_216;
+  temp_218 = temp_217;
+  if(%ge(temp_218, 2147483648)) {goto LnegCorrect_220;} else {goto LnoCorrect_221;}
+  LnegCorrect_220:
+  temp_219 = %sub(temp_218, 4294967296);
+  goto LcorrectEnd_222;
+  LnoCorrect_221:
+  temp_219 = temp_218;
+  LcorrectEnd_222:
+  if(%ne(temp_219, 0)) {goto LifTrue_227;} else {goto LifFalse_228;}
+  LifTrue_227:
+  temp_224 = alloc_ptr;
+  temp_225 = foreign "C"  print(Lgbl_223) also aborts ;
+  alloc_ptr = temp_224;
+  /* eliminated: temp_225 */
+  temp_226 = 0;
+  goto LifEnd_229;
+  LifFalse_228:
+  temp_226 = 0;
+  LifEnd_229:
+  /* eliminated: temp_226 */
+  if(%gt(%add(alloc_ptr, 48), bits64[space_end])) {goto Lalc_gc_232;} else {goto Lalc_233;}
+  Lalc_gc_232:
    call_gc() also aborts ;
-  Lalc_218:
+  Lalc_233:
   bits64[alloc_ptr] = 48;
-  temp_216 = %add(alloc_ptr, 8);
+  temp_231 = %add(alloc_ptr, 8);
   alloc_ptr = %add(alloc_ptr, 48);
-  temp_215 = temp_216;
-  bits64[%add(temp_215, 0)] = bits64[%add(bits64[%add(fp, 16)], 0)];
-  bits64[%add(temp_215, 8)] = %add(bits64[%add(bits64[%add(fp, 16)], 8)], 1);
-  bits64[%add(temp_215, 16)] = bits64[%add(fp, 8)];
-  bits64[%add(temp_215, 24)] = bits64[%add(bits64[%add(fp, 16)], 24)];
-  bits64[%add(temp_215, 32)] = bits64[%add(bits64[%add(fp, 16)], 32)];
-  temp_219 = temp_215;
-  LifEnd_222:
-  temp_223 = temp_219;
-  LifEnd_226:
-  temp_227 = temp_223;
-  LifEnd_230:
-  temp_231 = temp_227;
-  return(temp_231);
+  temp_230 = temp_231;
+  bits64[%add(temp_230, 0)] = bits64[%add(bits64[%add(fp, 16)], 0)];
+  bits64[%add(temp_230, 8)] = %add(bits64[%add(bits64[%add(fp, 16)], 8)], 1);
+  bits64[%add(temp_230, 16)] = bits64[%add(fp, 8)];
+  bits64[%add(temp_230, 24)] = bits64[%add(bits64[%add(fp, 16)], 24)];
+  bits64[%add(temp_230, 32)] = bits64[%add(bits64[%add(fp, 16)], 32)];
+  temp_234 = temp_230;
+  LifEnd_237:
+  temp_238 = temp_234;
+  LifEnd_241:
+  temp_242 = temp_238;
+  LifEnd_245:
+  temp_246 = temp_242;
+  return(temp_246);
 }}
 section "data" {
  ins_45_gc_data:
    bits32[] { 3::bits32,1::bits32,1::bits32,1::bits32 };
-   bits32[] { 31::bits32,1::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,1::bits32,1::bits32 };
+   bits32[] { 37::bits32,1::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,1::bits32,1::bits32 };
 }
 
 insert_46(bits64 pfp,bits64 word,bits64 p) {
@@ -576,27 +606,27 @@ insert_46(bits64 pfp,bits64 word,bits64 p) {
   bits64[fp+0] = pfp;
   bits64[fp+8] = word;
   bits64[fp+16] = p;
-  bits64 temp_327;
-  bits64 temp_236;
-  bits64 temp_233;
-  bits64 temp_232;
-  temp_327 =  ins_45(bits64[fp],bits64[%add(fp, 8)],bits64[%add(fp, 16)]) also aborts ;
-  bits64[%add(fp, 24)] = temp_327;
-  if(%gt(%add(alloc_ptr, 48), bits64[space_end])) {goto Lalc_gc_234;} else {goto Lalc_235;}
-  Lalc_gc_234:
+  bits64 temp_372;
+  bits64 temp_251;
+  bits64 temp_248;
+  bits64 temp_247;
+  temp_372 =  ins_45(bits64[fp],bits64[%add(fp, 8)],bits64[%add(fp, 16)]) also aborts ;
+  bits64[%add(fp, 24)] = temp_372;
+  if(%gt(%add(alloc_ptr, 48), bits64[space_end])) {goto Lalc_gc_249;} else {goto Lalc_250;}
+  Lalc_gc_249:
    call_gc() also aborts ;
-  Lalc_235:
+  Lalc_250:
   bits64[alloc_ptr] = 48;
-  temp_233 = %add(alloc_ptr, 8);
+  temp_248 = %add(alloc_ptr, 8);
   alloc_ptr = %add(alloc_ptr, 48);
-  temp_232 = temp_233;
-  bits64[%add(temp_232, 0)] = bits64[%add(bits64[fp], 16)];
-  bits64[%add(temp_232, 8)] = bits64[%add(bits64[%add(fp, 24)], 8)];
-  bits64[%add(temp_232, 16)] = bits64[%add(bits64[%add(fp, 24)], 16)];
-  bits64[%add(temp_232, 24)] = bits64[%add(bits64[%add(fp, 24)], 24)];
-  bits64[%add(temp_232, 32)] = bits64[%add(bits64[%add(fp, 24)], 32)];
-  temp_236 = temp_232;
-  return(temp_236);
+  temp_247 = temp_248;
+  bits64[%add(temp_247, 0)] = bits64[%add(bits64[fp], 16)];
+  bits64[%add(temp_247, 8)] = bits64[%add(bits64[%add(fp, 24)], 8)];
+  bits64[%add(temp_247, 16)] = bits64[%add(bits64[%add(fp, 24)], 16)];
+  bits64[%add(temp_247, 24)] = bits64[%add(bits64[%add(fp, 24)], 24)];
+  bits64[%add(temp_247, 32)] = bits64[%add(bits64[%add(fp, 24)], 32)];
+  temp_251 = temp_247;
+  return(temp_251);
 }}
 section "data" {
  insert_46_gc_data:
@@ -609,12 +639,12 @@ add_word_47(bits64 pfp,bits64 word) {
   stackdata { align 8; fp : bits64[2]; }
   bits64[fp+0] = pfp;
   bits64[fp+8] = word;
-  bits64 temp_328;
-  bits64 temp_237;
-  temp_328 =  insert_46(bits64[fp],bits64[%add(fp, 8)],bits64[%add(bits64[fp], 8)]) also aborts ;
-  bits64[%add(bits64[fp], 8)] = temp_328;
-  temp_237 = 0;
-  return(temp_237);
+  bits64 temp_373;
+  bits64 temp_252;
+  temp_373 =  insert_46(bits64[fp],bits64[%add(fp, 8)],bits64[%add(bits64[fp], 8)]) also aborts ;
+  bits64[%add(bits64[fp], 8)] = temp_373;
+  temp_252 = 0;
+  return(temp_252);
 }}
 section "data" {
  add_word_47_gc_data:
@@ -627,43 +657,43 @@ tprint_48(bits64 pfp,bits64 tree) {
   stackdata { align 8; fp : bits64[2]; }
   bits64[fp+0] = pfp;
   bits64[fp+8] = tree;
-  bits64 temp_251;
-  bits64 temp_247;
-  bits64 temp_246;
-  bits64 temp_245;
-  bits64 temp_244;
-  bits64 temp_243;
-  bits64 temp_242;
-  bits64 temp_241;
-  bits64 temp_239;
-  bits64 temp_238;
-  if(%ne(bits64[%add(fp, 8)], 0)) {goto LifTrue_248;} else {goto LifFalse_249;}
-  LifTrue_248:
+  bits64 temp_266;
+  bits64 temp_262;
+  bits64 temp_261;
+  bits64 temp_260;
+  bits64 temp_259;
+  bits64 temp_258;
+  bits64 temp_257;
+  bits64 temp_256;
+  bits64 temp_254;
+  bits64 temp_253;
+  if(%ne(bits64[%add(fp, 8)], 0)) {goto LifTrue_263;} else {goto LifFalse_264;}
+  LifTrue_263:
    tprint_48(bits64[fp],bits64[%add(bits64[%add(fp, 8)], 24)]) also aborts ;
-  temp_238 = alloc_ptr;
-  temp_239 = foreign "C"  printi(bits64[%add(bits64[%add(fp, 8)], 8)]) also aborts ;
-  alloc_ptr = temp_238;
-  /* eliminated: temp_239 */
-  temp_241 = alloc_ptr;
-  temp_242 = foreign "C"  print(Lgbl_240) also aborts ;
-  alloc_ptr = temp_241;
-  /* eliminated: temp_242 */
-  temp_243 = alloc_ptr;
-  temp_244 = foreign "C"  print(bits64[%add(bits64[%add(fp, 8)], 16)]) also aborts ;
-  alloc_ptr = temp_243;
-  /* eliminated: temp_244 */
-  temp_245 = alloc_ptr;
-  temp_246 = foreign "C"  print(Lgbl_57) also aborts ;
-  alloc_ptr = temp_245;
-  /* eliminated: temp_246 */
+  temp_253 = alloc_ptr;
+  temp_254 = foreign "C"  printi(bits64[%add(bits64[%add(fp, 8)], 8)]) also aborts ;
+  alloc_ptr = temp_253;
+  /* eliminated: temp_254 */
+  temp_256 = alloc_ptr;
+  temp_257 = foreign "C"  print(Lgbl_255) also aborts ;
+  alloc_ptr = temp_256;
+  /* eliminated: temp_257 */
+  temp_258 = alloc_ptr;
+  temp_259 = foreign "C"  print(bits64[%add(bits64[%add(fp, 8)], 16)]) also aborts ;
+  alloc_ptr = temp_258;
+  /* eliminated: temp_259 */
+  temp_260 = alloc_ptr;
+  temp_261 = foreign "C"  print(Lgbl_57) also aborts ;
+  alloc_ptr = temp_260;
+  /* eliminated: temp_261 */
    tprint_48(bits64[fp],bits64[%add(bits64[%add(fp, 8)], 32)]) also aborts ;
-  temp_247 = 0;
-  goto LifEnd_250;
-  LifFalse_249:
-  temp_247 = 0;
-  LifEnd_250:
-  temp_251 = temp_247;
-  return(temp_251);
+  temp_262 = 0;
+  goto LifEnd_265;
+  LifFalse_264:
+  temp_262 = 0;
+  LifEnd_265:
+  temp_266 = temp_262;
+  return(temp_266);
 }}
 section "data" {
  tprint_48_gc_data:
@@ -676,189 +706,249 @@ isletter_49(bits64 pfp,bits64 c) {
   stackdata { align 8; fp : bits64[2]; }
   bits64[fp+0] = pfp;
   bits64[fp+8] = c;
-  bits64 temp_330;
-  bits64 temp_329;
+  bits64 temp_375;
+  bits64 temp_374;
+  bits64 temp_323;
+  bits64 temp_319;
+  bits64 temp_315;
+  bits64 temp_314;
+  bits64 temp_313;
+  bits64 temp_309;
+  bits64 temp_305;
+  bits64 temp_304;
+  bits64 temp_303;
+  bits64 temp_302;
+  bits64 temp_297;
+  bits64 temp_296;
+  bits64 temp_295;
+  bits64 temp_294;
+  bits64 temp_293;
+  bits64 temp_292;
+  bits64 temp_291;
+  bits64 temp_290;
   bits64 temp_288;
-  bits64 temp_284;
-  bits64 temp_280;
+  bits64 temp_287;
+  bits64 temp_283;
   bits64 temp_279;
   bits64 temp_278;
-  bits64 temp_274;
-  bits64 temp_273;
-  bits64 temp_272;
+  bits64 temp_277;
+  bits64 temp_276;
+  bits64 temp_271;
   bits64 temp_270;
   bits64 temp_269;
   bits64 temp_268;
-  bits64 temp_267;
-  bits64 temp_266;
-  bits64 temp_265;
-  bits64 temp_263;
-  bits64 temp_262;
-  bits64 temp_258;
-  bits64 temp_257;
-  bits64 temp_256;
-  bits64 temp_254;
-  bits64 temp_253;
-  temp_253 = alloc_ptr;
-  temp_254 = foreign "C"  compare_str(bits64[%add(fp, 8)],Lgbl_252) also aborts ;
-  alloc_ptr = temp_253;
-  if(%ge(temp_254, 0)) {goto LifTrue_259;} else {goto LifFalse_260;}
-  LifTrue_259:
-  temp_256 = alloc_ptr;
-  temp_257 = foreign "C"  compare_str(bits64[%add(fp, 8)],Lgbl_255) also aborts ;
-  alloc_ptr = temp_256;
-  temp_258 = %sx64(%bit(%le(temp_257, 0)));
-  goto LifEnd_261;
-  LifFalse_260:
-  temp_258 = 0;
-  LifEnd_261:
-  if(%ne(temp_258, 0)) {goto LifTrue_285;} else {goto LifFalse_286;}
-  LifTrue_285:
-  temp_262 = alloc_ptr;
-  temp_263 = foreign "C"  ord(bits64[%add(fp, 8)]) also aborts ;
-  alloc_ptr = temp_262;
-  temp_329 = temp_263;
-  temp_265 = alloc_ptr;
-  temp_266 = foreign "C"  ord(Lgbl_264) also aborts ;
-  alloc_ptr = temp_265;
-  temp_330 = %add(temp_329, temp_266);
-  temp_267 = alloc_ptr;
-  temp_268 = foreign "C"  ord(Lgbl_252) also aborts ;
-  alloc_ptr = temp_267;
-  temp_284 = %sub(temp_330, temp_268);
-  goto LifEnd_287;
-  LifFalse_286:
-  temp_269 = alloc_ptr;
-  temp_270 = foreign "C"  compare_str(bits64[%add(fp, 8)],Lgbl_264) also aborts ;
-  alloc_ptr = temp_269;
-  if(%ge(temp_270, 0)) {goto LifTrue_275;} else {goto LifFalse_276;}
-  LifTrue_275:
-  temp_272 = alloc_ptr;
-  temp_273 = foreign "C"  compare_str(bits64[%add(fp, 8)],Lgbl_271) also aborts ;
-  alloc_ptr = temp_272;
-  temp_274 = %sx64(%bit(%le(temp_273, 0)));
-  goto LifEnd_277;
-  LifFalse_276:
-  temp_274 = 0;
-  LifEnd_277:
-  if(%ne(temp_274, 0)) {goto LifTrue_281;} else {goto LifFalse_282;}
-  LifTrue_281:
-  temp_278 = alloc_ptr;
-  temp_279 = foreign "C"  ord(bits64[%add(fp, 8)]) also aborts ;
-  alloc_ptr = temp_278;
-  temp_280 = temp_279;
-  goto LifEnd_283;
-  LifFalse_282:
-  temp_280 = 0;
-  LifEnd_283:
-  temp_284 = temp_280;
-  LifEnd_287:
-  temp_288 = temp_284;
-  return(temp_288);
+  temp_268 = alloc_ptr;
+  temp_269 = foreign "C"  compare_str(bits64[%add(fp, 8)],Lgbl_267) also aborts ;
+  alloc_ptr = temp_268;
+  temp_270 = temp_269;
+  if(%ge(temp_270, 2147483648)) {goto LnegCorrect_272;} else {goto LnoCorrect_273;}
+  LnegCorrect_272:
+  temp_271 = %sub(temp_270, 4294967296);
+  goto LcorrectEnd_274;
+  LnoCorrect_273:
+  temp_271 = temp_270;
+  LcorrectEnd_274:
+  if(%ge(temp_271, 0)) {goto LifTrue_284;} else {goto LifFalse_285;}
+  LifTrue_284:
+  temp_276 = alloc_ptr;
+  temp_277 = foreign "C"  compare_str(bits64[%add(fp, 8)],Lgbl_275) also aborts ;
+  alloc_ptr = temp_276;
+  temp_278 = temp_277;
+  if(%ge(temp_278, 2147483648)) {goto LnegCorrect_280;} else {goto LnoCorrect_281;}
+  LnegCorrect_280:
+  temp_279 = %sub(temp_278, 4294967296);
+  goto LcorrectEnd_282;
+  LnoCorrect_281:
+  temp_279 = temp_278;
+  LcorrectEnd_282:
+  temp_283 = %sx64(%bit(%le(temp_279, 0)));
+  goto LifEnd_286;
+  LifFalse_285:
+  temp_283 = 0;
+  LifEnd_286:
+  if(%ne(temp_283, 0)) {goto LifTrue_320;} else {goto LifFalse_321;}
+  LifTrue_320:
+  temp_287 = alloc_ptr;
+  temp_288 = foreign "C"  ord(bits64[%add(fp, 8)]) also aborts ;
+  alloc_ptr = temp_287;
+  temp_374 = temp_288;
+  temp_290 = alloc_ptr;
+  temp_291 = foreign "C"  ord(Lgbl_289) also aborts ;
+  alloc_ptr = temp_290;
+  temp_375 = %add(temp_374, temp_291);
+  temp_292 = alloc_ptr;
+  temp_293 = foreign "C"  ord(Lgbl_267) also aborts ;
+  alloc_ptr = temp_292;
+  temp_319 = %sub(temp_375, temp_293);
+  goto LifEnd_322;
+  LifFalse_321:
+  temp_294 = alloc_ptr;
+  temp_295 = foreign "C"  compare_str(bits64[%add(fp, 8)],Lgbl_289) also aborts ;
+  alloc_ptr = temp_294;
+  temp_296 = temp_295;
+  if(%ge(temp_296, 2147483648)) {goto LnegCorrect_298;} else {goto LnoCorrect_299;}
+  LnegCorrect_298:
+  temp_297 = %sub(temp_296, 4294967296);
+  goto LcorrectEnd_300;
+  LnoCorrect_299:
+  temp_297 = temp_296;
+  LcorrectEnd_300:
+  if(%ge(temp_297, 0)) {goto LifTrue_310;} else {goto LifFalse_311;}
+  LifTrue_310:
+  temp_302 = alloc_ptr;
+  temp_303 = foreign "C"  compare_str(bits64[%add(fp, 8)],Lgbl_301) also aborts ;
+  alloc_ptr = temp_302;
+  temp_304 = temp_303;
+  if(%ge(temp_304, 2147483648)) {goto LnegCorrect_306;} else {goto LnoCorrect_307;}
+  LnegCorrect_306:
+  temp_305 = %sub(temp_304, 4294967296);
+  goto LcorrectEnd_308;
+  LnoCorrect_307:
+  temp_305 = temp_304;
+  LcorrectEnd_308:
+  temp_309 = %sx64(%bit(%le(temp_305, 0)));
+  goto LifEnd_312;
+  LifFalse_311:
+  temp_309 = 0;
+  LifEnd_312:
+  if(%ne(temp_309, 0)) {goto LifTrue_316;} else {goto LifFalse_317;}
+  LifTrue_316:
+  temp_313 = alloc_ptr;
+  temp_314 = foreign "C"  ord(bits64[%add(fp, 8)]) also aborts ;
+  alloc_ptr = temp_313;
+  temp_315 = temp_314;
+  goto LifEnd_318;
+  LifFalse_317:
+  temp_315 = 0;
+  LifEnd_318:
+  temp_319 = temp_315;
+  LifEnd_322:
+  temp_323 = temp_319;
+  return(temp_323);
 }}
 section "data" {
  isletter_49_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
-   bits32[] { 25::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
+   bits32[] { 33::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
 }
 
 getword_50(bits64 pfp) {
  span 1 getword_50_gc_data {
   stackdata { align 8; fp : bits64[3]; }
   bits64[fp+0] = pfp;
-  bits64 temp_338;
-  bits64 temp_337;
-  bits64 temp_336;
-  bits64 temp_335;
-  bits64 temp_334;
-  bits64 temp_333;
+  bits64 temp_383;
+  bits64 temp_382;
+  bits64 temp_381;
+  bits64 temp_380;
+  bits64 temp_379;
+  bits64 temp_378;
+  bits64 temp_377;
+  bits64 temp_376;
+  bits64 temp_353;
+  bits64 temp_346;
+  bits64 temp_342;
+  bits64 temp_341;
+  bits64 temp_340;
+  bits64 temp_339;
   bits64 temp_332;
-  bits64 temp_331;
-  bits64 temp_308;
-  bits64 temp_301;
-  bits64 temp_300;
-  bits64 temp_299;
-  bits64 temp_292;
-  bits64 temp_291;
-  bits64 temp_290;
-  bits64[%add(fp, 8)] = Lgbl_289;
-  bits64[%add(fp, 16)] = Lgbl_289;
-  temp_331 =  getchar() also aborts ;
-  bits64[%add(fp, 16)] = temp_331;
-  Lloop_start_297:
-  temp_290 = alloc_ptr;
-  temp_291 = foreign "C"  compare_str(bits64[%add(fp, 16)],Lgbl_289) also aborts ;
-  alloc_ptr = temp_290;
-  if(%ne(temp_291, 0)) {goto LifTrue_293;} else {goto LifFalse_294;}
-  LifTrue_293:
-  temp_333 =  isletter_49(bits64[fp],bits64[%add(fp, 16)]) also aborts ;
-  temp_292 = %sx64(%bit(%eq(temp_333, 0)));
-  goto LifEnd_295;
-  LifFalse_294:
-  temp_292 = 0;
-  LifEnd_295:
-  if(%ne(temp_292, 0)) {goto Lloop_body_298;} else {goto Lloop_end_296;}
-  Lloop_body_298:
-  temp_332 =  getchar() also aborts ;
-  bits64[%add(fp, 16)] = temp_332;
-  goto Lloop_start_297;
-  Lloop_end_296:
-  Lloop_start_306:
-  temp_299 = alloc_ptr;
-  temp_300 = foreign "C"  compare_str(bits64[%add(fp, 16)],Lgbl_289) also aborts ;
-  alloc_ptr = temp_299;
-  if(%ne(temp_300, 0)) {goto LifTrue_302;} else {goto LifFalse_303;}
-  LifTrue_302:
-  temp_301 =  isletter_49(bits64[fp],bits64[%add(fp, 16)]) also aborts ;
-  goto LifEnd_304;
-  LifFalse_303:
-  temp_301 = 0;
-  LifEnd_304:
-  if(%ne(temp_301, 0)) {goto Lloop_body_307;} else {goto Lloop_end_305;}
-  Lloop_body_307:
-  temp_337 = bits64[%add(fp, 8)];
-  temp_336 =  isletter_49(bits64[fp],bits64[%add(fp, 16)]) also aborts ;
-  temp_335 =  chr(temp_336) also aborts ;
-  temp_334 =  concat(temp_337,temp_335) also aborts ;
-  bits64[%add(fp, 8)] = temp_334;
-  temp_338 =  getchar() also aborts ;
-  bits64[%add(fp, 16)] = temp_338;
-  goto Lloop_start_306;
-  Lloop_end_305:
-  temp_308 = bits64[%add(fp, 8)];
-  return(temp_308);
+  bits64 temp_328;
+  bits64 temp_327;
+  bits64 temp_326;
+  bits64 temp_325;
+  bits64[%add(fp, 8)] = Lgbl_324;
+  bits64[%add(fp, 16)] = Lgbl_324;
+  temp_376 =  getchar() also aborts ;
+  bits64[%add(fp, 16)] = temp_376;
+  Lloop_start_337:
+  temp_325 = alloc_ptr;
+  temp_326 = foreign "C"  compare_str(bits64[%add(fp, 16)],Lgbl_324) also aborts ;
+  alloc_ptr = temp_325;
+  temp_327 = temp_326;
+  if(%ge(temp_327, 2147483648)) {goto LnegCorrect_329;} else {goto LnoCorrect_330;}
+  LnegCorrect_329:
+  temp_328 = %sub(temp_327, 4294967296);
+  goto LcorrectEnd_331;
+  LnoCorrect_330:
+  temp_328 = temp_327;
+  LcorrectEnd_331:
+  if(%ne(temp_328, 0)) {goto LifTrue_333;} else {goto LifFalse_334;}
+  LifTrue_333:
+  temp_378 =  isletter_49(bits64[fp],bits64[%add(fp, 16)]) also aborts ;
+  temp_332 = %sx64(%bit(%eq(temp_378, 0)));
+  goto LifEnd_335;
+  LifFalse_334:
+  temp_332 = 0;
+  LifEnd_335:
+  if(%ne(temp_332, 0)) {goto Lloop_body_338;} else {goto Lloop_end_336;}
+  Lloop_body_338:
+  temp_377 =  getchar() also aborts ;
+  bits64[%add(fp, 16)] = temp_377;
+  goto Lloop_start_337;
+  Lloop_end_336:
+  Lloop_start_351:
+  temp_339 = alloc_ptr;
+  temp_340 = foreign "C"  compare_str(bits64[%add(fp, 16)],Lgbl_324) also aborts ;
+  alloc_ptr = temp_339;
+  temp_341 = temp_340;
+  if(%ge(temp_341, 2147483648)) {goto LnegCorrect_343;} else {goto LnoCorrect_344;}
+  LnegCorrect_343:
+  temp_342 = %sub(temp_341, 4294967296);
+  goto LcorrectEnd_345;
+  LnoCorrect_344:
+  temp_342 = temp_341;
+  LcorrectEnd_345:
+  if(%ne(temp_342, 0)) {goto LifTrue_347;} else {goto LifFalse_348;}
+  LifTrue_347:
+  temp_346 =  isletter_49(bits64[fp],bits64[%add(fp, 16)]) also aborts ;
+  goto LifEnd_349;
+  LifFalse_348:
+  temp_346 = 0;
+  LifEnd_349:
+  if(%ne(temp_346, 0)) {goto Lloop_body_352;} else {goto Lloop_end_350;}
+  Lloop_body_352:
+  temp_382 = bits64[%add(fp, 8)];
+  temp_381 =  isletter_49(bits64[fp],bits64[%add(fp, 16)]) also aborts ;
+  temp_380 =  chr(temp_381) also aborts ;
+  temp_379 =  concat(temp_382,temp_380) also aborts ;
+  bits64[%add(fp, 8)] = temp_379;
+  temp_383 =  getchar() also aborts ;
+  bits64[%add(fp, 16)] = temp_383;
+  goto Lloop_start_351;
+  Lloop_end_350:
+  temp_353 = bits64[%add(fp, 8)];
+  return(temp_353);
 }}
 section "data" {
  getword_50_gc_data:
    bits32[] { 3::bits32,1::bits32,1::bits32,1::bits32 };
-   bits32[] { 16::bits32,1::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
+   bits32[] { 20::bits32,1::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
 }
 
 main_51(bits64 pfp) {
  span 1 main_51_gc_data {
   stackdata { align 8; fp : bits64[2]; }
   bits64[fp+0] = pfp;
-  bits64 temp_340;
-  bits64 temp_339;
-  bits64 temp_314;
-  bits64 temp_310;
-  bits64 temp_309;
-  bits64[%add(fp, 8)] = Lgbl_289;
-  temp_339 =  getword_50(bits64[fp]) also aborts ;
-  bits64[%add(fp, 8)] = temp_339;
-  Lloop_start_312:
-  temp_309 = alloc_ptr;
-  temp_310 = foreign "C"  size(bits64[%add(fp, 8)]) also aborts ;
-  alloc_ptr = temp_309;
-  if(%gt(temp_310, 0)) {goto Lloop_body_313;} else {goto Lloop_end_311;}
-  Lloop_body_313:
+  bits64 temp_385;
+  bits64 temp_384;
+  bits64 temp_359;
+  bits64 temp_355;
+  bits64 temp_354;
+  bits64[%add(fp, 8)] = Lgbl_324;
+  temp_384 =  getword_50(bits64[fp]) also aborts ;
+  bits64[%add(fp, 8)] = temp_384;
+  Lloop_start_357:
+  temp_354 = alloc_ptr;
+  temp_355 = foreign "C"  size(bits64[%add(fp, 8)]) also aborts ;
+  alloc_ptr = temp_354;
+  if(%gt(temp_355, 0)) {goto Lloop_body_358;} else {goto Lloop_end_356;}
+  Lloop_body_358:
    add_word_47(bits64[fp],bits64[%add(fp, 8)]) also aborts ;
-  temp_340 =  getword_50(bits64[fp]) also aborts ;
-  bits64[%add(fp, 8)] = temp_340;
-  goto Lloop_start_312;
-  Lloop_end_311:
-  temp_314 =  tprint_48(bits64[fp],bits64[%add(bits64[fp], 8)]) also aborts ;
-  return(temp_314);
+  temp_385 =  getword_50(bits64[fp]) also aborts ;
+  bits64[%add(fp, 8)] = temp_385;
+  goto Lloop_start_357;
+  Lloop_end_356:
+  temp_359 =  tprint_48(bits64[fp],bits64[%add(bits64[fp], 8)]) also aborts ;
+  return(temp_359);
 }}
 section "data" {
  main_51_gc_data:
@@ -870,12 +960,12 @@ tiger_main(bits64 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 8; fp : bits64[4]; }
   bits64[fp+0] = pfp;
-  bits64 temp_315;
+  bits64 temp_360;
   bits64[%add(fp, 8)] = 0;
   bits64[%add(fp, 16)] = 0;
   bits64[%add(fp, 24)] = 1;
-  temp_315 =  main_51(fp) also aborts ;
-  return(temp_315);
+  temp_360 =  main_51(fp) also aborts ;
+  return(temp_360);
 }}
 section "data" {
  tiger_main_gc_data:

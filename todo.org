@@ -29,13 +29,18 @@ or not worth it with deriving or atdgen doing most of what asdl was doing
 ** support arm64
 DONE (macOS/Mach-O) 2026-08-25: hello.c-- milestone reached natively on
 Apple Silicon, no cross toolchain/qemu needed - see
-docs/claude_notes/notes_arm64.txt. Same session, follow-up: tests/tiger64/
-suite reaches 5/15 (tests/expected/tiger64-arm64.txt), hello.c-- itself
-passing. Remaining: sub-word memory *loads* (stores now work), the other
-10/15 tiger64 failures (grouped by symptom in notes_arm64.txt - check
-first whether it's the same shared cross-backend GC/liveness bug
-notes_arm.txt already root-caused for ARM32 before assuming arm64-specific
-bugs), a Linux/ELF "-arm64-elf" sibling.
+docs/claude_notes/notes_arm64.txt. Same day, two follow-ups: (1)
+tests/tiger64/hello.c-- reached (fork-tiger's own runtime/GC/stdlib), 5/15
+on the full suite; (2) 5/15 to 13/15 from three real fixes (a macOS BSD-sed
+\b portability bug corrupting tig_alloc's own pointer; a genuine ABI
+mismatch in fork-tiger's tigerc - tig_compare_str declared at native width
+when it's really a 32-bit C int, fixed on fork-tiger's side; a dead
+arm64rec.mlb grammar rule that was miscompiling unrelated runtime code by
+its mere presence) - see notes_arm64.txt's own follow-up section. Remaining
+2/15 (colmajor, merge) both match already-documented -riscv64 failures
+exactly (shared GC/liveness bug; tail-call return-value bug), not
+arm64-specific. Still open: sub-word memory *loads* (stores now work), a
+Linux/ELF "-arm64-elf" sibling.
 
 * Code
 
