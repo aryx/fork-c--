@@ -56,6 +56,17 @@
 
   let reg n   = if n = 31 then "sp" else "x" ^ string_of_int n
 
+  (* claude: the 32-bit ("W") alias of the same physical register - needed
+   * for narrow (8/16/32-bit) stores: strb/strh/str(32-bit form) all take a
+   * W-register source operand, there is no "strb x0,..." spelling on
+   * AArch64 at all. Only used for stores (see the %head comment on why
+   * sub-word loads remain out of scope: this is not needed for them since
+   * the exp function below has no "sx"/"zx" case at all - the same latent,
+   * pre-existing gap armrec.mlb's/riscv64rec.mlb's own Sx/Zx grammar rules
+   * have, per notes_arm.txt - so those rules would never actually fire
+   * regardless of register-name spelling). *)
+  let wreg n  = if n = 31 then "wsp" else "w" ^ string_of_int n
+
   (* claude: AArch64's load/store size suffixes for the sub-word case are
    * NOT used here (see the %head comment above on why sub-word memory
    * access is out of scope for this pass) - kept only as a placeholder in
@@ -110,6 +121,8 @@
 
 type
     (
+        't38,
+        't37,
         't36,
         't35,
         't34,
@@ -151,22 +164,24 @@ type
 nonterm
 =
     {
-        _Subcc6: ( 't36 ) Camlburg.nt;
-        _Subcc5: ( 't35 ) Camlburg.nt;
-        _Sub9: ( 't34 ) Camlburg.nt;
-        _Sub10: ( 't33 ) Camlburg.nt;
-        _Store4: ( 't32 ) Camlburg.nt;
-        _Store2: ( 't31 ) Camlburg.nt;
-        _Quot16: ( 't30 ) Camlburg.nt;
-        _Quot15: ( 't29 ) Camlburg.nt;
-        _Mul14: ( 't28 ) Camlburg.nt;
-        _Mul13: ( 't27 ) Camlburg.nt;
-        _Goto3: ( 't26 ) Camlburg.nt;
-        _Goto1: ( 't25 ) Camlburg.nt;
-        _And12: ( 't24 ) Camlburg.nt;
-        _And11: ( 't23 ) Camlburg.nt;
-        _Add8: ( 't22 ) Camlburg.nt;
-        _Add7: ( 't21 ) Camlburg.nt;
+        _Subcc6: ( 't38 ) Camlburg.nt;
+        _Subcc5: ( 't37 ) Camlburg.nt;
+        _Sub9: ( 't36 ) Camlburg.nt;
+        _Sub10: ( 't35 ) Camlburg.nt;
+        _Store4: ( 't34 ) Camlburg.nt;
+        _Store2: ( 't33 ) Camlburg.nt;
+        _Quot16: ( 't32 ) Camlburg.nt;
+        _Quot15: ( 't31 ) Camlburg.nt;
+        _Mul14: ( 't30 ) Camlburg.nt;
+        _Mul13: ( 't29 ) Camlburg.nt;
+        _Goto3: ( 't28 ) Camlburg.nt;
+        _Goto1: ( 't27 ) Camlburg.nt;
+        _And12: ( 't26 ) Camlburg.nt;
+        _And11: ( 't25 ) Camlburg.nt;
+        _Add8: ( 't24 ) Camlburg.nt;
+        _Add7: ( 't23 ) Camlburg.nt;
+        wregl: ( 't22 ) Camlburg.nt;
+        wreg32: ( 't21 ) Camlburg.nt;
         symbol: ( 't20 ) Camlburg.nt;
         spl: ( 't19 ) Camlburg.nt;
         sp: ( 't18 ) Camlburg.nt;
@@ -213,6 +228,8 @@ inf =
     ;sp = (Camlburg.infinity)
     ;spl = (Camlburg.infinity)
     ;symbol = (Camlburg.infinity)
+    ;wreg32 = (Camlburg.infinity)
+    ;wregl = (Camlburg.infinity)
     ;_Add7 = (Camlburg.infinity)
     ;_Add8 = (Camlburg.infinity)
     ;_And11 = (Camlburg.infinity)
@@ -252,7 +269,7 @@ and update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 291 "arch/arm64/arm64rec.mlb"
+# 315 "arch/arm64/arm64rec.mlb"
                                 ( cat ["<";any;">"] )
                                 
 # 000 "/dev/stdout"
@@ -339,14 +356,29 @@ and update_r =
                             let r = x.r.Camlburg.action ()
                             in
                                 
-# 193 "arch/arm64/arm64rec.mlb"
+# 205 "arch/arm64/arm64rec.mlb"
                                 ( reg r )
                                 
 # 000 "/dev/stdout"
 )
                     })
                     x)
-                { x with r = (nt) }
+                ((fun x ->
+                    (update_wregl
+                        {Camlburg.cost = (nt.Camlburg.cost)
+                        ;Camlburg.action =
+                            (fun () ->
+                                let r = x.r.Camlburg.action ()
+                                in
+                                    
+# 209 "arch/arm64/arm64rec.mlb"
+                                    ( wreg r )
+                                    
+# 000 "/dev/stdout"
+)
+                        })
+                        x)
+                    { x with r = (nt) })
 and update_ra =
     fun nt x ->
         if nt.Camlburg.cost >= x.ra.Camlburg.cost then
@@ -372,7 +404,7 @@ and update_reg =
                             let reg = x.reg.Camlburg.action ()
                             in
                                 
-# 210 "arch/arm64/arm64rec.mlb"
+# 226 "arch/arm64/arm64rec.mlb"
                                 ( cat ["["; reg; "]"] )
                                 
 # 000 "/dev/stdout"
@@ -404,6 +436,18 @@ and update_symbol =
             x
         else
             { x with symbol = (nt) }
+and update_wreg32 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.wreg32.Camlburg.cost then
+            x
+        else
+            { x with wreg32 = (nt) }
+and update_wregl =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.wregl.Camlburg.cost then
+            x
+        else
+            { x with wregl = (nt) }
 and update__Add7 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Add7.Camlburg.cost then
@@ -512,7 +556,7 @@ conZx =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 309 "arch/arm64/arm64rec.mlb"
+# 333 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Zx(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -526,7 +570,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 293 "arch/arm64/arm64rec.mlb"
+# 317 "arch/arm64/arm64rec.mlb"
                     ( cat [ "True"  ] )
                     
 # 000 "/dev/stdout"
@@ -542,7 +586,7 @@ and conSx =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 308 "arch/arm64/arm64rec.mlb"
+# 332 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Sx(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -580,7 +624,7 @@ and conSubcc =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 306 "arch/arm64/arm64rec.mlb"
+# 330 "arch/arm64/arm64rec.mlb"
                                 ( cat [ "Subcc(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -618,7 +662,7 @@ and conSub =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 302 "arch/arm64/arm64rec.mlb"
+# 326 "arch/arm64/arm64rec.mlb"
                                 ( cat [ "Sub(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -661,7 +705,7 @@ and conStore =
                             and w = arg3
                             in
                                 
-# 316 "arch/arm64/arm64rec.mlb"
+# 340 "arch/arm64/arm64rec.mlb"
                                 ( cat [ "Store(";dst;",";src;",";string_of_int w;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -683,7 +727,7 @@ and conStore =
                                         arg2.symbol.Camlburg.action ()
                                     in
                                         
-# 215 "arch/arm64/arm64rec.mlb"
+# 231 "arch/arm64/arm64rec.mlb"
                                         ( sprintf "adrp %s, %s@PAGE\n\tadd %s, %s, %s@PAGEOFF" regl symbol regl regl symbol )
                                         
 # 000 "/dev/stdout"
@@ -703,7 +747,7 @@ and conStore =
                                         arg2.constv.Camlburg.action ()
                                     in
                                         
-# 218 "arch/arm64/arm64rec.mlb"
+# 234 "arch/arm64/arm64rec.mlb"
                                         ( li64 regl constv )
                                         
 # 000 "/dev/stdout"
@@ -721,7 +765,7 @@ and conStore =
                                     and mem = arg2.mem.Camlburg.action ()
                                     in
                                         
-# 221 "arch/arm64/arm64rec.mlb"
+# 237 "arch/arm64/arm64rec.mlb"
                                         ( cat ["ldr"; " "; regl; ", "; mem] )
                                         
 # 000 "/dev/stdout"
@@ -739,8 +783,68 @@ and conStore =
                                     and reg = arg2.reg.Camlburg.action ()
                                     in
                                         
-# 224 "arch/arm64/arm64rec.mlb"
+# 240 "arch/arm64/arm64rec.mlb"
                                         ( cat ["str"; " "; reg; ", "; meml] )
+                                        
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.meml.Camlburg.cost
+                                +
+                                arg2.wreg32.Camlburg.cost
+                                +
+                                (Camlburg.matches 8) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let meml = arg1.meml.Camlburg.action ()
+                                    and
+                                        wreg32 =
+                                        arg2.wreg32.Camlburg.action ()
+                                    in
+                                        
+# 244 "arch/arm64/arm64rec.mlb"
+                                        ( cat ["strb"; " "; wreg32; ", "; meml] )
+                                        
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.meml.Camlburg.cost
+                                +
+                                arg2.wreg32.Camlburg.cost
+                                +
+                                (Camlburg.matches 16) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let meml = arg1.meml.Camlburg.action ()
+                                    and
+                                        wreg32 =
+                                        arg2.wreg32.Camlburg.action ()
+                                    in
+                                        
+# 246 "arch/arm64/arm64rec.mlb"
+                                        ( cat ["strh"; " "; wreg32; ", "; meml] )
+                                        
+# 000 "/dev/stdout"
+)
+                            }
+                            ;{Camlburg.cost =
+                                (arg1.meml.Camlburg.cost
+                                +
+                                arg2.wreg32.Camlburg.cost
+                                +
+                                (Camlburg.matches 32) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let meml = arg1.meml.Camlburg.action ()
+                                    and
+                                        wreg32 =
+                                        arg2.wreg32.Camlburg.action ()
+                                    in
+                                        
+# 248 "arch/arm64/arm64rec.mlb"
+                                        ( cat ["str"; " "; wreg32; ", "; meml] )
                                         
 # 000 "/dev/stdout"
 )
@@ -757,7 +861,7 @@ and conStore =
                                     and reg = arg2.reg.Camlburg.action ()
                                     in
                                         
-# 227 "arch/arm64/arm64rec.mlb"
+# 251 "arch/arm64/arm64rec.mlb"
                                         ( cat ["mov"; " "; regl; ", "; reg] )
                                         
 # 000 "/dev/stdout"
@@ -777,7 +881,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 249 "arch/arm64/arm64rec.mlb"
+# 273 "arch/arm64/arm64rec.mlb"
                                             ( cat ["cmp"; " "; x; ", "; y] )
                                             
 # 000 "/dev/stdout"
@@ -797,7 +901,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 251 "arch/arm64/arm64rec.mlb"
+# 275 "arch/arm64/arm64rec.mlb"
                                             ( sprintf "%s\n\tcmp %s, x16" (li64 "x16" y) x )
                                             
 # 000 "/dev/stdout"
@@ -817,7 +921,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 259 "arch/arm64/arm64rec.mlb"
+# 283 "arch/arm64/arm64rec.mlb"
                                             ( cat ["add"; " "; dst; ", "; x; ", "; y] )
                                             
 # 000 "/dev/stdout"
@@ -837,7 +941,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 262 "arch/arm64/arm64rec.mlb"
+# 286 "arch/arm64/arm64rec.mlb"
                                             ( sprintf "%s\n\tadd %s, %s, x16" (li64 "x16" y) dst x )
                                             
 # 000 "/dev/stdout"
@@ -857,7 +961,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 265 "arch/arm64/arm64rec.mlb"
+# 289 "arch/arm64/arm64rec.mlb"
                                             ( cat ["sub"; " "; dst; ", "; x; ", "; y] )
                                             
 # 000 "/dev/stdout"
@@ -877,7 +981,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 268 "arch/arm64/arm64rec.mlb"
+# 292 "arch/arm64/arm64rec.mlb"
                                             ( sprintf "%s\n\tsub %s, %s, x16" (li64 "x16" y) dst x )
                                             
 # 000 "/dev/stdout"
@@ -897,7 +1001,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 271 "arch/arm64/arm64rec.mlb"
+# 295 "arch/arm64/arm64rec.mlb"
                                             ( cat ["and"; " "; dst; ", "; x; ", "; y] )
                                             
 # 000 "/dev/stdout"
@@ -917,7 +1021,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 274 "arch/arm64/arm64rec.mlb"
+# 298 "arch/arm64/arm64rec.mlb"
                                             ( sprintf "%s\n\tand %s, %s, x16" (li64 "x16" y) dst x )
                                             
 # 000 "/dev/stdout"
@@ -937,7 +1041,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 278 "arch/arm64/arm64rec.mlb"
+# 302 "arch/arm64/arm64rec.mlb"
                                             ( cat ["mul"; " "; dst; ", "; x; ", "; y] )
                                             
 # 000 "/dev/stdout"
@@ -957,7 +1061,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 281 "arch/arm64/arm64rec.mlb"
+# 305 "arch/arm64/arm64rec.mlb"
                                             ( sprintf "%s\n\tmul %s, %s, x16" (li64 "x16" y) dst x )
                                             
 # 000 "/dev/stdout"
@@ -977,7 +1081,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 284 "arch/arm64/arm64rec.mlb"
+# 308 "arch/arm64/arm64rec.mlb"
                                             ( cat ["sdiv"; " "; dst; ", "; x; ", "; y] )
                                             
 # 000 "/dev/stdout"
@@ -997,7 +1101,7 @@ and conStore =
                                         let (x, y) = _v1
                                         in
                                             
-# 287 "arch/arm64/arm64rec.mlb"
+# 311 "arch/arm64/arm64rec.mlb"
                                             ( sprintf "%s\n\tsdiv %s, %s, x16" (li64 "x16" y) dst x )
                                             
 # 000 "/dev/stdout"
@@ -1014,7 +1118,7 @@ and conReg =
                     and n = arg2
                     in
                         
-# 313 "arch/arm64/arm64rec.mlb"
+# 337 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Reg('";Char.escaped char;"',"; string_of_int n;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1026,7 +1130,7 @@ and conReg =
                 ;Camlburg.action =
                     (fun () ->
                         
-# 197 "arch/arm64/arm64rec.mlb"
+# 213 "arch/arm64/arm64rec.mlb"
                         ( () )
                         
 # 000 "/dev/stdout"
@@ -1040,7 +1144,7 @@ and conReg =
                     ;Camlburg.action =
                         (fun () ->
                             
-# 196 "arch/arm64/arm64rec.mlb"
+# 212 "arch/arm64/arm64rec.mlb"
                             ( () )
                             
 # 000 "/dev/stdout"
@@ -1053,7 +1157,7 @@ and conReg =
                                 let n = arg2
                                 in
                                     
-# 192 "arch/arm64/arm64rec.mlb"
+# 204 "arch/arm64/arm64rec.mlb"
                                     ( n )
                                     
 # 000 "/dev/stdout"
@@ -1067,7 +1171,7 @@ and conReg =
                             ;Camlburg.action =
                                 (fun () ->
                                     
-# 199 "arch/arm64/arm64rec.mlb"
+# 215 "arch/arm64/arm64rec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1081,7 +1185,7 @@ and conReg =
                                 ;Camlburg.action =
                                     (fun () ->
                                         
-# 198 "arch/arm64/arm64rec.mlb"
+# 214 "arch/arm64/arm64rec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -1119,7 +1223,7 @@ and conQuot =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 305 "arch/arm64/arm64rec.mlb"
+# 329 "arch/arm64/arm64rec.mlb"
                                 ( cat [ "Quot(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1137,7 +1241,7 @@ and conPar =
                     and r = arg2.any.Camlburg.action ()
                     in
                         
-# 321 "arch/arm64/arm64rec.mlb"
+# 345 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Par(";l;",";r;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1159,7 +1263,7 @@ and conPar =
                                     let symbol = _v1
                                     in
                                         
-# 238 "arch/arm64/arm64rec.mlb"
+# 262 "arch/arm64/arm64rec.mlb"
                                         ( cat ["bl"; " "; symbol] )
                                         
 # 000 "/dev/stdout"
@@ -1179,7 +1283,7 @@ and conPar =
                                     let target = _v1
                                     in
                                         
-# 241 "arch/arm64/arm64rec.mlb"
+# 265 "arch/arm64/arm64rec.mlb"
                                         ( cat ["blr"; " "; target] )
                                         
 # 000 "/dev/stdout"
@@ -1199,7 +1303,7 @@ and conPar =
                                     let target = _v1
                                     in
                                         
-# 245 "arch/arm64/arm64rec.mlb"
+# 269 "arch/arm64/arm64rec.mlb"
                                         ( cat ["mov sp, "; nsp; "\n\tbr "; target] )
                                         
 # 000 "/dev/stdout"
@@ -1213,7 +1317,7 @@ and conNop =
             ;Camlburg.action =
                 (fun () ->
                     
-# 289 "arch/arm64/arm64rec.mlb"
+# 313 "arch/arm64/arm64rec.mlb"
                     ( "nop" )
                     
 # 000 "/dev/stdout"
@@ -1251,7 +1355,7 @@ and conMul =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 304 "arch/arm64/arm64rec.mlb"
+# 328 "arch/arm64/arm64rec.mlb"
                                 ( cat [ "Mul(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1267,7 +1371,7 @@ and conMem =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 312 "arch/arm64/arm64rec.mlb"
+# 336 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Mem(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1280,7 +1384,7 @@ and conMem =
                         let addr = arg1.addr.Camlburg.action ()
                         in
                             
-# 206 "arch/arm64/arm64rec.mlb"
+# 222 "arch/arm64/arm64rec.mlb"
                             ( addr )
                             
 # 000 "/dev/stdout"
@@ -1296,7 +1400,7 @@ and conLobits =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 310 "arch/arm64/arm64rec.mlb"
+# 334 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Lobits(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1313,7 +1417,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 295 "arch/arm64/arm64rec.mlb"
+# 319 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Link(";x#mangled_text;",";string_of_int w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1327,7 +1431,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 190 "arch/arm64/arm64rec.mlb"
+# 202 "arch/arm64/arm64rec.mlb"
                             ( x#mangled_text )
                             
 # 000 "/dev/stdout"
@@ -1344,7 +1448,7 @@ and conLate =
                     and w = arg2
                     in
                         
-# 296 "arch/arm64/arm64rec.mlb"
+# 320 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Late(";string;",";string_of_int w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1360,7 +1464,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 317 "arch/arm64/arm64rec.mlb"
+# 341 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Kill(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1378,7 +1482,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 320 "arch/arm64/arm64rec.mlb"
+# 344 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Guarded(";guard;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1395,7 +1499,7 @@ and conGuarded =
                             let symbol = _v1
                             in
                                 
-# 256 "arch/arm64/arm64rec.mlb"
+# 280 "arch/arm64/arm64rec.mlb"
                                 ( cat [arm64_bcond cond; " "; symbol] )
                                 
 # 000 "/dev/stdout"
@@ -1423,7 +1527,7 @@ and conGoto =
                             let any = arg1.any.Camlburg.action ()
                             in
                                 
-# 322 "arch/arm64/arm64rec.mlb"
+# 346 "arch/arm64/arm64rec.mlb"
                                 ( cat [ "Goto(";any;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1439,7 +1543,7 @@ and conGoto =
                                         arg1.symbol.Camlburg.action ()
                                     in
                                         
-# 230 "arch/arm64/arm64rec.mlb"
+# 254 "arch/arm64/arm64rec.mlb"
                                         ( cat ["b"; " "; symbol] )
                                         
 # 000 "/dev/stdout"
@@ -1451,7 +1555,7 @@ and conGoto =
                                     let reg = arg1.reg.Camlburg.action ()
                                     in
                                         
-# 233 "arch/arm64/arm64rec.mlb"
+# 257 "arch/arm64/arm64rec.mlb"
                                         ( cat ["br"; " "; reg] )
                                         
 # 000 "/dev/stdout"
@@ -1468,7 +1572,7 @@ and conFetch =
                     and w = arg2
                     in
                         
-# 299 "arch/arm64/arm64rec.mlb"
+# 323 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Fetch(";any;",";string_of_int w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1482,7 +1586,7 @@ and conFetch =
                         let ccl = arg1.ccl.Camlburg.action ()
                         in
                             
-# 202 "arch/arm64/arm64rec.mlb"
+# 218 "arch/arm64/arm64rec.mlb"
                             ( () )
                             
 # 000 "/dev/stdout"
@@ -1496,7 +1600,7 @@ and conFetch =
                             and w = arg2
                             in
                                 
-# 207 "arch/arm64/arm64rec.mlb"
+# 223 "arch/arm64/arm64rec.mlb"
                                 ( meml )
                                 
 # 000 "/dev/stdout"
@@ -1512,7 +1616,7 @@ and conFetch =
                                 let pcl = arg1.pcl.Camlburg.action ()
                                 in
                                     
-# 201 "arch/arm64/arm64rec.mlb"
+# 217 "arch/arm64/arm64rec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1528,7 +1632,7 @@ and conFetch =
                                     let ral = arg1.ral.Camlburg.action ()
                                     in
                                         
-# 204 "arch/arm64/arm64rec.mlb"
+# 220 "arch/arm64/arm64rec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -1544,7 +1648,7 @@ and conFetch =
                                         and w = arg2
                                         in
                                             
-# 194 "arch/arm64/arm64rec.mlb"
+# 206 "arch/arm64/arm64rec.mlb"
                                             ( regl )
                                             
 # 000 "/dev/stdout"
@@ -1562,13 +1666,31 @@ and conFetch =
                                                 arg1.spl.Camlburg.action ()
                                             in
                                                 
-# 203 "arch/arm64/arm64rec.mlb"
+# 219 "arch/arm64/arm64rec.mlb"
                                                 ( () )
                                                 
 # 000 "/dev/stdout"
 )
                                     })
-                                    inf))))))
+                                    ((update_wreg32
+                                        {Camlburg.cost =
+                                            (arg1.wregl.Camlburg.cost)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    wregl =
+                                                    arg1.wregl.Camlburg.action
+                                                        ()
+                                                and w = arg2
+                                                in
+                                                    
+# 210 "arch/arm64/arm64rec.mlb"
+                                                    ( wregl )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        })
+                                        inf)))))))
 and conFalse =
     fun () ->
         (update_any
@@ -1576,7 +1698,7 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 294 "arch/arm64/arm64rec.mlb"
+# 318 "arch/arm64/arm64rec.mlb"
                     ( cat [ "False" ] )
                     
 # 000 "/dev/stdout"
@@ -1593,7 +1715,7 @@ and conCond =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 307 "arch/arm64/arm64rec.mlb"
+# 331 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Cond(";op;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1607,7 +1729,7 @@ and conCond =
                         and ccval = arg2.ccval.Camlburg.action ()
                         in
                             
-# 254 "arch/arm64/arm64rec.mlb"
+# 278 "arch/arm64/arm64rec.mlb"
                             ( op )
                             
 # 000 "/dev/stdout"
@@ -1623,7 +1745,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 297 "arch/arm64/arm64rec.mlb"
+# 321 "arch/arm64/arm64rec.mlb"
                         ( cat [ "Bits(b)" ] )
                         
 # 000 "/dev/stdout"
@@ -1634,7 +1756,7 @@ and conBits =
                     (let bits = arg1
                     in
                         
-# 188 "arch/arm64/arm64rec.mlb"
+# 200 "arch/arm64/arm64rec.mlb"
                         ( guard (Bits.width bits = 64) )
                         
 # 000 "/dev/stdout"
@@ -1644,7 +1766,7 @@ and conBits =
                         let bits = arg1
                         in
                             
-# 188 "arch/arm64/arm64rec.mlb"
+# 200 "arch/arm64/arm64rec.mlb"
                             ( const64 bits )
                             
 # 000 "/dev/stdout"
@@ -1655,7 +1777,7 @@ and conBits =
                         (let bits = arg1
                         in
                             
-# 189 "arch/arm64/arm64rec.mlb"
+# 201 "arch/arm64/arm64rec.mlb"
                             ( guard (Bits.width bits = 64) )
                             
 # 000 "/dev/stdout"
@@ -1665,7 +1787,7 @@ and conBits =
                             let bits = arg1
                             in
                                 
-# 189 "arch/arm64/arm64rec.mlb"
+# 201 "arch/arm64/arm64rec.mlb"
                                 ( Bits.U.to_int64 bits )
                                 
 # 000 "/dev/stdout"
@@ -1703,7 +1825,7 @@ and conAnd =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 303 "arch/arm64/arm64rec.mlb"
+# 327 "arch/arm64/arm64rec.mlb"
                                 ( cat [ "And(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1744,7 +1866,7 @@ and conAdd =
                                 and reg = arg2.reg.Camlburg.action ()
                                 in
                                     
-# 211 "arch/arm64/arm64rec.mlb"
+# 227 "arch/arm64/arm64rec.mlb"
                                     ( cat ["["; reg; ", #"; const; "]"] )
                                     
 # 000 "/dev/stdout"
@@ -1760,7 +1882,7 @@ and conAdd =
                                 and const = arg2.const.Camlburg.action ()
                                 in
                                     
-# 212 "arch/arm64/arm64rec.mlb"
+# 228 "arch/arm64/arm64rec.mlb"
                                     ( cat ["["; reg; ", #"; const; "]"] )
                                     
 # 000 "/dev/stdout"
@@ -1775,7 +1897,7 @@ and conAdd =
                                 and y = arg2.any.Camlburg.action ()
                                 in
                                     
-# 301 "arch/arm64/arm64rec.mlb"
+# 325 "arch/arm64/arm64rec.mlb"
                                     ( cat [ "Add(";x;", ";y;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -1792,7 +1914,7 @@ and conAdd =
                                     and const = arg2.const.Camlburg.action ()
                                     in
                                         
-# 236 "arch/arm64/arm64rec.mlb"
+# 260 "arch/arm64/arm64rec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -1802,7 +1924,7 @@ and conAdd =
 
 
 
-# 105 "arch/arm64/arm64rec.mlb"
+# 116 "arch/arm64/arm64rec.mlb"
 
   let const = function
       | RP.Bool _                 -> error "boolean found"
@@ -1819,6 +1941,7 @@ and conAdd =
       | RP.App(("and", [w]), [x; y])  -> conAnd (exp x) (exp y)
       | RP.App(("mul", [w]), [x; y])  -> conMul (exp x) (exp y)
       | RP.App(("quot", [w]), [x; y]) -> conQuot (exp x) (exp y)
+      | RP.App(("lobits", [_;_]), [x]) -> exp x
       | RP.App((("arm64_subcc"), [w]), [x; y]) -> conSubcc (exp x) (exp y)
       | RP.App((("arm64_eq"|"arm64_ne"|"arm64_lt"|"arm64_le"|"arm64_gt"|"arm64_ge"
                 |"arm64_ls"|"arm64_hi") as op, [w]), [c]) ->

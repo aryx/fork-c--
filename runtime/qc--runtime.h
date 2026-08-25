@@ -28,6 +28,18 @@
 #define NUM_REGS 96 /* c(6)->0-5, f(32)->6-37, r(32)->38-69 = 70, same shape as riscv/alpha */
 #elif defined(__arm__)
 #define NUM_REGS 32 /* c(3)->0-2, r(16)->3-18 = 19; no float space (arm.ml: no FPU) */
+#elif defined(__aarch64__)
+/* claude: verified via a throwaway OCaml harness calling the real
+ * Target.mk_reg_ix_map on arm64.ml's actual T.spaces (not hand-derived by
+ * inspecting the SS.c/SS.r/SS.f `count` arguments the way the other
+ * targets' comments above were - that misses an off-by-one:
+ * Target.mk_reg_ix_map's space_to_regs generates indices 0..count
+ * INCLUSIVE, i.e. count+1 registers per space, not count. Confirmed
+ * result: x0->37, x28->65, x29(fp)->66, x30(lr)->67, sp(x31)->68, total=70 -
+ * c(3)->0-3 (4 slots, no npc/fp_mode/fp_fcmp: arm64regs.ml declares SS.c 3
+ * like arm.ml, not riscv64regs.ml's SS.c 6), f(32)->4-36 (33 slots),
+ * r(32)->37-69 (33 slots) = 70 total. */
+#define NUM_REGS 96 /* generous margin over the confirmed total=70, same margin style as riscv64/alpha/mips's own 96 */
 #elif defined(__i386__) || defined(__x86_64__)
 /*s: machine-dependent macro definitions for the public interface ((x86-linux)) */
 #define NUM_REGS 12

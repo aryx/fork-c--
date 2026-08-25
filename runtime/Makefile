@@ -114,8 +114,19 @@ else ifeq ($(BACKEND),riscv64)
 CC32    ?= riscv64-linux-gnu-gcc
 CONTOBJ  = $(B)/riscv64cont.o
 QCFLAG   = -riscv64
+else ifeq ($(BACKEND),arm64)
+# claude: also 64-bit (wordsize/pointersize 64), like riscv64/alpha above -
+# same GLOBALS_DECL/$(B)/%.c-- bits32->bits64 rewrite. Unlike every other
+# BACKEND here, this is this machine's own native architecture (Apple
+# Silicon), so CC32 is plain "clang" - no cross toolchain, and QC_AS/QC_LD
+# below end up pointing at the same default -arm64 already uses on its own
+# (see driver/main.ml's default_arm64_cc) - kept explicit anyway for
+# uniformity with every other BACKEND branch here.
+CC32    ?= clang
+CONTOBJ  = $(B)/arm64cont.o
+QCFLAG   = -arm64
 else
-$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, riscv32, riscv64 or alpha)
+$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, riscv32, riscv64, alpha or arm64)
 endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
@@ -190,6 +201,8 @@ $(B)/riscv64cont.o: riscv64cont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/alphacont.o: alphacont.s | $(B)
 	$(CC32) -c $< -o $@
+$(B)/arm64cont.o: arm64cont.s | $(B)
+	$(CC32) -c $< -o $@
 
 # The globals declaration is inserted after the "target byteorder" line so
 # the syncweb markers and everything else are preserved. claude: ppc/sparc
@@ -216,7 +229,7 @@ ifeq ($(filter $(BACKEND),ppc sparc),$(BACKEND))
 else ifeq ($(BACKEND),arm)
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed 's/^target byteorder little\(.*\);/target byteorder little float "none"\1;/' > $@
-else ifeq ($(filter $(BACKEND),riscv64 alpha),$(BACKEND))
+else ifeq ($(filter $(BACKEND),riscv64 alpha arm64),$(BACKEND))
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed -e 's/^target byteorder little;/target byteorder little wordsize 64 pointersize 64;/' \
 	        -e 's/bits32/bits64/g' -e 's/+4/+8/g' > $@
@@ -228,4 +241,4 @@ $(B)/%.o: $(B)/%.c--
 	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32 build-riscv64 build-alpha
+	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32 build-riscv64 build-alpha build-arm64

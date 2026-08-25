@@ -40,8 +40,25 @@ static struct cmm_pc_map_entry startup = {
 pc_map_entry* Cmm_thread_start_up_pcmap_entry = &startup;
 pc_map_entry* Cmm_thread_start_dn_pcmap_entry = &startdn;
 /*x: pcmap.c  */
+/* claude: on every ELF host, Cmm_pc_map/Cmm_pc_map_limit are bound by
+ * pcmap.ld (a GNU-ld "-T" linker-script fragment that places every input
+ * object's .pcmap section together and defines these two symbols around
+ * it - see that file). Mach-O has no equivalent to "-T": ld64 does not
+ * support linker scripts at all. Empirically confirmed replacement: ld64
+ * already auto-synthesizes a "section$start$SEGMENT$section"/
+ * "section$end$SEGMENT$section" symbol pair for every section, with no
+ * script needed (verified with a standalone hand-assembled test .s/.c
+ * pair before relying on it here - see docs/claude_notes/notes_arm64.txt).
+ * arm64asm.ml emits the pcmap section as ".section __DATA,pcmap", so the
+ * two symbols below are exactly its start/end. No macOS counterpart to
+ * pcmap.ld is needed at all - this #ifdef is the whole story. */
+#ifdef __APPLE__
+extern pc_map_index Cmm_pc_map[]       __asm("section$start$__DATA$pcmap");
+extern pc_map_index Cmm_pc_map_limit[] __asm("section$end$__DATA$pcmap");
+#else
 extern pc_map_index Cmm_pc_map[];
 extern pc_map_index Cmm_pc_map_limit[];
+#endif
 #define pc_map_size (Cmm_pc_map_limit - Cmm_pc_map)
 /*x: pcmap.c  */
 static int is_sorted(void) {

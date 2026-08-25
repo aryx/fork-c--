@@ -325,3 +325,191 @@ Not attempted
   ever added and wanted to reuse armrec.mlb-style code more directly - this
   backend sidesteps the question entirely via li64 instead.
 - Any of the "Known remaining gaps" above.
+
+===============================================================================
+Follow-up pass: tests/tiger64/ suite bring-up (2026-08-25, same session)
+===============================================================================
+
+Goal: get tests/tiger64/hello.c-- (fork-tiger's own runtime/GC/stdlib, not
+just demos/hello_arm64.c--'s bare printf call) running for -arm64, following
+notes_riscv.txt's tests/tiger64/ playbook. Reached hello PASS on the first
+successful build (tests/run-tiger64-arm64.sh hello), then ran the full
+15-test suite out of curiosity: 5/15 (exceptions, funcall, hello, queens,
+sieve) - baseline recorded at tests/expected/tiger64-arm64.txt. Comparable
+to arm's own first-pass 6/15 (notes_arm.txt) and better than mips's/
+sparc's own 1/15 baselines; not chased further than that in this session -
+consistent with the "record a baseline, document the gaps, stop" pattern
+every other backend's own bring-up note follows.
+
+This needed real changes to shared runtime/ C code (not just arch/arm64/),
+since tests/tiger64/ - unlike demos/hello_arm64.c-- - links against fork-
+c--'s own runtime/ (runtime.c/pcmap.c/gcc-linux.c/cut.c--/thread.c--/
+yield.c--, built into libqcmm.a) and fork-tiger's runtime (gc.c/stdlib.c),
+neither of which demos/hello_arm64.c-- ever touches (it just calls libc's
+printf directly).
+
+pcmap.ld has no Mach-O equivalent - fixed via ld64's own symbol synthesis
+------------------------------------------------------------------------------
+Every ELF-hosted backend here links against runtime/pcmap.ld, a GNU-ld
+"-T" linker-script fragment that places every input object's ".pcmap"
+section together and defines two symbols (Cmm_pc_map, Cmm_pc_map_limit)
+marking its start/end - pcmap.c's own GC-metadata-table walk (bsearch over
+Cmm_pc_map..Cmm_pc_map_limit) depends on these. Mach-O's ld64 has NO
+linker-script mechanism at all (no "-T", nothing equivalent) - this would
+otherwise have been a hard blocker.
+
+Fix: ld64 already auto-synthesizes a "section$start$SEGMENT$section"/
+"section$end$SEGMENT$section" symbol pair for ANY section, no script
+needed - a well-known but under-documented Mach-O linker feature (used
+e.g. by Objective-C runtime/Swift metadata section registries for exactly
+this "declare a custom section, find its bounds at runtime" pattern).
+Empirically verified BEFORE touching pcmap.c, with a standalone hand-
+assembled test .s (a `.section __DATA,pcmap` with three .quad entries) and
+a small test .c declaring
+`extern long Cmm_pc_map[] __asm("section$start$__DATA$pcmap");` - printed
+the correct count and values. runtime/pcmap.c's own two extern
+declarations are now `#ifdef __APPLE__`-guarded to use this form (see that
+file's own "claude:" comment); no pcmap.ld counterpart exists or is needed
+for Mach-O at all - the #ifdef is the whole fix. arm64asm.ml already
+emitted the section as plain ".section __DATA,pcmap" (no ELF ALLOC-flag
+dance needed, per the first pass's own findings), so the segment/section
+names the __asm strings reference were already exactly right.
+
+NUM_REGS/FP_REG for __aarch64__ - computed with a throwaway verification harness, not hand-derived
+------------------------------------------------------------------------------------------------------
+qc--runtime.h's NUM_REGS and gcc-linux.c's FP_REG (the flat register-index
+qc--'s own Target.mk_reg_ix_map numbering assigns to x29/fp - needed so
+Cmm_init_c_frame can find the C caller's frame-pointer chain by reading
+`a->regs[FP_REG]`) both needed a new #ifdef __aarch64__ branch. Every
+existing backend's own NUM_REGS comment describes its breakdown as if
+space_to_regs generates exactly `count` registers per space (e.g. "c(6)-
+>0-5" for a `SS.c 6 ...` declaration) - but Target.mk_reg_ix_map's
+space_to_regs helper (target/target.ml) actually generates `count+1`
+registers per space (0..count inclusive, an off-by-one over-generation,
+apparently harmless everywhere else only because NUM_REGS is always
+declared with generous slack over the naive sum). Rather than propagate
+that same imprecision, this pass wrote a throwaway OCaml harness (a
+scratch dune executable, deleted after use - not committed) that calls the
+REAL Target.mk_reg_ix_map on arm64.ml's actual T.spaces and looks up the
+integer index for x0/x28/x29/x30/sp directly. Confirmed result: x0->37,
+x28->65, x29(fp)->66, x30(lr)->67, sp(x31)->68, total=70 (c: 4 slots
+0-3, f: 33 slots 4-36, r: 33 slots 37-69). NUM_REGS set to 96 (generous
+margin over 70, matching riscv64/alpha/mips's own 96); FP_REG set to the
+confirmed 66. Both comments in qc--runtime.h/gcc-linux.c cross-reference
+this harness and its result, in case a future NUM_REGS discrepancy needs
+re-deriving for another target.
+
+Confirmed portable, contrary to its own filename: runtime.c/pcmap.c/gcc-linux.c
+------------------------------------------------------------------------------------
+Despite "gcc-linux.c"'s name, grepping runtime/runtime.c, pcmap.c, and
+gcc-linux.c turned up no Linux-specific headers or syscalls at all - only
+<assert.h>/<stdio.h>/<stdlib.h>/<stdarg.h>/<string.h>, all portable. The
+name is about "interoperating with gcc-compiled C code's frame-pointer
+convention," not about the Linux platform specifically. Confirmed by
+building all three with plain clang on this host with zero portability
+fixes needed beyond the NUM_REGS/FP_REG/pcmap branches above (which are
+architecture-, not OS-, specific - the FP_REG *value* is identical between
+Linux-gcc and Darwin-clang since both follow the same AAPCS64 x29 frame-
+record convention under -fno-omit-frame-pointer).
+
+New/modified files (runtime/, shared - not arch/arm64/-specific)
+------------------------------------------------------------------
+- runtime/arm64cont.s (new) - trap stub (Cmm_unwindcont_pc: "udf #0"),
+  same shape as riscv64cont.s/armcont.s, but with Mach-O's leading-
+  underscore symbol convention and plain ".text" (this file is hand-
+  assembled directly by clang, not through arm64asm.ml, so the Mach-O
+  conventions had to be applied by hand here too).
+- runtime/qc--runtime.h, runtime/gcc-linux.c - new #elif defined(__aarch64__)
+  branches (NUM_REGS=96, FP_REG=66 - see above).
+- runtime/pcmap.c - Cmm_pc_map/Cmm_pc_map_limit externs now
+  #ifdef __APPLE__-branch to the section$start$/section$end$ form (see
+  above) instead of relying on pcmap.ld.
+- runtime/Makefile - new BACKEND=arm64 branch (CC32=clang - no cross
+  toolchain, this machine's own native architecture; CONTOBJ=arm64cont.o;
+  QCFLAG=-arm64); arm64 added to the bits32->bits64/"wordsize 64
+  pointersize 64"-splice branch of the $(B)/%.c-- rule (alongside
+  riscv64/alpha).
+- runtime/dune - arm64cont.s added to the installed-files list.
+
+New files (tests/, tiger64-specific)
+--------------------------------------
+- tests/tiger64/regenerate-arm64.sh - the arm64/macOS counterpart of
+  regenerate-riscv64.sh. Simpler than every cross-toolchain backend's own
+  version: CCARM64=clang (no cross compiler), ARARM64=ar (plain host ar
+  archives foreign-object-format-agnostic containers fine - confirmed,
+  same as every other backend's own regenerate-*.sh, none of which use a
+  cross-ar either). Same flip64()/sed transforms as regenerate-riscv64.sh
+  (bits32->bits64, "+4"->"+8", alignment mask widened to 8-byte,
+  stdlibcmm.c--'s curr_exn alignment and EOF-sentinel-width fixes) -
+  entirely target-width-driven, nothing Mach-O-specific needed there.
+- tests/run-tiger64-arm64.sh - the arm64/macOS counterpart of
+  run-tiger64-riscv64.sh. Differs from every other run-tiger64-*.sh in
+  three ways: no qemu wrapper (runs the binary directly), no "-static" on
+  the final link (Apple does not support it), and the final link omits
+  "$RT/pcmap.ld" entirely (no Mach-O counterpart needed or used - see
+  above).
+- tests/tiger64/tigermain-arm64.o, stdlib-arm64.a - checked in (force-
+  added past the generic *.o/*.a .gitignore rule), like every other
+  backend's own tiger64/tigermain-*.o/stdlib-*.a.
+- tests/expected/tiger64-arm64.txt - the recorded baseline (5/15).
+
+Modified files (arch/arm64/, widening operator/memory coverage)
+-------------------------------------------------------------------
+- arch/arm64/arm64rec.mlb - added %lobits support (Post.lostore's only
+  producer - a free no-op onto a narrower-width memory *store*, same
+  reasoning as every sibling backend's identical "lobits" exp case) and
+  three new grammar rules for narrow (8/16/32-bit) stores (strb/strh/str
+  with a W-register source operand - AArch64 has no "strb x0,..." form at
+  all, only "strb w0,..."; a new `wreg`/`wregl`/`wreg32` nonterminal chain
+  materializes the W-register spelling of the same physical register,
+  alongside the existing X-register `reg`/`regl`). Unblocked
+  tests/tiger64/stdlibcmm.c--'s compile (fork-tiger's I/O buffer code does
+  plain byte stores) - the FIRST real compile-time error this backend hit
+  past demos/hello_arm64.c--'s own coverage ("unknown operator lobits").
+  Narrow *loads* (sign/zero-extending sx/zx from memory) remain
+  unimplemented - confirmed this is not new-to-arm64: arm64rec.mlb's `exp`
+  function (like armrec.mlb's/riscv64rec.mlb's own) has no case for the
+  "sx"/"zx" operators at all, so their own Sx/Zx-shaped grammar rules were
+  ALREADY dead code before this backend existed too (notes_arm.txt already
+  flags this exact gap for ARM32) - not something this pass introduced or
+  was in scope to fix, and not hit by tests/tiger64/'s 5 passing tests.
+- arch/arm64/arm64.ml - T.memory widened from [64] to [8;16;32;64]
+  (matching every sibling backend's own declaration - the sx/zx-load gap
+  above means this is somewhat aspirational for loads, but real and
+  exercised for stores); three new "lobits" capability entries
+  ([wordsize;8]/[wordsize;16]/[wordsize;32], mirroring arm.ml's/
+  riscv64.ml's own).
+
+Known remaining gaps, tiger64-specific
+------------------------------------------
+- 10/15 still fail. Not individually root-caused this session (out of
+  scope - see "Goal" above). Grouped by symptom for a future session:
+    - "Assertion failed: (size > 0), function internal_alloc, file gc.c,
+      line 77" (colmajor, rb, wf, wff): a real allocation-size bug, seen
+      immediately at startup, not after some number of successful
+      allocations - worth checking first whether this is the SAME shared
+      GC/register-allocator liveness bug notes_arm.txt's ARM32 section
+      already root-caused (a GC-required temp, e.g. saved_ra, not kept
+      live across every call site - see that note's "Root cause
+      CONFIRMED" section) before assuming it is arm64-specific.
+    - "Tiger program took ord of string of length <huge>" (merge, rc4):
+      looks like a string/pointer value corrupted into a huge integer -
+      could be the same class of bug, could be something else (e.g. a
+      calling-convention argument-passing bug specific to string
+      arguments); not investigated.
+    - stdout-differs-but-no-crash (arrays, forloop, qsort, rbshort):
+      not investigated at all - could be anything from a narrow-store
+      correctness bug (this session's own new code) to an unrelated
+      codegen gap.
+  Given arm.ml's own tiger-suite investigation found its remaining
+  failures were a SINGLE shared, pre-existing, cross-backend bug (not
+  ARM32-specific), the first thing worth checking here is whether fixing
+  that shared bug (still not fixed anywhere, per notes_arm.txt's own
+  "Not attempted") would move arm64's number too, before assuming these
+  10 failures are arm64-specific bugs needing 10 separate diagnoses.
+- No `test-tiger64-arm64` Makefile target added (and not added to
+  test-all) - deliberately following the same precedent as arm/mips/
+  sparc's own tiger suites (1/15-6/15, all excluded from the Makefile's
+  test-tiger* targets and test-all; only ppc/riscv32/riscv64/alpha, which
+  clear a much higher bar, get one). tests/run-tiger64-arm64.sh remains
+  directly runnable by hand.

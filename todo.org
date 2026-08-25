@@ -29,9 +29,13 @@ or not worth it with deriving or atdgen doing most of what asdl was doing
 ** support arm64
 DONE (macOS/Mach-O) 2026-08-25: hello.c-- milestone reached natively on
 Apple Silicon, no cross toolchain/qemu needed - see
-docs/claude_notes/notes_arm64.txt. Remaining: sub-word memory access,
-tests/tiger/ suite (tiger64 in particular), a Linux/ELF "-arm64-elf"
-sibling.
+docs/claude_notes/notes_arm64.txt. Same session, follow-up: tests/tiger64/
+suite reaches 5/15 (tests/expected/tiger64-arm64.txt), hello.c-- itself
+passing. Remaining: sub-word memory *loads* (stores now work), the other
+10/15 tiger64 failures (grouped by symptom in notes_arm64.txt - check
+first whether it's the same shared cross-backend GC/liveness bug
+notes_arm.txt already root-caused for ARM32 before assuming arm64-specific
+bugs), a Linux/ELF "-arm64-elf" sibling.
 
 * Code
 

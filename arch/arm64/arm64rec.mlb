@@ -54,6 +54,17 @@
 
   let reg n   = if n = 31 then "sp" else "x" ^ string_of_int n
 
+  (* claude: the 32-bit ("W") alias of the same physical register - needed
+   * for narrow (8/16/32-bit) stores: strb/strh/str(32-bit form) all take a
+   * W-register source operand, there is no "strb x0,..." spelling on
+   * AArch64 at all. Only used for stores (see the %head comment on why
+   * sub-word loads remain out of scope: this is not needed for them since
+   * the exp function below has no "sx"/"zx" case at all - the same latent,
+   * pre-existing gap armrec.mlb's/riscv64rec.mlb's own Sx/Zx grammar rules
+   * have, per notes_arm.txt - so those rules would never actually fire
+   * regardless of register-name spelling). *)
+  let wreg n  = if n = 31 then "wsp" else "w" ^ string_of_int n
+
   (* claude: AArch64's load/store size suffixes for the sub-word case are
    * NOT used here (see the %head comment above on why sub-word memory
    * access is out of scope for this pass) - kept only as a placeholder in
@@ -118,6 +129,7 @@
       | RP.App(("and", [w]), [x; y])  -> conAnd (exp x) (exp y)
       | RP.App(("mul", [w]), [x; y])  -> conMul (exp x) (exp y)
       | RP.App(("quot", [w]), [x; y]) -> conQuot (exp x) (exp y)
+      | RP.App(("lobits", [_;_]), [x]) -> exp x
       | RP.App((("arm64_subcc"), [w]), [x; y]) -> conSubcc (exp x) (exp y)
       | RP.App((("arm64_eq"|"arm64_ne"|"arm64_lt"|"arm64_le"|"arm64_gt"|"arm64_ge"
                 |"arm64_ls"|"arm64_hi") as op, [w]), [c]) ->
@@ -193,6 +205,10 @@ r:          Reg('r', n:int)  {: n :}
 regl:       r   {: reg r :}
 reg:        Fetch(regl,w:int)   {: regl :}
 
+(* claude: the W-register form of the same physical register, for narrow (8/16/32-bit) stores only - see wreg's own comment above. *)
+wregl:      r   {: wreg r :}
+wreg32:     Fetch(wregl,w:int)  {: wregl :}
+
 pcl:        Reg('c',  0) {: () :}
 ccl:        Reg('c',  2) {: () :}
 spl:        Reg('r', 31) {: () :}
@@ -222,6 +238,14 @@ inst:       Store(regl, mem, 64)
 
 inst:       Store(meml, reg, 64)
             {: cat ["str"; " "; reg; ", "; meml] :}
+
+(* claude: narrow stores - Post.lostore's only producer (%lobits truncating a wordsize-64 register value down to the store's own narrower width, a free no-op per the exp case above) - strb/strh/str(32-bit form) all take a W-register source, hence wreg32 not reg. Unblocked tests/tiger64/'s own stdlibcmm.c-- (fork-tiger's I/O buffer code does plain byte stores). *)
+inst:       Store(meml, wreg32, 8)
+            {: cat ["strb"; " "; wreg32; ", "; meml] :}
+inst:       Store(meml, wreg32, 16)
+            {: cat ["strh"; " "; wreg32; ", "; meml] :}
+inst:       Store(meml, wreg32, 32)
+            {: cat ["str"; " "; wreg32; ", "; meml] :}
 
 inst:       Store(regl, reg, 64)
             {: cat ["mov"; " "; regl; ", "; reg] :}

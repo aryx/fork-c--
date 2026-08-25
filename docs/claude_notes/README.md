@@ -81,8 +81,19 @@ Index:
   an unaligned pointer relocation in a freshly-opened Mach-O section unless
   it is explicitly `.align`ed first. Scoped to `T.memory = [64]` only (no
   sub-word load/store - AArch64's ldrb/ldrh/etc. need a W-register-vs-
-  X-register distinction not verified here) and no float. Follow-up (not
-  done): sub-word memory access, tests/tiger/ suite, a Linux/ELF sibling.
+  X-register distinction not verified here) and no float. Follow-up
+  (same session): reached tests/tiger64/hello.c-- (fork-tiger's own
+  runtime/GC/stdlib, not just demos/hello_arm64.c--'s bare printf call) -
+  needed real shared-code changes (runtime/pcmap.c's Cmm_pc_map/
+  Cmm_pc_map_limit now use ld64's auto-synthesized "section$start$/
+  section$end$" symbols instead of a GNU-ld linker script, which Mach-O
+  has no equivalent for at all; new __aarch64__ NUM_REGS/FP_REG branches
+  in qc--runtime.h/gcc-linux.c, values confirmed via a throwaway harness
+  calling the real Target.mk_reg_ix_map rather than hand-derived; narrow-
+  width memory *stores* newly implemented in arm64rec.mlb, unblocking
+  fork-tiger's stdlib). Full suite: 5/15 (tests/expected/tiger64-arm64.txt),
+  comparable to arm's own first-pass 6/15. Follow-up (not done): the
+  remaining 10/15, sub-word *loads*, a Linux/ELF sibling.
 - [notes_ssa.txt](notes_ssa.txt) — why qc-- doesn't use SSA internally:
   verified there's no SSA anywhere in the tree (mid-level IR is the
   zipper-CFG `front_zipcfg`/`Zipcfg`, optimizations run as classic

@@ -34,6 +34,8 @@
 #define FP_REG 68 /* $30/fp, flat index 38+30 - confirmed via ".frame $fp,..." */
 #elif defined(__arm__)
 #define FP_REG 10 /* r7, flat index 3+7 - confirmed via "push {r7}"/frame_needed=1 in a probe (this toolchain defaults to Thumb, where r7 is fp, not ARM mode's r11) */
+#elif defined(__aarch64__)
+#define FP_REG 66 /* x29/fp, flat index 37+29 - confirmed via a throwaway OCaml harness calling Target.mk_reg_ix_map on arm64.ml's real T.spaces (see qc--runtime.h's own NUM_REGS comment for the same harness/result), not a compiled-probe .frame directive (AArch64 has none - clang/gcc both just use the standard AAPCS64 x29 frame-record convention under -fno-omit-frame-pointer, so this is not toolchain-specific the way ARM32's Thumb-vs-ARM r7-vs-r11 choice was) */
 #elif defined(__i386__) || defined(__x86_64__)
 #define FP_REG 9 /* %ebp, r[5] */
 #else

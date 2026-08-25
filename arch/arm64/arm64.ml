@@ -369,17 +369,19 @@ let target =
     (* claude: scoped to exactly what arm64rec.mlb's grammar recognizes
      * today - add/sub/and/mul/quot + the ten eq/ne/lt/le/gt/ge/ltu/leu/gtu/
      * geu comparisons, same operator set arm.ml's/riscv64.ml's own
-     * capabilities declare. T.memory is [64] only, NOT [8;16;32;64] the way
-     * arm.ml's/riscv64.ml's own are - arm64rec.mlb deliberately has no sub-
-     * word load/store rules yet (see its own header comment: AArch64's
-     * ldrb/ldrh/ldrsb/ldrsh/ldrsw sub-word forms need a W-register-vs-
-     * X-register distinction this pass doesn't verify empirically). No
-     * lobits either - lobits capabilities were previously used only to
-     * suppress an mvalidate warning on a narrow-width memory *store*
-     * (Post.lostore's only producer), unreachable here since T.memory
-     * excludes every width lostore would ever be called for. Widen this
-     * list (and arm64rec.mlb) together as more operators get real camlburg
-     * rules. *)
+     * capabilities declare, PLUS lobits/narrow-width memory STORES (added
+     * once tests/tiger64/'s stdlibcmm.c-- turned out to need them - fork-
+     * tiger's I/O buffer code does plain byte stores). T.memory is
+     * [8;16;32;64], matching every other backend, but this does NOT mean
+     * sub-word LOADS (sign/zero-extending, Post.sxload/zxload) actually
+     * work: arm64rec.mlb's `exp` still has no "sx"/"zx" case at all, the
+     * same latent, pre-existing gap armrec.mlb's/riscv64rec.mlb's own Sx/Zx
+     * grammar rules have (see notes_arm.txt) - so those grammar rules
+     * would never fire regardless of what T.memory declares. Not observed
+     * to matter yet (tests/tiger64/hello.c-- and stdlibcmm.c-- only needed
+     * narrow STORES); a real gap if some future program needs a narrow
+     * LOAD. Widen this list (and arm64rec.mlb) together as more operators
+     * get real camlburg rules. *)
     ; T.capabilities        = { T.operators = List.map Up.opr
                                    [ "add",     [wordsize]
                                    ; "sub",     [wordsize]
@@ -396,6 +398,9 @@ let target =
                                    ; "leu",     [wordsize]
                                    ; "gtu",     [wordsize]
                                    ; "geu",     [wordsize]
+                                   ; "lobits",  [wordsize;8]
+                                   ; "lobits",  [wordsize;16]
+                                   ; "lobits",  [wordsize;32]
                                    ; "not",     []
                                    ; "bool",    []
                                    ; "disjoin", []
@@ -406,7 +411,7 @@ let target =
                                    ]
                               ; T.litops     = []
                               ; T.literals   = [wordsize]
-                              ; T.memory     = [64]
+                              ; T.memory     = [8; 16; 32; 64]
                               ; T.block_copy = true
                               ; T.itemps     = [wordsize]
                               ; T.ftemps     = []
