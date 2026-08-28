@@ -44,6 +44,7 @@
   riscv32_crt0.s
   riscv64cont.s
   arm64cont.s
+  amd64cont.s
   riscv32_syscalls.c
   cut.c--
   thread.c--

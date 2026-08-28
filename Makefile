@@ -107,6 +107,30 @@ test-tiger64-alpha::
 test-tiger64-arm64::
 	tests/run-tiger64-arm64.sh
 
+# claude: the -amd64 counterpart of test-tiger64-arm64 above - same self-
+# contained shape (tigermain-amd64.o/stdlib-amd64.a checked in, regenerate-
+# amd64.sh needs fork-tiger, run-tiger64-amd64.sh itself needs the explicit
+# "-arch x86_64" cross-target flag but no separate cross toolchain/qemu -
+# clang cross-assembles/links directly on this host, output runs under
+# Rosetta 2). 9/15, NOT the 13/15 bar test-tiger64-riscv64/test-tiger64-arm64
+# clear - colmajor and merge fail for the SAME already-documented cross-
+# backend reasons those two do everywhere else (see tests/tiger64/README /
+# docs/claude_notes/notes_arm64.txt's own follow-up section), but four more
+# (rc4, rb, wf, wff) fail here that pass on arm64/riscv64. Not root-caused
+# to a specific amd64-only bug: rb fails on tiger64/rb.c-- run against the
+# LARGER wf.0 input but PASSES (as "rbshort") on the same source against the
+# smaller rbshort.0 input, the same input-size/GC-pressure-sensitive shape
+# already documented and NOT yet fixed for colmajor on every backend - see
+# docs/claude_notes/notes_amd64.txt's own follow-up section for the full
+# diagnosis and what was actually fixed to get from 0/15 (division did not
+# even compile) to this baseline (a real, general amd64 register-allocation
+# correctness bug in Post.binop, described there in detail). Still in
+# test-all below: like every other tier here, this compares against a
+# recorded baseline (expected/tiger64-amd64.txt) rather than demanding
+# 100%, so it still catches regressions same as the rest.
+test-tiger64-amd64::
+	tests/run-tiger64-amd64.sh
+
 test-rt::
 	tests/run-rt.sh
 
@@ -157,7 +181,7 @@ test-optimizer::
 test-phases::
 	tests/run-phases.sh
 
-test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha test-tiger64-arm64 test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
+test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha test-tiger64-arm64 test-tiger64-amd64 test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 
 
 

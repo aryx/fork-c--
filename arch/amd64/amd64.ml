@@ -256,17 +256,67 @@ module Post = struct
         let sethi =
           if unsigned then rtl (R.store rdx (RO.unsigned w 0) w)
           else rtl (R.store rdx (R.app (R.opr "amd64_cqto" [w]) [R.fetch rax w]) w) in
-        let regpair = Rewrite.regpair ~hi:(R.fetch rdx w) ~lo:(R.fetch rax w) in
-        let q, r    = if unsigned then "divu", "modu" else "quot", "rem" in
-        let div     = R.par [R.store rax (R.app (R.opr q [w]) [regpair; tval y]) w;
-                             R.store rdx (R.app (R.opr r [w]) [regpair; tval y]) w] in
+        (* claude: NOT Rewrite.regpair (x86.ml's own 32-bit div case uses
+         * it) - regpair combines hi/lo into ONE symbolic value via
+         * %or(%shl(%zx(hi,2w),w),%zx(lo,2w)), which for w=64 is a width-128
+         * Rtl.exp. This codebase's Bits module hard-caps every width at 64
+         * (libs/bitops/bits.ml's Bits.check: "w <= 0 || w > 64"), so that
+         * width-128 expression crashes ("unsupported bitwidth 128") the
+         * moment anything in the pipeline (simplification, the Rtldebug
+         * typechecker, ...) touches it - well before instruction selection
+         * ever gets a chance to recognize the shape structurally. Confirmed
+         * empirically: tests/tiger64/'s colmajor.c--/merge.c--/sieve.c--
+         * (which use %quot) all hit exactly this crash before this fix.
+         * x86.ml's own 32-bit case never hits it because its regpair is
+         * only 32+32=64 bits, under the cap. Fixed by keeping rdx and rax
+         * as two SEPARATE w-bit arguments to a 3-ary "amd64_quot"/
+         * "amd64_rem"/"amd64_divu"/"amd64_modu" operator instead of pre-
+         * combining them - every sub-expression here stays <= 64 bits, and
+         * amd64rec.mlb's matching grammar rule recognizes the two Store
+         * nodes' shared (hi, lo, y) argument triple directly (mirroring
+         * x86rec.mlb's own "regpair"/edx_eax fusion in spirit, just without
+         * ever materializing the width-128 intermediate value at all). *)
+        let q, r    = if unsigned then "amd64_divu", "amd64_modu" else "amd64_quot", "amd64_rem" in
+        let hi, lo  = R.fetch rdx w, R.fetch rax w in
+        let div     = R.par [R.store rax (R.app (R.opr q [w]) [hi; lo; tval y]) w;
+                             R.store rdx (R.app (R.opr r [w]) [hi; lo; tval y]) w] in
         let finish = match fst op with
         | "quot" | "divu" -> move ~dst ~src:Rg.rax
         | "rem"  | "modu" -> move ~dst ~src:Rg.rdx
         | opname -> impossf "division operator %%%s?" opname in
         move ~dst:Rg.rax ~src:x <:> sethi <:> rtl div <:> finish
+    (* claude: NOT a single 3-address "dst := op(x,y)" Store (what arm64.ml's
+     * own binop does, and what this file's very first version did too) -
+     * that is UNSOUND for x86-64's inherently 2-address add/sub/and/imul.
+     * amd64rec.mlb's matching grammar rule expands "Store(dst,Add(x,y))"
+     * into TWO real machine instructions, "movq x,dst" then "addq y,dst"
+     * (see its own header comment) - but the register allocator sees this
+     * as ONE atomic RTL node with uses {x,y} and def {dst}, with NO idea
+     * that dst is actually clobbered by the first machine instruction
+     * before the second one reads y. If the allocator assigns y the SAME
+     * physical register as dst (entirely legal from its point of view - an
+     * operand is normally allowed to die into the destination register),
+     * "addq y,dst" silently reads x's just-moved-in value instead of y's,
+     * corrupting the result. Confirmed empirically: tests/tiger64/'s
+     * arrays.c-- (and 10 of the other 14 tests) segfaulted on exactly this
+     * - a disassembled crash showed "movq %rcx,%rsi; imulq %rsi,%rsi"
+     * where x86.ml's own "movq x,dst" was live along with y also assigned
+     * to %rsi. Fixed the same way x86.ml's own binop already does (see its
+     * "move dst x <:> llr op dst y" comment) - TWO separate RTL
+     * statements: an ordinary move (dst := x, a real instruction with no
+     * hazard) followed by a genuine in-place update (dst := dst op y,
+     * Store(tloc dst, App(op,[Fetch(tloc dst); tval y]))) where the store
+     * location and the fetch location are structurally the SAME dst - this
+     * is the "Llr" (load-locate-replace, x86rec.mlb's own name for it)
+     * shape the whole regalloc pipeline is built to interference-check
+     * correctly: y and dst-new are simultaneously live at that second
+     * statement (dst-old is read, y is read, dst-new is written), so a
+     * correct liveness computation now DOES treat them as interfering and
+     * never assigns them the same register - unlike the original one-node
+     * version, where the allocator had no way to see that hazard at all. *)
     | _ ->
-        rtl (R.store (tloc dst) (R.app (Up.opr op) [tval x; tval y]) (twidth dst))
+        move ~dst ~src:x <:>
+        rtl (R.store (tloc dst) (R.app (Up.opr op) [tval dst; tval y]) (twidth dst))
 
     let unrm  ~dst op x rm   = Impossible.unimp "floating point with rounding mode"
     let binrm ~dst op x y rm = Impossible.unimp "floating point with rounding mode"
@@ -433,26 +483,26 @@ let target =
     ; T.is_instruction      = Amd64rec.is_instruction
     ; T.tx_ast              = (fun secs -> secs)
     (* claude: scoped to exactly what amd64rec.mlb's grammar recognizes
-     * today - add/sub/and/mul, the ten eq/ne/lt/le/gt/ge/ltu/leu/gtu/geu
-     * comparisons. Division ("quot"/"rem"/"divu"/"modu") is deliberately
-     * NOT declared, even though Post.binop above has a complete, correct
-     * implementation for it: real idivq/divq need the "regpair" (rdx:rax)
-     * fusion trick x86rec.mlb's own Withundefflags/RegPair camlburg
-     * machinery implements (see x86rec.mlb's "regpair"/"edx_eax" rules),
-     * and getting that right for this pass's flags-free design would be a
-     * real undertaking amd64rec.mlb does not yet attempt - not needed by
-     * this pass's milestone (demos/hello_amd64.c-- has no division), left
-     * as a known gap (see notes_amd64.txt) rather than declared and left
-     * broken. not/bool/disjoin/conjoin/sx/zx/bit are similarly DECLARED
-     * (matching every other backend's own capability list) but - like
-     * arm64.ml's own identical declaration - have no corresponding
-     * amd64rec.mlb grammar rule yet (same latent gap arm64rec.mlb/
-     * armrec.mlb/riscv64rec.mlb all share). *)
+     * today - add/sub/and/mul, quot/rem/divu/modu (see Post.binop's own
+     * comment - added in the tests/tiger64/ follow-up pass, once
+     * colmajor.c--/merge.c--/sieve.c-- all turned out to need real integer
+     * division), the ten eq/ne/lt/le/gt/ge/ltu/leu/gtu/geu comparisons.
+     * Plain "div"/"mod" (C's own rounding convention) are NOT declared -
+     * Post.binop has no case for them (see that comment), not needed by
+     * anything in tests/tiger64/. not/bool/disjoin/conjoin/sx/zx/bit are
+     * similarly DECLARED (matching every other backend's own capability
+     * list) but - like arm64.ml's own identical declaration - have no
+     * corresponding amd64rec.mlb grammar rule yet (same latent gap
+     * arm64rec.mlb/armrec.mlb/riscv64rec.mlb all share). *)
     ; T.capabilities        = { T.operators = List.map Up.opr
                                    [ "add",     [wordsize]
                                    ; "sub",     [wordsize]
                                    ; "and",     [wordsize]
                                    ; "mul",     [wordsize]
+                                   ; "quot",    [wordsize]
+                                   ; "rem",     [wordsize]
+                                   ; "divu",    [wordsize]
+                                   ; "modu",    [wordsize]
                                    ; "eq",      [wordsize]
                                    ; "ne",      [wordsize]
                                    ; "lt",      [wordsize]
@@ -470,16 +520,25 @@ let target =
                                    ; "sx",      [1;wordsize]
                                    ; "zx",      [1;wordsize]
                                    ; "bit",     []
+                                   ; "lobits",  [wordsize;8]
+                                   ; "lobits",  [wordsize;16]
+                                   ; "lobits",  [wordsize;32]
                                    ]
                               ; T.litops     = []
                               ; T.literals   = [wordsize]
-                              (* claude: [64] only, no sub-word (8/16/32-bit)
-                               * memory access - matches arm64.ml's own
-                               * first-pass scope, since amd64rec.mlb has no
-                               * grammar rules for narrow loads/stores yet
-                               * (see its header comment / notes_amd64.txt's
-                               * "Known remaining gaps"). *)
-                              ; T.memory     = [64]
+                              (* claude: widened from [64] to [8;16;32;64] in
+                               * the tests/tiger64/ follow-up pass -
+                               * stdlibcmm.c--'s I/O buffer code needs narrow
+                               * STORES (Post.lostore's only producer), same
+                               * gap arm64.ml's own follow-up pass hit and
+                               * fixed the same way. Sub-word LOADS
+                               * (sign/zero-extending Post.sxload/zxload)
+                               * remain unimplemented - amd64rec.mlb's `exp`
+                               * function has no "sx"/"zx" case, so those
+                               * grammar rules would never fire regardless -
+                               * same latent, pre-existing gap every sibling
+                               * backend here shares (see notes_amd64.txt). *)
+                              ; T.memory     = [8; 16; 32; 64]
                               ; T.block_copy = true
                               ; T.itemps     = [wordsize]
                               ; T.ftemps     = []

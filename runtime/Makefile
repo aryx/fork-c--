@@ -125,8 +125,19 @@ else ifeq ($(BACKEND),arm64)
 CC32    ?= clang
 CONTOBJ  = $(B)/arm64cont.o
 QCFLAG   = -arm64
+else ifeq ($(BACKEND),amd64)
+# claude: also 64-bit (wordsize/pointersize 64), same GLOBALS_DECL/
+# $(B)/%.c-- bits32->bits64 rewrite as riscv64/alpha/arm64 above. Unlike
+# arm64, this is NOT this machine's own native architecture (still Apple
+# Silicon/arm64-apple-darwin) - CC32 needs the explicit "-arch x86_64"
+# cross-target flag (same as driver/main.ml's own default_amd64_cc), or
+# clang's default target would cross-assemble/link to the wrong (arm64)
+# architecture. Resulting binaries run under Rosetta 2, not natively.
+CC32    ?= clang -arch x86_64
+CONTOBJ  = $(B)/amd64cont.o
+QCFLAG   = -amd64
 else
-$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, riscv32, riscv64, alpha or arm64)
+$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, riscv32, riscv64, alpha, arm64 or amd64)
 endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
@@ -203,6 +214,8 @@ $(B)/alphacont.o: alphacont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/arm64cont.o: arm64cont.s | $(B)
 	$(CC32) -c $< -o $@
+$(B)/amd64cont.o: amd64cont.s | $(B)
+	$(CC32) -c $< -o $@
 
 # The globals declaration is inserted after the "target byteorder" line so
 # the syncweb markers and everything else are preserved. claude: ppc/sparc
@@ -229,7 +242,7 @@ ifeq ($(filter $(BACKEND),ppc sparc),$(BACKEND))
 else ifeq ($(BACKEND),arm)
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed 's/^target byteorder little\(.*\);/target byteorder little float "none"\1;/' > $@
-else ifeq ($(filter $(BACKEND),riscv64 alpha arm64),$(BACKEND))
+else ifeq ($(filter $(BACKEND),riscv64 alpha arm64 amd64),$(BACKEND))
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed -e 's/^target byteorder little;/target byteorder little wordsize 64 pointersize 64;/' \
 	        -e 's/bits32/bits64/g' -e 's/+4/+8/g' > $@
@@ -241,4 +254,4 @@ $(B)/%.o: $(B)/%.c--
 	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32 build-riscv64 build-alpha build-arm64
+	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32 build-riscv64 build-alpha build-arm64 build-amd64

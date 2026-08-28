@@ -61,6 +61,42 @@ let regnames =
 
 let regname n = Array.get regnames n
 
+(* claude: sub-register names at 32/16/8 bits - needed for narrow (8/16/32-
+ * bit) stores, added in the tests/tiger64/ follow-up pass once
+ * stdlibcmm.c--'s I/O buffer code turned out to need %lobits truncating
+ * stores (the same gap arm64rec.mlb's own follow-up pass hit and fixed the
+ * same way, see docs/claude_notes/notes_amd64.txt). Unlike AArch64's W-
+ * register-vs-X-register split (a genuinely different register NAME for the
+ * 32-bit view), x86-64 has real per-width sub-register mnemonics for every
+ * GPR: registers 0-7 (rax..rdi) use the classic 8/16/32-bit names (with the
+ * REX-required "l"-suffixed spl/bpl/sil/dil spelling for the low byte of
+ * rsp/rbp/rsi/rdi, NOT the legacy high-byte ah/ch/dh/bh encoding those same
+ * classic names would otherwise mean without a REX prefix - always emitting
+ * the REX-requiring form here since a modern assembler adds REX
+ * automatically whenever any REX-only register (r8-r15) or REX-required
+ * name (spl/bpl/sil/dil) appears), while r8-r15 just append b/w/d. *)
+let regnames8 =
+  [| "al";  "cl";  "dl";  "bl";  "spl"; "bpl"; "sil"; "dil"
+   ; "r8b"; "r9b"; "r10b"; "r11b"; "r12b"; "r13b"; "r14b"; "r15b"
+  |]
+let regnames16 =
+  [| "ax";  "cx";  "dx";  "bx";  "sp";  "bp";  "si";  "di"
+   ; "r8w"; "r9w"; "r10w"; "r11w"; "r12w"; "r13w"; "r14w"; "r15w"
+  |]
+let regnames32 =
+  [| "eax"; "ecx"; "edx"; "ebx"; "esp"; "ebp"; "esi"; "edi"
+   ; "r8d"; "r9d"; "r10d"; "r11d"; "r12d"; "r13d"; "r14d"; "r15d"
+  |]
+let regname8  n = Array.get regnames8  n
+let regname16 n = Array.get regnames16 n
+let regname32 n = Array.get regnames32 n
+let regnamew w n = match w with
+  | 8  -> regname8  n
+  | 16 -> regname16 n
+  | 32 -> regname32 n
+  | 64 -> regname   n
+  | _  -> Impossible.impossible "x86-64 register width not 8/16/32/64"
+
 (* claude: named Register.t constants, same role x86regs.ml's eax/ecx/edx/...
  * play for arch/x86/ - used directly by amd64.ml's Post.binop division case
  * (rax/rdx, the fixed dividend/quotient/remainder pair idivq/divq require). *)

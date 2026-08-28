@@ -407,4 +407,243 @@ Not attempted
   but this has NOT been empirically verified against a real ELF toolchain,
   only reasoned about from the ABI's own specification and this fork's
   existing ppc/ppcelfasm.ml precedent for the same kind of split.
+
+===============================================================================
+Follow-up pass: tests/tiger64/ suite bring-up (2026-08-28, same day)
+===============================================================================
+
+Goal: get tests/tiger64/hello.c-- and the rest of the 15-test suite running
+for -amd64, following notes_arm64.txt's own tests/tiger64/ playbook (copy
+regenerate-arm64.sh/run-tiger64-arm64.sh almost verbatim, since amd64 is a
+second Mach-O/macOS target sharing every one of arm64's own non-obvious
+fixes - BSD sed's missing \b, x86-64's AArch64-like zero-extending 32-bit
+register writes vs RISC-V64's sign-extending ones, Mach-O's pcmap section$
+start$/section$end$ symbol synthesis, no -static, no qemu wrapper needed).
+Result: tests/expected/tiger64-amd64.txt went from "does not exist" (the
+suite was entirely unwired for -amd64 after the first pass) to 9/15 -
+below riscv64's/arm64's own 13/15 bar, but for reasons investigated below,
+not just recorded blind.
+
+A real, general amd64-only bug found and fixed: two-address register
+allocation was unsound
+------------------------------------------------------------------------------
+The single highest-impact fix this pass made. Before it: only 3/15 passed
+(hello, funcall, exceptions - the three simplest tests, no array/string-
+heavy code), and every other test either failed to even compile (colmajor/
+merge/sieve - see the division fix below) or SEGFAULTED almost immediately
+on startup.
+
+Root cause: amd64.ml's very first version of Post.binop's default case (the
+one this pass inherited from the original milestone commit) built a single
+3-address RTL statement - "dst := op(x, y)", exactly like arm64.ml's own
+binop - and amd64rec.mlb's matching grammar rules expand that into TWO real
+x86-64 machine instructions ("movq x,dst" then "addq y,dst", since x86-64
+add/sub/and/imul are inherently 2-address, unlike AArch64's genuinely
+3-address add/sub/mul). The register allocator, however, sees this as ONE
+atomic RTL node with uses {x,y} and a def {dst} - it has no visibility into
+the fact that dst gets clobbered by the first machine instruction BEFORE the
+second one reads y. Nothing stops the allocator from assigning y the SAME
+physical register as dst (an operand is normally allowed to die into the
+destination register - that's a completely standard, safe optimization for
+a GENUINELY atomic instruction). When it does, "addq y,dst" silently reads
+x's just-moved-in value instead of y's real one, corrupting the result.
+
+Diagnosed with lldb against tests/tiger64/arrays.c--'s segfault: the crash
+was a wild-pointer store inside what should have been simple array-index
+address arithmetic (base + index*8) -
+    movq %rcx, %rsi      ; dst(rsi) := x(rcx)  -- should be y's 8, not x!
+    imulq %rsi, %rsi     ; dst *= y  -- but y was ALSO allocated to %rsi
+that disassembles to literally "rsi := rcx; rsi := rsi * rsi" instead of
+the intended "rsi := rcx * 8" - both operands of the imul collapsed onto
+the same physical register the mov had just overwritten.
+
+Fixed by making amd64.ml's Post.binop build the SAME two-RTL-statement
+shape arch/x86/x86.ml's own (32-bit, also 2-address) binop already uses,
+for exactly this reason: an ordinary move ("dst := x", one real instruction,
+no internal hazard) followed by a genuine in-place update ("dst := dst op
+y", where the Store's location and the Fetch's location inside its own RHS
+are structurally the SAME dst). That second RTL statement now has dst
+itself as an explicit, genuine use (not just a def) - which forces any
+sound liveness/interference computation to recognize that y and dst-new
+are simultaneously live at that point, so they can never be assigned the
+same register. No amd64rec.mlb grammar changes were needed for this fix at
+all - the existing "Store(dst:regl, Add(x:reg,y:reg), 64)" rule already
+matches the new RTL shape fine (its "x" operand just happens to be
+Fetch(dst) now); the fix is entirely in amd64.ml's Post.binop. See that
+function's own "claude:" comment for the full account.
+
+This bug was NOT hit by demos/hello_amd64.c-- (the very first milestone's
+only exercised program - a single printf call, no arithmetic on registers
+under pressure) nor apparently by anything in the first pass's own manual
+testing. It would have corrupted essentially any real amd64 program doing
+nontrivial arithmetic under register pressure - not a tiger64-specific
+issue, a backend-wide correctness bug.
+
+Integer divide: implemented, but NOT via Rewrite.regpair (the x86.ml
+approach) - that infrastructure has a hard 64-bit ceiling
+------------------------------------------------------------------------------
+The first pass deliberately left "quot"/"rem"/"divu"/"modu" undeclared,
+noting real idivq/divq need the "regpair" (rdx:rax) fusion trick x86.ml's
+own 32-bit binop uses via Rewrite.regpair (~hi:rdx ~lo:rax), building ONE
+combined value via %or(%shl(%zx(hi),w),%zx(lo)) that camlburg's own
+pattern-matching machinery then recognizes and un-fuses back into rdx/rax
+before emitting idiv. Porting that approach directly to 64-bit hits a
+real, structural wall: hi and lo are each 64 bits, so the combined value is
+128 bits - and this codebase's Bits module hard-caps every width at 64
+(libs/bitops/bits.ml's Bits.check: "w <= 0 || w > 64"). The crash
+("This can't happen: unsupported bitwidth 128") was not a camlburg gap at
+all - it happened well before instruction selection, the moment anything
+in the pipeline touched the width-128 Rtl.exp Rewrite.regpair built.
+Confirmed empirically: tests/tiger64/'s colmajor.c--/merge.c--/sieve.c--
+(the only three that use %quot) all hit this and failed to compile at all
+in the first pass's baseline.
+
+Fixed differently: instead of pre-combining rdx/rax into one width-128
+value, Post.binop's division case now passes them as two SEPARATE w-bit
+arguments to new 3-ary "amd64_quot"/"amd64_rem"/"amd64_divu"/"amd64_modu"
+operators (hi, lo, y) - every sub-expression stays <= 64 bits, so the Bits
+cap is never approached. amd64rec.mlb's matching grammar rule recognizes
+the shared (hi, lo, y) triple directly across the Par of two Store nodes
+Post.binop's div case builds (one storing the quotient to rax, one storing
+the remainder to rdx) and emits a single real "idivq"/"divq" instruction -
+structurally the same fusion idea x86rec.mlb's own regpair/edx_eax
+machinery implements, just without ever materializing the problematic
+128-bit intermediate value at all. Signed sign-extension of rax into rdx
+still uses the dedicated one-instruction "cqto" this pass's own first
+version already had (a separate Store recognized by its own small grammar
+rule, always emitted immediately before the idivq/divq).
+
+Also fixed in this pass (smaller, expected gaps from the first pass's own list)
+------------------------------------------------------------------------------
+- NUM_REGS/FP_REG: runtime/qc--runtime.h and runtime/gcc-linux.c had ONE
+  shared "#elif defined(__i386__) || defined(__x86_64__)" branch with
+  values (NUM_REGS=12, FP_REG=9) derived for arch/x86/x86.ml's 32-bit
+  register file - wrong for amd64.ml's completely different 64-bit one.
+  Split into separate __x86_64__/__i386__ branches; the new values (rax->4,
+  rbp->9, total=21, generous margin to 96) were confirmed the same way
+  arm64's own were - a throwaway OCaml harness (not committed) calling the
+  real Target.mk_reg_ix_map on Amd64.target's actual T.spaces, not hand-
+  derived from the space `count` arguments (same off-by-one trap arm64's
+  own comment already documents). Left unfixed, this risked exactly the
+  "silent stack corruption past the end of Cmm_Activation.regs[]" failure
+  mode qc--runtime.h's own header comment warns about by name.
+- runtime/cut.c--'s Cmm_CutTo (used by fork-tiger's runtime, not exercised
+  by demos/hello_amd64.c--) needs the "jump through a register while
+  simultaneously updating rsp" RTL shape (Mflow.MakeStandard's generic
+  cutto embed) - amd64rec.mlb had no grammar rule for it at all in the
+  first pass (arm64rec.mlb has always had the AArch64 equivalent). Added
+  one new rule, directly analogous to arm64rec.mlb's own.
+- Narrow (8/16/32-bit) stores: stdlibcmm.c--'s I/O buffer code needs them
+  (the exact same gap arm64's own follow-up pass hit and fixed first,
+  see that section above). Unlike AArch64's separate W-register-vs-
+  X-register NAME for the same physical register, x86-64 has real per-
+  width sub-register mnemonics for every GPR (al/ax/eax vs rax, etc,
+  including the REX-required spl/bpl/sil/dil spelling for the low byte of
+  rsp/rbp/rsi/rdi) - added amd64regs.ml's regname8/16/32 tables and three
+  new amd64rec.mlb grammar rules (movb/movw/movl), plus widened
+  amd64.ml's T.memory from [64] to [8;16;32;64] and declared the matching
+  "lobits" capability entries.
+
+Remaining failures: 6/15, likely NOT amd64-specific bugs
+------------------------------------------------------------------------------
+- colmajor: fails differently at different heap sizes (a Tiger runtime
+  "array index 0 for array of size 0" error at the default heap, wrong
+  (near-empty) output but exit 0 at TIGER_HEAPSIZE=1000000) - the same
+  GC-triggered-corruption shape already documented, unresolved, and
+  explicitly cross-backend in notes_arm64.txt's own follow-up section (its
+  arm64/riscv64 baselines both fail colmajor too, for the same undiagnosed
+  reason). Not chased further here, per that precedent.
+- merge: exits 0 instead of the expected 1, with the SAME "wrong exit
+  code" shape (not investigated bit-for-bit against stdout here, but the
+  failure mode matches exactly) already documented for arm64/riscv64 in
+  notes_arm64.txt. Not chased further, per that same precedent.
+- rc4, rb, wf, wff: NEW failures not on arm64's/riscv64's own known-gap
+  list (all four pass there). Symptoms: rc4 hits a Tiger "array index 63
+  for array of size 0" runtime error; rb segfaults inside libc's strlen,
+  called from tig_print with a NULL string pointer; wf/wff hit stdlib.c's
+  own "assert(t)" inside tig_compare_str (a NULL second argument). The
+  generated assembly at wf's own tig_compare_str call site was inspected
+  by hand and looks structurally correct (both %rdi and %rsi get loaded
+  from memory with nothing visibly clobbering %rdi in between) - this is
+  NOT a repeat of the two-address regalloc bug above (that fix is a single
+  shared code path in Post.binop, already applied everywhere). The
+  strongest lead: tests/tiger64/rb.c-- and tests/tiger64/rbshort (same
+  source file, tiger.tests' "rb"/"rbshort" entries) differ ONLY in input
+  size (wf.0 vs rbshort.0) - rb (larger input) segfaults, rbshort (smaller
+  input) PASSES. That is exactly the same "fails only past some size/
+  GC-pressure threshold" shape colmajor's own already-documented,
+  unresolved bug has - so the most likely explanation is that rc4/rb/wf/
+  wff are hitting the SAME undiagnosed cross-backend GC/register-
+  allocator-liveness bug notes_arm64.txt already names (just at a lower
+  threshold on amd64 than on arm64/riscv64, plausible given a different
+  register file size/allocation pattern), not a new, separate, amd64-only
+  bug. Not confirmed further (would need the same deep dive notes_arm64.txt
+  itself declined to finish - "fixing either means touching shared
+  regalloc/codegen machinery with real regression risk to every other
+  backend") - left as a documented gap rather than chased past this point,
+  consistent with that precedent and with this pass's own scope.
+
+Verification performed
+-----------------------
+    tests/tiger64/regenerate-amd64.sh
+    tests/run-tiger64-amd64.sh --update    # first baseline: 9/15
+    tests/run-tiger64-amd64.sh             # re-run, confirmed deterministic
+Also confirmed no regressions: tests/run-tiger64-arm64.sh still 13/15
+(matches its own baseline), and "qc -globals -stop .s demos/hello.c--"
+(plain -x86) still compiles - both relevant since runtime/Makefile,
+runtime/qc--runtime.h and runtime/gcc-linux.c are shared files this pass
+edited.
+
+New/modified files (this follow-up pass)
+------------------------------------------
+- tests/tiger64/regenerate-amd64.sh, tests/run-tiger64-amd64.sh (new) -
+  see above; near-verbatim copies of the arm64 originals.
+- tests/tiger64/tigermain-amd64.o, stdlib-amd64.a (new, force-added past
+  the generic *.o/*.a .gitignore rule, like every sibling backend's own).
+- tests/expected/tiger64-amd64.txt (new) - the recorded 9/15 baseline.
+- Makefile (top-level) - new test-tiger64-amd64 target, added to test-all.
+- runtime/qc--runtime.h, runtime/gcc-linux.c - split __x86_64__ out of the
+  shared __i386__ branch with its own NUM_REGS/FP_REG (see above).
+- runtime/Makefile - new BACKEND=amd64 branch (CC32=clang -arch x86_64,
+  the cross-target flag - see driver/main.ml's own default_amd64_cc);
+  amd64 added to the bits32->bits64 rewrite branch alongside riscv64/
+  alpha/arm64.
+- runtime/amd64cont.s (new) - trap stub (Cmm_unwindcont_pc: "ud2", x86-64's
+  own permanently-undefined-instruction trap), same shape as arm64cont.s
+  but with x86-64's own mnemonic; added to runtime/dune's install list.
+- arch/amd64/amd64.ml - Post.binop's default case rewritten (two-RTL-
+  statement in-place update, see above); division wired up (amd64_quot/
+  amd64_rem/amd64_divu/amd64_modu operators, T.capabilities entries);
+  T.memory widened to [8;16;32;64] with matching lobits capabilities.
+- arch/amd64/amd64rec.mlb -> amd64rec.ml/.mli - new grammar rules: cut_to's
+  Par(Goto(reg),Store(rspl,reg,64)) shape; narrow (movb/movw/movl) stores;
+  cqto/idivq/divq for division.
+- arch/amd64/amd64regs.ml/.mli - new regname8/16/32/regnamew sub-register
+  name tables.
+
+Known remaining gaps (updated)
+--------------------------------
+All the gaps the first pass already listed still apply (no ELF/Linux
+sibling, no float, no -O3 chase) EXCEPT sub-word memory access (fixed
+this pass - see above) and division (fixed this pass). New:
+- rc4/rb/wf/wff (4/15) most likely hitting the same undiagnosed cross-
+  backend GC/liveness bug colmajor's own entry already names, at a lower
+  threshold than arm64/riscv64 - not confirmed, not fixed, see "Remaining
+  failures" above.
+- Codegen quality: Post.binop's new default case always emits a real
+  extra "movq x,dst" even when the allocator happens to pick dst=x already
+  (where it would be a no-op the peephole/assembler could in principle
+  elide) - correct but not tight, matching the first pass's own
+  already-documented "not revisited this pass" call on the same point for
+  the immediate-operand rules.
+
+Not attempted (this pass)
+--------------------------
+- Root-causing the rc4/rb/wf/wff cluster past the "same shape as
+  colmajor's own documented gap" observation above.
+- Verifying whether Post.unop (still unimplemented at the OCaml level, and
+  with no matching amd64rec.mlb grammar rule either) has the same two-
+  address hazard Post.binop had - not reachable by anything in
+  tests/tiger64/ (T.capabilities declares no unary operator at all yet),
+  so not exercised or checked.
 - Any of the "Known remaining gaps" above.

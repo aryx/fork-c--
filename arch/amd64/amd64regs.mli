@@ -30,6 +30,14 @@ val rspace : Rtl.space
 val regnames : string array
 val regname  : int -> string
 
+val regnames8  : string array
+val regnames16 : string array
+val regnames32 : string array
+val regname8  : int -> string
+val regname16 : int -> string
+val regname32 : int -> string
+val regnamew  : int -> int -> string
+
 val rax : Register.t
 val rcx : Register.t
 val rdx : Register.t

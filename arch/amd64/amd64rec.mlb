@@ -100,6 +100,11 @@
       | RP.App((("amd64_e"|"amd64_ne"|"amd64_l"|"amd64_le"|"amd64_g"|"amd64_ge"
                 |"amd64_b"|"amd64_be"|"amd64_a"|"amd64_ae") as op, [w]), [c]) ->
           conCond op (exp c)
+      | RP.App(("amd64_cqto", [w]), [x])          -> conCqto (exp x)
+      | RP.App(("amd64_quot", [w]), [hi; lo; y])  -> conQuot3 (exp hi) (exp lo) (exp y)
+      | RP.App(("amd64_rem",  [w]), [hi; lo; y])  -> conRem3  (exp hi) (exp lo) (exp y)
+      | RP.App(("amd64_divu", [w]), [hi; lo; y])  -> conDivu3 (exp hi) (exp lo) (exp y)
+      | RP.App(("amd64_modu", [w]), [hi; lo; y])  -> conModu3 (exp hi) (exp lo) (exp y)
       | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
 
   and loc = function
@@ -203,11 +208,30 @@ inst:       Store(meml, reg, 64)
 inst:       Store(regl, reg, 64)
             {: cat ["movq"; " "; reg; ", "; regl] :}
 
+(* claude: narrow stores - Post.lostore's only producer (%lobits truncating a wordsize-64 register value down to the store's own narrower width, a free no-op per the exp case above) - added in the tests/tiger64/ follow-up pass, stdlibcmm.c--'s I/O buffer code does plain byte stores, same gap arm64rec.mlb's own follow-up pass hit. Unlike AArch64's separate W-register-vs-X-register spelling, x86-64 has a real per-width sub-register NAME for the same physical register (al/ax/eax vs rax, etc - see amd64regs.ml's regname8/16/32), so wreg8l/wreg16l/wreg32l duplicate regl's own Fetch(r,w) match under separate nonterminals purely to print a different-width name for the exact same underlying register fetch. *)
+wregl8:     r   {: "%" ^ Amd64regs.regname8 r :}
+wreg8:      Fetch(wregl8,w:int)   {: wregl8 :}
+wregl16:    r   {: "%" ^ Amd64regs.regname16 r :}
+wreg16:     Fetch(wregl16,w:int)  {: wregl16 :}
+wregl32:    r   {: "%" ^ Amd64regs.regname32 r :}
+wreg32:     Fetch(wregl32,w:int)  {: wregl32 :}
+
+inst:       Store(meml, wreg8, 8)
+            {: cat ["movb"; " "; wreg8; ", "; meml] :}
+inst:       Store(meml, wreg16, 16)
+            {: cat ["movw"; " "; wreg16; ", "; meml] :}
+inst:       Store(meml, wreg32, 32)
+            {: cat ["movl"; " "; wreg32; ", "; meml] :}
+
 inst:       Goto(symbol)
             {: cat ["jmp"; " "; symbol] :}
 
 inst:       Goto(reg)
             {: cat ["jmp"; " *"; reg] :}
+
+(* claude: Post.cut_to's jump-through-register-while-updating-sp RTL (Mflow.MakeStandard's generic cutto embed) - hit by runtime/cut.c--'s Cmm_CutTo, not by demos/hello_amd64.c--, so missing from the first pass. Mirrors arm64rec.mlb's own analogous rule: sp update first, then jump - no ordering hazard here either, since nsp's value does not depend on the old %rsp. *)
+inst:       Par(Goto(target:reg), Store(rspl, nsp:reg, 64))
+            {: sprintf "movq %s, %%rsp\n\tjmp *%s" nsp target :}
 
 (* claude: Post.subflags's "cmp"-equivalent: AT&T "cmp src,dst" computes dst-src and sets flags - so Subcc(x,y) (meaning x-y, matching arm64.ml's own cmp semantics) becomes "cmpq y, x". *)
 inst:       Store(ccl, Subcc(x:reg,y:reg), 64)
@@ -244,6 +268,24 @@ inst:       Store(dst:regl, Mul(x:reg,y:reg), 64)
 
 inst:       Store(dst:regl, Mul(x:reg,y:constv), 64)
             {: sprintf "imulq $%Ld, %s, %s" y x dst :}
+
+(* claude: integer divide - see amd64.ml's own Post.binop comment for why this is a separate (hi, lo, y) triple rather than one pre-combined 128-bit regpair value (Bits.check's hard 64-bit width cap). raxl/rdxl match the exact physical registers Post.binop always targets - idivq/divq/cqto take no explicit operand naming rax/rdx at all (hardware-implicit), so quot3val/rem3val/divu3val/modu3val only need to surface the shared divisor y, not hi/lo. cqto must run as its own instruction before idivq (Post.binop's "sethi" and "div" are separate RTL statements, not fused into one Par) - real x86-64 hardware needs rdx:rax fully set up before idiv/div reads it, and instruction selection processes each RTL statement independently in program order, so this ordering falls out for free. *)
+raxl:       Reg('r', 0) {: () :}
+rdxl:       Reg('r', 2) {: () :}
+
+cqtoval:    Cqto(reg) {: () :}
+inst:       Store(rdxl, cqtoval, 64)
+            {: "cqto" :}
+
+quot3val:   Quot3(hi:reg, lo:reg, y:reg) {: y :}
+rem3val:    Rem3(hi:reg, lo:reg, y:reg)  {: y :}
+inst:       Par(Store(raxl, quot3val, 64), Store(rdxl, rem3val, 64))
+            {: sprintf "idivq %s" quot3val :}
+
+divu3val:   Divu3(hi:reg, lo:reg, y:reg) {: y :}
+modu3val:   Modu3(hi:reg, lo:reg, y:reg) {: y :}
+inst:       Par(Store(raxl, divu3val, 64), Store(rdxl, modu3val, 64))
+            {: sprintf "divq %s" divu3val :}
 
 inst:       Nop() {: "nop" :}
 

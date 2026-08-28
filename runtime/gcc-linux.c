@@ -36,7 +36,26 @@
 #define FP_REG 10 /* r7, flat index 3+7 - confirmed via "push {r7}"/frame_needed=1 in a probe (this toolchain defaults to Thumb, where r7 is fp, not ARM mode's r11) */
 #elif defined(__aarch64__)
 #define FP_REG 66 /* x29/fp, flat index 37+29 - confirmed via a throwaway OCaml harness calling Target.mk_reg_ix_map on arm64.ml's real T.spaces (see qc--runtime.h's own NUM_REGS comment for the same harness/result), not a compiled-probe .frame directive (AArch64 has none - clang/gcc both just use the standard AAPCS64 x29 frame-record convention under -fno-omit-frame-pointer, so this is not toolchain-specific the way ARM32's Thumb-vs-ARM r7-vs-r11 choice was) */
-#elif defined(__i386__) || defined(__x86_64__)
+#elif defined(__x86_64__)
+#define FP_REG 9 /* %rbp, flat index 4+5 - confirmed via the same throwaway
+                    OCaml harness as qc--runtime.h's own __x86_64__ NUM_REGS
+                    comment (rbp is amd64regs.ml's r-space index 5, r-space
+                    starts at flat index 4) - NOT the same value as i386's
+                    FP_REG=9 below by coincidence of the number alone, that
+                    one is r[5] within a different, smaller register file
+                    (c(3) is only 4 slots wide either way, so both land on
+                    "c-space-width + r-space-index-5", but the two c/r
+                    spaces are unrelated register files - do not assume this
+                    numeric coincidence generalizes to any other value on
+                    this branch). Standard SysV AMD64 frame-pointer
+                    convention: clang/gcc -fno-omit-frame-pointer emit
+                    "push %rbp; mov %rsp,%rbp", same role x86-64's rbp plays
+                    as i386's ebp/AArch64's x29 - not independently probe-
+                    confirmed via a compiled prologue here, but this is
+                    universal, well-documented ABI convention, not a
+                    toolchain-specific choice the way ARM32's Thumb-vs-ARM
+                    r7-vs-r11 pick was. */
+#elif defined(__i386__)
 #define FP_REG 9 /* %ebp, r[5] */
 #else
 #error "NUM_REGS/FP_REG not defined for this platform - see qc--runtime.h/gcc-linux.c"

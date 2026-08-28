@@ -40,7 +40,18 @@
  * like arm.ml, not riscv64regs.ml's SS.c 6), f(32)->4-36 (33 slots),
  * r(32)->37-69 (33 slots) = 70 total. */
 #define NUM_REGS 96 /* generous margin over the confirmed total=70, same margin style as riscv64/alpha/mips's own 96 */
-#elif defined(__i386__) || defined(__x86_64__)
+#elif defined(__x86_64__)
+/* claude: NOT the same branch as __i386__ below - amd64.ml's T.spaces
+ * (Space.Standard64-based: c(3), r(16), no float space) is a completely
+ * different register file from x86.ml's 32-bit one (Space.Standard32-based:
+ * c(3), r(7)), so i386's NUM_REGS=12/FP_REG=9 do not apply here at all -
+ * verified via the same throwaway-OCaml-harness approach as __aarch64__
+ * above (calling the real Target.mk_reg_ix_map on Amd64.target's actual
+ * T.spaces). Confirmed result: rax->4, rbp->9, r15->19, total=21 - c(3)->0-3
+ * (4 slots, same shape as every other target's c space), r(16)->4-20 (17
+ * slots, the same count+1 off-by-one every other target's r space hits). */
+#define NUM_REGS 96 /* generous margin over the confirmed total=21, same margin style as every other 64-bit target's own 96 */
+#elif defined(__i386__)
 /*s: machine-dependent macro definitions for the public interface ((x86-linux)) */
 #define NUM_REGS 12
 /*e: machine-dependent macro definitions for the public interface ((x86-linux)) */

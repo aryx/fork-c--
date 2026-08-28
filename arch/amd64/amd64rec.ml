@@ -88,6 +88,24 @@
 
 type
     (
+        't58,
+        't57,
+        't56,
+        't55,
+        't54,
+        't53,
+        't52,
+        't51,
+        't50,
+        't49,
+        't48,
+        't47,
+        't46,
+        't45,
+        't44,
+        't43,
+        't42,
+        't41,
         't40,
         't39,
         't38,
@@ -133,40 +151,58 @@ type
 nonterm
 =
     {
-        _Subcc2: ( 't40 ) Camlburg.nt;
-        _Subcc1: ( 't39 ) Camlburg.nt;
-        _Sub7: ( 't38 ) Camlburg.nt;
-        _Sub6: ( 't37 ) Camlburg.nt;
-        _Sub12: ( 't36 ) Camlburg.nt;
-        _Par17: ( 't35 ) Camlburg.nt;
-        _Mul11: ( 't34 ) Camlburg.nt;
-        _Mul10: ( 't33 ) Camlburg.nt;
-        _Goto3: ( 't32 ) Camlburg.nt;
-        _Goto16: ( 't31 ) Camlburg.nt;
-        _Goto14: ( 't30 ) Camlburg.nt;
-        _Fetch15: ( 't29 ) Camlburg.nt;
-        _And9: ( 't28 ) Camlburg.nt;
-        _And8: ( 't27 ) Camlburg.nt;
-        _Add5: ( 't26 ) Camlburg.nt;
-        _Add4: ( 't25 ) Camlburg.nt;
-        _Add13: ( 't24 ) Camlburg.nt;
-        symbol: ( 't23 ) Camlburg.nt;
-        storeretaddr: ( 't22 ) Camlburg.nt;
-        stacktop: ( 't21 ) Camlburg.nt;
-        stacknext: ( 't20 ) Camlburg.nt;
-        rspv: ( 't19 ) Camlburg.nt;
-        rspl: ( 't18 ) Camlburg.nt;
-        regl: ( 't17 ) Camlburg.nt;
-        reg: ( 't16 ) Camlburg.nt;
-        r: ( 't15 ) Camlburg.nt;
-        push: ( 't14 ) Camlburg.nt;
-        pop: ( 't13 ) Camlburg.nt;
-        pcv: ( 't12 ) Camlburg.nt;
-        pcl: ( 't11 ) Camlburg.nt;
-        meml: ( 't10 ) Camlburg.nt;
-        mem: ( 't9 ) Camlburg.nt;
-        inst: ( 't8 ) Camlburg.nt;
-        eightc: ( 't7 ) Camlburg.nt;
+        _Subcc4: ( 't58 ) Camlburg.nt;
+        _Subcc3: ( 't57 ) Camlburg.nt;
+        _Sub9: ( 't56 ) Camlburg.nt;
+        _Sub8: ( 't55 ) Camlburg.nt;
+        _Sub18: ( 't54 ) Camlburg.nt;
+        _Store2: ( 't53 ) Camlburg.nt;
+        _Store17: ( 't52 ) Camlburg.nt;
+        _Store16: ( 't51 ) Camlburg.nt;
+        _Store15: ( 't50 ) Camlburg.nt;
+        _Store14: ( 't49 ) Camlburg.nt;
+        _Par22: ( 't48 ) Camlburg.nt;
+        _Mul13: ( 't47 ) Camlburg.nt;
+        _Mul12: ( 't46 ) Camlburg.nt;
+        _Goto5: ( 't45 ) Camlburg.nt;
+        _Goto20: ( 't44 ) Camlburg.nt;
+        _Goto1: ( 't43 ) Camlburg.nt;
+        _Fetch21: ( 't42 ) Camlburg.nt;
+        _And11: ( 't41 ) Camlburg.nt;
+        _And10: ( 't40 ) Camlburg.nt;
+        _Add7: ( 't39 ) Camlburg.nt;
+        _Add6: ( 't38 ) Camlburg.nt;
+        _Add19: ( 't37 ) Camlburg.nt;
+        wregl8: ( 't36 ) Camlburg.nt;
+        wregl32: ( 't35 ) Camlburg.nt;
+        wregl16: ( 't34 ) Camlburg.nt;
+        wreg8: ( 't33 ) Camlburg.nt;
+        wreg32: ( 't32 ) Camlburg.nt;
+        wreg16: ( 't31 ) Camlburg.nt;
+        symbol: ( 't30 ) Camlburg.nt;
+        storeretaddr: ( 't29 ) Camlburg.nt;
+        stacktop: ( 't28 ) Camlburg.nt;
+        stacknext: ( 't27 ) Camlburg.nt;
+        rspv: ( 't26 ) Camlburg.nt;
+        rspl: ( 't25 ) Camlburg.nt;
+        rem3val: ( 't24 ) Camlburg.nt;
+        regl: ( 't23 ) Camlburg.nt;
+        reg: ( 't22 ) Camlburg.nt;
+        rdxl: ( 't21 ) Camlburg.nt;
+        raxl: ( 't20 ) Camlburg.nt;
+        r: ( 't19 ) Camlburg.nt;
+        quot3val: ( 't18 ) Camlburg.nt;
+        push: ( 't17 ) Camlburg.nt;
+        pop: ( 't16 ) Camlburg.nt;
+        pcv: ( 't15 ) Camlburg.nt;
+        pcl: ( 't14 ) Camlburg.nt;
+        modu3val: ( 't13 ) Camlburg.nt;
+        meml: ( 't12 ) Camlburg.nt;
+        mem: ( 't11 ) Camlburg.nt;
+        inst: ( 't10 ) Camlburg.nt;
+        eightc: ( 't9 ) Camlburg.nt;
+        divu3val: ( 't8 ) Camlburg.nt;
+        cqtoval: ( 't7 ) Camlburg.nt;
         constv: ( 't6 ) Camlburg.nt;
         const: ( 't5 ) Camlburg.nt;
         cond: ( 't4 ) Camlburg.nt;
@@ -185,40 +221,58 @@ inf =
     ;cond = (Camlburg.infinity)
     ;const = (Camlburg.infinity)
     ;constv = (Camlburg.infinity)
+    ;cqtoval = (Camlburg.infinity)
+    ;divu3val = (Camlburg.infinity)
     ;eightc = (Camlburg.infinity)
     ;inst = (Camlburg.infinity)
     ;mem = (Camlburg.infinity)
     ;meml = (Camlburg.infinity)
+    ;modu3val = (Camlburg.infinity)
     ;pcl = (Camlburg.infinity)
     ;pcv = (Camlburg.infinity)
     ;pop = (Camlburg.infinity)
     ;push = (Camlburg.infinity)
+    ;quot3val = (Camlburg.infinity)
     ;r = (Camlburg.infinity)
+    ;raxl = (Camlburg.infinity)
+    ;rdxl = (Camlburg.infinity)
     ;reg = (Camlburg.infinity)
     ;regl = (Camlburg.infinity)
+    ;rem3val = (Camlburg.infinity)
     ;rspl = (Camlburg.infinity)
     ;rspv = (Camlburg.infinity)
     ;stacknext = (Camlburg.infinity)
     ;stacktop = (Camlburg.infinity)
     ;storeretaddr = (Camlburg.infinity)
     ;symbol = (Camlburg.infinity)
-    ;_Add13 = (Camlburg.infinity)
-    ;_Add4 = (Camlburg.infinity)
-    ;_Add5 = (Camlburg.infinity)
-    ;_And8 = (Camlburg.infinity)
-    ;_And9 = (Camlburg.infinity)
-    ;_Fetch15 = (Camlburg.infinity)
-    ;_Goto14 = (Camlburg.infinity)
-    ;_Goto16 = (Camlburg.infinity)
-    ;_Goto3 = (Camlburg.infinity)
-    ;_Mul10 = (Camlburg.infinity)
-    ;_Mul11 = (Camlburg.infinity)
-    ;_Par17 = (Camlburg.infinity)
-    ;_Sub12 = (Camlburg.infinity)
-    ;_Sub6 = (Camlburg.infinity)
-    ;_Sub7 = (Camlburg.infinity)
-    ;_Subcc1 = (Camlburg.infinity)
-    ;_Subcc2 = (Camlburg.infinity)
+    ;wreg16 = (Camlburg.infinity)
+    ;wreg32 = (Camlburg.infinity)
+    ;wreg8 = (Camlburg.infinity)
+    ;wregl16 = (Camlburg.infinity)
+    ;wregl32 = (Camlburg.infinity)
+    ;wregl8 = (Camlburg.infinity)
+    ;_Add19 = (Camlburg.infinity)
+    ;_Add6 = (Camlburg.infinity)
+    ;_Add7 = (Camlburg.infinity)
+    ;_And10 = (Camlburg.infinity)
+    ;_And11 = (Camlburg.infinity)
+    ;_Fetch21 = (Camlburg.infinity)
+    ;_Goto1 = (Camlburg.infinity)
+    ;_Goto20 = (Camlburg.infinity)
+    ;_Goto5 = (Camlburg.infinity)
+    ;_Mul12 = (Camlburg.infinity)
+    ;_Mul13 = (Camlburg.infinity)
+    ;_Par22 = (Camlburg.infinity)
+    ;_Store14 = (Camlburg.infinity)
+    ;_Store15 = (Camlburg.infinity)
+    ;_Store16 = (Camlburg.infinity)
+    ;_Store17 = (Camlburg.infinity)
+    ;_Store2 = (Camlburg.infinity)
+    ;_Sub18 = (Camlburg.infinity)
+    ;_Sub8 = (Camlburg.infinity)
+    ;_Sub9 = (Camlburg.infinity)
+    ;_Subcc3 = (Camlburg.infinity)
+    ;_Subcc4 = (Camlburg.infinity)
     }
 
 
@@ -242,7 +296,7 @@ and update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 269 "arch/amd64/amd64rec.mlb"
+# 311 "arch/amd64/amd64rec.mlb"
                                 ( cat ["<";any;">"] )
                                 
 # 000 "/dev/stdout"
@@ -280,6 +334,18 @@ and update_constv =
             x
         else
             { x with constv = (nt) }
+and update_cqtoval =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.cqtoval.Camlburg.cost then
+            x
+        else
+            { x with cqtoval = (nt) }
+and update_divu3val =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.divu3val.Camlburg.cost then
+            x
+        else
+            { x with divu3val = (nt) }
 and update_eightc =
     fun nt x ->
         if nt.Camlburg.cost >= x.eightc.Camlburg.cost then
@@ -304,6 +370,12 @@ and update_meml =
             x
         else
             { x with meml = (nt) }
+and update_modu3val =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.modu3val.Camlburg.cost then
+            x
+        else
+            { x with modu3val = (nt) }
 and update_pcl =
     fun nt x ->
         if nt.Camlburg.cost >= x.pcl.Camlburg.cost then
@@ -328,6 +400,12 @@ and update_push =
             x
         else
             { x with push = (nt) }
+and update_quot3val =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.quot3val.Camlburg.cost then
+            x
+        else
+            { x with quot3val = (nt) }
 and update_r =
     fun nt x ->
         if nt.Camlburg.cost >= x.r.Camlburg.cost then
@@ -341,14 +419,71 @@ and update_r =
                             let r = x.r.Camlburg.action ()
                             in
                                 
-# 171 "arch/amd64/amd64rec.mlb"
+# 176 "arch/amd64/amd64rec.mlb"
                                 ( reg r )
                                 
 # 000 "/dev/stdout"
 )
                     })
                     x)
-                { x with r = (nt) }
+                ((fun x ->
+                    (update_wregl8
+                        {Camlburg.cost = (nt.Camlburg.cost)
+                        ;Camlburg.action =
+                            (fun () ->
+                                let r = x.r.Camlburg.action ()
+                                in
+                                    
+# 212 "arch/amd64/amd64rec.mlb"
+                                    ( "%" ^ Amd64regs.regname8 r )
+                                    
+# 000 "/dev/stdout"
+)
+                        })
+                        x)
+                    ((fun x ->
+                        (update_wregl16
+                            {Camlburg.cost = (nt.Camlburg.cost)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let r = x.r.Camlburg.action ()
+                                    in
+                                        
+# 214 "arch/amd64/amd64rec.mlb"
+                                        ( "%" ^ Amd64regs.regname16 r )
+                                        
+# 000 "/dev/stdout"
+)
+                            })
+                            x)
+                        ((fun x ->
+                            (update_wregl32
+                                {Camlburg.cost = (nt.Camlburg.cost)
+                                ;Camlburg.action =
+                                    (fun () ->
+                                        let r = x.r.Camlburg.action ()
+                                        in
+                                            
+# 216 "arch/amd64/amd64rec.mlb"
+                                            ( "%" ^ Amd64regs.regname32 r )
+                                            
+# 000 "/dev/stdout"
+)
+                                })
+                                x)
+                            { x with r = (nt) })))
+and update_raxl =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.raxl.Camlburg.cost then
+            x
+        else
+            { x with raxl = (nt) }
+and update_rdxl =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.rdxl.Camlburg.cost then
+            x
+        else
+            { x with rdxl = (nt) }
 and update_reg =
     fun nt x ->
         if nt.Camlburg.cost >= x.reg.Camlburg.cost then
@@ -362,7 +497,7 @@ and update_reg =
                             let reg = x.reg.Camlburg.action ()
                             in
                                 
-# 186 "arch/amd64/amd64rec.mlb"
+# 191 "arch/amd64/amd64rec.mlb"
                                 ( cat ["("; reg; ")"] )
                                 
 # 000 "/dev/stdout"
@@ -376,6 +511,12 @@ and update_regl =
             x
         else
             { x with regl = (nt) }
+and update_rem3val =
+    fun nt x ->
+        if nt.Camlburg.cost >= x.rem3val.Camlburg.cost then
+            x
+        else
+            { x with rem3val = (nt) }
 and update_rspl =
     fun nt x ->
         if nt.Camlburg.cost >= x.rspl.Camlburg.cost then
@@ -412,108 +553,174 @@ and update_symbol =
             x
         else
             { x with symbol = (nt) }
-and update__Add13 =
+and update_wreg16 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Add13.Camlburg.cost then
+        if nt.Camlburg.cost >= x.wreg16.Camlburg.cost then
             x
         else
-            { x with _Add13 = (nt) }
-and update__Add4 =
+            { x with wreg16 = (nt) }
+and update_wreg32 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Add4.Camlburg.cost then
+        if nt.Camlburg.cost >= x.wreg32.Camlburg.cost then
             x
         else
-            { x with _Add4 = (nt) }
-and update__Add5 =
+            { x with wreg32 = (nt) }
+and update_wreg8 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Add5.Camlburg.cost then
+        if nt.Camlburg.cost >= x.wreg8.Camlburg.cost then
             x
         else
-            { x with _Add5 = (nt) }
-and update__And8 =
+            { x with wreg8 = (nt) }
+and update_wregl16 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._And8.Camlburg.cost then
+        if nt.Camlburg.cost >= x.wregl16.Camlburg.cost then
             x
         else
-            { x with _And8 = (nt) }
-and update__And9 =
+            { x with wregl16 = (nt) }
+and update_wregl32 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._And9.Camlburg.cost then
+        if nt.Camlburg.cost >= x.wregl32.Camlburg.cost then
             x
         else
-            { x with _And9 = (nt) }
-and update__Fetch15 =
+            { x with wregl32 = (nt) }
+and update_wregl8 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch15.Camlburg.cost then
+        if nt.Camlburg.cost >= x.wregl8.Camlburg.cost then
             x
         else
-            { x with _Fetch15 = (nt) }
-and update__Goto14 =
+            { x with wregl8 = (nt) }
+and update__Add19 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Goto14.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Add19.Camlburg.cost then
             x
         else
-            { x with _Goto14 = (nt) }
-and update__Goto16 =
+            { x with _Add19 = (nt) }
+and update__Add6 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Goto16.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Add6.Camlburg.cost then
             x
         else
-            { x with _Goto16 = (nt) }
-and update__Goto3 =
+            { x with _Add6 = (nt) }
+and update__Add7 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Goto3.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Add7.Camlburg.cost then
             x
         else
-            { x with _Goto3 = (nt) }
-and update__Mul10 =
+            { x with _Add7 = (nt) }
+and update__And10 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Mul10.Camlburg.cost then
+        if nt.Camlburg.cost >= x._And10.Camlburg.cost then
             x
         else
-            { x with _Mul10 = (nt) }
-and update__Mul11 =
+            { x with _And10 = (nt) }
+and update__And11 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Mul11.Camlburg.cost then
+        if nt.Camlburg.cost >= x._And11.Camlburg.cost then
             x
         else
-            { x with _Mul11 = (nt) }
-and update__Par17 =
+            { x with _And11 = (nt) }
+and update__Fetch21 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Par17.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch21.Camlburg.cost then
             x
         else
-            { x with _Par17 = (nt) }
-and update__Sub12 =
+            { x with _Fetch21 = (nt) }
+and update__Goto1 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sub12.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Goto1.Camlburg.cost then
             x
         else
-            { x with _Sub12 = (nt) }
-and update__Sub6 =
+            { x with _Goto1 = (nt) }
+and update__Goto20 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sub6.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Goto20.Camlburg.cost then
             x
         else
-            { x with _Sub6 = (nt) }
-and update__Sub7 =
+            { x with _Goto20 = (nt) }
+and update__Goto5 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sub7.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Goto5.Camlburg.cost then
             x
         else
-            { x with _Sub7 = (nt) }
-and update__Subcc1 =
+            { x with _Goto5 = (nt) }
+and update__Mul12 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Subcc1.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Mul12.Camlburg.cost then
             x
         else
-            { x with _Subcc1 = (nt) }
-and update__Subcc2 =
+            { x with _Mul12 = (nt) }
+and update__Mul13 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Subcc2.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Mul13.Camlburg.cost then
             x
         else
-            { x with _Subcc2 = (nt) }
+            { x with _Mul13 = (nt) }
+and update__Par22 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Par22.Camlburg.cost then
+            x
+        else
+            { x with _Par22 = (nt) }
+and update__Store14 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Store14.Camlburg.cost then
+            x
+        else
+            { x with _Store14 = (nt) }
+and update__Store15 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Store15.Camlburg.cost then
+            x
+        else
+            { x with _Store15 = (nt) }
+and update__Store16 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Store16.Camlburg.cost then
+            x
+        else
+            { x with _Store16 = (nt) }
+and update__Store17 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Store17.Camlburg.cost then
+            x
+        else
+            { x with _Store17 = (nt) }
+and update__Store2 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Store2.Camlburg.cost then
+            x
+        else
+            { x with _Store2 = (nt) }
+and update__Sub18 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Sub18.Camlburg.cost then
+            x
+        else
+            { x with _Sub18 = (nt) }
+and update__Sub8 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Sub8.Camlburg.cost then
+            x
+        else
+            { x with _Sub8 = (nt) }
+and update__Sub9 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Sub9.Camlburg.cost then
+            x
+        else
+            { x with _Sub9 = (nt) }
+and update__Subcc3 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Subcc3.Camlburg.cost then
+            x
+        else
+            { x with _Subcc3 = (nt) }
+and update__Subcc4 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Subcc4.Camlburg.cost then
+            x
+        else
+            { x with _Subcc4 = (nt) }
 
 
 let rec
@@ -526,7 +733,7 @@ conZx =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 286 "arch/amd64/amd64rec.mlb"
+# 328 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Zx(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -540,7 +747,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 271 "arch/amd64/amd64rec.mlb"
+# 313 "arch/amd64/amd64rec.mlb"
                     ( cat [ "True"  ] )
                     
 # 000 "/dev/stdout"
@@ -556,7 +763,7 @@ and conSx =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 285 "arch/amd64/amd64rec.mlb"
+# 327 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Sx(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -565,7 +772,7 @@ and conSx =
             inf
 and conSubcc =
     fun arg1 arg2 ->
-        (update__Subcc1
+        (update__Subcc3
             {Camlburg.cost =
                 (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -575,7 +782,7 @@ and conSubcc =
                     in
                         (x ,y))
             })
-            ((update__Subcc2
+            ((update__Subcc4
                 {Camlburg.cost =
                     (arg1.reg.Camlburg.cost + arg2.constv.Camlburg.cost)
                 ;Camlburg.action =
@@ -594,7 +801,7 @@ and conSubcc =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 283 "arch/amd64/amd64rec.mlb"
+# 325 "arch/amd64/amd64rec.mlb"
                                 ( cat [ "Subcc(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -603,7 +810,7 @@ and conSubcc =
                     inf))
 and conSub =
     fun arg1 arg2 ->
-        (update__Sub12
+        (update__Sub18
             {Camlburg.cost =
                 (arg1.rspv.Camlburg.cost + arg2.eightc.Camlburg.cost)
             ;Camlburg.action =
@@ -613,7 +820,7 @@ and conSub =
                     in
                         (rspv ,eightc))
             })
-            ((update__Sub6
+            ((update__Sub8
                 {Camlburg.cost =
                     (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost)
                 ;Camlburg.action =
@@ -623,7 +830,7 @@ and conSub =
                         in
                             (x ,y))
                 })
-                ((update__Sub7
+                ((update__Sub9
                     {Camlburg.cost =
                         (arg1.reg.Camlburg.cost + arg2.constv.Camlburg.cost)
                     ;Camlburg.action =
@@ -642,7 +849,7 @@ and conSub =
                                 and y = arg2.any.Camlburg.action ()
                                 in
                                     
-# 280 "arch/amd64/amd64rec.mlb"
+# 322 "arch/amd64/amd64rec.mlb"
                                     ( cat [ "Sub(";x;", ";y;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -651,343 +858,670 @@ and conSub =
                         inf)))
 and conStore =
     fun arg1 arg2 arg3 ->
-        (update_any
+        (update__Store14
             {Camlburg.cost =
-                (arg1.any.Camlburg.cost + arg2.any.Camlburg.cost)
+                (arg1.raxl.Camlburg.cost + arg2.quot3val.Camlburg.cost
+                +
+                (Camlburg.matches 64) arg3)
             ;Camlburg.action =
                 (fun () ->
-                    let dst = arg1.any.Camlburg.action ()
-                    and src = arg2.any.Camlburg.action ()
-                    and w = arg3
+                    let raxl = arg1.raxl.Camlburg.action ()
+                    and quot3val = arg2.quot3val.Camlburg.action ()
+                    in
+                        (raxl ,quot3val))
+            })
+            ((update__Store15
+                {Camlburg.cost =
+                    (arg1.rdxl.Camlburg.cost + arg2.rem3val.Camlburg.cost
+                    +
+                    (Camlburg.matches 64) arg3)
+                ;Camlburg.action =
+                    (fun () ->
+                        let rdxl = arg1.rdxl.Camlburg.action ()
+                        and rem3val = arg2.rem3val.Camlburg.action ()
+                        in
+                            (rdxl ,rem3val))
+                })
+                ((update__Store16
+                    {Camlburg.cost =
+                        (arg1.raxl.Camlburg.cost
+                        +
+                        arg2.divu3val.Camlburg.cost
+                        +
+                        (Camlburg.matches 64) arg3)
+                    ;Camlburg.action =
+                        (fun () ->
+                            let raxl = arg1.raxl.Camlburg.action ()
+                            and divu3val = arg2.divu3val.Camlburg.action ()
+                            in
+                                (raxl ,divu3val))
+                    })
+                    ((update__Store17
+                        {Camlburg.cost =
+                            (arg1.rdxl.Camlburg.cost
+                            +
+                            arg2.modu3val.Camlburg.cost
+                            +
+                            (Camlburg.matches 64) arg3)
+                        ;Camlburg.action =
+                            (fun () ->
+                                let rdxl = arg1.rdxl.Camlburg.action ()
+                                and
+                                    modu3val =
+                                    arg2.modu3val.Camlburg.action ()
+                                in
+                                    (rdxl ,modu3val))
+                        })
+                        ((update__Store2
+                            {Camlburg.cost =
+                                (arg1.rspl.Camlburg.cost
+                                +
+                                arg2.reg.Camlburg.cost
+                                +
+                                (Camlburg.matches 64) arg3)
+                            ;Camlburg.action =
+                                (fun () ->
+                                    let rspl = arg1.rspl.Camlburg.action ()
+                                    and nsp = arg2.reg.Camlburg.action ()
+                                    in
+                                        (rspl ,nsp))
+                            })
+                            ((update_any
+                                {Camlburg.cost =
+                                    (arg1.any.Camlburg.cost
+                                    +
+                                    arg2.any.Camlburg.cost)
+                                ;Camlburg.action =
+                                    (fun () ->
+                                        let dst = arg1.any.Camlburg.action ()
+                                        and src = arg2.any.Camlburg.action ()
+                                        and w = arg3
+                                        in
+                                            
+# 335 "arch/amd64/amd64rec.mlb"
+                                            ( cat [ "Store(";dst;",";src;",";string_of_int w;")" ] )
+                                            
+# 000 "/dev/stdout"
+)
+                                })
+                                ((update_inst
+                                    (Camlburg.choice
+                                        [{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2.symbol.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    regl =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    symbol =
+                                                    arg2.symbol.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 197 "arch/amd64/amd64rec.mlb"
+                                                    ( sprintf "leaq %s(%%rip), %s" symbol regl )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2.constv.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    regl =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    constv =
+                                                    arg2.constv.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 200 "arch/amd64/amd64rec.mlb"
+                                                    ( sprintf "movabsq $%Ld, %s" constv regl )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2.mem.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    regl =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    mem =
+                                                    arg2.mem.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 203 "arch/amd64/amd64rec.mlb"
+                                                    ( cat ["movq"; " "; mem; ", "; regl] )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.meml.Camlburg.cost
+                                            +
+                                            arg2.reg.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    meml =
+                                                    arg1.meml.Camlburg.action
+                                                        ()
+                                                and
+                                                    reg =
+                                                    arg2.reg.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 206 "arch/amd64/amd64rec.mlb"
+                                                    ( cat ["movq"; " "; reg; ", "; meml] )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2.reg.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    regl =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    reg =
+                                                    arg2.reg.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 209 "arch/amd64/amd64rec.mlb"
+                                                    ( cat ["movq"; " "; reg; ", "; regl] )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.meml.Camlburg.cost
+                                            +
+                                            arg2.wreg8.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 8) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    meml =
+                                                    arg1.meml.Camlburg.action
+                                                        ()
+                                                and
+                                                    wreg8 =
+                                                    arg2.wreg8.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 220 "arch/amd64/amd64rec.mlb"
+                                                    ( cat ["movb"; " "; wreg8; ", "; meml] )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.meml.Camlburg.cost
+                                            +
+                                            arg2.wreg16.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 16) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    meml =
+                                                    arg1.meml.Camlburg.action
+                                                        ()
+                                                and
+                                                    wreg16 =
+                                                    arg2.wreg16.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 222 "arch/amd64/amd64rec.mlb"
+                                                    ( cat ["movw"; " "; wreg16; ", "; meml] )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.meml.Camlburg.cost
+                                            +
+                                            arg2.wreg32.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 32) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    meml =
+                                                    arg1.meml.Camlburg.action
+                                                        ()
+                                                and
+                                                    wreg32 =
+                                                    arg2.wreg32.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 224 "arch/amd64/amd64rec.mlb"
+                                                    ( cat ["movl"; " "; wreg32; ", "; meml] )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.ccl.Camlburg.cost
+                                            +
+                                            arg2._Subcc3.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    ccl =
+                                                    arg1.ccl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Subcc3.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 238 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "cmpq %s, %s" y x )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.ccl.Camlburg.cost
+                                            +
+                                            arg2._Subcc4.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    ccl =
+                                                    arg1.ccl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Subcc4.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 240 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "cmpq $%Ld, %s" y x )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2._Add6.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    dst =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Add6.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 248 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "movq %s, %s\n\taddq %s, %s" x dst y dst )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2._Add7.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    dst =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Add7.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 251 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "movq %s, %s\n\taddq $%Ld, %s" x dst y dst )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2._Sub8.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    dst =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Sub8.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 254 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "movq %s, %s\n\tsubq %s, %s" x dst y dst )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2._Sub9.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    dst =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Sub9.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 257 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "movq %s, %s\n\tsubq $%Ld, %s" x dst y dst )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2._And10.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    dst =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._And10.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 260 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "movq %s, %s\n\tandq %s, %s" x dst y dst )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2._And11.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    dst =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._And11.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 263 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "movq %s, %s\n\tandq $%Ld, %s" x dst y dst )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2._Mul12.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    dst =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Mul12.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 267 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "movq %s, %s\n\timulq %s, %s" x dst y dst )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.regl.Camlburg.cost
+                                            +
+                                            arg2._Mul13.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    dst =
+                                                    arg1.regl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Mul13.Camlburg.action
+                                                        ()
+                                                in
+                                                    let (x, y) = _v1
+                                                    in
+                                                        
+# 270 "arch/amd64/amd64rec.mlb"
+                                                        ( sprintf "imulq $%Ld, %s, %s" y x dst )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        }
+                                        ;{Camlburg.cost =
+                                            (arg1.rdxl.Camlburg.cost
+                                            +
+                                            arg2.cqtoval.Camlburg.cost
+                                            +
+                                            (Camlburg.matches 64) arg3)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    rdxl =
+                                                    arg1.rdxl.Camlburg.action
+                                                        ()
+                                                and
+                                                    cqtoval =
+                                                    arg2.cqtoval.Camlburg.action
+                                                        ()
+                                                in
+                                                    
+# 278 "arch/amd64/amd64rec.mlb"
+                                                    ( "cqto" )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        }]))
+                                    ((update_pop
+                                        {Camlburg.cost =
+                                            (arg1.rspl.Camlburg.cost
+                                            +
+                                            arg2._Add19.Camlburg.cost)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    rspl =
+                                                    arg1.rspl.Camlburg.action
+                                                        ()
+                                                and
+                                                    _v1 =
+                                                    arg2._Add19.Camlburg.action
+                                                        ()
+                                                and w = arg3
+                                                in
+                                                    let (rspv, eightc) = _v1
+                                                    in
+                                                        
+# 297 "arch/amd64/amd64rec.mlb"
+                                                        ( () )
+                                                        
+# 000 "/dev/stdout"
+)
+                                        })
+                                        ((update_push
+                                            {Camlburg.cost =
+                                                (arg1.rspl.Camlburg.cost
+                                                +
+                                                arg2._Sub18.Camlburg.cost)
+                                            ;Camlburg.action =
+                                                (fun () ->
+                                                    let
+                                                        rspl =
+                                                        arg1.rspl.Camlburg.action
+                                                            ()
+                                                    and
+                                                        _v1 =
+                                                        arg2._Sub18.Camlburg.action
+                                                            ()
+                                                    and w = arg3
+                                                    in
+                                                        let
+                                                            (rspv, eightc) =
+                                                            _v1
+                                                        in
+                                                            
+# 296 "arch/amd64/amd64rec.mlb"
+                                                            ( () )
+                                                            
+# 000 "/dev/stdout"
+)
+                                            })
+                                            ((update_storeretaddr
+                                                {Camlburg.cost =
+                                                    (arg1.stacknext.Camlburg.cost
+                                                    +
+                                                    arg2.pcv.Camlburg.cost)
+                                                ;Camlburg.action =
+                                                    (fun () ->
+                                                        let
+                                                            stacknext =
+                                                            arg1.stacknext.Camlburg.action
+                                                                ()
+                                                        and
+                                                            pcv =
+                                                            arg2.pcv.Camlburg.action
+                                                                ()
+                                                        and w = arg3
+                                                        in
+                                                            
+# 300 "arch/amd64/amd64rec.mlb"
+                                                            ( () )
+                                                            
+# 000 "/dev/stdout"
+)
+                                                })
+                                                inf)))))))))
+and conRem3 =
+    fun arg1 arg2 arg3 ->
+        (update_rem3val
+            {Camlburg.cost =
+                (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost
+                +
+                arg3.reg.Camlburg.cost)
+            ;Camlburg.action =
+                (fun () ->
+                    let hi = arg1.reg.Camlburg.action ()
+                    and lo = arg2.reg.Camlburg.action ()
+                    and y = arg3.reg.Camlburg.action ()
                     in
                         
-# 293 "arch/amd64/amd64rec.mlb"
-                        ( cat [ "Store(";dst;",";src;",";string_of_int w;")" ] )
+# 281 "arch/amd64/amd64rec.mlb"
+                        ( y )
                         
 # 000 "/dev/stdout"
 )
             })
-            ((update_inst
-                (Camlburg.choice
-                    [{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2.symbol.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let regl = arg1.regl.Camlburg.action ()
-                            and symbol = arg2.symbol.Camlburg.action ()
-                            in
-                                
-# 192 "arch/amd64/amd64rec.mlb"
-                                ( sprintf "leaq %s(%%rip), %s" symbol regl )
-                                
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2.constv.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let regl = arg1.regl.Camlburg.action ()
-                            and constv = arg2.constv.Camlburg.action ()
-                            in
-                                
-# 195 "arch/amd64/amd64rec.mlb"
-                                ( sprintf "movabsq $%Ld, %s" constv regl )
-                                
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2.mem.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let regl = arg1.regl.Camlburg.action ()
-                            and mem = arg2.mem.Camlburg.action ()
-                            in
-                                
-# 198 "arch/amd64/amd64rec.mlb"
-                                ( cat ["movq"; " "; mem; ", "; regl] )
-                                
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.meml.Camlburg.cost + arg2.reg.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let meml = arg1.meml.Camlburg.action ()
-                            and reg = arg2.reg.Camlburg.action ()
-                            in
-                                
-# 201 "arch/amd64/amd64rec.mlb"
-                                ( cat ["movq"; " "; reg; ", "; meml] )
-                                
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2.reg.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let regl = arg1.regl.Camlburg.action ()
-                            and reg = arg2.reg.Camlburg.action ()
-                            in
-                                
-# 204 "arch/amd64/amd64rec.mlb"
-                                ( cat ["movq"; " "; reg; ", "; regl] )
-                                
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.ccl.Camlburg.cost + arg2._Subcc1.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let ccl = arg1.ccl.Camlburg.action ()
-                            and _v1 = arg2._Subcc1.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 214 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "cmpq %s, %s" y x )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.ccl.Camlburg.cost + arg2._Subcc2.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let ccl = arg1.ccl.Camlburg.action ()
-                            and _v1 = arg2._Subcc2.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 216 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "cmpq $%Ld, %s" y x )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2._Add4.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let dst = arg1.regl.Camlburg.action ()
-                            and _v1 = arg2._Add4.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 224 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "movq %s, %s\n\taddq %s, %s" x dst y dst )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2._Add5.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let dst = arg1.regl.Camlburg.action ()
-                            and _v1 = arg2._Add5.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 227 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "movq %s, %s\n\taddq $%Ld, %s" x dst y dst )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2._Sub6.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let dst = arg1.regl.Camlburg.action ()
-                            and _v1 = arg2._Sub6.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 230 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "movq %s, %s\n\tsubq %s, %s" x dst y dst )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2._Sub7.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let dst = arg1.regl.Camlburg.action ()
-                            and _v1 = arg2._Sub7.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 233 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "movq %s, %s\n\tsubq $%Ld, %s" x dst y dst )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2._And8.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let dst = arg1.regl.Camlburg.action ()
-                            and _v1 = arg2._And8.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 236 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "movq %s, %s\n\tandq %s, %s" x dst y dst )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2._And9.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let dst = arg1.regl.Camlburg.action ()
-                            and _v1 = arg2._And9.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 239 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "movq %s, %s\n\tandq $%Ld, %s" x dst y dst )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2._Mul10.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let dst = arg1.regl.Camlburg.action ()
-                            and _v1 = arg2._Mul10.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 243 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "movq %s, %s\n\timulq %s, %s" x dst y dst )
-                                    
-# 000 "/dev/stdout"
-)
-                    }
-                    ;{Camlburg.cost =
-                        (arg1.regl.Camlburg.cost + arg2._Mul11.Camlburg.cost
-                        +
-                        (Camlburg.matches 64) arg3)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let dst = arg1.regl.Camlburg.action ()
-                            and _v1 = arg2._Mul11.Camlburg.action ()
-                            in
-                                let (x, y) = _v1
-                                in
-                                    
-# 246 "arch/amd64/amd64rec.mlb"
-                                    ( sprintf "imulq $%Ld, %s, %s" y x dst )
-                                    
-# 000 "/dev/stdout"
-)
-                    }]))
-                ((update_pop
-                    {Camlburg.cost =
-                        (arg1.rspl.Camlburg.cost + arg2._Add13.Camlburg.cost)
-                    ;Camlburg.action =
-                        (fun () ->
-                            let rspl = arg1.rspl.Camlburg.action ()
-                            and _v1 = arg2._Add13.Camlburg.action ()
-                            and w = arg3
-                            in
-                                let (rspv, eightc) = _v1
-                                in
-                                    
-# 255 "arch/amd64/amd64rec.mlb"
-                                    ( () )
-                                    
-# 000 "/dev/stdout"
-)
-                    })
-                    ((update_push
-                        {Camlburg.cost =
-                            (arg1.rspl.Camlburg.cost
-                            +
-                            arg2._Sub12.Camlburg.cost)
-                        ;Camlburg.action =
-                            (fun () ->
-                                let rspl = arg1.rspl.Camlburg.action ()
-                                and _v1 = arg2._Sub12.Camlburg.action ()
-                                and w = arg3
-                                in
-                                    let (rspv, eightc) = _v1
-                                    in
-                                        
-# 254 "arch/amd64/amd64rec.mlb"
-                                        ( () )
-                                        
-# 000 "/dev/stdout"
-)
-                        })
-                        ((update_storeretaddr
-                            {Camlburg.cost =
-                                (arg1.stacknext.Camlburg.cost
-                                +
-                                arg2.pcv.Camlburg.cost)
-                            ;Camlburg.action =
-                                (fun () ->
-                                    let
-                                        stacknext =
-                                        arg1.stacknext.Camlburg.action ()
-                                    and pcv = arg2.pcv.Camlburg.action ()
-                                    and w = arg3
-                                    in
-                                        
-# 258 "arch/amd64/amd64rec.mlb"
-                                        ( () )
-                                        
-# 000 "/dev/stdout"
-)
-                            })
-                            inf))))
+            inf
 and conReg =
     fun arg1 arg2 ->
         (update_any
@@ -998,7 +1532,7 @@ and conReg =
                     and n = arg2
                     in
                         
-# 290 "arch/amd64/amd64rec.mlb"
+# 332 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Reg('";Char.escaped char;"',"; string_of_int n;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1010,7 +1544,7 @@ and conReg =
                 ;Camlburg.action =
                     (fun () ->
                         
-# 175 "arch/amd64/amd64rec.mlb"
+# 180 "arch/amd64/amd64rec.mlb"
                         ( () )
                         
 # 000 "/dev/stdout"
@@ -1024,7 +1558,7 @@ and conReg =
                     ;Camlburg.action =
                         (fun () ->
                             
-# 174 "arch/amd64/amd64rec.mlb"
+# 179 "arch/amd64/amd64rec.mlb"
                             ( () )
                             
 # 000 "/dev/stdout"
@@ -1037,30 +1571,79 @@ and conReg =
                                 let n = arg2
                                 in
                                     
-# 170 "arch/amd64/amd64rec.mlb"
+# 175 "arch/amd64/amd64rec.mlb"
                                     ( n )
                                     
 # 000 "/dev/stdout"
 )
                         })
-                        ((update_rspl
+                        ((update_raxl
                             {Camlburg.cost =
                                 ((Camlburg.matches 'r') arg1
                                 +
-                                (Camlburg.matches 4) arg2)
+                                (Camlburg.matches 0) arg2)
                             ;Camlburg.action =
                                 (fun () ->
                                     
-# 176 "arch/amd64/amd64rec.mlb"
+# 273 "arch/amd64/amd64rec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
 )
                             })
-                            inf))))
+                            ((update_rdxl
+                                {Camlburg.cost =
+                                    ((Camlburg.matches 'r') arg1
+                                    +
+                                    (Camlburg.matches 2) arg2)
+                                ;Camlburg.action =
+                                    (fun () ->
+                                        
+# 274 "arch/amd64/amd64rec.mlb"
+                                        ( () )
+                                        
+# 000 "/dev/stdout"
+)
+                                })
+                                ((update_rspl
+                                    {Camlburg.cost =
+                                        ((Camlburg.matches 'r') arg1
+                                        +
+                                        (Camlburg.matches 4) arg2)
+                                    ;Camlburg.action =
+                                        (fun () ->
+                                            
+# 181 "arch/amd64/amd64rec.mlb"
+                                            ( () )
+                                            
+# 000 "/dev/stdout"
+)
+                                    })
+                                    inf))))))
+and conQuot3 =
+    fun arg1 arg2 arg3 ->
+        (update_quot3val
+            {Camlburg.cost =
+                (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost
+                +
+                arg3.reg.Camlburg.cost)
+            ;Camlburg.action =
+                (fun () ->
+                    let hi = arg1.reg.Camlburg.action ()
+                    and lo = arg2.reg.Camlburg.action ()
+                    and y = arg3.reg.Camlburg.action ()
+                    in
+                        
+# 280 "arch/amd64/amd64rec.mlb"
+                        ( y )
+                        
+# 000 "/dev/stdout"
+)
+            })
+            inf
 and conPar =
     fun arg1 arg2 ->
-        (update__Par17
+        (update__Par22
             {Camlburg.cost =
                 (arg1.storeretaddr.Camlburg.cost + arg2.push.Camlburg.cost)
             ;Camlburg.action =
@@ -1079,7 +1662,7 @@ and conPar =
                         and r = arg2.any.Camlburg.action ()
                         in
                             
-# 298 "arch/amd64/amd64rec.mlb"
+# 340 "arch/amd64/amd64rec.mlb"
                             ( cat [ "Par(";l;",";r;")" ] )
                             
 # 000 "/dev/stdout"
@@ -1088,58 +1671,118 @@ and conPar =
                 ((update_inst
                     (Camlburg.choice
                         [{Camlburg.cost =
-                            (arg1._Goto14.Camlburg.cost
+                            (arg1._Goto1.Camlburg.cost
+                            +
+                            arg2._Store2.Camlburg.cost)
+                        ;Camlburg.action =
+                            (fun () ->
+                                let _v1 = arg1._Goto1.Camlburg.action ()
+                                and _v2 = arg2._Store2.Camlburg.action ()
+                                in
+                                    let (rspl, nsp) = _v2
+                                    in
+                                        let target = _v1
+                                        in
+                                            
+# 234 "arch/amd64/amd64rec.mlb"
+                                            ( sprintf "movq %s, %%rsp\n\tjmp *%s" nsp target )
+                                            
+# 000 "/dev/stdout"
+)
+                        }
+                        ;{Camlburg.cost =
+                            (arg1._Store14.Camlburg.cost
+                            +
+                            arg2._Store15.Camlburg.cost)
+                        ;Camlburg.action =
+                            (fun () ->
+                                let _v1 = arg1._Store14.Camlburg.action ()
+                                and _v2 = arg2._Store15.Camlburg.action ()
+                                in
+                                    let (rdxl, rem3val) = _v2
+                                    in
+                                        let (raxl, quot3val) = _v1
+                                        in
+                                            
+# 283 "arch/amd64/amd64rec.mlb"
+                                            ( sprintf "idivq %s" quot3val )
+                                            
+# 000 "/dev/stdout"
+)
+                        }
+                        ;{Camlburg.cost =
+                            (arg1._Store16.Camlburg.cost
+                            +
+                            arg2._Store17.Camlburg.cost)
+                        ;Camlburg.action =
+                            (fun () ->
+                                let _v1 = arg1._Store16.Camlburg.action ()
+                                and _v2 = arg2._Store17.Camlburg.action ()
+                                in
+                                    let (rdxl, modu3val) = _v2
+                                    in
+                                        let (raxl, divu3val) = _v1
+                                        in
+                                            
+# 288 "arch/amd64/amd64rec.mlb"
+                                            ( sprintf "divq %s" divu3val )
+                                            
+# 000 "/dev/stdout"
+)
+                        }
+                        ;{Camlburg.cost =
+                            (arg1._Goto20.Camlburg.cost
                             +
                             arg2.pop.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
-                                let _v1 = arg1._Goto14.Camlburg.action ()
+                                let _v1 = arg1._Goto20.Camlburg.action ()
                                 and pop = arg2.pop.Camlburg.action ()
                                 in
                                     let (stacktop, w) = _v1
                                     in
                                         
-# 261 "arch/amd64/amd64rec.mlb"
+# 303 "arch/amd64/amd64rec.mlb"
                                         ( "ret" )
                                         
 # 000 "/dev/stdout"
 )
                         }
                         ;{Camlburg.cost =
-                            (arg1._Goto16.Camlburg.cost
+                            (arg1._Goto1.Camlburg.cost
                             +
-                            arg2._Par17.Camlburg.cost)
+                            arg2._Par22.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
-                                let _v1 = arg1._Goto16.Camlburg.action ()
-                                and _v2 = arg2._Par17.Camlburg.action ()
+                                let _v1 = arg1._Goto1.Camlburg.action ()
+                                and _v2 = arg2._Par22.Camlburg.action ()
                                 in
                                     let (storeretaddr, push) = _v2
                                     in
                                         let target = _v1
                                         in
                                             
-# 264 "arch/amd64/amd64rec.mlb"
+# 306 "arch/amd64/amd64rec.mlb"
                                             ( cat ["call"; " *"; target] )
                                             
 # 000 "/dev/stdout"
 )
                         }
                         ;{Camlburg.cost =
-                            (arg1._Goto3.Camlburg.cost
+                            (arg1._Goto5.Camlburg.cost
                             +
-                            arg2._Par17.Camlburg.cost)
+                            arg2._Par22.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
-                                let _v1 = arg1._Goto3.Camlburg.action ()
-                                and _v2 = arg2._Par17.Camlburg.action ()
+                                let _v1 = arg1._Goto5.Camlburg.action ()
+                                and _v2 = arg2._Par22.Camlburg.action ()
                                 in
                                     let (storeretaddr, push) = _v2
                                     in
                                         let target = _v1
                                         in
                                             
-# 267 "arch/amd64/amd64rec.mlb"
+# 309 "arch/amd64/amd64rec.mlb"
                                             ( cat ["call"; " "; target] )
                                             
 # 000 "/dev/stdout"
@@ -1153,7 +1796,7 @@ and conNop =
             ;Camlburg.action =
                 (fun () ->
                     
-# 248 "arch/amd64/amd64rec.mlb"
+# 290 "arch/amd64/amd64rec.mlb"
                     ( "nop" )
                     
 # 000 "/dev/stdout"
@@ -1162,7 +1805,7 @@ and conNop =
             inf
 and conMul =
     fun arg1 arg2 ->
-        (update__Mul10
+        (update__Mul12
             {Camlburg.cost =
                 (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -1172,7 +1815,7 @@ and conMul =
                     in
                         (x ,y))
             })
-            ((update__Mul11
+            ((update__Mul13
                 {Camlburg.cost =
                     (arg1.reg.Camlburg.cost + arg2.constv.Camlburg.cost)
                 ;Camlburg.action =
@@ -1191,13 +1834,34 @@ and conMul =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 282 "arch/amd64/amd64rec.mlb"
+# 324 "arch/amd64/amd64rec.mlb"
                                 ( cat [ "Mul(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
 )
                     })
                     inf))
+and conModu3 =
+    fun arg1 arg2 arg3 ->
+        (update_modu3val
+            {Camlburg.cost =
+                (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost
+                +
+                arg3.reg.Camlburg.cost)
+            ;Camlburg.action =
+                (fun () ->
+                    let hi = arg1.reg.Camlburg.action ()
+                    and lo = arg2.reg.Camlburg.action ()
+                    and y = arg3.reg.Camlburg.action ()
+                    in
+                        
+# 286 "arch/amd64/amd64rec.mlb"
+                        ( y )
+                        
+# 000 "/dev/stdout"
+)
+            })
+            inf
 and conMem =
     fun arg1 ->
         (update_any
@@ -1207,7 +1871,7 @@ and conMem =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 289 "arch/amd64/amd64rec.mlb"
+# 331 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Mem(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1220,22 +1884,22 @@ and conMem =
                         let addr = arg1.addr.Camlburg.action ()
                         in
                             
-# 182 "arch/amd64/amd64rec.mlb"
+# 187 "arch/amd64/amd64rec.mlb"
                             ( addr )
                             
 # 000 "/dev/stdout"
 )
                 })
                 ((update_stacknext
-                    {Camlburg.cost = (arg1._Sub12.Camlburg.cost)
+                    {Camlburg.cost = (arg1._Sub18.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let _v1 = arg1._Sub12.Camlburg.action ()
+                            let _v1 = arg1._Sub18.Camlburg.action ()
                             in
                                 let (rspv, eightc) = _v1
                                 in
                                     
-# 257 "arch/amd64/amd64rec.mlb"
+# 299 "arch/amd64/amd64rec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1248,7 +1912,7 @@ and conMem =
                                 let rspv = arg1.rspv.Camlburg.action ()
                                 in
                                     
-# 256 "arch/amd64/amd64rec.mlb"
+# 298 "arch/amd64/amd64rec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1264,7 +1928,7 @@ and conLobits =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 287 "arch/amd64/amd64rec.mlb"
+# 329 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Lobits(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1281,7 +1945,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 273 "arch/amd64/amd64rec.mlb"
+# 315 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Link(";x#mangled_text;",";string_of_int w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1295,7 +1959,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 168 "arch/amd64/amd64rec.mlb"
+# 173 "arch/amd64/amd64rec.mlb"
                             ( x#mangled_text )
                             
 # 000 "/dev/stdout"
@@ -1312,7 +1976,7 @@ and conLate =
                     and w = arg2
                     in
                         
-# 274 "arch/amd64/amd64rec.mlb"
+# 316 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Late(";string;",";string_of_int w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1328,7 +1992,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 294 "arch/amd64/amd64rec.mlb"
+# 336 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Kill(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1346,7 +2010,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 297 "arch/amd64/amd64rec.mlb"
+# 339 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Guarded(";guard;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1354,16 +2018,16 @@ and conGuarded =
             })
             ((update_inst
                 {Camlburg.cost =
-                    (arg1.cond.Camlburg.cost + arg2._Goto3.Camlburg.cost)
+                    (arg1.cond.Camlburg.cost + arg2._Goto5.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
                         let cond = arg1.cond.Camlburg.action ()
-                        and _v1 = arg2._Goto3.Camlburg.action ()
+                        and _v1 = arg2._Goto5.Camlburg.action ()
                         in
                             let symbol = _v1
                             in
                                 
-# 221 "arch/amd64/amd64rec.mlb"
+# 245 "arch/amd64/amd64rec.mlb"
                                 ( cat [amd64_jcc cond; " "; symbol] )
                                 
 # 000 "/dev/stdout"
@@ -1372,21 +2036,21 @@ and conGuarded =
                 inf)
 and conGoto =
     fun arg1 ->
-        (update__Goto14
-            {Camlburg.cost = (arg1._Fetch15.Camlburg.cost)
+        (update__Goto1
+            {Camlburg.cost = (arg1.reg.Camlburg.cost)
             ;Camlburg.action =
                 (fun () ->
-                    let _v1 = arg1._Fetch15.Camlburg.action ()
-                    in
-                        let (stacktop, w) = _v1 in (stacktop ,w))
+                    let target = arg1.reg.Camlburg.action () in target)
             })
-            ((update__Goto16
-                {Camlburg.cost = (arg1.reg.Camlburg.cost)
+            ((update__Goto20
+                {Camlburg.cost = (arg1._Fetch21.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
-                        let target = arg1.reg.Camlburg.action () in target)
+                        let _v1 = arg1._Fetch21.Camlburg.action ()
+                        in
+                            let (stacktop, w) = _v1 in (stacktop ,w))
                 })
-                ((update__Goto3
+                ((update__Goto5
                     {Camlburg.cost = (arg1.symbol.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
@@ -1401,7 +2065,7 @@ and conGoto =
                                 let any = arg1.any.Camlburg.action ()
                                 in
                                     
-# 299 "arch/amd64/amd64rec.mlb"
+# 341 "arch/amd64/amd64rec.mlb"
                                     ( cat [ "Goto(";any;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -1417,7 +2081,7 @@ and conGoto =
                                             arg1.symbol.Camlburg.action ()
                                         in
                                             
-# 207 "arch/amd64/amd64rec.mlb"
+# 227 "arch/amd64/amd64rec.mlb"
                                             ( cat ["jmp"; " "; symbol] )
                                             
 # 000 "/dev/stdout"
@@ -1429,7 +2093,7 @@ and conGoto =
                                         let reg = arg1.reg.Camlburg.action ()
                                         in
                                             
-# 210 "arch/amd64/amd64rec.mlb"
+# 230 "arch/amd64/amd64rec.mlb"
                                             ( cat ["jmp"; " *"; reg] )
                                             
 # 000 "/dev/stdout"
@@ -1438,7 +2102,7 @@ and conGoto =
                             inf))))
 and conFetch =
     fun arg1 arg2 ->
-        (update__Fetch15
+        (update__Fetch21
             {Camlburg.cost = (arg1.stacktop.Camlburg.cost)
             ;Camlburg.action =
                 (fun () ->
@@ -1455,7 +2119,7 @@ and conFetch =
                         and w = arg2
                         in
                             
-# 277 "arch/amd64/amd64rec.mlb"
+# 319 "arch/amd64/amd64rec.mlb"
                             ( cat [ "Fetch(";any;",";string_of_int w;")" ] )
                             
 # 000 "/dev/stdout"
@@ -1469,7 +2133,7 @@ and conFetch =
                             let ccl = arg1.ccl.Camlburg.action ()
                             in
                                 
-# 180 "arch/amd64/amd64rec.mlb"
+# 185 "arch/amd64/amd64rec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -1483,7 +2147,7 @@ and conFetch =
                                 and w = arg2
                                 in
                                     
-# 183 "arch/amd64/amd64rec.mlb"
+# 188 "arch/amd64/amd64rec.mlb"
                                     ( meml )
                                     
 # 000 "/dev/stdout"
@@ -1499,7 +2163,7 @@ and conFetch =
                                     let pcl = arg1.pcl.Camlburg.action ()
                                     in
                                         
-# 179 "arch/amd64/amd64rec.mlb"
+# 184 "arch/amd64/amd64rec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -1515,7 +2179,7 @@ and conFetch =
                                         and w = arg2
                                         in
                                             
-# 172 "arch/amd64/amd64rec.mlb"
+# 177 "arch/amd64/amd64rec.mlb"
                                             ( regl )
                                             
 # 000 "/dev/stdout"
@@ -1533,13 +2197,67 @@ and conFetch =
                                                 arg1.rspl.Camlburg.action ()
                                             in
                                                 
-# 177 "arch/amd64/amd64rec.mlb"
+# 182 "arch/amd64/amd64rec.mlb"
                                                 ( () )
                                                 
 # 000 "/dev/stdout"
 )
                                     })
-                                    inf))))))
+                                    ((update_wreg16
+                                        {Camlburg.cost =
+                                            (arg1.wregl16.Camlburg.cost)
+                                        ;Camlburg.action =
+                                            (fun () ->
+                                                let
+                                                    wregl16 =
+                                                    arg1.wregl16.Camlburg.action
+                                                        ()
+                                                and w = arg2
+                                                in
+                                                    
+# 215 "arch/amd64/amd64rec.mlb"
+                                                    ( wregl16 )
+                                                    
+# 000 "/dev/stdout"
+)
+                                        })
+                                        ((update_wreg32
+                                            {Camlburg.cost =
+                                                (arg1.wregl32.Camlburg.cost)
+                                            ;Camlburg.action =
+                                                (fun () ->
+                                                    let
+                                                        wregl32 =
+                                                        arg1.wregl32.Camlburg.action
+                                                            ()
+                                                    and w = arg2
+                                                    in
+                                                        
+# 217 "arch/amd64/amd64rec.mlb"
+                                                        ( wregl32 )
+                                                        
+# 000 "/dev/stdout"
+)
+                                            })
+                                            ((update_wreg8
+                                                {Camlburg.cost =
+                                                    (arg1.wregl8.Camlburg.cost)
+                                                ;Camlburg.action =
+                                                    (fun () ->
+                                                        let
+                                                            wregl8 =
+                                                            arg1.wregl8.Camlburg.action
+                                                                ()
+                                                        and w = arg2
+                                                        in
+                                                            
+# 213 "arch/amd64/amd64rec.mlb"
+                                                            ( wregl8 )
+                                                            
+# 000 "/dev/stdout"
+)
+                                                })
+                                                inf)))))))))
 and conFalse =
     fun () ->
         (update_any
@@ -1547,9 +2265,46 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 272 "arch/amd64/amd64rec.mlb"
+# 314 "arch/amd64/amd64rec.mlb"
                     ( cat [ "False" ] )
                     
+# 000 "/dev/stdout"
+)
+            })
+            inf
+and conDivu3 =
+    fun arg1 arg2 arg3 ->
+        (update_divu3val
+            {Camlburg.cost =
+                (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost
+                +
+                arg3.reg.Camlburg.cost)
+            ;Camlburg.action =
+                (fun () ->
+                    let hi = arg1.reg.Camlburg.action ()
+                    and lo = arg2.reg.Camlburg.action ()
+                    and y = arg3.reg.Camlburg.action ()
+                    in
+                        
+# 285 "arch/amd64/amd64rec.mlb"
+                        ( y )
+                        
+# 000 "/dev/stdout"
+)
+            })
+            inf
+and conCqto =
+    fun arg1 ->
+        (update_cqtoval
+            {Camlburg.cost = (arg1.reg.Camlburg.cost)
+            ;Camlburg.action =
+                (fun () ->
+                    let reg = arg1.reg.Camlburg.action ()
+                    in
+                        
+# 276 "arch/amd64/amd64rec.mlb"
+                        ( () )
+                        
 # 000 "/dev/stdout"
 )
             })
@@ -1564,7 +2319,7 @@ and conCond =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 284 "arch/amd64/amd64rec.mlb"
+# 326 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Cond(";op;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1578,7 +2333,7 @@ and conCond =
                         and ccval = arg2.ccval.Camlburg.action ()
                         in
                             
-# 219 "arch/amd64/amd64rec.mlb"
+# 243 "arch/amd64/amd64rec.mlb"
                             ( op )
                             
 # 000 "/dev/stdout"
@@ -1594,7 +2349,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 275 "arch/amd64/amd64rec.mlb"
+# 317 "arch/amd64/amd64rec.mlb"
                         ( cat [ "Bits(b)" ] )
                         
 # 000 "/dev/stdout"
@@ -1605,7 +2360,7 @@ and conBits =
                     (let bits = arg1
                     in
                         
-# 166 "arch/amd64/amd64rec.mlb"
+# 171 "arch/amd64/amd64rec.mlb"
                         ( guard (Bits.width bits = 64) )
                         
 # 000 "/dev/stdout"
@@ -1615,7 +2370,7 @@ and conBits =
                         let bits = arg1
                         in
                             
-# 166 "arch/amd64/amd64rec.mlb"
+# 171 "arch/amd64/amd64rec.mlb"
                             ( const64 bits )
                             
 # 000 "/dev/stdout"
@@ -1626,7 +2381,7 @@ and conBits =
                         (let bits = arg1
                         in
                             
-# 167 "arch/amd64/amd64rec.mlb"
+# 172 "arch/amd64/amd64rec.mlb"
                             ( guard (Bits.width bits = 64) )
                             
 # 000 "/dev/stdout"
@@ -1636,7 +2391,7 @@ and conBits =
                             let bits = arg1
                             in
                                 
-# 167 "arch/amd64/amd64rec.mlb"
+# 172 "arch/amd64/amd64rec.mlb"
                                 ( Bits.U.to_int64 bits )
                                 
 # 000 "/dev/stdout"
@@ -1647,7 +2402,7 @@ and conBits =
                             (let b = arg1
                             in
                                 
-# 252 "arch/amd64/amd64rec.mlb"
+# 294 "arch/amd64/amd64rec.mlb"
                                 ( guard (Bits.width b > 3 && Bits.Ops.eq (Bits.U.of_int 8 (Bits.width b)) b) )
                                 
 # 000 "/dev/stdout"
@@ -1657,7 +2412,7 @@ and conBits =
                                 let b = arg1
                                 in
                                     
-# 253 "arch/amd64/amd64rec.mlb"
+# 295 "arch/amd64/amd64rec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1666,7 +2421,7 @@ and conBits =
                         inf)))
 and conAnd =
     fun arg1 arg2 ->
-        (update__And8
+        (update__And10
             {Camlburg.cost =
                 (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -1676,7 +2431,7 @@ and conAnd =
                     in
                         (x ,y))
             })
-            ((update__And9
+            ((update__And11
                 {Camlburg.cost =
                     (arg1.reg.Camlburg.cost + arg2.constv.Camlburg.cost)
                 ;Camlburg.action =
@@ -1695,7 +2450,7 @@ and conAnd =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 281 "arch/amd64/amd64rec.mlb"
+# 323 "arch/amd64/amd64rec.mlb"
                                 ( cat [ "And(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1704,7 +2459,7 @@ and conAnd =
                     inf))
 and conAdd =
     fun arg1 arg2 ->
-        (update__Add13
+        (update__Add19
             {Camlburg.cost =
                 (arg1.rspv.Camlburg.cost + arg2.eightc.Camlburg.cost)
             ;Camlburg.action =
@@ -1714,7 +2469,7 @@ and conAdd =
                     in
                         (rspv ,eightc))
             })
-            ((update__Add4
+            ((update__Add6
                 {Camlburg.cost =
                     (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost)
                 ;Camlburg.action =
@@ -1724,7 +2479,7 @@ and conAdd =
                         in
                             (x ,y))
                 })
-                ((update__Add5
+                ((update__Add7
                     {Camlburg.cost =
                         (arg1.reg.Camlburg.cost + arg2.constv.Camlburg.cost)
                     ;Camlburg.action =
@@ -1746,7 +2501,7 @@ and conAdd =
                                     and reg = arg2.reg.Camlburg.action ()
                                     in
                                         
-# 187 "arch/amd64/amd64rec.mlb"
+# 192 "arch/amd64/amd64rec.mlb"
                                         ( cat [const; "("; reg; ")"] )
                                         
 # 000 "/dev/stdout"
@@ -1762,7 +2517,7 @@ and conAdd =
                                     and const = arg2.const.Camlburg.action ()
                                     in
                                         
-# 188 "arch/amd64/amd64rec.mlb"
+# 193 "arch/amd64/amd64rec.mlb"
                                         ( cat [const; "("; reg; ")"] )
                                         
 # 000 "/dev/stdout"
@@ -1779,7 +2534,7 @@ and conAdd =
                                     and y = arg2.any.Camlburg.action ()
                                     in
                                         
-# 279 "arch/amd64/amd64rec.mlb"
+# 321 "arch/amd64/amd64rec.mlb"
                                         ( cat [ "Add(";x;", ";y;")" ] )
                                         
 # 000 "/dev/stdout"
@@ -1810,6 +2565,11 @@ and conAdd =
       | RP.App((("amd64_e"|"amd64_ne"|"amd64_l"|"amd64_le"|"amd64_g"|"amd64_ge"
                 |"amd64_b"|"amd64_be"|"amd64_a"|"amd64_ae") as op, [w]), [c]) ->
           conCond op (exp c)
+      | RP.App(("amd64_cqto", [w]), [x])          -> conCqto (exp x)
+      | RP.App(("amd64_quot", [w]), [hi; lo; y])  -> conQuot3 (exp hi) (exp lo) (exp y)
+      | RP.App(("amd64_rem",  [w]), [hi; lo; y])  -> conRem3  (exp hi) (exp lo) (exp y)
+      | RP.App(("amd64_divu", [w]), [hi; lo; y])  -> conDivu3 (exp hi) (exp lo) (exp y)
+      | RP.App(("amd64_modu", [w]), [hi; lo; y])  -> conModu3 (exp hi) (exp lo) (exp y)
       | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
 
   and loc = function
