@@ -1,0 +1,299 @@
+%head {:
+  (* claude: no upstream amd64rec.nw exists to port - see amd64.ml's header
+   * comment for why this does NOT reuse arch/x86/x86rec.mlb's design
+   * despite x86-64 being the same ISA family as 32-bit x86: x86rec.mlb is
+   * shaped the way it is (its large "Withaflags"/"Withcarryflags"/
+   * "Pairdestwithflags" pattern-match family) specifically to fuse a
+   * result store with a PAIRED EFLAGS-register store into one real
+   * instruction, because arch/x86/x86.ml's Post always emits both. This
+   * backend's own amd64.ml Post never emits a paired flags store for
+   * ordinary arithmetic (see its header comment for why that is still
+   * correct) - so this grammar is modeled on arch/arm64/arm64rec.mlb's
+   * much simpler shape instead (%head/%tail structure, one dedicated
+   * comparison-sets-a-pseudo-location design), crossed with real x86-64
+   * AT&T-syntax instruction text and a real (not link-register-based)
+   * call/ret protocol.
+   *
+   * Only the subset actually needed by demos/hello_amd64.c-- is covered,
+   * same "cover exactly what's needed, document the rest as a known gap"
+   * discipline arm64rec.mlb's own header comment describes: base and
+   * base+displacement addressing at the full 64-bit width only (no
+   * sub-word loads/stores - amd64.ml declares T.memory = [64] only, same
+   * reason arm64rec.mlb's own first pass did), add/sub/and/mul, the ten
+   * eq/ne/lt/le/gt/ge/ltu/leu/gtu/geu comparisons, direct/indirect calls
+   * via a real "call"/"ret" (not arm64's link-register bl/blr - see
+   * amd64.ml's header comment), and unconditional/conditional branches.
+   * No division (see amd64.ml's T.capabilities comment for why - it needs
+   * the same rdx:rax "regpair" fusion x86rec.mlb's own Withundefflags/
+   * RegPair machinery implements, not attempted here), no shifts, no
+   * or/xor, no float.
+   *
+   * Immediate materialization is much simpler than arm64rec.mlb's li64:
+   * x86-64 has a native one-instruction "movabsq $imm64, %reg" for any
+   * full 64-bit immediate - no movz/movk multi-instruction dance needed
+   * (that was specifically an AArch64/ARM limitation). Loading a global
+   * symbol's ADDRESS (needed under macOS's PIE requirement) uses the
+   * standard one-instruction "leaq symbol(%rip), %reg" RIP-relative idiom
+   * - the x86-64 analogue of arm64rec.mlb's two-instruction adrp/add
+   * @PAGE/@PAGEOFF dance, but simpler (no page-relative split needed,
+   * leaq's displacement covers the full 64-bit RIP-relative range the
+   * linker/loader can resolve).
+   *)
+  open Nopoly
+  module RP = Rtl.Private
+  module RU = Rtlutil
+  module Up = Rtl.Up
+  module Dn = Rtl.Dn
+  module SS = Space.Standard64
+
+  exception Error of string
+  let error msg = raise (Error msg)
+  let sprintf   = Printf.sprintf
+
+  let guard p = if p then 0 else Camlburg.inf_cost
+
+  let const64 b =
+      assert (Bits.width b = 64);
+      Int64.to_string (Bits.S.to_int64 b)
+
+  let cat     = String.concat ""
+  let sprintf = Printf.sprintf
+
+  let reg n   = "%" ^ Amd64regs.regname n
+
+  (* claude: maps amd64.ml's Post.amd64_cond names (amd64_e/amd64_ne/.../
+   * amd64_ae - the exact operator names Post.subflags/bc_guard build, see
+   * amd64.ml's bc_guard/amd64_cond) to real x86-64 Jcc mnemonics. Unlike
+   * arm64rec.mlb's arm64_bcond, no ltu/geu operand-swap trick is needed:
+   * x86-64's b/be/a/ae mnemonics cover all four unsigned comparisons
+   * directly (see amd64.ml's own bc_guard comment). *)
+  let amd64_jcc = function
+      | "amd64_e"  -> "je"
+      | "amd64_ne" -> "jne"
+      | "amd64_l"  -> "jl"
+      | "amd64_le" -> "jle"
+      | "amd64_g"  -> "jg"
+      | "amd64_ge" -> "jge"
+      | "amd64_b"  -> "jb"
+      | "amd64_be" -> "jbe"
+      | "amd64_a"  -> "ja"
+      | "amd64_ae" -> "jae"
+      | op       -> error (sprintf "not an x86-64 condition: %s" op)
+:}
+%tail {:
+  let const = function
+      | RP.Bool _                 -> error "boolean found"
+      | RP.Link(s,_,w)            -> conLink s w
+      | RP.Diff _                 -> error "PIC not supported"
+      | RP.Bits(b)                -> conBits b
+      | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
+
+  let rec exp = function
+      | RP.Const(k)               -> const k
+      | RP.Fetch(l,w)             -> conFetch (loc l) w
+      | RP.App(("add", [w]), [x; y])  -> conAdd (exp x) (exp y)
+      | RP.App(("sub", [w]), [x; y])  -> conSub (exp x) (exp y)
+      | RP.App(("and", [w]), [x; y])  -> conAnd (exp x) (exp y)
+      | RP.App(("mul", [w]), [x; y])  -> conMul (exp x) (exp y)
+      | RP.App(("lobits", [_;_]), [x]) -> exp x
+      | RP.App((("amd64_subcc"), [w]), [x; y]) -> conSubcc (exp x) (exp y)
+      | RP.App((("amd64_e"|"amd64_ne"|"amd64_l"|"amd64_le"|"amd64_g"|"amd64_ge"
+                |"amd64_b"|"amd64_be"|"amd64_a"|"amd64_ae") as op, [w]), [c]) ->
+          conCond op (exp c)
+      | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
+
+  and loc = function
+      | RP.Reg((sp,_,_),i,w)      -> conReg sp i
+      | RP.Mem(('m',_,_),w,e,ass) -> conMem (exp e)
+      | RP.Mem((sp,_,_),_,_,_)    -> error (sprintf "mem-space space %c" sp)
+      | RP.Var   (s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Global(s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Slice _                -> error "cannot handle slice"
+
+  let effect = function
+      | RP.Store(RP.Reg(('c',_,_),i,w),r,_)
+        when i = SS.indices.SS.pc  -> conGoto (exp r)
+      | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+      | RP.Kill(l)                -> error "cannot handle kill"
+
+  let guarded g stmt = match g with
+      | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
+      | _                         -> conGuarded (exp g) (effect stmt)
+
+  let rec geffects = function
+      | []                        -> conNop ()
+      | [g, s]                    -> guarded g s
+      | (g, s) :: t               -> conPar (guarded g s) (geffects t)
+
+  let rtl (RP.Rtl es) = geffects es
+
+  let rtl_to_string = RU.ToString.rtl
+
+  let dump msg rtl =
+      List.iter prerr_string
+      [ "error in recognizer: "
+      ; msg
+      ; " on "
+      ; rtl_to_string rtl
+      ; "\n"
+      ]
+
+  let to_string r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          Printf.sprintf "\t%s" (plan.inst.Camlburg.action ())
+      with
+          | Camlburg.Uncovered -> cat ["not an instruction: "
+                                      ; rtl_to_string r
+                                      ]
+          | Error msg          -> ( dump msg r
+                                  ; sprintf "error: %s" (rtl_to_string r)
+                                  )
+
+  let is_instruction r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          plan.inst.Camlburg.cost < 100
+      with
+          | Camlburg.Uncovered -> false
+          | Error msg          -> ( dump msg r
+                                  ; false
+                                  )
+:}
+%term
+  bits n x w
+%%
+const:      Bits(bits) [{: guard (Bits.width bits = 64) :}]{: const64 bits :}
+constv:     Bits(bits) [{: guard (Bits.width bits = 64) :}]{: Bits.U.to_int64 bits :}
+symbol:     Link(x, w:int)      {: x#mangled_text :}
+
+r:          Reg('r', n:int)  {: n :}
+regl:       r   {: reg r :}
+reg:        Fetch(regl,w:int)   {: regl :}
+
+pcl:        Reg('c',  0) {: () :}
+ccl:        Reg('c',  2) {: () :}
+rspl:       Reg('r', 4)  {: () :}
+rspv:       Fetch(rspl,64)      {: () :}
+
+pcv:        Fetch(pcl,64)       {: () :}
+ccval:      Fetch(ccl,64)       {: () :}
+
+meml:       Mem(addr)     {: addr :}
+mem:        Fetch(meml,w:int)   {: meml :}
+
+(* claude: base and base+disp addressing only (AT&T "(%reg)" / "disp(%reg)") - see %head comment: no scaled/indexed addressing, no sub-word access. *)
+addr:       reg                 {: cat ["("; reg; ")"] :}
+addr:       Add(const,reg)      {: cat [const; "("; reg; ")"] :}
+addr:       Add(reg,const)      {: cat [const; "("; reg; ")"] :}
+
+(* claude: loading a global's ADDRESS - one-instruction RIP-relative leaq, see %head comment (the x86-64 analogue of arm64rec.mlb's two-instruction adrp/add@PAGE/@PAGEOFF). *)
+inst:       Store(regl, symbol, 64)
+            {: sprintf "leaq %s(%%rip), %s" symbol regl :}
+
+inst:       Store(regl, constv, 64)
+            {: sprintf "movabsq $%Ld, %s" constv regl :}
+
+inst:       Store(regl, mem, 64)
+            {: cat ["movq"; " "; mem; ", "; regl] :}
+
+inst:       Store(meml, reg, 64)
+            {: cat ["movq"; " "; reg; ", "; meml] :}
+
+inst:       Store(regl, reg, 64)
+            {: cat ["movq"; " "; reg; ", "; regl] :}
+
+inst:       Goto(symbol)
+            {: cat ["jmp"; " "; symbol] :}
+
+inst:       Goto(reg)
+            {: cat ["jmp"; " *"; reg] :}
+
+(* claude: Post.subflags's "cmp"-equivalent: AT&T "cmp src,dst" computes dst-src and sets flags - so Subcc(x,y) (meaning x-y, matching arm64.ml's own cmp semantics) becomes "cmpq y, x". *)
+inst:       Store(ccl, Subcc(x:reg,y:reg), 64)
+            {: sprintf "cmpq %s, %s" y x :}
+inst:       Store(ccl, Subcc(x:reg,y:constv), 64)
+            {: sprintf "cmpq $%Ld, %s" y x :}
+
+(* claude: the conditional-branch half - Post.bc_of_guard wraps the (setup, guard) pair into "Guarded(guard,Store(pcl,tgt,64))", which the tail turns into "Guarded(cond,Goto(addr))", same shape as arm64rec.mlb's own. *)
+cond:       Cond(op:string, ccval) {: op :}
+inst:       Guarded(cond,Goto(symbol))
+            {: cat [amd64_jcc cond; " "; symbol] :}
+
+inst:       Store(dst:regl, Add(x:reg,y:reg), 64)
+            {: sprintf "movq %s, %s\n\taddq %s, %s" x dst y dst :}
+
+inst:       Store(dst:regl, Add(x:reg,y:constv), 64)
+            {: sprintf "movq %s, %s\n\taddq $%Ld, %s" x dst y dst :}
+
+inst:       Store(dst:regl, Sub(x:reg,y:reg), 64)
+            {: sprintf "movq %s, %s\n\tsubq %s, %s" x dst y dst :}
+
+inst:       Store(dst:regl, Sub(x:reg,y:constv), 64)
+            {: sprintf "movq %s, %s\n\tsubq $%Ld, %s" x dst y dst :}
+
+inst:       Store(dst:regl, And(x:reg,y:reg), 64)
+            {: sprintf "movq %s, %s\n\tandq %s, %s" x dst y dst :}
+
+inst:       Store(dst:regl, And(x:reg,y:constv), 64)
+            {: sprintf "movq %s, %s\n\tandq $%Ld, %s" x dst y dst :}
+
+(* claude: "imul" has a real 2-operand register*register-into-register form (unlike add/sub/and's strict 2-address encoding), but we still always move x into dst first for uniformity/simplicity, matching the other arithmetic rules above - not the tightest codegen, always correct. *)
+inst:       Store(dst:regl, Mul(x:reg,y:reg), 64)
+            {: sprintf "movq %s, %s\n\timulq %s, %s" x dst y dst :}
+
+inst:       Store(dst:regl, Mul(x:reg,y:constv), 64)
+            {: sprintf "imulq $%Ld, %s, %s" y x dst :}
+
+inst:       Nop() {: "nop" :}
+
+(* claude: real x86-64 call/ret protocol - a "call" pushes the return address onto the stack and jumps; "ret" pops it and jumps. Unlike arm64rec.mlb's link-register bl/blr, this needs to recognize the push/pop-shaped RTL amd64.ml's Post.do_call/F.return actually build (see amd64.ml's own push'/pop_with) - same idea as x86rec.mlb's own push/pop/stacktop/stacknext helpers, simplified since this backend has no Llr in-place-update fusion to route through. *)
+eightc:     Bits(b:bits)
+    [{: guard (Bits.width b > 3 && Bits.Ops.eq (Bits.U.of_int 8 (Bits.width b)) b) :}]
+    {: () :}
+push:       Store(rspl, Sub(rspv, eightc), w:int) {: () :}
+pop:        Store(rspl, Add(rspv, eightc), w:int) {: () :}
+stacktop:   Mem(rspv)               {: () :}
+stacknext:  Mem(Sub(rspv, eightc))  {: () :}
+storeretaddr: Store(stacknext, pcv, w:int) {: () :}
+
+inst:       Par(Goto(Fetch(stacktop,w:int)), pop)
+            {: "ret" :}
+
+inst:       Par(Goto(target:reg), Par(storeretaddr, push))
+            {: cat ["call"; " *"; target] :}
+
+inst:       Par(Goto(target:symbol), Par(storeretaddr, push))
+            {: cat ["call"; " "; target] :}
+
+inst: any [100]         {: cat ["<";any;">"] :}
+
+any : True  ()          {: cat [ "True"  ] :}
+any : False ()          {: cat [ "False" ] :}
+any : Link(x, w:int)    {: cat [ "Link(";x#mangled_text;",";string_of_int w;")" ] :}
+any : Late(string,w:int){: cat [ "Late(";string;",";string_of_int w;")" ] :}
+any : Bits(bits)        {: cat [ "Bits(b)" ] :}
+
+any : Fetch (any, w:int){: cat [ "Fetch(";any;",";string_of_int w;")" ] :}
+
+any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
+any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
+any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : Subcc(x:any,y:any){: cat [ "Subcc(";x;", ";y;")" ] :}
+any : Cond(op:string,any) {: cat [ "Cond(";op;",";any;")" ] :}
+any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
+any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
+any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
+
+any : Mem(any)   {: cat [ "Mem(";any;")" ] :}
+any : Reg(char, n:int)  {: cat [ "Reg('";Char.escaped char;"',"; string_of_int n;")" ] :}
+
+any : Store (dst:any, src:any, w:int)
+                        {: cat [ "Store(";dst;",";src;",";string_of_int w;")" ] :}
+any : Kill(any)         {: cat [ "Kill(";any;")" ] :}
+
+any : Guarded(guard:any, any)
+                        {: cat [ "Guarded(";guard;",";any;")" ] :}
+any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
+any : Goto(any)         {: cat [ "Goto(";any;")" ] :}

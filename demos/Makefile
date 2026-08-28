@@ -85,10 +85,10 @@ RUNARM   ?= $(shell command -v qemu-arm        2>/dev/null)
 RUNRISCV64 ?= $(shell command -v qemu-riscv64  2>/dev/null)
 RUNRISCV32 ?= $(shell command -v qemu-riscv32  2>/dev/null)
 
-.PHONY: all x86 ppc sparc alpha mips arm riscv64 riscv32 arm64 \
-        run run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 run-arm64 clean
+.PHONY: all x86 ppc sparc alpha mips arm riscv64 riscv32 arm64 amd64 \
+        run run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 run-arm64 run-amd64 clean
 
-all: x86 ppc sparc alpha mips arm riscv64 riscv32 arm64
+all: x86 ppc sparc alpha mips arm riscv64 riscv32 arm64 amd64
 
 $(B):
 	mkdir -p $(B)
@@ -214,7 +214,24 @@ arm64: $(B)/hello_arm64
 run-arm64: arm64
 	@./$(B)/hello_arm64; echo "[exit status $$?]"
 
-run: run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 run-arm64
+# ---------------------------------------------------------------------------
+# amd64 (hello_amd64.c--, 64-bit little-endian, the -amd64 backend; unlike
+# arm64 this is NOT the host's native architecture, so qc's own -amd64
+# default ("clang -arch x86_64", baked into driver/main.ml's
+# default_amd64_cc) does the cross-assembling/linking - no QC_AS/QC_LD
+# override needed here either, same as arm64's rule, just a different
+# reason - and the result runs under Rosetta 2, not natively, so no qemu
+# wrapper either)
+# ---------------------------------------------------------------------------
+$(B)/hello_amd64: hello_amd64.c-- | $(B)
+	$(QC) -amd64 -globals -o $@ $<
+
+amd64: $(B)/hello_amd64
+
+run-amd64: amd64
+	@./$(B)/hello_amd64; echo "[exit status $$?]"
+
+run: run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 run-arm64 run-amd64
 
 clean:
 	rm -rf $(B)

@@ -1,0 +1,39 @@
+/* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
+ *
+ * claude: same program as hello.c--/hello_arm64.c--, adapted to x86-64's
+ * 64-bit, little-endian metrics (wordsize/pointersize 64 - Driver.compile
+ * checks the source's declared metrics against the target's and refuses to
+ * proceed on a mismatch, which is why this needs its own file rather than
+ * reusing hello.c--'s bits32 one, same reason hello_riscv64.c--/
+ * hello_arm64.c-- needed their own). Exercises qc's amd64/Mach-O backend
+ * end to end:
+ *
+ *   qc -amd64 -globals -o hello_amd64 demos/hello_amd64.c--
+ *   ./hello_amd64                 # prints "hello, world!", exits 0
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag. Unlike hello_arm64.c--,
+ * this does NOT run natively: this machine is arm64-apple-darwin, not
+ * x86_64-apple-darwin, so the resulting Mach-O executable runs under
+ * Rosetta 2 translation (already installed and active on this machine -
+ * see driver/main.ml's default_amd64_cc comment). qc's -as/-ld default for
+ * -amd64 is "clang -arch x86_64" (not plain "clang", which would produce
+ * the wrong - arm64 - architecture on this host); no QC_AS/QC_LD override
+ * and no -static are needed (Apple does not support statically linking
+ * against libSystem at all, same as every other Mach-O-targeted backend
+ * here).
+ */
+
+target byteorder little wordsize 64 pointersize 64;
+
+import bits64 printf;
+export main, my_data;
+
+section "data" {
+  my_data: bits8 [] "hello, world!\n\0";
+}
+
+foreign "C" main("unsigned" bits64 iargc, "address" bits64 iargv) {
+  foreign "C" printf("address" my_data);
+  foreign "C" return(0);
+}

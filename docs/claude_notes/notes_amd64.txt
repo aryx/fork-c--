@@ -1,0 +1,410 @@
+notes_amd64.txt
+================
+
+Written: 2026-08-28, against the commit that adds this file and the x86-64
+(amd64/Mach-O) backend itself. All claims below are VERIFIED: read in the
+code, or observed by actually cross-assembling/linking with `qc -amd64 ...`
+on this machine and running the result under Rosetta 2 (not native - see
+"Toolchain" below), not inferred from upstream (arch/x86/ exists upstream
+but was deliberately NOT ported from directly - see "What this is").
+
+What this is
+------------
+x86-64 (AMD64) is the ninth non-x86 backend plugged into this fork, after
+ppc, sparc, alpha, mips, arm, riscv64, riscv32, and arm64. Unlike every one
+of those, upstream qc-- DOES have a 32-bit x86 backend (arch/x86/) this
+could in principle have been ported from - but arch/x86/x86.ml's Post
+module is shaped the way it is (a large family of "Withaflags"/
+"Withcarryflags"/"Pairdestwithflags" camlburg patterns in x86rec.mlb)
+specifically because it always emits an arithmetic result store PAIRED
+with a separate EFLAGS-register store in the same Par - real x86 hardware
+ADD/SUB/etc. unavoidably set flags as a side effect and x86.ml models that
+explicitly. This backend deliberately does NOT do that (see "The flags-free
+Post design" below) - so it is modeled structurally on arch/arm64/
+arm64.ml/arm64call.ml/arm64cc.ml/arm64backend.ml (much simpler Post shape,
+single dedicated-comparison design) rather than on arch/x86/'s own files,
+crossed with real x86-64 AT&T-syntax instruction text and a real (stack-
+based, not link-register-based) call/ret protocol.
+
+The flags-free Post design (the single most important choice in this backend)
+----------------------------------------------------------------------------
+arch/x86/x86rec.mlb is ~1067 lines, much of it ("Withaflags"/
+"Withcarryflags"/"Pairdestwithflags"/"Withundefflags", x86rec.mlb's
+`effect`/`geffects` function, roughly 350 of those lines) existing to
+recognize "these two Par'd Store nodes are actually the natural EFLAGS
+side-effect of ONE real add/sub/mul instruction" and fuse them into a
+single camlburg `inst` rule - because arch/x86/x86.ml's Post.binop/unop
+always build that Par explicitly (e.g. `R.par [store dst (add x y) w;
+addflags x y w]`). Without that fusion there is no `inst` rule at all
+matching a bare `Par(Store(result,...), Store(flags,...))` shape and
+instruction selection fails.
+
+amd64.ml's Post does not do this. Post.binop/unop (amd64.ml) just compute
+and store a result - no paired flags-register store at all, the same shape
+arch/arm64/arm64.ml's own Post.binop has. Comparisons get their own
+dedicated store to a synthetic "cc" pseudo-location (Post.subflags/cmp,
+storing an "amd64_subcc"-tagged value), consumed immediately by bc_guard
+for a conditional branch - mirrors arm64.ml's subflags/cmp/bc_guard almost
+line for line, just with amd64_* operator names and real x86-64 jCC
+mnemonics (see "Register roles"/"Immediate materialization" below for why
+even the mnemonic-mapping is actually SIMPLER than arm64's own).
+
+This is still 100% correct even though real ADDQ/SUBQ/IMULQ instructions
+also clobber EFLAGS as an unobserved side effect: nothing in the RTL/IR
+this backend ever produces claims to READ flags except immediately after a
+dedicated Post.subflags-produced comparison - so an intervening add's own
+flag clobber is simply never read, and is harmless. This sidesteps
+x86rec.mlb's entire flags-fusion machinery. The one place this reasoning
+does NOT eliminate x86-family complexity is integer divide (see "Division"
+below) - not a flags issue at all, purely an operand-placement constraint
+(idivq/divq unavoidably use the fixed rdx:rax pair, no 3-operand divide
+the way AArch64's sdiv is).
+
+Call/return: real stack-based protocol, not arm64's link register
+-------------------------------------------------------------------
+x86-64 has no return-address register at all (unlike arm64's x30/lr) - a
+real "call" instruction pushes the return address onto the stack and "ret"
+pops it. So amd64.ml's Post.call/callr/return are modeled on arch/x86/
+x86.ml's own push'/pop_with shape (module F in amd64.ml), not on arm64.ml's
+do_call/ra_offset/link-register shape - just 8 bytes wide throughout
+instead of x86.ml's 4, and using amd64.ml's own subcc/flags-free machinery
+where relevant. Mflow.MakeStandard's ra_reg/ra_offset struct fields are
+consequently unused placeholders here too, exactly as x86.ml's own comment
+states ("not used"). amd64rec.mlb's own push/pop/stacktop/stacknext/
+storeretaddr camlburg rules recognize the exact RTL shape this produces and
+emit real "call"/"call *reg"/"ret" instructions - see amd64rec.mlb's header
+comment.
+
+Target shape (verified in arch/amd64/amd64.ml)
+-----------------------------------------------
+- 64-bit little-endian, Space.Standard64 (like arm64.ml/riscv64.ml/
+  alpha.ml). 16 general registers rax-r15 in one flat 'r' space, unlike
+  arm64regs.ml's "index 31 means sp, no real assembly mnemonic for it"
+  special case - x86-64 has a real name ("rsp") for every register, so no
+  such special-casing is needed (see amd64regs.ml's own header comment).
+- T.float = Float.ieee754 declared (matching Metrics.default, same as
+  arm64.ml's own deferral), even though Post.unrm/binrm/dblop are still
+  Impossible.unimp/Unsupported - no float support this pass.
+- T.memory = [64] only, NOT [8;16;32;64] - matches arm64.ml's own FIRST-pass
+  scope exactly (its later follow-up pass widened this once tests/tiger64/
+  needed narrow stores; this pass has not gone there - see "Known remaining
+  gaps").
+- Division ("quot"/"rem"/"divu"/"modu") is implemented in Post.binop
+  (correct RTL construction, ported from x86.ml's own div case, widened to
+  64 bits, with the paired undefflags store dropped per the flags-free
+  design) but deliberately NOT declared in T.capabilities and NOT wired
+  into amd64rec.mlb's grammar - see "Division" below.
+
+Division: implemented in Post, not wired into the grammar
+-------------------------------------------------------------
+idivq/divq take ONE 64-bit operand and unavoidably operate on the fixed
+rdx:rax pair (dividend in rdx:rax, quotient out to rax, remainder out to
+rdx). amd64.ml's Post.binop has a complete port of x86.ml's own div/mod
+case (move dividend into rax; for signed, sign-extend rax into rdx via a
+dedicated "amd64_cqto" operator - a real one-instruction x86-64 primitive,
+simpler than x86.ml's own shift-based sign-extension trick; for unsigned,
+zero rdx; emit the divide via Rewrite.regpair combining rdx:rax into one
+symbolic dividend value, same idiom x86.ml's own binop uses). What is NOT
+done is the amd64rec.mlb camlburg-side recognizer: real idivq/divq need the
+same "regpair" (rdx:rax) fusion trick x86rec.mlb's own Withundefflags/
+RegPair machinery implements (recognizing that two separate Store nodes -
+rax:=quot(...), rdx:=rem(...) - sharing an identical rdx:rax dividend
+sub-expression are actually ONE real hardware instruction). Getting that
+right for this pass's flags-free design would be a real, separate
+undertaking - not attempted, since demos/hello_amd64.c-- has no division at
+all. T.capabilities.operators deliberately omits quot/rem/divu/modu so
+that declaring the capability doesn't silently accept division syntax the
+compiler cannot actually select an instruction for - see "Known remaining
+gaps".
+
+Register roles (verified in amd64cc.ml/amd64call.ml)
+------------------------------------------------------
+Real SysV AMD64 ABI ("System V Application Binary Interface, AMD64
+Architecture Processor Supplement") - identical on macOS and Linux, unlike
+arm64, where Apple's own ABI addendum diverges from plain AAPCS64. Nothing
+in amd64.ml, amd64call.ml, amd64cc.ml, or amd64rec.mlb is Mach-O-specific
+at all - that is deliberate, see "A Linux/ELF sibling would be cheap"
+below.
+  rdi,rsi,rdx,rcx,r8,r9  argument registers, in this exact order (further
+                           args overflow to the stack), volatile
+  rax                    return register, volatile (no struct-return/
+                           multi-value-return support yet, matching
+                           arm64cc.ml's own x0-only minimalism)
+  r10                    volatile temporary
+  r11                    reserved as this backend's own scratch/jump-target
+                           register (amd64call.ml's jump_tgt_reg) - the
+                           conventional caller-saved scratch real x86-64
+                           toolchains use for indirect branches/PLT stubs,
+                           same reservation role as arm64call.ml's x16/IP0
+  rbx,r12,r13,r14,r15   non-volatile (callee-saved) - the allocatable
+                           nvl_int pool, also used as the cutto pool
+                           (disjoint from the rdi/rsi/rdx/rcx/r8/r9 argument
+                           registers), mirroring arm64cc.ml's x19-x26 cutto
+                           choice
+  rbp                    reserved, NOT in nvl_int - purely defensive
+                           (unlike arm64's x29, which Apple's own unwinder
+                           actually relies on): this backend does NOT
+                           maintain a real push-rbp/mov %rsp,%rbp frame-
+                           pointer chain (qc-- manages its own stack layout
+                           via Framelayout/Automaton, same as every other
+                           backend here) - reserving rbp just avoids
+                           surprises with any tooling that assumes it means
+                           something
+  rsp                    stack pointer, handled specially, 16-byte aligned
+                           at call sites (a SysV AMD64 ABI *convention*
+                           enforced by toolchain expectations, not a
+                           hardware fault the way AArch64's misaligned-SP
+                           fault is - treated identically here regardless:
+                           C.sp_align = 16)
+
+A Linux/ELF sibling would be cheap
+-----------------------------------
+Because amd64.ml/amd64call.ml/amd64cc.ml/amd64rec.mlb contain nothing
+Mach-O-specific (the real SysV AMD64 ABI is identical on macOS and Linux),
+a future "-amd64-elf" backend would only need a new amd64elfasm.ml - a
+second Asm.assembler class reusing Amd64rec.to_string and every ISA-level
+file completely unchanged, following arch/ppc/ppcelfasm.ml's exact
+relationship to ppc.ml/ppcrec.ml under ppc.ml's own Mach-O default (see
+ppcelfasm.ml's own header comment). This was an explicit design goal from
+the start, not an afterthought - contrast with arm64, where Apple's own
+ABI addendum (x18 reservation, stricter frame-pointer requirements, 16-byte
+sp alignment as a hardware fault not just convention) means a hypothetical
+"-arm64-elf" sibling would need real changes to arm64call.ml/arm64cc.ml
+too, not just a new asm module.
+
+Immediate materialization: much simpler than arm64's li64
+-------------------------------------------------------------
+x86-64 has a native one-instruction "movabsq $imm64, %reg" for a full
+64-bit immediate - no movz/movk multi-instruction dance needed (that was
+specifically an AArch64/ARM limitation arm64rec.mlb's li64 worked around;
+see arm64.ml's own header comment for the otool-verified GNU-as-pseudo-op
+bug that trick sidesteps). Loading a global symbol's ADDRESS (needed under
+macOS's PIE requirement) uses the standard one-instruction "leaq
+symbol(%rip), %reg" RIP-relative idiom - the x86-64 analogue of arm64rec.
+mlb's two-instruction adrp/add@PAGE/@PAGEOFF dance, but simpler (leaq's
+displacement covers the full RIP-relative range in one instruction, no
+page-relative split needed).
+
+Comparisons: also simpler than arm64's bc_guard
+----------------------------------------------------
+x86-64 has DIRECT condition-suffix mnemonics for all ten comparisons (e/
+ne/l/le/g/ge/b/be/a/ae, reused verbatim from arch/x86/x86.ml's own cmpopr
+table, renamed amd64_* to keep operator names distinct from x86.ml's own
+x86_* names). Unlike arm64.ml's bc_guard, which has to swap operands for
+ltu/geu because AArch64's LO/LS/HI/HS mnemonics don't cover every
+direction, x86-64's b/be/a/ae mnemonics cover all four unsigned
+comparisons directly - amd64.ml's bc_guard needed no operand-swap logic at
+all.
+
+Toolchain
+---------
+"clang -arch x86_64" (driver/main.ml's default_amd64_cc), NOT plain
+"clang" the way arm64's own default_arm64_cc is: this machine is
+arm64-apple-darwin, not x86_64-apple-darwin, so plain clang would
+cross-assemble to the WRONG (arm64) architecture. "-arch x86_64" is Apple
+clang's own cross-arch flag (distinct from every Linux-hosted backend's own
+"-target <arch>-unknown-linux-gnu", which picks a different OS/ABI, not
+just a different arch - no separate sysroot is needed here, Xcode's clang
+already ships x86_64 Mach-O support out of the box). Empirically verified
+BEFORE writing any of this backend's code: a hand-assembled hello-world .s
+calling printf, assembled with "clang -arch x86_64 -c" and linked with
+"clang -arch x86_64" (no -static - same "Apple does not support statically
+linking against libSystem" rule as arm64's own default), produced a working
+x86_64 Mach-O executable. The resulting binaries run under Rosetta 2
+translation, NOT natively (confirmed `pgrep oahd` / `/Library/Apple/usr/
+share/rosetta` both present and active on this machine before writing any
+of this backend). No QC_AS/QC_LD override needed in demos/Makefile's amd64
+rule - qc's own -amd64 default already does the right cross-arch thing.
+
+Bugs found and fixed while bringing this up
+---------------------------------------------
+- amd64asm.ml's `comment` method initially copied arm64asm.ml's own
+  "; %s\n" (ARM comment syntax) verbatim. This is wrong for x86 GAS/AT&T
+  syntax: ";" is a STATEMENT SEPARATOR there, not a comment leader - hit
+  immediately as the first real compile error ("unexpected token in
+  argument list" pointing at a comment line). Fixed to "/* %s */\n",
+  matching arch/x86/x86asm.ml's own convention (C-style comments, which
+  GAS accepts) instead of arm64asm.ml's ARM-style one. This is the only
+  real bug hit bringing this backend up - everything else (Mach-O section/
+  alignment conventions, push/pop call protocol, division scoped out)
+  worked on the first successful build.
+- Everything else about arm64asm.ml's Mach-O conventions (leading-
+  underscore mangling, ".section __DATA,%s" + unconditional ".align 3" per
+  non-text section for the same ld64 pointer-alignment-inference reason,
+  no PIC-stub machinery for import/local, trivial call-site longjmp) ported
+  to amd64asm.ml completely unchanged and worked immediately.
+
+Verification performed
+-----------------------
+    ./bin/qc -amd64 -globals -o /tmp/hello_amd64 demos/hello_amd64.c--
+    /tmp/hello_amd64
+      -> prints "hello, world!", exits 0
+
+Run 5 times in a row with no variation (checking for a borderline stack-
+alignment or register-allocation issue that might only manifest
+intermittently - none observed, same practice notes_arm64.txt's own
+verification followed). Also verified via `demos/Makefile`'s new `amd64`/
+`run-amd64` targets (`make -C demos run-amd64`), and confirmed both the
+existing x86 backend (`qc -globals -stop .s demos/hello.c--`) and the
+existing arm64 backend (`qc -arm64 -globals -o ... demos/hello_arm64.c--`,
+run natively) still compile/link/run correctly after this session's
+driver/main.ml changes (a `backend` variant/CLI-flag addition touching a
+closed match in several places, same regression risk shape arm64's own
+bring-up carried - see "Modified files").
+
+New files (arch/amd64/), no upstream .nw counterpart
+--------------------------------------------------------------
+- amd64regs.ml/.mli  - Spaces (SS.r 16 id [64], SS.c 3 id [64] - "pc, _,
+                        cc"), plus named Register.t constants (rax..rdi)
+                        used directly by amd64.ml's division code. Split
+                        out of amd64.ml to avoid a circular dependency,
+                        mirrors arm64regs.ml/riscv64regs.ml.
+- amd64cc.ml         - T.cc_specs table: "C"/"C--"/"notail"/"C-- thread"
+                        all dispatch to one calling convention (modeled on
+                        arm64cc.ml's shape, register roles per the real
+                        SysV AMD64 ABI - see "Register roles" above).
+- amd64call.ml/.mli  - Call.t builder. rax/rcx/rdx/rsi/rdi/r8/r9/r10 =
+                        vol_int, rbx/r12/r13/r14/r15 = nvl_int, r11/rbp/rsp
+                        excluded from both pools (see "Register roles").
+                        sp_align = 16. Unlike arm64call.ml's `ra` (a link
+                        register), ra_on_entry/ra_on_exit read/write a real
+                        stack memory location (mem_ra), matching x86call.ml's
+                        own amem-based approach instead.
+- amd64rec.mlb -> amd64rec.ml/.mli
+                     - camlburg instruction-selection grammar, generated via
+                       `bin/ocamlburg arch/amd64/amd64rec.mlb >
+                       arch/amd64/amd64rec.ml` (not a dune rule, same as
+                       every other *rec.ml here - regenerate by hand). Hit
+                       the same ocamlburg gotcha notes_arm64.txt already
+                       documents (the %% grammar section's comment lexer
+                       does not support a (* ... *) comment spanning
+                       multiple lines) - every %%-section comment here is a
+                       single line, same fix. Also hit a second, new
+                       gotcha: the `Mem` pseudo-constructor's arity must be
+                       consistent everywhere it is used in one grammar (this
+                       file's `loc` function only ever produces a 1-argument
+                       "Mem(exp)", so every %% grammar rule matching `Mem`
+                       must use that same 1-argument form - an earlier draft
+                       mixed in a 2-argument "Mem(addr, cellcount)" form for
+                       the stack push/pop rules, copied from x86rec.mlb's
+                       own 2-argument Mem convention, and ocamlburg rejected
+                       it at generation time ("constructor `Mem' found with
+                       arguments (_,int), but expected (_)"). Covers: base
+                       and base+displacement addressing at the full 64-bit
+                       width only (no sub-word access - see amd64.ml's
+                       T.memory comment), add/sub/and/mul (always via a
+                       move-then-op two-instruction sequence for
+                       correctness regardless of register allocation, not
+                       optimality), the ten eq/ne/lt/le/gt/ge/ltu/leu/gtu/
+                       geu comparisons, a real call/ret protocol (push/pop/
+                       stacktop/stacknext/storeretaddr rules - see "Call/
+                       return" above), unconditional/conditional branches.
+                       No division (see "Division" above), no shifts, no
+                       or/xor, no float.
+- amd64asm.ml/.mli   - Asm.assembler: Mach-O/Darwin emitter, ported from
+                        arm64asm.ml almost verbatim (see "Bugs found and
+                        fixed" for the one real difference - the comment
+                        syntax).
+- amd64backend.ml    - the phase pipeline, copied from arm64backend.ml's
+                        structure verbatim (module names swapped only) -
+                        NOT x86backend.ml's more elaborate one (32-bit-
+                        x86-specific x87-float-widening phases and a
+                        three-way per-convention layout dispatch this
+                        backend does not need, matching arm64's own
+                        simpler single-layout precedent).
+- amd64.ml/.mli      - Target.t + Post postexpander, see "The flags-free
+                        Post design"/"Call/return"/"Division" above for the
+                        real design content; otherwise structurally close
+                        to arm64.ml (Space.Standard64, T.float=ieee754
+                        deferred, single globals/placevars automaton).
+- dune               - new library cmm_arch_amd64, same libraries list
+                        shape as arch/arm64/dune.
+
+Modified files
+--------------
+- driver/main.ml     - mirrored every -arm64 wiring site: use_amd64 ref,
+                        default_amd64_cc ("clang -arch x86_64" - see
+                        "Toolchain"), the `backend` variant Amd64, the
+                        effective_cc/default_output_file/stop_at_of_flag
+                        matches, the compile_file dispatch amd64
+                        (Amd64asm.make, Amd64.target, Amd64backend.optimizer),
+                        the backend-selection if-chain, the "-amd64" CLI
+                        flag and its entry in -x86's reset list.
+- driver/dune         - added cmm_arch_amd64 to driver/main.exe's libraries.
+- demos/hello_amd64.c-- (new) - same program as demos/hello.c--/
+                        hello_arm64.c--, adapted to bits64 like
+                        hello_arm64.c-- (byteorder little wordsize 64
+                        pointersize 64); no float pragma needed (see
+                        amd64.ml's T.float comment).
+- demos/Makefile      - new amd64/run-amd64 targets; like arm64's own rule,
+                        no QC_AS/QC_LD override needed (qc's own -amd64
+                        default is already right) and no qemu wrapper
+                        needed (Rosetta 2 makes the binary directly
+                        runnable, unlike every genuinely emulated Linux-
+                        hosted backend here).
+
+Not kept in sync: the legacy per-directory Makefile build (Makefile's
+MAKESUBDIRS) - same situation notes_arm64.txt already documents for arm64
+(stale well before this session, dune is "the default" per CLAUDE.md).
+arch/amd64/Makefile itself (the per-directory one, for that legacy path if
+ever revived) was still written with a correct SRC list, matching
+CLAUDE.md's stated convention for *that* file.
+
+Known remaining gaps
+---------------------
+- No Linux/ELF sibling ("-amd64-elf" or similar) yet - macOS/Mach-O only,
+  per this pass's explicit scope. Unlike arm64's own equivalent gap, this
+  one really would be cheap to fill (see "A Linux/ELF sibling would be
+  cheap" above) - the ISA-level files are already written with zero
+  Mach-O-specific content for exactly this reason.
+- Division ("quot"/"rem"/"divu"/"modu") is implemented at the Post level
+  but has no amd64rec.mlb camlburg grammar rule and is NOT declared in
+  T.capabilities - see "Division" above for exactly what is missing (the
+  rdx:rax "regpair" fusion recognizer) and why it was not attempted this
+  pass. Plain "div"/"mod" (C's own rounding convention, needing
+  Rewrite.div' correction on top of quot/rem) are not even attempted at
+  the Post level.
+- No float support at all (same deferral every other new-development
+  backend here makes on its first pass).
+- Sub-word memory access (T.memory = [64] only) - same scope-limiting
+  choice arm64's own first pass made; a real gap for any future program
+  that declares narrower-than-64-bit locals or does byte-level I/O
+  (fork-tiger's own stdlibcmm.c-- needed exactly this for arm64's own
+  tests/tiger64/ bring-up - very likely to recur here too).
+- No or/xor/shift support in amd64rec.mlb (not declared in
+  T.capabilities either) - not needed by demos/hello_amd64.c--, not
+  attempted.
+- not/bool/disjoin/conjoin/sx/zx/bit are DECLARED in T.capabilities
+  (matching every other backend's own capability list) but have no
+  corresponding amd64rec.mlb grammar rule - the same latent, pre-existing
+  gap arm64rec.mlb/armrec.mlb/riscv64rec.mlb all share (see
+  notes_arm64.txt's own note on this for arm64's sx/zx case specifically).
+- Tiger test suite (tests/tiger64/) not attempted at all this session -
+  this pass stopped at the hello.c-- milestone per explicit scope, same as
+  arm64's own first pass did (see notes_arm64.txt's own "Follow-up pass"
+  sections for what that bring-up eventually needed: Mach-O-specific
+  pcmap symbol handling already solved by arm64asm.ml's own precedent,
+  runtime/ NUM_REGS/FP_REG constants for a new architecture, a
+  regenerate-amd64.sh/run-tiger64-amd64.sh pair - none of that attempted
+  here).
+- -O3 not tried against this backend at all yet - every other new-
+  development backend here hits a known, shared, cross-backend -O3 hang
+  (see notes_arm.txt's/notes_riscv.txt's own "Known remaining gaps"),
+  very likely the same story here, not re-diagnosed.
+- Codegen quality: every arithmetic rule in amd64rec.mlb always emits a
+  move-then-op two-instruction sequence (e.g. "movq %x,%dst\n\taddq
+  %y,%dst"), even when the register allocator happened to assign dst=x
+  already (where a single "addq %y,%dst" would suffice) - correct but not
+  tight, not revisited this pass (correctness/milestone was the goal, not
+  code quality).
+
+Not attempted
+-------------
+- Verifying whether a real Linux/ELF+gcc toolchain (as opposed to clang's
+  cross-assembler) would need any changes at all to amd64.ml/amd64call.ml/
+  amd64cc.ml/amd64rec.mlb - the design claims this would be a clean
+  amd64elfasm.ml-only addition (see "A Linux/ELF sibling would be cheap"),
+  but this has NOT been empirically verified against a real ELF toolchain,
+  only reasoned about from the ABI's own specification and this fork's
+  existing ppc/ppcelfasm.ml precedent for the same kind of split.
+- Any of the "Known remaining gaps" above.

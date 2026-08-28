@@ -162,6 +162,22 @@ let use_riscv64 = ref false
  * follow arch/ppc/ppcelfasm.ml's precedent. *)
 let use_arm64 = ref false
 
+(* claude: -amd64, 64-bit little-endian x86-64 (see arch/amd64/amd64.ml).
+ * Unlike -arm64, this is NOT the machine's own native architecture (this
+ * fork is developed on an Apple Silicon Mac, arm64-apple-darwin) - it needs
+ * a cross-architecture assembler/linker invocation (see default_amd64_cc
+ * below) and its output runs only under Rosetta 2 translation, not
+ * natively. Mach-O/Darwin assembly only for now (arch/amd64/amd64asm.ml),
+ * same "-ppc"/"-arm64"-shaped situation minus the "no usable default on
+ * this host" caveat - Xcode's clang can cross-assemble/link x86_64 Mach-O
+ * directly on this host with just "-arch x86_64", no separate sysroot
+ * needed (unlike the Linux-hosted cross backends' own QC_AS/QC_LD story).
+ * A Linux/ELF "-amd64-elf" sibling, if ever added, would follow
+ * arch/ppc/ppcelfasm.ml's precedent - see amd64.ml's own header comment
+ * for why the ISA-level files (amd64.ml/amd64call.ml/amd64cc.ml/
+ * amd64rec.mlb) are already written to make that cheap. *)
+let use_amd64 = ref false
+
 (* claude: -riscv32, 32-bit little-endian RISC-V (RV32IMAC - see
  * arch/riscv32/riscv32.ml). Unlike every other -<arch> flag, there is no
  * Linux-userspace glibc cross-toolchain for it on this machine (Ubuntu
@@ -268,6 +284,21 @@ let default_riscv32_cc = "riscv64-linux-gnu-gcc -march=rv32imac -mabi=ilp32 -nos
  * -static: Apple does not support statically linking against libSystem,
  * unlike every Linux-hosted backend's own default_*_cc above). *)
 let default_arm64_cc = "clang"
+(* claude: for -amd64. This machine is arm64-apple-darwin, NOT
+ * x86_64-apple-darwin, so plain "clang" (default_arm64_cc's own choice)
+ * would cross-assemble/link to the WRONG (arm64) architecture here - it has
+ * to be told explicitly. "-arch x86_64" is Apple clang's own cross-arch
+ * flag (distinct from every Linux-hosted backend's own "-target
+ * <arch>-unknown-linux-gnu", which picks a different OS/ABI entirely, not
+ * just a different arch) - empirically verified working this session: a
+ * hand-assembled hello-world .s built and linked with "clang -arch
+ * x86_64 -c ... " / "clang -arch x86_64 ..." (no -target, no -static -
+ * same "Apple does not support static-linking libSystem" rule as
+ * default_arm64_cc's own) produced a working x86_64 Mach-O executable that
+ * ran correctly under Rosetta 2 (already installed and active on this
+ * machine - `pgrep oahd` / `/Library/Apple/usr/share/rosetta` both
+ * confirmed present before this backend was written). *)
+let default_amd64_cc = "clang -arch x86_64"
 
 let getenv_or name default =
   match Sys.getenv_opt name with
@@ -454,6 +485,11 @@ type backend =
    * macOS only for now - no "-arm64-elf" sibling yet (see use_arm64's own
    * comment). *)
   | Arm64
+  (* claude: 64-bit little-endian x86-64 (AMD64). Emits Mach-O/Darwin
+   * assembly (arch/amd64/amd64asm.ml), macOS only for now - no "-amd64-elf"
+   * sibling yet (see use_amd64's own comment). Unlike Arm64, this is NOT
+   * the host's native architecture - see default_amd64_cc's comment. *)
+  | Amd64
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
    *)
@@ -475,6 +511,7 @@ let effective_cc backend cmd =
            | Riscv64 -> default_riscv64_cc
            | Riscv32 -> default_riscv32_cc
            | Arm64 -> default_arm64_cc
+           | Amd64 -> default_amd64_cc
            | Ppc -> failwith "-ppc: pass -as/-ld (or QC_AS/QC_LD) explicitly \
                                for the Mach-O assembler/linker to use"
            | Interp -> failwith "-interp has no assembler/linker step")
@@ -487,7 +524,7 @@ let effective_cc backend cmd =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 -> ".s"
+   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Amd64 -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -527,6 +564,9 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     | Arm64 ->
         let asm = Arm64asm.make Cfgutil.emit chan in
         Arm64.target, asm, Arm64backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
+    | Amd64 ->
+        let asm = Amd64asm.make Cfgutil.emit chan in
+        Amd64.target, asm, Amd64backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
          * see TODO/lua/lualink.ml:234 *)
@@ -728,13 +768,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64) -> Assembly
+  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Amd64) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64) -> Object
+  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Amd64) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64) -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Amd64) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -770,6 +810,7 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     else if !use_riscv64 then Riscv64
     else if !use_riscv32 then Riscv32
     else if !use_arm64 then Arm64
+    else if !use_amd64 then Amd64
     else X86
   in
   let stop = stop_at_of_flag backend in
@@ -904,10 +945,14 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     "-arm64", Arg.Unit (fun () -> use_arm64 := true),
     " generate 64-bit little-endian AArch64 Mach-O assembly instead of x86 \
 (this machine's own native architecture - no cross toolchain needed)";
+    "-amd64", Arg.Unit (fun () -> use_amd64 := true),
+    " generate 64-bit little-endian x86-64 Mach-O assembly instead of x86 \
+(cross-assembled/linked via \"clang -arch x86_64\", runs under Rosetta 2 on \
+this arm64 host)";
     "-x86", Arg.Unit (fun () ->
       use_interp := false; use_ppc := false; use_ppc_elf := false; use_sparc := false;
       use_alpha := false; use_mips := false; use_arm := false; use_riscv64 := false;
-      use_riscv32 := false; use_arm64 := false),
+      use_riscv32 := false; use_arm64 := false; use_amd64 := false),
     " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
