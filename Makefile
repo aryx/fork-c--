@@ -294,6 +294,17 @@ endif
 
 test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger-mips test-tiger-sparc test-tiger-arm test-tiger64-riscv64 test-tiger64-alpha test-tiger64-arm64 test-tiger64-amd64 $(TEST_ARM64_MACHO) $(TEST_AMD64_MACHO) test-amd64-alignment test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 
+# claude: subset of test-all that actually runs on a plain macOS dev
+# machine, for people (i.e. most Mac users) who don't have the Linux-
+# targeting cross toolchains test-tiger64-{riscv64,alpha,arm64,amd64} and
+# friends need. Reuses TEST_ARM64_MACHO/TEST_AMD64_MACHO exactly as
+# test-all does above, so it stays in sync with ./configure's Darwin
+# detection instead of hardcoding the two target names again - on a
+# non-Darwin host (no CCARM64MACHO/CCAMD64MACHO in Makefile.config) both
+# expand to empty and this target does nothing, matching test-all's own
+# behavior for these two tiers.
+test-macos:: $(TEST_ARM64_MACHO) $(TEST_AMD64_MACHO)
+
 
 
 
