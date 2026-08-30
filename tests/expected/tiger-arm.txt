@@ -6,10 +6,10 @@ funcall PASS
 hello PASS
 merge FAIL
 qsort FAIL
-queens FAIL
+queens PASS
 rc4 FAIL
-rb FAIL
-rbshort FAIL
+rb PASS
+rbshort PASS
 sieve PASS
-wf FAIL
-wff FAIL
+wf PASS
+wff PASS

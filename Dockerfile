@@ -37,9 +37,10 @@ RUN apt-get install -y diffutils libpcre3-dev libpcre2-dev
 RUN apt-get install -y gcc-i686-linux-gnu libc6-dev-i386-cross qemu-user
 
 # The other cross toolchains "make test-all" needs (ppc, riscv32, riscv64,
-# alpha, amd64 - see ./configure's own comments for why each one and which
-# qc-- backend it serves). qemu-user above already ships the qemu-ppc/
-# qemu-riscv32/qemu-riscv64/qemu-alpha/qemu-x86_64 binaries these need.
+# alpha, amd64, mips, sparc, arm - see ./configure's own comments for why
+# each one and which qc-- backend it serves). qemu-user above already ships
+# the qemu-ppc/qemu-riscv32/qemu-riscv64/qemu-alpha/qemu-x86_64/qemu-mipsel/
+# qemu-sparc32plus/qemu-arm binaries these need.
 #
 # No gcc-x86-64-linux-gnu: on amd64 (what this image now always targets,
 # see FROM above) that package doesn't exist - build-essential's own gcc
@@ -47,12 +48,19 @@ RUN apt-get install -y gcc-i686-linux-gnu libc6-dev-i386-cross qemu-user
 # alias, so CCAMD64's default is already satisfied. binutils-x86-64-linux-gnu/
 # libc6-dev-amd64-cross are still real (if mostly redundant) packages there,
 # so no such special-casing needed for them.
+#
+# gcc-sparc64-linux-gnu, not a plain 32-bit sparc-linux-gnu package: Ubuntu
+# ships no such thing, only sparc64-linux-gnu targeting 32-bit SPARC V8 via
+# -m32 (see tests/run-tiger-sparc.sh's own CCSPARC comment).
 RUN apt-get install -y \
       gcc-powerpc-linux-gnu libc6-dev-powerpc-cross \
       gcc-riscv64-unknown-elf picolibc-riscv64-unknown-elf \
       gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu libc6-dev-riscv64-cross \
       gcc-alpha-linux-gnu binutils-alpha-linux-gnu libc6.1-dev-alpha-cross \
-      binutils-x86-64-linux-gnu libc6-dev-amd64-cross
+      binutils-x86-64-linux-gnu libc6-dev-amd64-cross \
+      gcc-mipsel-linux-gnu binutils-mipsel-linux-gnu libc6-dev-mipsel-cross \
+      gcc-sparc64-linux-gnu binutils-sparc64-linux-gnu libc6-dev-sparc64-cross \
+      gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf libc6-dev-armhf-cross
 
 # Setup OPAM and OCaml
 RUN apt-get install -y opam
