@@ -147,6 +147,18 @@ test-tiger64-arm64-mach-o::
 test-tiger64-amd64-mach-o::
 	tests/run-tiger64-amd64-mach-o.sh
 
+# claude: regression test for a real amd64-only bug (see arch/amd64/
+# amd64backend.ml's own retaddr_block comment and tests/run-amd64-
+# alignment.sh's own header) - real x86-64 "call" pushes an 8-byte return
+# address that the shared stack-frame layout didn't account for, so every
+# call site was misaligned; glibc's printf crashed on it under real qemu-
+# x86_64 even though it compiled and linked cleanly. Not baseline-driven
+# like every other tier here: both its fixtures are expected to PASS,
+# always - this is a "does the fix still hold" check, not a "how close to
+# 100%" one.
+test-amd64-alignment::
+	tests/run-amd64-alignment.sh
+
 test-rt::
 	tests/run-rt.sh
 
@@ -215,7 +227,7 @@ ifdef CCAMD64MACHO
 TEST_AMD64_MACHO := test-tiger64-amd64-mach-o
 endif
 
-test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha $(TEST_ARM64_MACHO) $(TEST_AMD64_MACHO) test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
+test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha $(TEST_ARM64_MACHO) $(TEST_AMD64_MACHO) test-amd64-alignment test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 
 
 

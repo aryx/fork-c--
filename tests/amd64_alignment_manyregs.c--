@@ -1,0 +1,40 @@
+/* claude: a regression fixture for the amd64 stack-alignment bug fixed in
+ * arch/amd64/amd64backend.ml's retaddr_block (see its own comment for the
+ * full diagnosis) - run via tests/run-amd64-alignment.sh, alongside
+ * demos/hello_amd64.c--.
+ *
+ * The bug: real x86-64 "call" pushes an 8-byte return address, so vfp
+ * (the real %rsp at function entry) is only 8-byte aligned, not the
+ * 16-byte alignment every call site needs - glibc's optimized vfprintf
+ * does an aligned %xmm0-7 spill that faults on a misaligned stack. The
+ * fix (a real Block.t modeling those 8 bytes, spliced into the frame's
+ * layout at vfp's own position) is correct for ANY spill/stack-data
+ * footprint as long as that block's own alignment stays at sp_align (16)
+ * - a wrong first attempt dropped it to 8 instead, whose failure mode
+ * turned out to depend on whether the spill count is odd or even (see
+ * amd64backend.ml's own retaddr_block comment). This fixture gives a
+ * DIFFERENT natural spill count than hello_amd64.c--'s one register
+ * (eight locals forcing several callee-saved register spills), and eight
+ * printf arguments - two more than SysV's six integer argument registers,
+ * so this also exercises stack-passed outgoing call args, a second block
+ * in the same frame-layout chain hello_amd64.c-- never touches - broader
+ * coverage of that chain than either fixture gives alone (see
+ * tests/run-amd64-alignment.sh's own comment).
+ */
+
+target byteorder little wordsize 64 pointersize 64;
+
+import bits64 printf;
+export main, fmt;
+
+section "data" {
+  fmt: bits8 [] "%d %d %d %d %d %d %d %d\n\0";
+}
+
+foreign "C" main("unsigned" bits64 iargc, "address" bits64 iargv) {
+  bits64 a, b, c, d, e, f, g, h;
+  a = 1; b = 2; c = 3; d = 4; e = 5; f = 6; g = 7; h = 8;
+  foreign "C" printf("address" fmt, "bits64" a, "bits64" b, "bits64" c,
+                      "bits64" d, "bits64" e, "bits64" f, "bits64" g, "bits64" h);
+  foreign "C" return(0);
+}
