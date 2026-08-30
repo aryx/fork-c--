@@ -114,9 +114,11 @@ test-tiger64-alpha::
 # wrong exit code with otherwise-correct stdout) - see
 # docs/claude_notes/notes_arm64.txt's own follow-up section for why
 # neither is arm64-specific. Darwin-only (see -arm64-mach-o's own comment
-# in driver/main.ml) - like every Darwin-only tier here, still listed in
-# test-all below since that predates this fork's Linux-hosted focus, but
-# expect it to fail outright on a non-Mac host (no ld64/Mach-O linker).
+# in driver/main.ml) - test-all below now only pulls this tier in when
+# ./configure detected Darwin (CCARM64MACHO set in Makefile.config), so a
+# plain "make test-all" on Linux no longer fails outright for lack of an
+# ld64/Mach-O linker; run "make test-tiger64-arm64-mach-o" directly to
+# force it anyway (still fails on Linux, same reason).
 test-tiger64-arm64-mach-o::
 	tests/run-tiger64-arm64-mach-o.sh
 
@@ -141,7 +143,7 @@ test-tiger64-arm64-mach-o::
 # in Post.binop, described there in detail). This compares against a
 # recorded baseline (expected/tiger64-amd64-mach-o.txt) rather than
 # demanding 100%, so it still catches regressions same as the rest.
-# Darwin-only, same test-all caveat as test-tiger64-arm64-mach-o above.
+# Darwin-only, same conditional test-all inclusion as test-tiger64-arm64-mach-o above.
 test-tiger64-amd64-mach-o::
 	tests/run-tiger64-amd64-mach-o.sh
 
@@ -195,7 +197,25 @@ test-optimizer::
 test-phases::
 	tests/run-phases.sh
 
-test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha test-tiger64-arm64-mach-o test-tiger64-amd64-mach-o test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
+# claude: the two Mach-O tiers above are Darwin-only (see their own
+# comments) - CCARM64MACHO/CCAMD64MACHO are only "export"ed into
+# Makefile.config by ./configure when "uname -s" = Darwin (see configure's
+# "Write Makefile.config" section), so gating test-all on them here means
+# it self-adapts to the host instead of unconditionally trying (and
+# failing outright, no ld64/Mach-O linker) on Linux. Requires
+# "./configure" to have run first (undocumented -include Makefile.config
+# below is a no-op otherwise, same as every other CC*/RUN_* var here) -
+# without it these two tiers are skipped even on a real Mac, consistent
+# with every other optional backend in this list already needing
+# configure's detection to be exercised at all.
+ifdef CCARM64MACHO
+TEST_ARM64_MACHO := test-tiger64-arm64-mach-o
+endif
+ifdef CCAMD64MACHO
+TEST_AMD64_MACHO := test-tiger64-amd64-mach-o
+endif
+
+test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha $(TEST_ARM64_MACHO) $(TEST_AMD64_MACHO) test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 
 
 
