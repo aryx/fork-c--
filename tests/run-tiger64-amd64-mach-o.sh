@@ -15,8 +15,8 @@
 # wordsize 64 pointersize 64" sources exactly, so no byteorder flip is
 # needed.
 #
-# Everything links against tiger64/tigermain-amd64.o and
-# tiger64/stdlib-amd64.a, which are checked in exactly like
+# Everything links against tiger64/tigermain-amd64-mach-o.o and
+# tiger64/stdlib-amd64-mach-o.a, which are checked in exactly like
 # run-tiger64-arm64-mach-o.sh's own, so this needs no fork-tiger checkout to run.
 # Regenerate both with tiger64/regenerate-amd64-mach-o.sh after changing anything
 # that affects the run-time data the compiler emits.
@@ -89,7 +89,7 @@ while read -r name src rc stdin_file; do
        >"$B/$name.qcerr" 2>&1; then
     echo "FAIL $name (compile)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
-  if ! $CCAMD64MACHO "$T/tigermain-amd64.o" "$B/$name.o" "$T/stdlib-amd64.a" \
+  if ! $CCAMD64MACHO "$T/tigermain-amd64-mach-o.o" "$B/$name.o" "$T/stdlib-amd64-mach-o.a" \
        "$LIB" -o "$B/$name" 2>"$B/$name.lderr"; then
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi

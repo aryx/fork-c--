@@ -1,5 +1,5 @@
 #!/bin/sh
-# Regenerate tigermain-arm64.o and stdlib-arm64.a, the arm64/macOS
+# Regenerate tigermain-arm64-mach-o.o and stdlib-arm64-mach-o.a, the arm64/macOS
 # counterpart of regenerate-riscv64.sh - see that script first, this one
 # only differs in the target (and in needing no cross toolchain at all:
 # this machine IS arm64-apple-darwin).
@@ -110,15 +110,15 @@ sed 's/wordsize 32 pointersize 32/wordsize 64 pointersize 64/' \
 
 # Tiger's C--, compiled by us. None of these gets -globals: the global area
 # belongs to the one unit compiled at link time, which is the test itself.
-"$QC" -arm64-mach-o -stop .o -o "$here/tigermain-arm64.o" "$tmp/runtime.c--"
+"$QC" -arm64-mach-o -stop .o -o "$here/tigermain-arm64-mach-o.o" "$tmp/runtime.c--"
 "$QC" -arm64-mach-o -stop .o -o "$tmp/stdlibcmm.o"         "$tmp/stdlibcmm.c--"
 "$QC" -arm64-mach-o -stop .o -o "$tmp/alloc.o"             "$tmp/alloc.c--"
 
-rm -f "$here/stdlib-arm64.a"
-$ARARM64 cr "$here/stdlib-arm64.a" \
+rm -f "$here/stdlib-arm64-mach-o.a"
+$ARARM64 cr "$here/stdlib-arm64-mach-o.a" \
   "$tmp/stdlib.o" "$tmp/stdlibcmm.o" "$tmp/gc.o" "$tmp/alloc.o"
 
 echo "regenerated:"
-echo "  $here/tigermain-arm64.o"
-echo "  $here/stdlib-arm64.a"
+echo "  $here/tigermain-arm64-mach-o.o"
+echo "  $here/stdlib-arm64-mach-o.a"
 echo "now run ../run-tiger64-arm64-mach-o.sh and commit both if the results are what you expect"

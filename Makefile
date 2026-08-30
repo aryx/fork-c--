@@ -105,8 +105,47 @@ test-tiger64-riscv64::
 test-tiger64-alpha::
 	tests/run-tiger64-alpha.sh
 
+# claude: the -arm64 (Linux/ELF, the bare/default flag of the arm64 pair -
+# see driver/main.ml's use_arm64 comment) counterpart of test-tiger64-riscv64
+# above - same self-contained shape (tigermain-arm64.o/stdlib-arm64.a checked
+# in - bare names, matching -arm64 itself being the bare/default flag; the
+# Mach-O tier below now carries the explicit "-mach-o" suffix on its own
+# artefacts instead, freeing these up - regenerate-arm64.sh needs fork-tiger,
+# run-tiger64-arm64.sh itself needs the arm64 cross toolchain, though on this
+# repo's own aarch64-linux dev host that toolchain IS the native one, same as
+# x86 on an x86 host). 13/15, matching test-tiger64-riscv64/
+# test-tiger64-arm64-mach-o's own bar exactly, with the SAME two failures
+# (colmajor's GC-triggered heap corruption; merge's wrong exit code with
+# otherwise-correct stdout) - see docs/claude_notes/notes_arm64.txt's own
+# follow-up section for why neither is arm64-specific. Unlike the Mach-O tier
+# below, this one is NOT Darwin-gated: it is the whole point of this tier
+# (verified end to end from fork-tiger per the "runtime: split
+# arm64cont.s/amd64cont.s" commit), so it always runs in test-all - the
+# arm64/amd64 cross toolchains are already a test-all prerequisite via
+# test-tiger64-riscv64's own sibling requirements.
+test-tiger64-arm64::
+	tests/run-tiger64-arm64.sh
+
+# claude: the -amd64 (Linux/ELF) counterpart of test-tiger64-arm64 above -
+# same self-contained shape (tigermain-amd64.o/stdlib-amd64.a checked in -
+# bare names, same reasoning as test-tiger64-arm64's own - regenerate-amd64.sh
+# needs fork-tiger, run-tiger64-amd64.sh itself needs the amd64 cross
+# toolchain plus qemu-x86_64 to run the result on this repo's own
+# aarch64-linux dev host). 9/15, NOT the 13/15 bar test-tiger64-arm64 clears -
+# colmajor and merge fail for the SAME already-documented cross-backend
+# reasons those two do everywhere else, but rc4/rb/wf/wff also fail here,
+# matching test-tiger64-amd64-mach-o's own exact 9/15 bar and failure set
+# (see that target's own comment and docs/claude_notes/notes_amd64.txt's
+# follow-up section for the diagnosis). Not Darwin-gated, same reasoning as
+# test-tiger64-arm64 above.
+test-tiger64-amd64::
+	tests/run-tiger64-amd64.sh
+
 # claude: the -arm64-mach-o counterpart of test-tiger64-riscv64 above -
-# same self-contained shape (tigermain-arm64.o/stdlib-arm64.a checked in,
+# same self-contained shape (tigermain-arm64-mach-o.o/stdlib-arm64-mach-o.a
+# checked in - "-mach-o" suffix: plain "arm64" is now claimed by the
+# Linux/ELF tigermain-arm64.o/stdlib-arm64.a test-tiger64-arm64 above uses,
+# since -arm64 itself is the bare/default flag of the pair -
 # regenerate-arm64-mach-o.sh needs fork-tiger, run-tiger64-arm64-mach-o.sh itself
 # needs no cross toolchain at all - this machine's own native architecture,
 # on an Apple Silicon Mac). 13/15, matching riscv64's own bar exactly, with
@@ -123,8 +162,9 @@ test-tiger64-arm64-mach-o::
 	tests/run-tiger64-arm64-mach-o.sh
 
 # claude: the -amd64-mach-o counterpart of test-tiger64-arm64-mach-o above -
-# same self-contained shape (tigermain-amd64.o/stdlib-amd64.a checked in,
-# regenerate-amd64-mach-o.sh needs fork-tiger, run-tiger64-amd64-mach-o.sh itself
+# same self-contained shape (tigermain-amd64-mach-o.o/stdlib-amd64-mach-o.a
+# checked in - "-mach-o" suffix, same reasoning as test-tiger64-arm64-mach-o's
+# own - regenerate-amd64-mach-o.sh needs fork-tiger, run-tiger64-amd64-mach-o.sh itself
 # needs the explicit "-arch x86_64" cross-target flag but no separate cross
 # toolchain/qemu - clang cross-assembles/links directly on this host,
 # output runs under Rosetta 2). 9/15, NOT the 13/15 bar test-tiger64-
@@ -227,7 +267,7 @@ ifdef CCAMD64MACHO
 TEST_AMD64_MACHO := test-tiger64-amd64-mach-o
 endif
 
-test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha $(TEST_ARM64_MACHO) $(TEST_AMD64_MACHO) test-amd64-alignment test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
+test-all:: test test-tiger test-tiger-ppc test-tiger-riscv32 test-tiger64-riscv64 test-tiger64-alpha test-tiger64-arm64 test-tiger64-amd64 $(TEST_ARM64_MACHO) $(TEST_AMD64_MACHO) test-amd64-alignment test-rt test-quest test-native test-native-ppc test-native-o3 test-native-ppc-o3 test-lcc test-optimizer test-phases
 
 
 
