@@ -8,7 +8,20 @@
 # archive. Building this on an arm64 host (e.g. Apple Silicon, or this
 # repo's own arm64 dev machine) now runs under QEMU system emulation
 # instead of failing outright on a missing package.
-FROM --platform=linux/amd64 ubuntu:22.04
+#
+# claude: 24.04, not 22.04 - tests/tiger/tigermain-riscv32.o and
+# stdlib-riscv32.a are checked in prebuilt (see tests/tiger/
+# regenerate-riscv32.sh), built on pad's own dev machine, which is 24.04's
+# gcc-riscv64-unknown-elf (13.2.0/binutils 2.42). Newer binutils tags the
+# RISC-V arch ELF attribute with "zmmul"; 22.04's older binutils (2.38,
+# paired with gcc-riscv64-unknown-elf 10.2.0) doesn't recognize that
+# extension string and refuses to link ANY object carrying it - "Invalid or
+# unknown z ISA extension: 'zmmul'" - which broke every single
+# test-tiger-riscv32 test (confirmed by linking the checked-in objects
+# against a real ubuntu:22.04 container's toolchain and reproducing that
+# exact error). Matching the base image to the machine that produces these
+# prebuilt artifacts avoids the whole class of toolchain-version skew.
+FROM --platform=linux/amd64 ubuntu:24.04
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
