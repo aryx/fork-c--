@@ -1,0 +1,94 @@
+Removing the semgrep-pfff-libs dependency
+==========================================
+(scoping notes from a Claude Code session, 2026-08-30)
+
+Conclusion: easy. Only 3 files in the real tree touch the submodule at
+all. Everything else (arch/*, middle/*, backend/*, cfg/*, etc.) already
+uses the fork's own cmm_commons2/cmm_commons3 (libs/prelude,
+libs/bitops), which are unrelated to semgrep-pfff-libs despite the
+similar naming. Estimate: about half a day, purely mechanical.
+
+(Search method: grepped the real source tree -- excluding TODO/,
+semgrep-pfff-libs/, todo/, caps/, .claude/ (which has a leftover
+orphaned agent worktree with its own nested checkout), _build/ -- for
+every module name defined under semgrep-pfff-libs/. Hits on generic
+names like Eq, Proc, Parse, OCaml, FS in arch/* etc. are false
+positives: those are locally-defined modules of the same name, not the
+submodule's.)
+
+Files that actually depend on the submodule
+--------------------------------------------
+
+1) parsing/parse_cmm.ml
+   - `open Common` (unused directly beyond this)
+   - `UFile.with_open_in (Fpath.v file) (fun chan -> ...)`
+   Fix: Fpath itself is a real standalone opam package (already a
+   dependency independent of the submodule) -- keep using it. Only
+   UFile.with_open_in needs replacing:
+     let ic = open_in file in
+     Fun.protect ~finally:(fun () -> close_in ic) (fun () -> f ic)
+
+2) parsing/test_parsing_cmm.ml (+ .mli)
+   - `open Common` for the `=~` regex-match operator
+   - `UCommon.pr2` / `UCommon.pr2_gen` (stderr print + generic dump
+     via Dumper.dump)
+   - `Arg_.mk_action_1_arg`
+   Fix: `=~` -> Str.string_match (or just inline the regex check);
+   pr2 -> Printf.eprintf "%s\n%!"; pr2_gen only used once for a debug
+   dump, can drop or use ppx_deriving.show's generated printer instead
+   of Dumper.dump.
+
+3) driver/main.ml -- the real surface area:
+   - Arg_ : the -action-flag CLI framework (mk_action_0_arg,
+     mk_action_1_arg, options_of_actions, parse_options, do_action,
+     action_list, usage). Self-contained, 187 lines in
+     semgrep-pfff-libs/commons/Arg_.ml, wraps only stdlib Arg. Upstream
+     even marks it "DEPRECATED, use Cmdliner instead." Plan: vendor a
+     trimmed copy (only the ~7 functions actually called) directly
+     into driver/, e.g. driver/arg_.ml. Drop the UnixExit exception
+     dance -- nothing catches it today, so parse_options can just call
+     `exit code` directly instead of raising.
+   - Exit : OK / Err of string / Code of int, exit, catch. 86 lines,
+     small capability-typed exit-code wrapper (exit takes a
+     `< Cap.exit; .. >` object from the *separate* `caps` submodule,
+     which stays). Vendor as-is (~20 lines).
+   - Console.print caps -- under the hood this is literally
+     `let print _caps str = print_string str; flush stdout` (ignores
+     caps entirely). One-line inline replacement.
+   - CapExec.status_of_run + Cmd.t / Cmd.to_string -- used once, to
+     run the assembler/linker subprocess. This is the one piece with
+     real external deps (Bos, Rresult). Easiest fix: replace with
+     Unix.create_process / Unix.waitpid directly, dropping Bos/Rresult
+     entirely rather than vendoring wrappers around them.
+   - List_.map / List_.null, String_.empty, Fpath_.of_strings,
+     Logs_.setup -- thin one-line wrappers over stdlib / Fpath / Logs.
+     (Fpath and Logs are themselves real standalone opam packages
+     already required independent of the submodule -- no issue there,
+     just drop the pfff wrapper layer.)
+   - `spf` and `=*=` from `open Common` -- spf is just Printf.sprintf;
+     =*= is just (=) (renamed upstream only to dodge a lint against
+     polymorphic compare).
+
+Mechanical cleanup once the above is done
+------------------------------------------
+- Remove `commons`, `commons.unsafe`, `profiling` from the (libraries)
+  stanzas in parsing/dune and driver/dune.
+- Remove the semgrep-pfff-libs comment/dependency note from
+  dune-project's (depends) (currently just `num` plus the comment
+  about commons/profiling pulling their own deps).
+- Drop the semgrep-pfff-libs git submodule entry (.gitmodules,
+  `git submodule deinit`).
+- Remove the separate opam-install step for semgrep-pfff-libs's own
+  .opam files from the Dockerfile.
+- CLAUDE.md's "Build and run" section currently says the build fails
+  with "Library "profiling" not found" if the submodule isn't checked
+  out -- update/remove that note once this lands.
+
+Not in scope / unaffected
+----------------------------
+- The `caps` submodule (Cap.t, CapUnix, CapSys, CapStdlib, CapRandom)
+  is separate from semgrep-pfff-libs and is barely wired into the cmm
+  build today (only caps/src/tcb/TCB.ml exists in-tree; nothing in the
+  cmm dune files references cmm_caps/caps_tcb). Not touched by this.
+- Fpath and Logs are real standalone opam packages, independent of
+  semgrep-pfff-libs -- keep depending on them directly.
