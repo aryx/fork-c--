@@ -1,7 +1,14 @@
 # Build and test Quick C-- with OCaml 4.14.0 via OPAM on Ubuntu Linux.
-# See also .github/workflows/docker.yml for its use in Github Actions (GHA).
-
-FROM ubuntu:22.04
+# See also .github/workflows/docker.yml for its use in Github Actions (GHA),
+# which runs this on an amd64 "ubuntu-latest" runner.
+#
+# --platform=linux/amd64: pinned rather than left to the build host, since
+# some of the cross-toolchain packages below (e.g. gcc-powerpc-linux-gnu,
+# gcc-alpha-linux-gnu) exist for amd64's archive but not arm64's ports
+# archive. Building this on an arm64 host (e.g. Apple Silicon, or this
+# repo's own arm64 dev machine) now runs under QEMU system emulation
+# instead of failing outright on a missing package.
+FROM --platform=linux/amd64 ubuntu:22.04
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
@@ -28,6 +35,24 @@ RUN apt-get install -y diffutils libpcre3-dev libpcre2-dev
 # namespace, so an image that runs on one machine silently fails on another -
 # too fragile to depend on across architectures, Docker and CI.
 RUN apt-get install -y gcc-i686-linux-gnu libc6-dev-i386-cross qemu-user
+
+# The other cross toolchains "make test-all" needs (ppc, riscv32, riscv64,
+# alpha, amd64 - see ./configure's own comments for why each one and which
+# qc-- backend it serves). qemu-user above already ships the qemu-ppc/
+# qemu-riscv32/qemu-riscv64/qemu-alpha/qemu-x86_64 binaries these need.
+#
+# No gcc-x86-64-linux-gnu: on amd64 (what this image now always targets,
+# see FROM above) that package doesn't exist - build-essential's own gcc
+# already IS the amd64 compiler and comes with an x86_64-linux-gnu-gcc
+# alias, so CCAMD64's default is already satisfied. binutils-x86-64-linux-gnu/
+# libc6-dev-amd64-cross are still real (if mostly redundant) packages there,
+# so no such special-casing needed for them.
+RUN apt-get install -y \
+      gcc-powerpc-linux-gnu libc6-dev-powerpc-cross \
+      gcc-riscv64-unknown-elf picolibc-riscv64-unknown-elf \
+      gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu libc6-dev-riscv64-cross \
+      gcc-alpha-linux-gnu binutils-alpha-linux-gnu libc6.1-dev-alpha-cross \
+      binutils-x86-64-linux-gnu libc6-dev-amd64-cross
 
 # Setup OPAM and OCaml
 RUN apt-get install -y opam
@@ -73,35 +98,15 @@ RUN eval $(opam env) && dune build @install
 # Test
 RUN ./bin/qc --help
 
-# The cheap tier: run qc over every C-- file in tests/src and demos and compare
-# the outcome against the recorded baseline in tests/expected/. It needs
-# nothing but the qc we just built.
-RUN make test
+# Detect the cross toolchains installed above and write Makefile.config.
+# --skip-submodules: .dockerignore drops the top-level .git, so this isn't
+# a git repository here and configure's own submodule check would fail;
+# the submodule content itself was already brought in by "COPY . ." above.
+RUN eval $(opam env) && ./configure --skip-submodules
 
-# The behavioural tier: build the Tiger programs in tests/tiger with qc, run
-# them under qemu-i386, and check their output and exit status against what
-# upstream recorded. This is what validates code generation rather than just
-# the absence of crashes - "make test" only proves qc does not fall over.
-#
-# Like the compile tier it compares against a recorded baseline, so it passes
-# while twelve of the fifteen still fail on the known PC-map bug, and reports
-# any *change*.
-RUN make test-tiger
-
-# The runtime's own behavioural tier: `cut to`, `foreign "C-- thread"`, and
-# stack unwinding via .pcmap - paths hello.tig never exercises, so
-# test-tiger proves nothing about them. Also baseline-compared; one of the
-# six (trace) currently fails, see tests/rt.tests.
-RUN make test-rt
-
-# The general native-backend regression suite (needs no run-time system,
-# unlike the two above). Also baseline-compared; 15 of 66 currently fail,
-# mostly known widen/simplify_exps gaps plus two real parser gaps (carry,
-# tadd) - see tests/native.tests.
-RUN make test-native
-
-# LCC's own regression suite, translated to C--. Also baseline-compared;
-# 7 of 14 currently fail on one shared, well-localized gap - the x86
-# target's `extract` capability is stubbed with `impossf "extract on x86"`
-# (arch/x86/x86.ml:165) - see tests/lcc.tests.
-RUN make test-lcc
+# Every regression tier this repo has, baseline-compared against
+# tests/expected/. See the Makefile's own test/test-tiger/test-rt/
+# test-quest/test-native/test-lcc/test-optimizer/test-phases/test-all
+# targets (and each tests/run-*.sh) for what each tier covers and why it
+# compares against a recorded baseline rather than demanding 100%.
+RUN make test-all
