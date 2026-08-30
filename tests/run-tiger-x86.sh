@@ -43,7 +43,7 @@
 here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}
-CC32=${CC32:-i686-linux-gnu-gcc}
+CCX86=${CCX86:-i686-linux-gnu-gcc}
 
 # How to run a 32-bit x86 binary. We do NOT rely on binfmt_misc: whether a
 # foreign binary "just runs" depends on host-wide registrations that a
@@ -51,16 +51,16 @@ CC32=${CC32:-i686-linux-gnu-gcc}
 # the container's mount namespace, so the same image works on one machine and
 # not another. Naming the emulator explicitly is portable.
 #
-# On a genuine x86 host, set RUN32= (empty) to run the binaries directly.
+# On a genuine x86 host, set RUN_X86= (empty) to run the binaries directly.
 # qc drives an external assembler, defaulting to clang because that is the one
 # compiler able to target i386 from any host. We already have a real i386
 # cross toolchain here, so point qc at it rather than requiring both.
-QC_AS=${QC_AS:-$CC32}
-QC_LD=${QC_LD:-$CC32}
+QC_AS=${QC_AS:-$CCX86}
+QC_LD=${QC_LD:-$CCX86}
 export QC_AS QC_LD
 
-if [ -z "${RUN32+set}" ]; then
-  if command -v qemu-i386 >/dev/null 2>&1; then RUN32=qemu-i386; else RUN32=; fi
+if [ -z "${RUN_X86+set}" ]; then
+  if command -v qemu-i386 >/dev/null 2>&1; then RUN_X86=qemu-i386; else RUN_X86=; fi
 fi
 RT=../runtime
 LIB=$RT/build-x86/libqcmm.a
@@ -71,8 +71,8 @@ if [ ! -x "$QC" ]; then
   echo "run-tiger.sh: no qc at $QC (run 'dune build' first)" >&2
   exit 2
 fi
-if ! command -v "$CC32" >/dev/null 2>&1; then
-  echo "run-tiger.sh: no $CC32; install the i386 cross toolchain:" >&2
+if ! command -v "$CCX86" >/dev/null 2>&1; then
+  echo "run-tiger.sh: no $CCX86; install the i386 cross toolchain:" >&2
   echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
   exit 2
 fi
@@ -107,13 +107,13 @@ while read -r name src rc stdin_file; do
   if ! "$QC" -globals -stop .o -o "$B/$name.o" "$T/$src" >"$B/$name.qcerr" 2>&1; then
     echo "FAIL $name (compile)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
-  if ! "$CC32" -static "$T/tigermain-x86.o" "$B/$name.o" "$T/stdlib-x86.a" \
+  if ! "$CCX86" -static "$T/tigermain-x86.o" "$B/$name.o" "$T/stdlib-x86.a" \
        "$LIB" "$RT/pcmap.ld" -o "$B/$name" 2>"$B/$name.lderr"; then
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
 
   if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=$T/input/$stdin_file; fi
-  timeout 60 $RUN32 "./$B/$name" < "$input" > "$B/$name.out" 2> "$B/$name.err"
+  timeout 60 $RUN_X86 "./$B/$name" < "$input" > "$B/$name.out" 2> "$B/$name.err"
   got=$?
 
   if ! diff "$B/$name.out" "$T/output/$name.1" > "$B/$name.diff" 2>&1; then

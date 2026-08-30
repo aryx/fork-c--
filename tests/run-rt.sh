@@ -37,14 +37,14 @@
 here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}
-CC32=${CC32:-i686-linux-gnu-gcc}
+CCX86=${CCX86:-i686-linux-gnu-gcc}
 
-QC_AS=${QC_AS:-$CC32}
-QC_LD=${QC_LD:-$CC32}
+QC_AS=${QC_AS:-$CCX86}
+QC_LD=${QC_LD:-$CCX86}
 export QC_AS QC_LD
 
-if [ -z "${RUN32+set}" ]; then
-  if command -v qemu-i386 >/dev/null 2>&1; then RUN32=qemu-i386; else RUN32=; fi
+if [ -z "${RUN_X86+set}" ]; then
+  if command -v qemu-i386 >/dev/null 2>&1; then RUN_X86=qemu-i386; else RUN_X86=; fi
 fi
 RT=../runtime
 B=build/rt
@@ -55,8 +55,8 @@ if [ ! -x "$QC" ]; then
   echo "run-rt.sh: no qc at $QC (run 'dune build' first)" >&2
   exit 2
 fi
-if ! command -v "$CC32" >/dev/null 2>&1; then
-  echo "run-rt.sh: no $CC32; install the i386 cross toolchain:" >&2
+if ! command -v "$CCX86" >/dev/null 2>&1; then
+  echo "run-rt.sh: no $CCX86; install the i386 cross toolchain:" >&2
   echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
   exit 2
 fi
@@ -97,17 +97,17 @@ while read -r name cmm other rc stdin_file; do
   # which needs every C frame in the walk to actually have one - not the
   # modern default. Harmless for the other rt.tests, which don't walk C
   # frames at all.
-  if ! "$CC32" -w -fcommon -fno-omit-frame-pointer -I "$RT" -c "cmm-pass/$other" \
+  if ! "$CCX86" -w -fcommon -fno-omit-frame-pointer -I "$RT" -c "cmm-pass/$other" \
        -o "$B/$name.other.o" 2>"$B/$name.ccerr"; then
     echo "FAIL $name (compile other)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
-  if ! "$CC32" -static "$B/$name.o" "$B/$name.other.o" "$LIB" "$RT/pcmap.ld" \
+  if ! "$CCX86" -static "$B/$name.o" "$B/$name.other.o" "$LIB" "$RT/pcmap.ld" \
        -o "$B/$name" 2>"$B/$name.lderr"; then
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
 
   if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=cmm-pass/$stdin_file; fi
-  timeout 60 $RUN32 "./$B/$name" < "$input" > "$B/$name.out" 2> "$B/$name.err"
+  timeout 60 $RUN_X86 "./$B/$name" < "$input" > "$B/$name.out" 2> "$B/$name.err"
   got=$?
 
   if ! diff "$B/$name.out" "cmm-pass/output/$name.1" > "$B/$name.diff" 2>&1; then

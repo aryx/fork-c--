@@ -16,14 +16,14 @@
 here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}
-CC32=${CC32:-i686-linux-gnu-gcc}
+CCX86=${CCX86:-i686-linux-gnu-gcc}
 
-QC_AS=${QC_AS:-$CC32}
-QC_LD=${QC_LD:-$CC32}
+QC_AS=${QC_AS:-$CCX86}
+QC_LD=${QC_LD:-$CCX86}
 export QC_AS QC_LD
 
-if [ -z "${RUN32+set}" ]; then
-  if command -v qemu-i386 >/dev/null 2>&1; then RUN32=qemu-i386; else RUN32=; fi
+if [ -z "${RUN_X86+set}" ]; then
+  if command -v qemu-i386 >/dev/null 2>&1; then RUN_X86=qemu-i386; else RUN_X86=; fi
 fi
 
 B=build/lcc
@@ -32,8 +32,8 @@ if [ ! -x "$QC" ]; then
   echo "run-lcc.sh: no qc at $QC (run 'dune build' first)" >&2
   exit 2
 fi
-if ! command -v "$CC32" >/dev/null 2>&1; then
-  echo "run-lcc.sh: no $CC32; install the i386 cross toolchain:" >&2
+if ! command -v "$CCX86" >/dev/null 2>&1; then
+  echo "run-lcc.sh: no $CCX86; install the i386 cross toolchain:" >&2
   echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
   exit 2
 fi
@@ -82,19 +82,19 @@ while IFS='|' read -r name srcs other rc stdin_file argv; do
   fi
 
   if [ "$other" != "-" ]; then
-    if ! "$CC32" -w -fcommon -I ../runtime -c "$other" -o "$B/$name.other.o" \
+    if ! "$CCX86" -w -fcommon -I ../runtime -c "$other" -o "$B/$name.other.o" \
          2>"$B/$name.ccerr"; then
       echo "FAIL $name (compile other)"; echo "$name FAIL" >> "$B/actual.txt"; continue
     fi
     objs="$objs $B/$name.other.o"
   fi
 
-  if ! "$CC32" -static $objs -o "$B/$name" 2>"$B/$name.lderr"; then
+  if ! "$CCX86" -static $objs -o "$B/$name" 2>"$B/$name.lderr"; then
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
 
   if [ "$stdin_file" = "-" ]; then input=/dev/null; else input=lcc/$stdin_file; fi
-  timeout 60 $RUN32 "./$B/$name" $argv < "$input" > "$B/$name.out" 2> "$B/$name.err"
+  timeout 60 $RUN_X86 "./$B/$name" $argv < "$input" > "$B/$name.out" 2> "$B/$name.err"
   got=$?
 
   # Three entries (see lcc.tests) have no recorded output upstream and

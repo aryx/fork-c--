@@ -57,13 +57,13 @@
 #
 #      sudo apt install qemu-user
 #
-#    RUN32/RUNPPC/RUNSPARC/RUNALPHA/RUNMIPS/RUNARM/RUNRISCV64 below name
+#    RUNX86/RUNPPC/RUNSPARC/RUNALPHA/RUNMIPS/RUNARM/RUNRISCV64 below name
 #    qemu-i386/qemu-ppc/qemu-sparc32plus/qemu-alpha/qemu-mipsel/qemu-arm/
 #    qemu-riscv64 explicitly rather than relying on binfmt_misc, which is a
 #    host-wide registration a container inherits only by accident - the
 #    kernel resolves the interpreter path in the container's own mount
 #    namespace, so the same image runs on one machine and not another. On a
-#    genuine host of that architecture, nothing is needed: "make RUN32=
+#    genuine host of that architecture, nothing is needed: "make RUNX86=
 #    run-x86" (or RUNPPC=/RUNSPARC=/RUNALPHA=/RUNMIPS=/RUNARM=/RUNRISCV64=
 #    with the matching run-* target). qemu-sparc32plus is required for sparc
 #    specifically, not plain qemu-sparc - see hello_sparc.c--'s own comment
@@ -75,7 +75,7 @@
 # ---------------------------------------------------------------------------
 
 QC      ?= ../bin/qc
-CC32    ?= i686-linux-gnu-gcc
+CCX86    ?= i686-linux-gnu-gcc
 CCPPC   ?= powerpc-linux-gnu-gcc
 CCSPARC ?= sparc64-linux-gnu-gcc -m32
 CCALPHA ?= alpha-linux-gnu-gcc
@@ -91,7 +91,7 @@ CCAMD64MACHO ?= clang -arch x86_64
 
 B = build
 
-RUN32    ?= $(shell command -v qemu-i386       2>/dev/null)
+RUNX86    ?= $(shell command -v qemu-i386       2>/dev/null)
 RUNPPC   ?= $(shell command -v qemu-ppc        2>/dev/null)
 RUNSPARC ?= $(shell command -v qemu-sparc32plus 2>/dev/null)
 RUNALPHA ?= $(shell command -v qemu-alpha      2>/dev/null)
@@ -121,12 +121,12 @@ $(B):
 # -globals is needed even for this one-file program: see driver/main.ml's
 # comment on the exportglobals flag.
 $(B)/hello: hello.c-- | $(B)
-	QC_AS="$(CC32)" QC_LD="$(CC32) -static" $(QC) -globals -o $@ $<
+	QC_AS="$(CCX86)" QC_LD="$(CCX86) -static" $(QC) -globals -o $@ $<
 
 x86: $(B)/hello
 
 run-x86: x86
-	@$(RUN32) ./$(B)/hello; echo "[exit status $$?]"
+	@$(RUNX86) ./$(B)/hello; echo "[exit status $$?]"
 
 # ---------------------------------------------------------------------------
 # ppc (hello_ppc.c--, byteorder big, the -ppc-elf backend)

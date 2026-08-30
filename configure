@@ -21,7 +21,7 @@ set -eu
 #     the cross toolchain that assembles/links its output and, on a host
 #     that isn't that architecture, the qemu user-mode emulator that runs
 #     it. This is the same problem tiger's own configure solves for
-#     qc--'s CC32/CC_PPC/etc - the difference is those are needed here by
+#     qc--'s CCX86/CCPPC/etc - the difference is those are needed here by
 #     this repo's OWN test suite (test-tiger, test-native-ppc, ...), not
 #     by a downstream client. See demos/Makefile's own REQUIREMENTS
 #     section and each tests/run-*.sh's header for the long version of
@@ -31,6 +31,17 @@ set -eu
 # product) needs none of it - only the various "make test-*" tiers do,
 # and each already has its own sensible fallback default (see e.g.
 # tests/run-tiger-ppc.sh's own "CCPPC=${CCPPC:-powerpc-linux-gnu-gcc}").
+# CCX86/RUN_X86 (the -x86 backend's own pair, following that same CC<ARCH>/
+# RUN_<ARCH> convention rather than staying a bare "CC32"/"RUN32" - see the
+# git history around the commit that added this ./configure script for why
+# that bare naming was a bug: tests/run-native.sh separately reuses CC32/
+# RUN32 as a generic *per-$BACKEND* override (its own CC32_DEFAULT/
+# RUN32_DEFAULT switch on ppc/sparc/x86), and Make's "export" below means
+# whatever this script picks for the x86 tier would silently shadow that
+# script's ppc/sparc defaults too - every "make test-native-ppc"/
+# "test-native-sparc" recipe inherits this file's exports regardless of
+# BACKEND=ppc. Naming the x86 pair CCX86/RUN_X86 like every other backend
+# removes the collision instead of special-casing x86.
 # What ./configure adds is a) an upfront report of what's missing instead
 # of discovering it tier-by-tier, and b) Makefile.config, which the
 # top-level Makefile "-include"s and re-"export"s so that a value
@@ -51,8 +62,8 @@ set -eu
 ###############################################################################
 
 # Parse options
-CC32=${CC32:-}
-RUN32=${RUN32:-}
+CCX86=${CCX86:-}
+RUN_X86=${RUN_X86:-}
 CCPPC=${CCPPC:-}
 RUN_PPC=${RUN_PPC:-}
 CCSPARC=${CCSPARC:-}
@@ -76,7 +87,7 @@ CCAMD64MACHO=${CCAMD64MACHO:-}
 SKIP_SUBMODULES=no
 for arg in "$@"; do
     case "$arg" in
-        --cc32=*)       CC32="${arg#--cc32=}" ;;
+        --cc-x86=*)     CCX86="${arg#--cc-x86=}" ;;
         --cc-ppc=*)     CCPPC="${arg#--cc-ppc=}" ;;
         --cc-sparc=*)   CCSPARC="${arg#--cc-sparc=}" ;;
         --cc-alpha=*)   CCALPHA="${arg#--cc-alpha=}" ;;
@@ -93,7 +104,7 @@ for arg in "$@"; do
             ;;
         --help|-h)
             echo "Usage: ./configure [options]"
-            echo "  --cc32=CMD         the 32-bit x86 C compiler (default backend; -x86)"
+            echo "  --cc-x86=CMD       the 32-bit x86 C compiler (default backend; -x86)"
             echo "  --cc-ppc=CMD       the 32-bit ppc C compiler (-ppc-elf)"
             echo "  --cc-sparc=CMD     the 32-bit sparc C compiler (-sparc)"
             echo "  --cc-alpha=CMD     the 64-bit alpha C compiler (-alpha)"
@@ -106,7 +117,7 @@ for arg in "$@"; do
             echo "  --cc-arm64-mach-o=CMD  the 64-bit arm64 C compiler (-arm64-mach-o; Darwin only)"
             echo "  --cc-amd64-mach-o=CMD  the 64-bit amd64 C compiler (-amd64-mach-o; Darwin only)"
             echo "  --skip-submodules  don't check/init git submodules"
-            echo "CC32, RUN32 and, per backend, CC<ARCH>/RUN_<ARCH> may also be set"
+            echo "CC<ARCH>/RUN_<ARCH> (per backend, e.g. CCX86/RUN_X86) may also be set"
             echo "in the environment."
             exit 0
             ;;
@@ -192,23 +203,23 @@ fi
 # Not gcc-multilib: multilib offers secondary ABIs of the host's own
 # architecture family, which on arm64 means 32-bit ARM, not i386.
 
-if [ -z "$CC32" ]; then
-    CC32=i686-linux-gnu-gcc
+if [ -z "$CCX86" ]; then
+    CCX86=i686-linux-gnu-gcc
 fi
-if ! command -v "$CC32" >/dev/null 2>&1; then
-    echo "configure: warning: no $CC32 on PATH (needed for -x86 and most of make test-*)" >&2
+if ! command -v "$CCX86" >/dev/null 2>&1; then
+    echo "configure: warning: no $CCX86 on PATH (needed for -x86 and most of make test-*)" >&2
     echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
 fi
 
-if [ -z "$RUN32" ]; then
+if [ -z "$RUN_X86" ]; then
     ARCH=`uname -m`
     case "$ARCH" in
         i?86 | x86_64)
-            RUN32=
+            RUN_X86=
             ;;
         *)
-            RUN32=`command -v qemu-i386 2>/dev/null || true`
-            if [ -z "$RUN32" ]; then
+            RUN_X86=`command -v qemu-i386 2>/dev/null || true`
+            if [ -z "$RUN_X86" ]; then
                 echo "configure: warning: $ARCH host and no qemu-i386 on PATH" >&2
                 echo "  sudo apt install qemu-user" >&2
             fi
@@ -219,7 +230,7 @@ fi
 ###############################################################################
 # The other backends (all optional)
 ###############################################################################
-# Detection is best-effort: unlike CC32, none of these is the default
+# Detection is best-effort: unlike CCX86, none of these is the default
 # backend, so a missing toolchain is a warning, not a configure failure -
 # the matching "make test-*"/"make test-native-<arch>" target will just
 # fail later with a clearer message. Variable naming here follows
@@ -376,9 +387,9 @@ fi
     echo
     echo "# The 32-bit x86 toolchain, since qc only emits i386 there (-x86, the"
     echo "# default backend)"
-    echo "export CC32=$CC32"
+    echo "export CCX86=$CCX86"
     echo "# How to run the result; empty on an x86 host"
-    echo "export RUN32=$RUN32"
+    echo "export RUN_X86=$RUN_X86"
     echo
     echo "# The 32-bit ppc toolchain, for qc--'s -ppc-elf backend (optional)"
     echo "export CCPPC=$CCPPC"
@@ -433,8 +444,8 @@ fi
 } > Makefile.config
 
 echo "wrote Makefile.config"
-echo "  CC32       = $CC32"
-echo "  RUN32      = ${RUN32:-(native)}"
+echo "  CCX86      = $CCX86"
+echo "  RUN_X86    = ${RUN_X86:-(native)}"
 echo "  CCPPC      = $CCPPC"
 echo "  RUN_PPC    = ${RUN_PPC:-(native)}"
 echo "  CCSPARC    = $CCSPARC"

@@ -26,7 +26,7 @@ set -e
 here=$(cd "$(dirname "$0")" && pwd)
 TIGDIR=${TIGDIR:-$HOME/github/fork-tiger}
 QC=${QC:-$here/../../bin/qc}
-CC32=${CC32:-i686-linux-gnu-gcc}
+CCX86=${CCX86:-i686-linux-gnu-gcc}
 AR32=${AR32:-i686-linux-gnu-ar}
 RT=$(cd "$here/../../runtime" && pwd)
 
@@ -57,8 +57,8 @@ trap 'rm -rf "$tmp"' EXIT
 # frames unscanned, collecting objects that are still live.
 CFLAGS="-w -fcommon -fno-omit-frame-pointer -I $RT"
 
-( cd "$TIGDIR/stdlib"  && $CC32 $CFLAGS -I "$TIGDIR/runtime" -c stdlib.c -o "$tmp/stdlib.o" )
-( cd "$TIGDIR/runtime" && $CC32 $CFLAGS -c gc.c -o "$tmp/gc.o" )
+( cd "$TIGDIR/stdlib"  && $CCX86 $CFLAGS -I "$TIGDIR/runtime" -c stdlib.c -o "$tmp/stdlib.o" )
+( cd "$TIGDIR/runtime" && $CCX86 $CFLAGS -c gc.c -o "$tmp/gc.o" )
 
 # Tiger's C--, compiled by us. None of these gets -globals: the global area
 # belongs to the one unit compiled at link time, which is the test itself.
