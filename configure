@@ -1,0 +1,431 @@
+#!/bin/sh
+#config: to debug this script add also '-x' to the set below
+set -eu
+
+###############################################################################
+# Prelude
+###############################################################################
+# This script was written by Claude Code.
+#
+# Unlike ~/tiger/configure or ~/goken/configure, this repo does not need to
+# go *find* a pre-built tool - this repo builds qc-- itself, via
+# "dune build". So this script's job is narrower:
+#
+#  1. Check that the handful of prerequisites "dune build" itself needs
+#     (dune, an OCaml new enough for dune-project's own >= 4.14.0, the
+#     git submodules commons/profiling and caps come from) are actually
+#     in place, and fail loudly with the fix if not - see CLAUDE.md's own
+#     "Build and run" section, which this mirrors.
+#
+#  2. Detect, for every backend qc-- itself supports (see "qc --help"),
+#     the cross toolchain that assembles/links its output and, on a host
+#     that isn't that architecture, the qemu user-mode emulator that runs
+#     it. This is the same problem tiger's own configure solves for
+#     qc--'s CC32/CC_PPC/etc - the difference is those are needed here by
+#     this repo's OWN test suite (test-tiger, test-native-ppc, ...), not
+#     by a downstream client. See demos/Makefile's own REQUIREMENTS
+#     section and each tests/run-*.sh's header for the long version of
+#     why each of these is needed.
+#
+# All of this is optional in the sense that "dune build" (the actual
+# product) needs none of it - only the various "make test-*" tiers do,
+# and each already has its own sensible fallback default (see e.g.
+# tests/run-tiger-ppc.sh's own "CCPPC=${CCPPC:-powerpc-linux-gnu-gcc}").
+# What ./configure adds is a) an upfront report of what's missing instead
+# of discovering it tier-by-tier, and b) Makefile.config, which the
+# top-level Makefile "-include"s and re-"export"s so that a value
+# detected (or overridden) here actually reaches "make test-tiger-ppc"
+# and friends, not just a script run directly by hand.
+#
+# amd64 and arm64 are the odd ones out: qc--'s own -amd64 and -arm64
+# backends emit Mach-O only so far (see arch/amd64/ and arch/arm64/'s own
+# notes, and pad.txt) - there is no ELF/Linux target for either yet, so
+# detecting a cross toolchain for them on a non-Darwin host would test
+# nothing real. This script only probes CCAMD64/CCARM64 on a Darwin host,
+# where both run natively (arm64) or under Rosetta 2 (amd64) - see
+# tests/run-tiger64-arm64.sh / tests/run-tiger64-amd64.sh.
+#
+# TODO:
+#  - once -amd64/-arm64 grow a Linux/ELF path, extend the Darwin-only
+#    check below to probe them on any host.
+
+###############################################################################
+# Entry point
+###############################################################################
+
+# Parse options
+CC32=${CC32:-}
+RUN32=${RUN32:-}
+CCPPC=${CCPPC:-}
+RUN_PPC=${RUN_PPC:-}
+CCSPARC=${CCSPARC:-}
+RUN_SPARC=${RUN_SPARC:-}
+CCALPHA=${CCALPHA:-}
+RUN_ALPHA=${RUN_ALPHA:-}
+CCMIPS=${CCMIPS:-}
+RUN_MIPS=${RUN_MIPS:-}
+CCARM=${CCARM:-}
+RUN_ARM=${RUN_ARM:-}
+CCRISCV32=${CCRISCV32:-}
+RUN_RISCV32=${RUN_RISCV32:-}
+CCRISCV64=${CCRISCV64:-}
+RUN_RISCV64=${RUN_RISCV64:-}
+CCARM64=${CCARM64:-}
+CCAMD64=${CCAMD64:-}
+SKIP_SUBMODULES=no
+for arg in "$@"; do
+    case "$arg" in
+        --cc32=*)       CC32="${arg#--cc32=}" ;;
+        --cc-ppc=*)     CCPPC="${arg#--cc-ppc=}" ;;
+        --cc-sparc=*)   CCSPARC="${arg#--cc-sparc=}" ;;
+        --cc-alpha=*)   CCALPHA="${arg#--cc-alpha=}" ;;
+        --cc-mips=*)    CCMIPS="${arg#--cc-mips=}" ;;
+        --cc-arm=*)     CCARM="${arg#--cc-arm=}" ;;
+        --cc-riscv32=*) CCRISCV32="${arg#--cc-riscv32=}" ;;
+        --cc-riscv64=*) CCRISCV64="${arg#--cc-riscv64=}" ;;
+        --cc-arm64=*)   CCARM64="${arg#--cc-arm64=}" ;;
+        --cc-amd64=*)   CCAMD64="${arg#--cc-amd64=}" ;;
+        --skip-submodules)
+            SKIP_SUBMODULES=yes
+            ;;
+        --help|-h)
+            echo "Usage: ./configure [options]"
+            echo "  --cc32=CMD         the 32-bit x86 C compiler (default backend; -x86)"
+            echo "  --cc-ppc=CMD       the 32-bit ppc C compiler (-ppc-elf)"
+            echo "  --cc-sparc=CMD     the 32-bit sparc C compiler (-sparc)"
+            echo "  --cc-alpha=CMD     the 64-bit alpha C compiler (-alpha)"
+            echo "  --cc-mips=CMD      the 32-bit mipsel C compiler (-mips)"
+            echo "  --cc-arm=CMD       the 32-bit arm C compiler (-arm)"
+            echo "  --cc-riscv32=CMD   the 32-bit riscv32 C compiler (-riscv32)"
+            echo "  --cc-riscv64=CMD   the 64-bit riscv64 C compiler (-riscv64)"
+            echo "  --cc-arm64=CMD     the 64-bit arm64 C compiler (-arm64; Darwin only)"
+            echo "  --cc-amd64=CMD     the 64-bit amd64 C compiler (-amd64; Darwin only)"
+            echo "  --skip-submodules  don't check/init git submodules"
+            echo "CC32, RUN32 and, per backend, CC<ARCH>/RUN_<ARCH> may also be set"
+            echo "in the environment."
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg" >&2
+            echo "Try: ./configure --help" >&2
+            exit 1
+            ;;
+    esac
+done
+
+###############################################################################
+# dune and OCaml
+###############################################################################
+# Nothing in this repo works without these two - unlike a missing cross
+# toolchain below (only one optional test tier), this is a hard failure.
+
+if ! command -v dune >/dev/null 2>&1; then
+    echo "configure: no dune on PATH" >&2
+    echo "  install OCaml + dune, e.g. via opam: https://opam.ocaml.org/" >&2
+    exit 1
+fi
+
+OCAMLVERSION=`ocaml -vnum 2>/dev/null || true`
+if [ -z "$OCAMLVERSION" ]; then
+    echo "configure: no ocaml on PATH" >&2
+    echo "  install OCaml, e.g. via opam: https://opam.ocaml.org/" >&2
+    exit 1
+fi
+OCAML_MAJOR=`echo "$OCAMLVERSION" | cut -d. -f1`
+OCAML_MINOR=`echo "$OCAMLVERSION" | cut -d. -f2`
+if [ "$OCAML_MAJOR" -lt 4 ] || { [ "$OCAML_MAJOR" -eq 4 ] && [ "$OCAML_MINOR" -lt 14 ]; }; then
+    echo "configure: OCaml $OCAMLVERSION found, but dune-project requires >= 4.14.0" >&2
+    echo "  opam switch create 4.14.2" >&2
+    exit 1
+fi
+
+###############################################################################
+# git submodules (caps, semgrep-pfff-libs)
+###############################################################################
+# "dune build" fails with 'Library "profiling" not found' if these aren't
+# checked out - see CLAUDE.md's "Build and run". Harmless to re-run if
+# already initialized, so just always do it rather than trying to detect
+# whether it's needed first.
+
+if [ "$SKIP_SUBMODULES" = no ] && [ -e .gitmodules ] && command -v git >/dev/null 2>&1; then
+    if ! git submodule update --init; then
+        echo "configure: 'git submodule update --init' failed" >&2
+        echo "  the commons/profiling libraries (semgrep-pfff-libs) and caps" >&2
+        echo "  come from submodules - dune build fails without them" >&2
+        exit 1
+    fi
+fi
+
+###############################################################################
+# A few key opam packages
+###############################################################################
+# cmm.opam's own direct deps (ppx_deriving, num) - not the full transitive
+# closure pulled in by the semgrep-pfff-libs submodule's commons.opam/
+# profiling.opam (pcre, yojson, ppxlib, ...): that list is long, changes
+# with upstream, and is already authoritatively re-derived by the
+# Dockerfile's own "opam install --deps-only" line, which is the one to
+# copy if opam ever needs to install for real. This is just a fast,
+# common-case sanity check, so a missing package here is a warning, not a
+# hard failure - the actual error dune build would give is clear enough.
+
+if command -v ocamlfind >/dev/null 2>&1; then
+    for pkg in ppx_deriving num; do
+        if ! ocamlfind list 2>/dev/null | grep -q "^$pkg "; then
+            echo "configure: warning: ocamlfind package '$pkg' not found" >&2
+            echo "  opam install --deps-only ./cmm.opam ./caps/caps.opam \\" >&2
+            echo "    ./semgrep-pfff-libs/commons.opam ./semgrep-pfff-libs/profiling.opam" >&2
+        fi
+    done
+else
+    echo "configure: warning: no ocamlfind on PATH, skipping opam package checks" >&2
+fi
+
+###############################################################################
+# The primary backend: 32-bit x86 (-x86, the default; test-tiger, test-rt,
+# test-quest, test-native, test-lcc all assume it)
+###############################################################################
+# Not gcc-multilib: multilib offers secondary ABIs of the host's own
+# architecture family, which on arm64 means 32-bit ARM, not i386.
+
+if [ -z "$CC32" ]; then
+    CC32=i686-linux-gnu-gcc
+fi
+if ! command -v "$CC32" >/dev/null 2>&1; then
+    echo "configure: warning: no $CC32 on PATH (needed for -x86 and most of make test-*)" >&2
+    echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
+fi
+
+if [ -z "$RUN32" ]; then
+    ARCH=`uname -m`
+    case "$ARCH" in
+        i?86 | x86_64)
+            RUN32=
+            ;;
+        *)
+            RUN32=`command -v qemu-i386 2>/dev/null || true`
+            if [ -z "$RUN32" ]; then
+                echo "configure: warning: $ARCH host and no qemu-i386 on PATH" >&2
+                echo "  sudo apt install qemu-user" >&2
+            fi
+            ;;
+    esac
+fi
+
+###############################################################################
+# The other backends (all optional)
+###############################################################################
+# Detection is best-effort: unlike CC32, none of these is the default
+# backend, so a missing toolchain is a warning, not a configure failure -
+# the matching "make test-*"/"make test-native-<arch>" target will just
+# fail later with a clearer message. Variable naming here follows
+# whatever each tests/run-*.sh already reads (see their own
+# "${CCxxx:-...}"/"${RUN_xxx+set}" lines) - CC<ARCH> with no underscore,
+# RUN_<ARCH> with one; not a typo, just what's there already.
+#
+# arg1 = display name (for "-$name" in messages), arg2 = CC var name,
+# arg3 = default CC (may have flags), arg4 = apt hint, arg5 = RUN var
+# name, arg6 = default qemu binary, arg7 = uname -m patterns this arch is
+# native on (RUN left empty there).
+detect_backend() {
+    name=$1; ccvar=$2; default_cc=$3; apt_hint=$4; runvar=$5; default_run=$6; native_pat=$7
+
+    eval "cc=\${$ccvar}"
+    eval "run=\${$runvar}"
+
+    if [ -z "$cc" ]; then cc=$default_cc; fi
+    ccbin=${cc%% *}
+    if ! command -v "$ccbin" >/dev/null 2>&1; then
+        echo "configure: warning: no $ccbin on PATH (only needed for -$name)" >&2
+        echo "  $apt_hint" >&2
+    fi
+
+    if [ -z "$run" ]; then
+        ARCH=`uname -m`
+        case "$ARCH" in
+            $native_pat)
+                run=
+                ;;
+            *)
+                run=`command -v "$default_run" 2>/dev/null || true`
+                if [ -z "$run" ]; then
+                    echo "configure: warning: $ARCH host and no $default_run on PATH (only needed for -$name)" >&2
+                    echo "  sudo apt install qemu-user" >&2
+                fi
+                ;;
+        esac
+    fi
+
+    eval "$ccvar=\$cc"
+    eval "$runvar=\$run"
+}
+
+# ppc: 32-bit big-endian PowerPC (-ppc-elf).
+detect_backend ppc-elf CCPPC "powerpc-linux-gnu-gcc" \
+    "sudo apt install gcc-powerpc-linux-gnu libc6-dev-powerpc-cross" \
+    RUN_PPC qemu-ppc "ppc|ppc64|powerpc|powerpc64"
+
+# sparc: 32-bit big-endian SPARC V8. Ubuntu ships no plain 32-bit
+# sparc-linux-gnu cross toolchain, only sparc64-linux-gnu, which targets
+# 32-bit SPARC V8 via -m32 - so CCSPARC is deliberately two words. Its
+# -m32 output is SPARC32PLUS-flagged (v8plus) even though the
+# instructions used are plain v8, so it needs qemu-sparc32plus, not plain
+# qemu-sparc (which rejects it: "Invalid ELF image for this
+# architecture").
+detect_backend sparc CCSPARC "sparc64-linux-gnu-gcc -m32" \
+    "sudo apt install gcc-sparc64-linux-gnu binutils-sparc64-linux-gnu libc6-dev-sparc64-cross libc6-dev-sparc-sparc64-cross gcc-multilib-sparc64-linux-gnu" \
+    RUN_SPARC qemu-sparc32plus "sparc"
+
+# alpha: 64-bit little-endian DEC Alpha. A real glibc cross toolchain
+# exists, no freestanding workaround needed.
+detect_backend alpha CCALPHA "alpha-linux-gnu-gcc" \
+    "sudo apt install gcc-alpha-linux-gnu binutils-alpha-linux-gnu libc6-dev-alpha-cross" \
+    RUN_ALPHA qemu-alpha "alpha"
+
+# mips: 32-bit little-endian MIPS (mipsel) - qemu-mipsel, not qemu-mips
+# (big-endian MIPS), matches CCMIPS's own little-endian choice.
+detect_backend mips CCMIPS "mipsel-linux-gnu-gcc" \
+    "sudo apt install gcc-mipsel-linux-gnu binutils-mipsel-linux-gnu libc6-dev-mipsel-cross" \
+    RUN_MIPS qemu-mipsel "mips|mipsel|mips64|mips64el"
+
+# arm: 32-bit little-endian ARM. -march=armv7ve+fp: plain armv7-a has no
+# integer divide instruction, needed once the backend started emitting
+# "sdiv"; "+fp" is required too or cc1 refuses to compile at all.
+detect_backend arm CCARM "arm-linux-gnueabihf-gcc -march=armv7ve+fp" \
+    "sudo apt install gcc-arm-linux-gnueabihf libc6-dev-armhf-cross" \
+    RUN_ARM qemu-arm "arm*"
+
+# riscv32: 32-bit little-endian RISC-V (RV32IMAC). Ubuntu ships no
+# riscv32-linux-gnu glibc at all, so CCRISCV32 is a bare-metal
+# (gcc-riscv64-unknown-elf) compiler targeting rv32imac/ilp32 against
+# picolibc instead of glibc - never native anywhere, hence the sentinel
+# pattern that matches no real "uname -m".
+detect_backend riscv32 CCRISCV32 "riscv64-unknown-elf-gcc -march=rv32imac -mabi=ilp32 --specs=picolibc.specs" \
+    "sudo apt install gcc-riscv64-unknown-elf picolibc-riscv64-unknown-elf" \
+    RUN_RISCV32 qemu-riscv32 "never-native-freestanding-target"
+
+# riscv64: 64-bit little-endian RISC-V (RV64GC). A real glibc cross
+# toolchain exists, no freestanding workaround needed - like alpha and
+# unlike riscv32.
+detect_backend riscv64 CCRISCV64 "riscv64-linux-gnu-gcc" \
+    "sudo apt install gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu libc6-dev-riscv64-cross" \
+    RUN_RISCV64 qemu-riscv64 "riscv64"
+
+# arm64 / amd64: qc--'s newest backends, Mach-O only so far (see
+# arch/arm64/, arch/amd64/, pad.txt) - there is no ELF/Linux target to
+# test yet, so only probe these on Darwin, where arm64 is this machine's
+# own native architecture (no cross toolchain, no qemu) and amd64 runs
+# under Rosetta 2 (needs "-arch x86_64" but still no separate cross
+# toolchain or qemu - see tests/run-tiger64-amd64.sh's own comment).
+if [ "`uname -s`" = "Darwin" ]; then
+    if [ -z "$CCARM64" ]; then CCARM64=clang; fi
+    if ! command -v "${CCARM64%% *}" >/dev/null 2>&1; then
+        echo "configure: warning: no ${CCARM64%% *} (only needed for -arm64)" >&2
+        echo "  xcode-select --install" >&2
+    fi
+    if [ -z "$CCAMD64" ]; then CCAMD64="clang -arch x86_64"; fi
+    if ! command -v "${CCAMD64%% *}" >/dev/null 2>&1; then
+        echo "configure: warning: no ${CCAMD64%% *} (only needed for -amd64)" >&2
+        echo "  xcode-select --install" >&2
+    fi
+fi
+
+###############################################################################
+# Write Makefile.config
+###############################################################################
+# "export VAR=value" rather than plain "VAR=value": this file is
+# "-include"d by the top-level Makefile, and GNU Make's own "export"
+# directive both sets the variable there AND re-exports it into the
+# environment of every recipe's shell (e.g. tests/run-tiger-ppc.sh),
+# which is what actually gets these values from here into "make
+# test-tiger-ppc" - a plain assignment would only be visible to Make
+# itself, never reach the script's own "${CCPPC:-...}". Verified this
+# syntax separately in Make (handles the multi-word CCSPARC/CCARM values
+# fine, unlike sourcing this same file from a shell, which is NOT
+# supported - the multi-word values break plain "export" in dash/bash).
+#
+# arm64/amd64 are written only when detected (Darwin) - omitting them
+# entirely (rather than writing an empty default) means Make never
+# "export"s their names at all, so on Linux "make test-tiger64-arm64" (an
+# unsupported combination anyway - see above) falls through to that
+# script's own native "clang"/"clang -arch x86_64" defaults exactly as if
+# Makefile.config didn't exist, instead of forcing an empty override.
+
+{
+    echo "# generated by ./configure - do not edit, re-run configure instead"
+    echo
+    echo "# The 32-bit x86 toolchain, since qc only emits i386 there (-x86, the"
+    echo "# default backend)"
+    echo "export CC32=$CC32"
+    echo "# How to run the result; empty on an x86 host"
+    echo "export RUN32=$RUN32"
+    echo
+    echo "# The 32-bit ppc toolchain, for qc--'s -ppc-elf backend (optional)"
+    echo "export CCPPC=$CCPPC"
+    echo "export RUN_PPC=$RUN_PPC"
+    echo
+    echo "# The 32-bit sparc (V8) toolchain, for qc--'s -sparc backend (optional)"
+    echo "export CCSPARC=$CCSPARC"
+    echo "export RUN_SPARC=$RUN_SPARC"
+    echo
+    echo "# The 64-bit alpha toolchain, for qc--'s -alpha backend (optional)"
+    echo "export CCALPHA=$CCALPHA"
+    echo "export RUN_ALPHA=$RUN_ALPHA"
+    echo
+    echo "# The 32-bit mipsel toolchain, for qc--'s -mips backend (optional)"
+    echo "export CCMIPS=$CCMIPS"
+    echo "export RUN_MIPS=$RUN_MIPS"
+    echo
+    echo "# The 32-bit arm toolchain, for qc--'s -arm backend (optional)"
+    echo "export CCARM=$CCARM"
+    echo "export RUN_ARM=$RUN_ARM"
+    echo
+    echo "# The 32-bit riscv32 (bare-metal/picolibc) toolchain, for qc--'s"
+    echo "# -riscv32 backend (optional)"
+    echo "export CCRISCV32=$CCRISCV32"
+    echo "export RUN_RISCV32=$RUN_RISCV32"
+    echo
+    echo "# The 64-bit riscv64 toolchain, for qc--'s -riscv64 backend (optional)"
+    echo "export CCRISCV64=$CCRISCV64"
+    echo "export RUN_RISCV64=$RUN_RISCV64"
+    if [ -n "$CCARM64" ]; then
+        echo
+        echo "# The 64-bit arm64 toolchain, for qc--'s -arm64 backend (Darwin only;"
+        echo "# native, no cross toolchain, no qemu)"
+        echo "export CCARM64=$CCARM64"
+    fi
+    if [ -n "$CCAMD64" ]; then
+        echo
+        echo "# The 64-bit amd64 toolchain, for qc--'s -amd64 backend (Darwin only;"
+        echo "# runs under Rosetta 2, no cross toolchain, no qemu)"
+        echo "export CCAMD64=$CCAMD64"
+    fi
+} > Makefile.config
+
+echo "wrote Makefile.config"
+echo "  CC32       = $CC32"
+echo "  RUN32      = ${RUN32:-(native)}"
+echo "  CCPPC      = $CCPPC"
+echo "  RUN_PPC    = ${RUN_PPC:-(native)}"
+echo "  CCSPARC    = $CCSPARC"
+echo "  RUN_SPARC  = ${RUN_SPARC:-(native)}"
+echo "  CCALPHA    = $CCALPHA"
+echo "  RUN_ALPHA  = ${RUN_ALPHA:-(native)}"
+echo "  CCMIPS     = $CCMIPS"
+echo "  RUN_MIPS   = ${RUN_MIPS:-(native)}"
+echo "  CCARM      = $CCARM"
+echo "  RUN_ARM    = ${RUN_ARM:-(native)}"
+echo "  CCRISCV32  = $CCRISCV32"
+echo "  RUN_RISCV32 = ${RUN_RISCV32:-(native)}"
+echo "  CCRISCV64  = $CCRISCV64"
+echo "  RUN_RISCV64 = ${RUN_RISCV64:-(native)}"
+if [ -n "$CCARM64" ]; then
+    echo "  CCARM64    = $CCARM64  (native)"
+fi
+if [ -n "$CCAMD64" ]; then
+    echo "  CCAMD64    = $CCAMD64  (Rosetta 2)"
+fi
+echo
+echo "Next: dune build && make test"
+echo "(make test-tiger, test-native-ppc, etc. need the toolchains reported"
+echo "above as warnings, if any - see this script's own comments for the"
+echo "apt package to install)"

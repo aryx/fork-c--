@@ -2,6 +2,16 @@
 # Top rules using dune
 ##############################################################################
 
+# claude: written by ./configure - the cross toolchain/qemu settings for
+# the optional "make test-<arch>*" tiers below (see that script's own
+# comments). Its "export VAR=value" lines both set and re-export each
+# variable, so a script like tests/run-tiger-ppc.sh sees the same CCPPC/
+# RUN_PPC a plain "tests/run-tiger-ppc.sh" invocation would if configure
+# was never run: absent -> falls back to that script's own default. "-"
+# rather than plain "include": don't fail if configure hasn't been run
+# yet, since "dune build" itself needs none of this.
+-include Makefile.config
+
 all::
 	dune build
 clean::
