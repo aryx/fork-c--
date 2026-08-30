@@ -84,7 +84,9 @@ bool.c-- OK
 forloop_tiger.c-- OK
 hello.c-- OK
 hello_alpha.c-- FAIL
+hello_amd64.c-- FAIL
 hello_arm.c-- FAIL
+hello_arm64.c-- FAIL
 hello_ppc.c-- FAIL
 hello_riscv32.c-- OK
 hello_riscv64.c-- FAIL
