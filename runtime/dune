@@ -45,6 +45,8 @@
   riscv64cont.s
   arm64cont.s
   amd64cont.s
+  arm64machocont.s
+  amd64machocont.s
   riscv32_syscalls.c
   cut.c--
   thread.c--

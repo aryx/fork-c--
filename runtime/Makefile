@@ -116,28 +116,44 @@ CONTOBJ  = $(B)/riscv64cont.o
 QCFLAG   = -riscv64
 else ifeq ($(BACKEND),arm64)
 # claude: also 64-bit (wordsize/pointersize 64), like riscv64/alpha above -
-# same GLOBALS_DECL/$(B)/%.c-- bits32->bits64 rewrite. Unlike every other
-# BACKEND here, this is this machine's own native architecture (Apple
-# Silicon), so CC32 is plain "clang" - no cross toolchain, and QC_AS/QC_LD
-# below end up pointing at the same default -arm64 already uses on its own
-# (see driver/main.ml's default_arm64_cc) - kept explicit anyway for
-# uniformity with every other BACKEND branch here.
-CC32    ?= clang
+# same GLOBALS_DECL/$(B)/%.c-- bits32->bits64 rewrite. Linux/ELF (qc--'s
+# -arm64 bare flag, its default since the arch/{amd64,arm64}/*asm.ml
+# rename) - CC32 defaults to a real cross toolchain, native on an
+# aarch64-linux host (no cross toolchain needed there, same as x86 on an
+# x86 host). The OLD macOS-only Mach-O behaviour is BACKEND=arm64-mach-o
+# below instead - CONTOBJ differs between the two (see arm64cont.s/
+# arm64machocont.s's own comments): ELF hosts need no leading underscore
+# on the C symbol name, Mach-O (Darwin) does.
+CC32    ?= aarch64-linux-gnu-gcc
 CONTOBJ  = $(B)/arm64cont.o
 QCFLAG   = -arm64
 else ifeq ($(BACKEND),amd64)
 # claude: also 64-bit (wordsize/pointersize 64), same GLOBALS_DECL/
-# $(B)/%.c-- bits32->bits64 rewrite as riscv64/alpha/arm64 above. Unlike
-# arm64, this is NOT this machine's own native architecture (still Apple
-# Silicon/arm64-apple-darwin) - CC32 needs the explicit "-arch x86_64"
-# cross-target flag (same as driver/main.ml's own default_amd64_cc), or
-# clang's default target would cross-assemble/link to the wrong (arm64)
-# architecture. Resulting binaries run under Rosetta 2, not natively.
-CC32    ?= clang -arch x86_64
+# $(B)/%.c-- bits32->bits64 rewrite as riscv64/alpha/arm64 above.
+# Linux/ELF (qc--'s -amd64 bare flag) - CC32 defaults to a real cross
+# toolchain (no "-arch x86_64" cross-target clang flag needed, unlike the
+# Mach-O sibling below - this is a real x86-64 ELF binary).
+CC32    ?= x86_64-linux-gnu-gcc
 CONTOBJ  = $(B)/amd64cont.o
 QCFLAG   = -amd64
+else ifeq ($(BACKEND),arm64-mach-o)
+# claude: the OLD arm64 behaviour, before qc-- grew a Linux/ELF -arm64 (see
+# docs/claude_notes/notes_arm64.txt) - macOS/Mach-O only, native on Apple
+# Silicon, so CC32 is plain "clang" - no cross toolchain.
+CC32    ?= clang
+CONTOBJ  = $(B)/arm64machocont.o
+QCFLAG   = -arm64-mach-o
+else ifeq ($(BACKEND),amd64-mach-o)
+# claude: the OLD amd64 behaviour - macOS/Mach-O only. CC32 needs the
+# explicit "-arch x86_64" cross-target flag (same as driver/main.ml's own
+# default_amd64_cc), or clang's default target would cross-assemble/link
+# to the wrong (arm64) architecture. Resulting binaries run under
+# Rosetta 2, not natively.
+CC32    ?= clang -arch x86_64
+CONTOBJ  = $(B)/amd64machocont.o
+QCFLAG   = -amd64-mach-o
 else
-$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, riscv32, riscv64, alpha, arm64 or amd64)
+$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, riscv32, riscv64, alpha, arm64, amd64, arm64-mach-o or amd64-mach-o)
 endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
@@ -216,6 +232,10 @@ $(B)/arm64cont.o: arm64cont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/amd64cont.o: amd64cont.s | $(B)
 	$(CC32) -c $< -o $@
+$(B)/arm64machocont.o: arm64machocont.s | $(B)
+	$(CC32) -c $< -o $@
+$(B)/amd64machocont.o: amd64machocont.s | $(B)
+	$(CC32) -c $< -o $@
 
 # The globals declaration is inserted after the "target byteorder" line so
 # the syncweb markers and everything else are preserved. claude: ppc/sparc
@@ -242,7 +262,7 @@ ifeq ($(filter $(BACKEND),ppc sparc),$(BACKEND))
 else ifeq ($(BACKEND),arm)
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed 's/^target byteorder little\(.*\);/target byteorder little float "none"\1;/' > $@
-else ifeq ($(filter $(BACKEND),riscv64 alpha arm64 amd64),$(BACKEND))
+else ifeq ($(filter $(BACKEND),riscv64 alpha arm64 amd64 arm64-mach-o amd64-mach-o),$(BACKEND))
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed -e 's/^target byteorder little;/target byteorder little wordsize 64 pointersize 64;/' \
 	        -e 's/bits32/bits64/g' -e 's/+4/+8/g' > $@
@@ -254,4 +274,4 @@ $(B)/%.o: $(B)/%.c--
 	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32 build-riscv64 build-alpha build-arm64 build-amd64
+	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32 build-riscv64 build-alpha build-arm64 build-amd64 build-arm64-mach-o build-amd64-mach-o

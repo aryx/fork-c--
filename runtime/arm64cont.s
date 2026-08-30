@@ -25,13 +25,12 @@
  * permanently-undefined AArch64 instruction armcont.s's ARM32 version
  * uses (valid, identical mnemonic on both ISAs).
  *
- * Mach-O specific: leading underscore on the symbol name (Darwin's C
- * symbol-mangling convention - every other *cont.s here targets ELF hosts,
- * where no such prefix is needed) and plain ".text" for the section
- * (empirically verified equivalent to arm64asm.ml's own Mach-O section
- * handling - see docs/claude_notes/notes_arm64.txt).
+ * Linux/ELF (qc--'s -arm64 bare/default flag): no leading underscore on
+ * the symbol name, unlike Darwin's C symbol-mangling convention - see
+ * arm64machocont.s (the -arm64-mach-o sibling) for that one. Plain ".text"
+ * for the section either way.
  */
-.globl _Cmm_unwindcont_pc
+.globl Cmm_unwindcont_pc
 .text
-_Cmm_unwindcont_pc:
+Cmm_unwindcont_pc:
 	udf #0

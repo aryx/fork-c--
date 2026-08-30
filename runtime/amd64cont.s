@@ -26,11 +26,12 @@
  * breakpoint trap, a different semantic - ud2 is the direct analogue of
  * arm64cont.s's "udf #0").
  *
- * Mach-O specific: leading underscore on the symbol name (Darwin's C
- * symbol-mangling convention, same as arm64cont.s's own) and plain ".text"
- * for the section (matches amd64asm.ml's own Mach-O section handling).
+ * Linux/ELF (qc--'s -amd64 bare/default flag): no leading underscore on
+ * the symbol name, unlike Darwin's C symbol-mangling convention - see
+ * amd64machocont.s (the -amd64-mach-o sibling) for that one. Plain ".text"
+ * for the section either way.
  */
-.globl _Cmm_unwindcont_pc
+.globl Cmm_unwindcont_pc
 .text
-_Cmm_unwindcont_pc:
+Cmm_unwindcont_pc:
 	ud2
