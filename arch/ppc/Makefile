@@ -6,7 +6,7 @@ TOP=../..
 TARGET=lib
 
 # need camlburg for ppcrec
-SRC= ppcasm.ml ppc.ml \
+SRC= ppcmach.ml ppc.ml \
      ppcrec.ml
 
 #no ppcregs.ml ? no ppccall.ml ?

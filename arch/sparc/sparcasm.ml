@@ -1,7 +1,7 @@
 (*s: sparcasm.ml *)
 (* claude: was Cfgx.M (the older Cfg representation); Cfgutil.emit (the
  * only real caller, see sparcasm.mli) has since moved to Zipcfg/
- * Zipcfg.Rep, same as arch/ppc/ppcasm.ml already uses. *)
+ * Zipcfg.Rep, same as arch/ppc/ppcmach.ml already uses. *)
 module G  = Zipcfg
 module GR = Zipcfg.Rep
 module SM = Strutil.Map
@@ -62,7 +62,7 @@ object (this)
       (* claude: pcmap/pcmap_data must carry the ALLOC flag or the runtime
        * data lands outside every PT_LOAD segment and Cmm_lookup_entry
        * always reads zeroes - same fix/reasoning as arch/x86/x86asm.ml's
-       * and arch/ppc/ppcelfasm.ml's #section (GNU as only gives default
+       * and arch/ppc/ppcasm.ml's #section (GNU as only gives default
        * flags to the standard section names). Confirmed via gdb: without
        * this, the live pcmap table at Cmm_pc_map..Cmm_pc_map_limit was
        * entirely zero bytes, not just missing one entry. *)
@@ -128,7 +128,7 @@ object (this)
       output_string _fd "\n"
 
     (* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
-     * cal_altrets/cal_contedges) - see arch/ppc/ppcasm.ml's own `call`
+     * cal_altrets/cal_contedges) - see arch/ppc/ppcmach.ml's own `call`
      * method, same shape. The "ba ...\n\tnop" longjmp idiom (branch
      * always, with its mandatory delay-slot nop) is SPARC-specific,
      * kept from the original. *)

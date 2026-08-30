@@ -3,7 +3,7 @@
 (* claude: was "type node = Rtl.rtl Cfgx.M.node" (the older Cfg
  * representation) plus a #call/#cfg_instr pair built around it -
  * Cfgutil.emit (the only real caller, see mipsasm.mli) has since moved
- * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcelfasm.ml/arch/sparc/
+ * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcasm.ml/arch/sparc/
  * sparcasm.ml/arch/alpha/alphaasm.ml - see this file's #call/#cfg_instr
  * below for the corresponding fix. *)
 module G  = Zipcfg
@@ -37,7 +37,7 @@ let spec =
 (*e: name mangler specification *)
 
 (* claude: 'cfg * (...) Proc.t, not just (...) Proc.t - same fix as
- * ppcelfasm.ml/sparcasm.ml/alphaasm.ml's class type (Asm.assembler's type
+ * ppcasm.ml/sparcasm.ml/alphaasm.ml's class type (Asm.assembler's type
  * param now pairs the Zipcfg.graph alongside the Proc.t record; see
  * #cfg_instr below, which receives that pair). *)
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
@@ -73,7 +73,7 @@ object (this)
         (* claude: pcmap/pcmap_data must carry the ALLOC flag or the
          * runtime data lands outside every PT_LOAD segment and
          * Cmm_lookup_entry always reads zeroes - same fix/reasoning as
-         * arch/x86/x86asm.ml's, arch/ppc/ppcelfasm.ml's, arch/sparc/
+         * arch/x86/x86asm.ml's, arch/ppc/ppcasm.ml's, arch/sparc/
          * sparcasm.ml's, and arch/alpha/alphaasm.ml's #section (GNU as
          * only gives default flags to the standard section names).
          * Applied proactively here (not rediscovered via a crash) since
@@ -90,7 +90,7 @@ object (this)
 
     (* claude: GNU as's .align on MIPS ELF (like PowerPC/SPARC/Alpha) is a
      * power-of-two exponent, not a byte count - same convention
-     * ppcelfasm.ml's/alphaasm.ml's #align uses. *)
+     * ppcasm.ml's/alphaasm.ml's #align uses. *)
     method align  n       =
       let rec lg = function
         | 0 -> 0
@@ -120,7 +120,7 @@ object (this)
      * OCaml error, "this method is defined several times" - not just a
      * shadowing warning) - dropped the two later redefinitions, kept the
      * "#"-style comment since mips-linux-gnu-as (this ELF/Linux toolchain,
-     * like ppcelfasm.ml's own "# %s") uses "#" for line comments. *)
+     * like ppcasm.ml's own "# %s") uses "#" for line comments. *)
     method comment s = fprintf _fd "#  %s   \n" s
 
     method const (s: Symbol.t) (b:Bits.bits) = 
@@ -134,7 +134,7 @@ object (this)
         output_string _fd "\n"
 
     (* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
-     * cal_altrets/cal_contedges) - see arch/ppc/ppcelfasm.ml's/arch/sparc/
+     * cal_altrets/cal_contedges) - see arch/ppc/ppcasm.ml's/arch/sparc/
      * sparcasm.ml's/arch/alpha/alphaasm.ml's own #call, same shape. MIPS
      * has a branch-delay slot (like SPARC, unlike Alpha/PPC), so a
      * longjmp needs an explicit trailing nop, same as sparcasm.ml's

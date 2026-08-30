@@ -25,10 +25,10 @@
  * identical on macOS and Linux - unlike arm64cc.ml, there is no Apple-
  * specific addendum to cross here at all. That is deliberate and load-
  * bearing: it is exactly what would let a future Linux/ELF+gcc sibling
- * backend (amd64elfasm.ml, following arch/ppc/ppcelfasm.ml's precedent)
+ * backend (amd64asm.ml, following arch/ppc/ppcasm.ml's precedent)
  * reuse this file, amd64call.ml, amd64.ml and amd64rec.mlb completely
  * unchanged - only a new Asm.assembler module for ELF/GAS object-format
- * conventions would be needed, same relationship ppcelfasm.ml has to
+ * conventions would be needed, same relationship ppcasm.ml has to
  * ppc.ml/ppcrec.ml under ppc.ml's own Mach-O default.
  *
  *   rdi,rsi,rdx,rcx,r8,r9  argument registers, in this exact order

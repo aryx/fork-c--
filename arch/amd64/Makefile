@@ -5,7 +5,7 @@ TOP=../..
 ##############################################################################
 TARGET=lib
 
-SRC= amd64.ml amd64regs.ml amd64cc.ml amd64call.ml amd64rec.ml amd64asm.ml amd64backend.ml
+SRC= amd64.ml amd64regs.ml amd64cc.ml amd64call.ml amd64rec.ml amd64asm.ml amd64mach.ml amd64backend.ml
 
 SYSLIBS=
 

@@ -28,8 +28,8 @@
             * distinguishing prefix "r3" reads as a symbol); they require
             * "%r3". Mach-O's assembler wants the bare form instead, so
             * this is a runtime switch rather than a hardcoded string -
-            * set from to_asm's elf argument (see ppcelfasm.ml vs
-            * ppcasm.ml). *)
+            * set from to_asm's elf argument (see ppcasm.ml vs
+            * ppcmach.ml). *)
            let elf_syntax = ref false
            let reg_str n = if !elf_syntax then s "%%r%d" n else s "r%d" n
            let cr0_str () = if !elf_syntax then "%cr0" else "cr0"

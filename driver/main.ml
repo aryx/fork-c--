@@ -118,8 +118,8 @@ let use_ppc = ref false
 
 (* claude: -ppc-elf, a Linux/ELF-targeted sibling of -ppc kept separate
  * rather than replacing it, since -ppc's Mach-O output is what upstream's
- * arch/ppc/ppcasm.ml always emitted and is worth keeping (e.g. to target
- * macOS later); see arch/ppc/ppcelfasm.ml for why Mach-O can't be tested
+ * arch/ppc/ppcmach.ml always emitted and is worth keeping (e.g. to target
+ * macOS later); see arch/ppc/ppcasm.ml for why Mach-O can't be tested
  * end-to-end on a non-Mac machine. *)
 let use_ppc_elf = ref false
 
@@ -151,32 +151,41 @@ let use_arm = ref false
  * arch/riscv64/riscv64asm.ml already emits GNU-as-compatible syntax. *)
 let use_riscv64 = ref false
 
-(* claude: -arm64, 64-bit little-endian AArch64 (see arch/arm64/arm64.ml).
- * Unlike every other -<arch> flag, this is the machine's own native
- * architecture (this fork is developed on an Apple Silicon Mac), so it
- * needs no cross toolchain and no qemu - see default_arm64_cc below.
- * Mach-O/Darwin assembly only for now (arch/arm64/arm64asm.ml), same
- * "-ppc"-shaped situation ppc's own Mach-O default is in, minus the "no
- * usable default on this host" caveat since the host and target now
- * genuinely match; a Linux/ELF "-arm64-elf" sibling, if ever added, would
- * follow arch/ppc/ppcelfasm.ml's precedent. *)
+(* claude: -arm64, 64-bit little-endian AArch64 (see arch/arm64/arm64.ml),
+ * Linux/ELF assembly (arch/arm64/arm64asm.ml) - the bare, default flag
+ * of this pair, unlike -ppc/-ppc-elf where the bare "-ppc" name is Mach-O:
+ * -ppc's Mach-O default is upstream's own original target, kept as the
+ * bare name for continuity; arm64/amd64 have no upstream lineage at all
+ * (this fork invented both), were first brought up Mach-O-only on the
+ * Apple Silicon Mac this fork was originally developed on, but this fork's
+ * actual target platform is Linux (see CLAUDE.md's "What this is") - so
+ * once a Linux/ELF sibling existed, it earned the bare name and Mach-O
+ * moved to the explicit -arm64-mach-o suffix below. Native on an
+ * aarch64-linux host (this repo's own current dev host - no cross
+ * toolchain, no qemu needed), cross via qemu-aarch64 otherwise - see
+ * default_arm64_cc below. *)
 let use_arm64 = ref false
 
-(* claude: -amd64, 64-bit little-endian x86-64 (see arch/amd64/amd64.ml).
- * Unlike -arm64, this is NOT the machine's own native architecture (this
- * fork is developed on an Apple Silicon Mac, arm64-apple-darwin) - it needs
- * a cross-architecture assembler/linker invocation (see default_amd64_cc
- * below) and its output runs only under Rosetta 2 translation, not
- * natively. Mach-O/Darwin assembly only for now (arch/amd64/amd64asm.ml),
- * same "-ppc"/"-arm64"-shaped situation minus the "no usable default on
- * this host" caveat - Xcode's clang can cross-assemble/link x86_64 Mach-O
- * directly on this host with just "-arch x86_64", no separate sysroot
- * needed (unlike the Linux-hosted cross backends' own QC_AS/QC_LD story).
- * A Linux/ELF "-amd64-elf" sibling, if ever added, would follow
- * arch/ppc/ppcelfasm.ml's precedent - see amd64.ml's own header comment
- * for why the ISA-level files (amd64.ml/amd64call.ml/amd64cc.ml/
- * amd64rec.mlb) are already written to make that cheap. *)
+(* claude: -arm64-mach-o, the Mach-O/Darwin sibling of -arm64 kept separate
+ * rather than dropped, since it is still worth keeping (e.g. to target
+ * macOS) - see use_arm64's own comment for why it, not -arm64, carries the
+ * suffix here. See default_arm64_macho_cc below. *)
+let use_arm64_macho = ref false
+
+(* claude: -amd64, 64-bit little-endian x86-64 (see arch/amd64/amd64.ml),
+ * Linux/ELF assembly (arch/amd64/amd64asm.ml) - the bare, default flag
+ * of this pair, same "Linux is this fork's actual target" reasoning as
+ * use_arm64's own comment. Needs qemu-x86_64 to run on this fork's own
+ * aarch64-linux dev host - see default_amd64_cc below. *)
 let use_amd64 = ref false
+
+(* claude: -amd64-mach-o, the Mach-O/Darwin sibling of -amd64 kept separate
+ * rather than dropped, since it is still worth keeping (e.g. to target
+ * macOS) - see use_arm64's own comment for why it, not -amd64, carries the
+ * suffix here. Its output runs only under Rosetta 2 translation on the
+ * Apple Silicon Mac this was developed on, not natively - see
+ * default_amd64_macho_cc below. *)
+let use_amd64_macho = ref false
 
 (* claude: -riscv32, 32-bit little-endian RISC-V (RV32IMAC - see
  * arch/riscv32/riscv32.ml). Unlike every other -<arch> flag, there is no
@@ -277,28 +286,49 @@ let default_riscv64_cc = "riscv64-linux-gnu-gcc"
  * this one IS usable end to end - just not self-sufficient the way every
  * other -<arch> default is (it always needs that extra _start object). *)
 let default_riscv32_cc = "riscv64-linux-gnu-gcc -march=rv32imac -mabi=ilp32 -nostdlib"
-(* claude: for -arm64. This machine IS arm64-apple-darwin, so plain "clang"
- * (no -target override, no cross-sysroot workaround) assembles AND links
- * correctly - empirically verified (a hand-assembled hello-world .s calling
- * printf assembled with "clang -c" and linked with plain "clang", no
- * -static: Apple does not support statically linking against libSystem,
- * unlike every Linux-hosted backend's own default_*_cc above). *)
-let default_arm64_cc = "clang"
-(* claude: for -amd64. This machine is arm64-apple-darwin, NOT
- * x86_64-apple-darwin, so plain "clang" (default_arm64_cc's own choice)
- * would cross-assemble/link to the WRONG (arm64) architecture here - it has
- * to be told explicitly. "-arch x86_64" is Apple clang's own cross-arch
- * flag (distinct from every Linux-hosted backend's own "-target
+(* claude: for -arm64, the Linux/ELF backend and (unlike -ppc's Mach-O
+ * default) the bare default for this pair - see use_arm64's own comment for
+ * why amd64/arm64 invert -ppc/-ppc-elf's "bare name = Mach-O" convention.
+ * Ubuntu ships a real aarch64-linux-gnu gcc/binutils/glibc toolchain
+ * (native 64-bit, no multilib trick needed - same situation as
+ * -riscv64's/-alpha's own default_*_cc), so this can be the plain default,
+ * same pattern as default_riscv64_cc. On an aarch64-linux host (this
+ * fork's own dev host as of this backend's addition) plain
+ * "aarch64-linux-gnu-gcc" IS the native gcc too - qemu-aarch64 is only
+ * needed to run the result on some other host. *)
+let default_arm64_cc = "aarch64-linux-gnu-gcc"
+(* claude: for -amd64, the Linux/ELF backend and the bare default - same
+ * story as default_arm64_cc above. Ubuntu ships a real x86-64-linux-gnu
+ * gcc/binutils/glibc toolchain (gcc-x86-64-linux-gnu), same "plain
+ * default" situation - just cross rather than native on this fork's own
+ * aarch64-linux dev host, so its output needs qemu-x86_64 to run here (see
+ * tests/run-tiger64-amd64-mach-o.sh's own comment). *)
+let default_amd64_cc = "x86_64-linux-gnu-gcc"
+(* claude: for -arm64-mach-o, the Mach-O/Darwin sibling - this machine (the
+ * Apple Silicon Mac this backend was originally developed on) IS
+ * arm64-apple-darwin, so plain "clang" (no -target override, no
+ * cross-sysroot workaround) assembles AND links correctly - empirically
+ * verified (a hand-assembled hello-world .s calling printf assembled with
+ * "clang -c" and linked with plain "clang", no -static: Apple does not
+ * support statically linking against libSystem, unlike every Linux-hosted
+ * backend's own default_*_cc above). *)
+let default_arm64_macho_cc = "clang"
+(* claude: for -amd64-mach-o, the Mach-O/Darwin sibling. That same
+ * Apple Silicon Mac is arm64-apple-darwin, NOT x86_64-apple-darwin, so
+ * plain "clang" (default_arm64_macho_cc's own choice) would cross-
+ * assemble/link to the WRONG (arm64) architecture there - it has to be
+ * told explicitly. "-arch x86_64" is Apple clang's own cross-arch flag
+ * (distinct from every Linux-hosted backend's own "-target
  * <arch>-unknown-linux-gnu", which picks a different OS/ABI entirely, not
- * just a different arch) - empirically verified working this session: a
- * hand-assembled hello-world .s built and linked with "clang -arch
- * x86_64 -c ... " / "clang -arch x86_64 ..." (no -target, no -static -
- * same "Apple does not support static-linking libSystem" rule as
- * default_arm64_cc's own) produced a working x86_64 Mach-O executable that
- * ran correctly under Rosetta 2 (already installed and active on this
- * machine - `pgrep oahd` / `/Library/Apple/usr/share/rosetta` both
- * confirmed present before this backend was written). *)
-let default_amd64_cc = "clang -arch x86_64"
+ * just a different arch) - empirically verified working when this backend
+ * was written: a hand-assembled hello-world .s built and linked with
+ * "clang -arch x86_64 -c ..." / "clang -arch x86_64 ..." (no -target, no
+ * -static - same "Apple does not support static-linking libSystem" rule as
+ * default_arm64_macho_cc's own) produced a working x86_64 Mach-O
+ * executable that ran correctly under Rosetta 2 (already installed and
+ * active on that machine - `pgrep oahd` / `/Library/Apple/usr/share/
+ * rosetta` both confirmed present before this backend was written). *)
+let default_amd64_macho_cc = "clang -arch x86_64"
 
 let getenv_or name default =
   match Sys.getenv_opt name with
@@ -442,11 +472,11 @@ let dump_nelab caps file =
 type backend =
   | X86
   (* 32-bit big-endian PowerPC, which is what gcc-powerpc-linux-gnu and
-   * qemu-ppc target. Emits Mach-O/Darwin assembly (arch/ppc/ppcasm.ml),
+   * qemu-ppc target. Emits Mach-O/Darwin assembly (arch/ppc/ppcmach.ml),
    * upstream's original target. *)
   | Ppc
   (* claude: same PowerPC target as Ppc, but Linux/ELF assembly
-   * (arch/ppc/ppcelfasm.ml) instead of Mach-O, so it can actually be
+   * (arch/ppc/ppcasm.ml) instead of Mach-O, so it can actually be
    * assembled and run (via qemu-ppc) on a non-Mac machine. *)
   | PpcElf
   (* claude: 32-bit big-endian SPARC V8, what qemu-sparc targets. Emits
@@ -480,16 +510,23 @@ type backend =
    * "-riscv32-elf" sibling needed. Verified freestanding only (no glibc for
    * this width on this machine - see use_riscv32's comment). *)
   | Riscv32
-  (* claude: 64-bit little-endian AArch64, this machine's own native
-   * architecture. Emits Mach-O/Darwin assembly (arch/arm64/arm64asm.ml),
-   * macOS only for now - no "-arm64-elf" sibling yet (see use_arm64's own
-   * comment). *)
+  (* claude: 64-bit little-endian AArch64. Emits Linux/ELF assembly
+   * (arch/arm64/arm64asm.ml) - the bare constructor of this pair, unlike
+   * Ppc/PpcElf, since Linux/ELF (not Mach-O) is this fork's actual target
+   * platform for arm64/amd64 - see use_arm64's own comment. *)
   | Arm64
-  (* claude: 64-bit little-endian x86-64 (AMD64). Emits Mach-O/Darwin
-   * assembly (arch/amd64/amd64asm.ml), macOS only for now - no "-amd64-elf"
-   * sibling yet (see use_amd64's own comment). Unlike Arm64, this is NOT
-   * the host's native architecture - see default_amd64_cc's comment. *)
+  (* claude: same AArch64 target as Arm64, but Mach-O/Darwin assembly
+   * (arch/arm64/arm64mach.ml) instead of Linux/ELF, so it can still target
+   * macOS - see use_arm64_macho's own comment. *)
+  | Arm64MachO
+  (* claude: 64-bit little-endian x86-64 (AMD64). Emits Linux/ELF assembly
+   * (arch/amd64/amd64asm.ml) - the bare constructor of this pair, same
+   * reasoning as Arm64's own comment. *)
   | Amd64
+  (* claude: same x86-64 target as Amd64, but Mach-O/Darwin assembly
+   * (arch/amd64/amd64mach.ml) instead of Linux/ELF, so it can still target
+   * macOS - see use_amd64_macho's own comment. *)
+  | Amd64MachO
   (* The bytecode interpreter: no expansion, no liveness, no register
    * allocation, so it is the shorter route to a running program.
    *)
@@ -511,7 +548,9 @@ let effective_cc backend cmd =
            | Riscv64 -> default_riscv64_cc
            | Riscv32 -> default_riscv32_cc
            | Arm64 -> default_arm64_cc
+           | Arm64MachO -> default_arm64_macho_cc
            | Amd64 -> default_amd64_cc
+           | Amd64MachO -> default_amd64_macho_cc
            | Ppc -> failwith "-ppc: pass -as/-ld (or QC_AS/QC_LD) explicitly \
                                for the Mach-O assembler/linker to use"
            | Interp -> failwith "-interp has no assembler/linker step")
@@ -524,7 +563,7 @@ let effective_cc backend cmd =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Amd64 -> ".s"
+   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -538,10 +577,10 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
         let asm = X86asm.make Cfgutil.emit chan in
         X86.target, asm, X86backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Ppc ->
-        let asm = Ppcasm.make Cfgutil.emit chan in
+        let asm = Ppcmach.make Cfgutil.emit chan in
         Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | PpcElf ->
-        let asm = Ppcelfasm.make Cfgutil.emit chan in
+        let asm = Ppcasm.make Cfgutil.emit chan in
         Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Sparc ->
         let asm = Sparcasm.make Cfgutil.emit chan in
@@ -564,8 +603,14 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     | Arm64 ->
         let asm = Arm64asm.make Cfgutil.emit chan in
         Arm64.target, asm, Arm64backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
+    | Arm64MachO ->
+        let asm = Arm64mach.make Cfgutil.emit chan in
+        Arm64.target, asm, Arm64backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Amd64 ->
         let asm = Amd64asm.make Cfgutil.emit chan in
+        Amd64.target, asm, Amd64backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
+    | Amd64MachO ->
+        let asm = Amd64mach.make Cfgutil.emit chan in
         Amd64.target, asm, Amd64backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Interp ->
         (* the same parameters upstream's Asm.interp32l was bound with,
@@ -768,13 +813,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Amd64) -> Assembly
+  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Amd64) -> Object
+  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Amd64) -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -810,7 +855,9 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     else if !use_riscv64 then Riscv64
     else if !use_riscv32 then Riscv32
     else if !use_arm64 then Arm64
+    else if !use_arm64_macho then Arm64MachO
     else if !use_amd64 then Amd64
+    else if !use_amd64_macho then Amd64MachO
     else X86
   in
   let stop = stop_at_of_flag backend in
@@ -942,17 +989,26 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; Cap.exec; ..>) (argv: string ar
     " generate 64-bit little-endian RISC-V (RV64GC) Linux/ELF assembly instead of x86";
     "-riscv32", Arg.Unit (fun () -> use_riscv32 := true),
     " generate 32-bit little-endian RISC-V (RV32IMAC) Linux/ELF assembly instead of x86";
-    "-arm64", Arg.Unit (fun () -> use_arm64 := true),
+    "-arm64", Arg.Unit (fun () -> use_arm64 := true; use_arm64_macho := false),
+    " generate 64-bit little-endian AArch64 Linux/ELF assembly instead of x86 \
+(default cc: " ^ default_arm64_cc ^ "; native on an aarch64-linux host, \
+via qemu-aarch64 otherwise)";
+    "-arm64-mach-o", Arg.Unit (fun () -> use_arm64_macho := true; use_arm64 := false),
     " generate 64-bit little-endian AArch64 Mach-O assembly instead of x86 \
-(this machine's own native architecture - no cross toolchain needed)";
-    "-amd64", Arg.Unit (fun () -> use_amd64 := true),
+(on an arm64-apple-darwin host, no cross toolchain needed)";
+    "-amd64", Arg.Unit (fun () -> use_amd64 := true; use_amd64_macho := false),
+    " generate 64-bit little-endian x86-64 Linux/ELF assembly instead of x86 \
+(default cc: " ^ default_amd64_cc ^ "; needs qemu-x86_64 to run on a \
+non-x86_64 host)";
+    "-amd64-mach-o", Arg.Unit (fun () -> use_amd64_macho := true; use_amd64 := false),
     " generate 64-bit little-endian x86-64 Mach-O assembly instead of x86 \
-(cross-assembled/linked via \"clang -arch x86_64\", runs under Rosetta 2 on \
-this arm64 host)";
+(cross-assembled/linked via \"clang -arch x86_64\" on an arm64-apple-darwin \
+host, runs under Rosetta 2)";
     "-x86", Arg.Unit (fun () ->
       use_interp := false; use_ppc := false; use_ppc_elf := false; use_sparc := false;
       use_alpha := false; use_mips := false; use_arm := false; use_riscv64 := false;
-      use_riscv32 := false; use_arm64 := false; use_amd64 := false),
+      use_riscv32 := false; use_arm64 := false; use_arm64_macho := false;
+      use_amd64 := false; use_amd64_macho := false),
     " generate x86 assembly (the default)";
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";

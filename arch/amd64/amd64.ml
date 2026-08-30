@@ -45,10 +45,10 @@
  * Mach-O-specific - the real SysV AMD64 ABI this backend implements is
  * identical on macOS and Linux (unlike arm64, where Apple's ABI diverges
  * from AAPCS64). That is deliberate: a future Linux/ELF+gcc sibling would
- * only need a new amd64elfasm.ml (following arch/ppc/ppcelfasm.ml's
+ * only need a new amd64asm.ml (following arch/ppc/ppcasm.ml's
  * relationship to ppc.ml/ppcrec.ml under ppc.ml's own Mach-O default),
  * reusing this file and amd64rec.mlb completely unchanged. Only
- * amd64asm.ml (this pass's Mach-O/Darwin object-format conventions) is
+ * amd64mach.ml (this pass's Mach-O/Darwin object-format conventions) is
  * platform-specific.
  *)
 open Nopoly

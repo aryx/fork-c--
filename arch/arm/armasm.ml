@@ -18,7 +18,7 @@
 (*****************************************************************************)
 (* The ARM Asm.assembler: turns a procedure's Zipcfg into GNU-as-compatible
  * ARM/Linux/ELF assembly text, driven by Cfgutil.emit (same shape as
- * arch/mips/mipsasm.ml/arch/alpha/alphaasm.ml/arch/ppc/ppcelfasm.ml - read
+ * arch/mips/mipsasm.ml/arch/alpha/alphaasm.ml/arch/ppc/ppcasm.ml - read
  * alphaasm.ml first: like Alpha (and unlike MIPS/SPARC), ARM has no branch-
  * delay slot, so #call needs no trailing nop after a longjmp).
  *)

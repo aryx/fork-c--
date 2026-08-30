@@ -1,10 +1,10 @@
 #!/bin/sh
 # Behavioural tests: the bits64 tiger64/ test programs, compiled by us for
-# -arm64, run NATIVELY (this machine IS arm64-apple-darwin - no qemu, no
-# cross toolchain, no -static: Apple does not support static-linking
-# libSystem), and checked against stdout/exit code. The arm64 counterpart
-# of run-tiger64-riscv64.sh - see that script first, this one only differs
-# in the target.
+# -arm64-mach-o, run NATIVELY (this machine IS arm64-apple-darwin - no
+# qemu, no cross toolchain, no -static: Apple does not support static-
+# linking libSystem), and checked against stdout/exit code. The Mach-O
+# counterpart of run-tiger64-riscv64.sh - see that script first, this one
+# only differs in the target.
 #
 # arm64 is little-endian, matching tiger64/'s own "target byteorder little
 # wordsize 64 pointersize 64" sources exactly, so no byteorder flip is
@@ -16,40 +16,40 @@
 # run. Regenerate both with tiger64/regenerate-arm64.sh after changing
 # anything that affects the run-time data the compiler emits.
 #
-# Results are checked against a recorded baseline (expected/tiger64-arm64.txt)
+# Results are checked against a recorded baseline (expected/tiger64-arm64-mach-o.txt)
 # rather than "everything must pass" - same reasoning as every other script
 # here (run-tiger.sh's header has the fullest version of it).
 #
 # Usage:
-#   ./run-tiger64-arm64.sh              run them all, check against the baseline
-#   ./run-tiger64-arm64.sh --update     re-record the baseline (review the diff!)
-#   ./run-tiger64-arm64.sh hello wf     run only those, report but do not compare
+#   ./run-tiger64-arm64-mach-o.sh              run them all, check against the baseline
+#   ./run-tiger64-arm64-mach-o.sh --update     re-record the baseline (review the diff!)
+#   ./run-tiger64-arm64-mach-o.sh hello wf     run only those, report but do not compare
 
 here=$(dirname "$0")
 cd "$here"
 QC=${QC:-../bin/qc}
-CCARM64=${CCARM64:-clang}
+CCARM64MACHO=${CCARM64MACHO:-clang}
 TIMEOUT=${TIMEOUT:-60}
 
-QC_AS=${QC_AS:-$CCARM64}
-QC_LD=${QC_LD:-$CCARM64}
+QC_AS=${QC_AS:-$CCARM64MACHO}
+QC_LD=${QC_LD:-$CCARM64MACHO}
 export QC_AS QC_LD
 
 RT=../runtime
 LIB=$RT/build-arm64/libqcmm.a
 T=tiger64
-B=build/tiger64-arm64
+B=build/tiger64-arm64-mach-o
 
 if [ ! -x "$QC" ]; then
-  echo "run-tiger64-arm64.sh: no qc at $QC (run 'dune build' first)" >&2
+  echo "run-tiger64-arm64-mach-o.sh: no qc at $QC (run 'dune build' first)" >&2
   exit 2
 fi
-if ! command -v "$CCARM64" >/dev/null 2>&1; then
-  echo "run-tiger64-arm64.sh: no $CCARM64 (Xcode command line tools not installed?)" >&2
+if ! command -v "$CCARM64MACHO" >/dev/null 2>&1; then
+  echo "run-tiger64-arm64-mach-o.sh: no $CCARM64MACHO (Xcode command line tools not installed?)" >&2
   exit 2
 fi
 if [ ! -f "$LIB" ]; then
-  echo "run-tiger64-arm64.sh: building the run-time system first" >&2
+  echo "run-tiger64-arm64-mach-o.sh: building the run-time system first" >&2
   make -C "$RT" BACKEND=arm64 GLOBALS_DECL='bits64 alloc_ptr;' \
     QC="$(cd "$(dirname "$QC")" && pwd)/$(basename "$QC")" \
     >/dev/null || exit 2
@@ -61,7 +61,7 @@ mkdir -p "$B"
 update=no
 if [ "$1" = "--update" ]; then update=yes; shift; fi
 want=$*
-baseline=expected/tiger64-arm64.txt
+baseline=expected/tiger64-arm64-mach-o.txt
 
 # tiger64/'s tests are the same manifest as tiger/'s - see run-tiger64-riscv64.sh's own comment.
 grep -v '^#' tiger.tests | grep -v '^[ 	]*$' | while read -r name src rc stdin_file; do
@@ -73,11 +73,11 @@ while read -r name src rc stdin_file; do
     case " $want " in *" $name "*) ;; *) continue ;; esac
   fi
 
-  if ! "$QC" -globals -arm64 -stop .o -o "$B/$name.o" "$T/$src" \
+  if ! "$QC" -globals -arm64-mach-o -stop .o -o "$B/$name.o" "$T/$src" \
        >"$B/$name.qcerr" 2>&1; then
     echo "FAIL $name (compile)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
-  if ! "$CCARM64" "$T/tigermain-arm64.o" "$B/$name.o" "$T/stdlib-arm64.a" \
+  if ! "$CCARM64MACHO" "$T/tigermain-arm64.o" "$B/$name.o" "$T/stdlib-arm64.a" \
        "$LIB" -o "$B/$name" 2>"$B/$name.lderr"; then
     echo "FAIL $name (link)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi
@@ -104,7 +104,7 @@ done < "$B/manifest.txt"
 pass=$(grep -c " PASS$" "$B/actual.txt" || true)
 fail=$(grep -c " FAIL$" "$B/actual.txt" || true)
 echo
-echo "tiger64-arm64: $pass passed, $fail failed"
+echo "tiger64-arm64-mach-o: $pass passed, $fail failed"
 
 if [ -n "$want" ]; then exit 0; fi
 

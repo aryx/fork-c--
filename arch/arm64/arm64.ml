@@ -28,7 +28,7 @@
  *
  * Immediate materialization does NOT reuse arm.ml's "ldr rX, =imm" trick:
  * that GNU-as pseudo-op, when tried against Apple's LLVM-based integrated
- * assembler (the only assembler this backend targets - see arm64asm.ml) for
+ * assembler (the only assembler this backend targets - see arm64mach.ml) for
  * the 64-bit register form "ldr xN, =imm", was empirically confirmed broken
  * - it reserves only 4 bytes in the literal pool for what should be an
  * 8-byte constant, silently truncating anything above 2^32 and reading

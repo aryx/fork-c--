@@ -2,7 +2,7 @@
 (* claude: was "type node = Rtl.rtl Cfgx.M.node" (the older Cfg
  * representation) plus a #call/#cfg_instr pair built around it -
  * Cfgutil.emit (the only real caller, see alphaasm.mli) has since moved
- * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcelfasm.ml (the closest
+ * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcasm.ml (the closest
  * template: also a from-scratch Linux/ELF assembler, not a Mach-O/
  * windowed one) and arch/sparc/sparcasm.ml already use - see this file's
  * #call/#cfg_instr below for the corresponding fix. *)
@@ -37,7 +37,7 @@ let spec =
 (*e: [[Alphaasm]] name mangler specification *)
 
 (* claude: 'cfg * (...) Proc.t, not just (...) Proc.t - same fix as
- * ppcelfasm.ml/sparcasm.ml's class type (Asm.assembler's type param now
+ * ppcasm.ml/sparcasm.ml's class type (Asm.assembler's type param now
  * pairs the Zipcfg.graph alongside the Proc.t record; see #cfg_instr
  * below, which receives that pair). *)
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
@@ -73,7 +73,7 @@ object (this)
         (* claude: pcmap/pcmap_data must carry the ALLOC flag or the
          * runtime data lands outside every PT_LOAD segment and
          * Cmm_lookup_entry always reads zeroes - same fix/reasoning as
-         * arch/x86/x86asm.ml's, arch/ppc/ppcelfasm.ml's, and
+         * arch/x86/x86asm.ml's, arch/ppc/ppcasm.ml's, and
          * arch/sparc/sparcasm.ml's #section (GNU as only gives default
          * flags to the standard section names). Applied proactively here
          * (not rediscovered via a crash) since it is now a known,
@@ -90,7 +90,7 @@ object (this)
 
     (* claude: GNU as's .align on Alpha ELF (like PowerPC/MIPS/SPARC) is a
      * power-of-two exponent, not a byte count - same convention
-     * ppcelfasm.ml's #align uses. *)
+     * ppcasm.ml's #align uses. *)
     method align  n       =
       let rec lg = function
         | 0 -> 0
@@ -130,7 +130,7 @@ object (this)
         output_string _fd "\n"
 
     (* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
-     * cal_altrets/cal_contedges) - see arch/ppc/ppcelfasm.ml's/
+     * cal_altrets/cal_contedges) - see arch/ppc/ppcasm.ml's/
      * arch/sparc/sparcasm.ml's own #call, same shape. Alpha has no
      * branch-delay slot (unlike SPARC's "ba ...\n\tnop"), so a longjmp
      * is just a plain unconditional branch. *)

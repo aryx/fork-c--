@@ -29,7 +29,7 @@
  * on macOS and Linux - unlike arm64call.ml's Apple-specific AAPCS64
  * addendum, nothing here is Mach-O-specific at all, which is exactly what
  * lets a future Linux/ELF+gcc sibling reuse this file unchanged, only
- * needing a new amd64elfasm.ml the way arch/ppc/ppcelfasm.ml reuses
+ * needing a new amd64asm.ml the way arch/ppc/ppcasm.ml reuses
  * ppc.ml/ppcrec.ml under ppc.ml's Mach-O default). *)
 
 module A  = Automaton

@@ -41,6 +41,34 @@
 
   let guard p = if p then 0 else Camlburg.inf_cost
 
+  (* claude: mutable syntax-select flag, set from to_string's ~mach
+   * argument (see arm64mach.ml vs arm64asm.ml's own #instruction) - only
+   * the address-of-symbol idiom below actually differs between the two
+   * object formats; everything else this recognizer emits assembles
+   * identically on both. Defaults to false (GNU-as/ELF syntax), not true:
+   * ELF/Linux, not Mach-O, is this fork's actual target platform for
+   * arm64/amd64 (see driver/main.ml's use_arm64 comment for the same
+   * "bare name = ELF" convention at the CLI-flag level) - unlike
+   * arch/ppc/ppcrec.mlb's own elf_syntax, which defaults to false (Mach-O)
+   * for the opposite reason: -ppc's Mach-O is upstream's own original
+   * target. *)
+  let mach_syntax = ref false
+
+  (* claude: computing a global/import symbol's ADDRESS via the adrp+add
+   * page/page-offset idiom - Mach-O/ld64 spells the two relocations
+   * "symbol@PAGE"/"symbol@PAGEOFF" (suffixes on the symbol operand); GNU
+   * as/ELF spells the same two relocations as a bare "adrp reg, symbol"
+   * (no suffix - R_AARCH64_ADR_PREL_PG_HI21) followed by
+   * "add reg, reg, :lo12:symbol" (a prefix on the symbol operand instead
+   * of a suffix - R_AARCH64_ADD_ABS_LO12_NC). Empirically confirmed: the
+   * Mach-O-only original spelling was the FIRST bug hit bringing up
+   * arm64asm.ml (aarch64-linux-gnu-as rejected "my_data@PAGE" outright:
+   * "unexpected characters following instruction"). *)
+  let adrp_add regl symbol =
+    if !mach_syntax
+    then sprintf "adrp %s, %s@PAGE\n\tadd %s, %s, %s@PAGEOFF" regl symbol regl regl symbol
+    else sprintf "adrp %s, %s\n\tadd %s, %s, :lo12:%s" regl symbol regl regl symbol
+
   (* claude: signed decimal - used only for the "[reg, #imm]" load/store
    * offset field (a real AArch64 immediate operand, needs to print
    * negative offsets as "-8" not a huge unsigned value) and as the "next"
@@ -172,7 +200,8 @@
       ; "\n"
       ]
 
-  let to_string r =
+  let to_string ?(mach=false) r =
+      let _ = mach_syntax := mach in
       try
           let plan = rtl (Dn.rtl r) in
           Printf.sprintf "\t%s" (plan.inst.Camlburg.action ())
@@ -228,7 +257,7 @@ addr:       Add(const,reg)      {: cat ["["; reg; ", #"; const; "]"] :}
 addr:       Add(reg,const)      {: cat ["["; reg; ", #"; const; "]"] :}
 
 inst:       Store(regl, symbol, 64)
-            {: sprintf "adrp %s, %s@PAGE\n\tadd %s, %s, %s@PAGEOFF" regl symbol regl regl symbol :}
+            {: adrp_add regl symbol :}
 
 inst:       Store(regl, constv, 64)
             {: li64 regl constv :}

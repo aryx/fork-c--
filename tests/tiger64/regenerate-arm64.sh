@@ -121,4 +121,4 @@ $ARARM64 cr "$here/stdlib-arm64.a" \
 echo "regenerated:"
 echo "  $here/tigermain-arm64.o"
 echo "  $here/stdlib-arm64.a"
-echo "now run ../run-tiger64-arm64.sh and commit both if the results are what you expect"
+echo "now run ../run-tiger64-arm64-mach-o.sh and commit both if the results are what you expect"

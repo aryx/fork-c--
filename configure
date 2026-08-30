@@ -37,17 +37,14 @@ set -eu
 # detected (or overridden) here actually reaches "make test-tiger-ppc"
 # and friends, not just a script run directly by hand.
 #
-# amd64 and arm64 are the odd ones out: qc--'s own -amd64 and -arm64
-# backends emit Mach-O only so far (see arch/amd64/ and arch/arm64/'s own
-# notes, and pad.txt) - there is no ELF/Linux target for either yet, so
-# detecting a cross toolchain for them on a non-Darwin host would test
-# nothing real. This script only probes CCAMD64/CCARM64 on a Darwin host,
-# where both run natively (arm64) or under Rosetta 2 (amd64) - see
-# tests/run-tiger64-arm64.sh / tests/run-tiger64-amd64.sh.
-#
-# TODO:
-#  - once -amd64/-arm64 grow a Linux/ELF path, extend the Darwin-only
-#    check below to probe them on any host.
+# amd64 and arm64 each have two backends now: -amd64/-arm64 (Linux/ELF, the
+# bare/default flag of the pair - see driver/main.ml's use_arm64 comment for
+# why amd64/arm64 invert -ppc/-ppc-elf's "bare name = Mach-O" convention)
+# and -amd64-mach-o/-arm64-mach-o (Darwin only). CCAMD64/CCARM64 (the ELF
+# pair) are probed on any host, same detect_backend treatment as every
+# other Linux/ELF backend below. CCAMD64MACHO/CCARM64MACHO (the Mach-O
+# pair) are still probed only on Darwin, same as before this pair grew an
+# ELF sibling - see tests/run-tiger64-arm64-mach-o.sh / tests/run-tiger64-amd64-mach-o.sh.
 
 ###############################################################################
 # Entry point
@@ -71,7 +68,11 @@ RUN_RISCV32=${RUN_RISCV32:-}
 CCRISCV64=${CCRISCV64:-}
 RUN_RISCV64=${RUN_RISCV64:-}
 CCARM64=${CCARM64:-}
+RUN_ARM64=${RUN_ARM64:-}
 CCAMD64=${CCAMD64:-}
+RUN_AMD64=${RUN_AMD64:-}
+CCARM64MACHO=${CCARM64MACHO:-}
+CCAMD64MACHO=${CCAMD64MACHO:-}
 SKIP_SUBMODULES=no
 for arg in "$@"; do
     case "$arg" in
@@ -85,6 +86,8 @@ for arg in "$@"; do
         --cc-riscv64=*) CCRISCV64="${arg#--cc-riscv64=}" ;;
         --cc-arm64=*)   CCARM64="${arg#--cc-arm64=}" ;;
         --cc-amd64=*)   CCAMD64="${arg#--cc-amd64=}" ;;
+        --cc-arm64-mach-o=*) CCARM64MACHO="${arg#--cc-arm64-mach-o=}" ;;
+        --cc-amd64-mach-o=*) CCAMD64MACHO="${arg#--cc-amd64-mach-o=}" ;;
         --skip-submodules)
             SKIP_SUBMODULES=yes
             ;;
@@ -98,8 +101,10 @@ for arg in "$@"; do
             echo "  --cc-arm=CMD       the 32-bit arm C compiler (-arm)"
             echo "  --cc-riscv32=CMD   the 32-bit riscv32 C compiler (-riscv32)"
             echo "  --cc-riscv64=CMD   the 64-bit riscv64 C compiler (-riscv64)"
-            echo "  --cc-arm64=CMD     the 64-bit arm64 C compiler (-arm64; Darwin only)"
-            echo "  --cc-amd64=CMD     the 64-bit amd64 C compiler (-amd64; Darwin only)"
+            echo "  --cc-arm64=CMD     the 64-bit arm64 C compiler (-arm64, Linux/ELF)"
+            echo "  --cc-amd64=CMD     the 64-bit amd64 C compiler (-amd64, Linux/ELF)"
+            echo "  --cc-arm64-mach-o=CMD  the 64-bit arm64 C compiler (-arm64-mach-o; Darwin only)"
+            echo "  --cc-amd64-mach-o=CMD  the 64-bit amd64 C compiler (-amd64-mach-o; Darwin only)"
             echo "  --skip-submodules  don't check/init git submodules"
             echo "CC32, RUN32 and, per backend, CC<ARCH>/RUN_<ARCH> may also be set"
             echo "in the environment."
@@ -310,21 +315,35 @@ detect_backend riscv64 CCRISCV64 "riscv64-linux-gnu-gcc" \
     "sudo apt install gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu libc6-dev-riscv64-cross" \
     RUN_RISCV64 qemu-riscv64 "riscv64"
 
-# arm64 / amd64: qc--'s newest backends, Mach-O only so far (see
-# arch/arm64/, arch/amd64/, pad.txt) - there is no ELF/Linux target to
-# test yet, so only probe these on Darwin, where arm64 is this machine's
-# own native architecture (no cross toolchain, no qemu) and amd64 runs
-# under Rosetta 2 (needs "-arch x86_64" but still no separate cross
-# toolchain or qemu - see tests/run-tiger64-amd64.sh's own comment).
+# arm64: 64-bit little-endian AArch64 (-arm64, Linux/ELF - the bare/
+# default flag of the pair, see this script's own header comment). Native
+# on this repo's own aarch64-linux dev host - no cross toolchain, no qemu.
+detect_backend arm64 CCARM64 "aarch64-linux-gnu-gcc" \
+    "sudo apt install gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu libc6-dev-arm64-cross" \
+    RUN_ARM64 qemu-aarch64 "aarch64|arm64"
+
+# amd64: 64-bit little-endian x86-64 (-amd64, Linux/ELF - the bare/
+# default flag of the pair). Needs qemu-x86_64 to run on this repo's own
+# aarch64-linux dev host.
+detect_backend amd64 CCAMD64 "x86_64-linux-gnu-gcc" \
+    "sudo apt install gcc-x86-64-linux-gnu binutils-x86-64-linux-gnu libc6-dev-amd64-cross" \
+    RUN_AMD64 qemu-x86_64 "x86_64"
+
+# arm64-mach-o / amd64-mach-o: the Mach-O/Darwin sibling of each above
+# (see driver/main.ml's use_arm64_macho/use_amd64_macho comments) - only
+# probed on Darwin, where arm64 is this machine's own native architecture
+# (no cross toolchain, no qemu) and amd64 runs under Rosetta 2 (needs
+# "-arch x86_64" but still no separate cross toolchain or qemu - see
+# tests/run-tiger64-amd64-mach-o.sh's own comment).
 if [ "`uname -s`" = "Darwin" ]; then
-    if [ -z "$CCARM64" ]; then CCARM64=clang; fi
-    if ! command -v "${CCARM64%% *}" >/dev/null 2>&1; then
-        echo "configure: warning: no ${CCARM64%% *} (only needed for -arm64)" >&2
+    if [ -z "$CCARM64MACHO" ]; then CCARM64MACHO=clang; fi
+    if ! command -v "${CCARM64MACHO%% *}" >/dev/null 2>&1; then
+        echo "configure: warning: no ${CCARM64MACHO%% *} (only needed for -arm64-mach-o)" >&2
         echo "  xcode-select --install" >&2
     fi
-    if [ -z "$CCAMD64" ]; then CCAMD64="clang -arch x86_64"; fi
-    if ! command -v "${CCAMD64%% *}" >/dev/null 2>&1; then
-        echo "configure: warning: no ${CCAMD64%% *} (only needed for -amd64)" >&2
+    if [ -z "$CCAMD64MACHO" ]; then CCAMD64MACHO="clang -arch x86_64"; fi
+    if ! command -v "${CCAMD64MACHO%% *}" >/dev/null 2>&1; then
+        echo "configure: warning: no ${CCAMD64MACHO%% *} (only needed for -amd64-mach-o)" >&2
         echo "  xcode-select --install" >&2
     fi
 fi
@@ -343,12 +362,14 @@ fi
 # fine, unlike sourcing this same file from a shell, which is NOT
 # supported - the multi-word values break plain "export" in dash/bash).
 #
-# arm64/amd64 are written only when detected (Darwin) - omitting them
-# entirely (rather than writing an empty default) means Make never
-# "export"s their names at all, so on Linux "make test-tiger64-arm64" (an
-# unsupported combination anyway - see above) falls through to that
-# script's own native "clang"/"clang -arch x86_64" defaults exactly as if
-# Makefile.config didn't exist, instead of forcing an empty override.
+# arm64-mach-o/amd64-mach-o are written only when detected (Darwin) -
+# omitting them entirely (rather than writing an empty default) means Make
+# never "export"s their names at all, so on Linux "make
+# test-tiger64-arm64-mach-o" (an unsupported combination anyway - see
+# above) falls through to that script's own native "clang"/"clang -arch
+# x86_64" defaults exactly as if Makefile.config didn't exist, instead of
+# forcing an empty override. CCARM64/CCAMD64 (the ELF pair) are always
+# written, same as every other optional backend above.
 
 {
     echo "# generated by ./configure - do not edit, re-run configure instead"
@@ -387,17 +408,27 @@ fi
     echo "# The 64-bit riscv64 toolchain, for qc--'s -riscv64 backend (optional)"
     echo "export CCRISCV64=$CCRISCV64"
     echo "export RUN_RISCV64=$RUN_RISCV64"
-    if [ -n "$CCARM64" ]; then
+    echo
+    echo "# The 64-bit arm64 toolchain, for qc--'s -arm64 backend (Linux/ELF,"
+    echo "# optional)"
+    echo "export CCARM64=$CCARM64"
+    echo "export RUN_ARM64=$RUN_ARM64"
+    echo
+    echo "# The 64-bit amd64 toolchain, for qc--'s -amd64 backend (Linux/ELF,"
+    echo "# optional)"
+    echo "export CCAMD64=$CCAMD64"
+    echo "export RUN_AMD64=$RUN_AMD64"
+    if [ -n "$CCARM64MACHO" ]; then
         echo
-        echo "# The 64-bit arm64 toolchain, for qc--'s -arm64 backend (Darwin only;"
-        echo "# native, no cross toolchain, no qemu)"
-        echo "export CCARM64=$CCARM64"
+        echo "# The 64-bit arm64 toolchain, for qc--'s -arm64-mach-o backend (Darwin"
+        echo "# only; native, no cross toolchain, no qemu)"
+        echo "export CCARM64MACHO=$CCARM64MACHO"
     fi
-    if [ -n "$CCAMD64" ]; then
+    if [ -n "$CCAMD64MACHO" ]; then
         echo
-        echo "# The 64-bit amd64 toolchain, for qc--'s -amd64 backend (Darwin only;"
-        echo "# runs under Rosetta 2, no cross toolchain, no qemu)"
-        echo "export CCAMD64=$CCAMD64"
+        echo "# The 64-bit amd64 toolchain, for qc--'s -amd64-mach-o backend (Darwin"
+        echo "# only; runs under Rosetta 2, no cross toolchain, no qemu)"
+        echo "export CCAMD64MACHO=$CCAMD64MACHO"
     fi
 } > Makefile.config
 
@@ -418,11 +449,15 @@ echo "  CCRISCV32  = $CCRISCV32"
 echo "  RUN_RISCV32 = ${RUN_RISCV32:-(native)}"
 echo "  CCRISCV64  = $CCRISCV64"
 echo "  RUN_RISCV64 = ${RUN_RISCV64:-(native)}"
-if [ -n "$CCARM64" ]; then
-    echo "  CCARM64    = $CCARM64  (native)"
+echo "  CCARM64    = $CCARM64"
+echo "  RUN_ARM64  = ${RUN_ARM64:-(native)}"
+echo "  CCAMD64    = $CCAMD64"
+echo "  RUN_AMD64  = ${RUN_AMD64:-(native)}"
+if [ -n "$CCARM64MACHO" ]; then
+    echo "  CCARM64MACHO = $CCARM64MACHO  (native)"
 fi
-if [ -n "$CCAMD64" ]; then
-    echo "  CCAMD64    = $CCAMD64  (Rosetta 2)"
+if [ -n "$CCAMD64MACHO" ]; then
+    echo "  CCAMD64MACHO = $CCAMD64MACHO  (Rosetta 2)"
 fi
 echo
 echo "Next: dune build && make test"

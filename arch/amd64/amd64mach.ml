@@ -13,25 +13,23 @@
  * license.txt for more details.
  *)
 
-(* claude: a Linux/ELF-targeted sibling of amd64mach.ml, which emits Mach-O/
- * Darwin syntax (leading-underscore symbols, "__DATA" sections) that a
- * Linux/ELF toolchain (e.g. "x86_64-linux-gnu-gcc", or qemu-x86_64) cannot
- * assemble - following arch/ppc/ppcasm.ml's precedent, exactly as
- * amd64mach.ml's own header comment anticipated. Reuses Amd64rec.to_string
- * for instruction selection unchanged (already Mach-O/ELF-agnostic - see
- * amd64.ml's header comment) - only the object-format conventions around
- * it differ: no leading underscore, ".section .name" instead of
- * ".section __DATA,name", and GNU as's own x86-64 ".align" semantics
- * (a byte count, same as i386 - see arch/x86/x86asm.ml - NOT the
- * power-of-two exponent every RISC-ish ELF backend in this fork uses,
- * which is what amd64mach.ml's own Mach-O #align mistakenly would be if
- * copied verbatim: ld64's ".align" IS log2 on every Darwin target, x86
- * included, but GNU as's is arch-dependent and x86_64 uses bytes).
+(* claude: no upstream amd64asm.nw exists to port. Modeled almost verbatim
+ * on arch/arm64/arm64mach.ml's Mach-O/Darwin conventions (leading-underscore
+ * symbol mangling, ".section __DATA,%s" + unconditional ".align 3" for
+ * every non-text section - the same ld64 pointer-alignment-inference
+ * gotcha arm64mach.ml's own `section` method documents applies here too:
+ * ld64 infers a section's alignment from what is actually emitted at its
+ * start and refuses to place an 8-byte ".quad" pointer relocation into a
+ * section it infers as 1-byte aligned - trivial `import`/`local` with no
+ * PIC-stub machinery, same `.byte`/`.short`/`.long`/`.quad` `value` method
+ * by width).
  *
- * Read arch/amd64/amd64mach.ml first for the Mach-O version this mirrors,
- * and arch/x86/x86asm.ml for the proven-working ELF/x86 conventions this
- * reuses wherever the two agree (in particular #section's pcmap ALLOC-flag
- * special case).
+ * This backend is Mach-O/macOS only for now (see amd64.ml's own header
+ * comment) - a Linux/ELF sibling, if ever added, would follow the
+ * arch/ppc/ppcasm.ml precedent: same amd64.ml/amd64rec.mlb (nothing in
+ * either is Mach-O-specific - see amd64.ml's header comment), a second
+ * Asm.assembler class here reusing Amd64rec.to_string directly, the way
+ * this file's own #instruction method calls it below.
  *)
 open Nopoly
 module G  = Zipcfg
@@ -43,9 +41,6 @@ let sprintf = Printf.sprintf
 let unimp   = Impossible.unimp
 let int64   = Bits.U.to_int64
 
-(* claude: unlike amd64mach.ml's Mach-O mangler, ELF C symbols on
- * x86_64-linux-gnu get no leading underscore - same as x86asm.ml's/
- * ppcasm.ml's spec. *)
 let spec =
     let reserved = [] in
     let id = function
@@ -59,7 +54,7 @@ let spec =
         | x when id x -> x
         | _           -> '_'
         in
-            { Mangle.preprocess = (fun x -> x)
+            { Mangle.preprocess = (fun x -> "_" ^ x)
             ; Mangle.replace    = replace
             ; Mangle.reserved   = reserved
             ; Mangle.avoid      = (fun x -> x ^ "_")
@@ -81,12 +76,11 @@ object (this)
 
     method private print l = List.iter (output_string _fd) l
 
-    (* claude: no PIC-stub emission needed - a plain "call printf"/"call
-     * foo" against an undefined external is resolved by the ELF linker
-     * directly (static link, this fork's own default - see
-     * driver/main.ml's default_amd64_elf_cc) or through an automatically-
-     * generated PLT stub (dynamic link); nothing special has to appear in
-     * the .s, same as every other ELF backend in this fork. *)
+    (* claude: no PIC-stub emission needed for x86-64 Mach-O either - same
+     * empirical finding arm64mach.ml's own header comment records for
+     * AArch64 (a plain "call _printf"/"call _foo" against a libSystem
+     * symbol assembles and links fine; ld64 synthesizes whatever stub
+     * islands it needs). *)
     method import s = this#new_symbol s
     method local  s = this#new_symbol s
 
@@ -97,25 +91,24 @@ object (this)
 
     method label (s: Symbol.t) = fprintf _fd "%s:\n" s#mangled_text
 
+    (* claude: same ld64 alignment-inference gotcha as arm64mach.ml's own
+     * `section` method - force every __DATA section 8-byte aligned so a
+     * leading ".quad" pointer relocation never lands in a section ld64
+     * infers as 1-byte aligned. *)
     method section name =
         _section <- name;
-        (* claude: pcmap/pcmap_data must carry the ALLOC flag or the
-         * runtime data lands outside every PT_LOAD segment and
-         * Cmm_lookup_entry always reads zeroes - same recurring fix as
-         * every other ELF backend here (x86/ppc-elf/sparc/alpha/mips/arm/
-         * riscv64). *)
-        match name with
-        | "pcmap" | "pcmap_data" ->
-            fprintf _fd ".section .%s,\"a\",@progbits\n" name
-        | _ ->
-            fprintf _fd ".section .%s\n" name
+        if name =$= "text" then fprintf _fd ".text\n"
+        else (fprintf _fd ".section __DATA,%s\n" name; fprintf _fd ".align 3\n")
     method current = _section
 
-    method org n = unimp "no .org in amd64 elf assembler"
-    (* claude: unlike amd64mach.ml's Mach-O #align (ld64: always a log2
-     * exponent), GNU as's ".align" on x86_64 (like i386 - see
-     * arch/x86/x86asm.ml) is a plain byte count. *)
-    method align n = if n <> 1 then fprintf _fd ".align %d\n" n
+    method org n = unimp "no .org in amd64 assembler"
+    method align  n =
+      let rec lg = function
+        | 0 -> 0
+        | 1 -> 0
+        | n -> 1 + (lg (n/2))
+      in
+      if n <> 1 then fprintf _fd ".align %d\n" (lg n)
     method addloc n = if n <> 0 then fprintf _fd ".space %d\n"  n
     method zeroes (n:int) = fprintf _fd ".space %d, 0\n" n
 
@@ -124,7 +117,7 @@ object (this)
         | 16 -> fprintf _fd ".short %Ld\n" (int64 v)
         | 32 -> fprintf _fd ".long %Ld\n"  (int64 v)
         | 64 -> fprintf _fd ".quad %Ld\n"  (int64 v)
-        | w  -> unimp (sprintf "unsupported width %d in amd64 elf assembler" w)
+        | w  -> unimp (sprintf "unsupported width %d in amd64 assembler" w)
 
     method addr a =
       match Reloc.if_bare a with
@@ -135,20 +128,26 @@ object (this)
 
     method emit = ()
 
+    (* claude: unlike arm64mach.ml's own "; %s" (ARM comment syntax), x86
+     * GAS/AT&T syntax treats ";" as a statement separator, not a comment
+     * leader - hit this as the FIRST real bug bringing this backend up
+     * (see notes_amd64.txt). "/* ... */" matches arch/x86/x86asm.ml's own
+     * convention instead. *)
     method comment s = fprintf _fd "/* %s */\n" s
 
     method const (s: Symbol.t) (b:Bits.bits) =
         fprintf _fd ".set %s, 0x%Lx" s#mangled_text (int64 b)
 
     method longjmp_size () =
-      Impossible.unimp "longjmp size not set for amd64 elf -- needed for alternate returns"
+      Impossible.unimp "longjmp size not set for amd64 -- needed for alternate returns"
 
     method private instruction rtl =
         output_string _fd (Amd64rec.to_string rtl);
         output_string _fd "\n"
 
-    (* claude: no branch-delay slot on x86-64, so a longjmp is just the one
-     * instruction - same shape as amd64mach.ml's own #call. *)
+    (* claude: no branch-delay slot on x86-64 either, so a longjmp is just
+     * the one instruction - same shape as arm64mach.ml's/riscv64asm.ml's
+     * own #call. *)
     method private call (node : GR.call) =
       let longjmp edge = fprintf _fd "\tjmp %s\n" (_mangle (snd edge.G.node)) in
       let rec output_altret_jumps n edges =

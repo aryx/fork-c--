@@ -30,7 +30,7 @@ fi
 # CC<ARCH> here - "command -v" only checks the first word (the actual
 # executable). Parameter expansion, not "set -- $CCAMD64" (which would
 # clobber this script's own "$@"/positional params for no benefit here -
-# see run-tiger64-amd64.sh's own comment on the same trap, where it DOES
+# see run-tiger64-amd64-mach-o.sh's own comment on the same trap, where it DOES
 # matter since that script has real positional args to preserve).
 ccamd64_prog=${CCAMD64%% *}
 if ! command -v "$ccamd64_prog" >/dev/null 2>&1; then
@@ -111,4 +111,4 @@ $ARAMD64 cr "$here/stdlib-amd64.a" \
 echo "regenerated:"
 echo "  $here/tigermain-amd64.o"
 echo "  $here/stdlib-amd64.a"
-echo "now run ../run-tiger64-amd64.sh and commit both if the results are what you expect"
+echo "now run ../run-tiger64-amd64-mach-o.sh and commit both if the results are what you expect"
