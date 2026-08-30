@@ -1,7 +1,7 @@
 #!/bin/sh
 # Behavioural tests: Tiger programs, compiled by us for -riscv32, run under
 # qemu-riscv32, and checked against stdout/exit code. The riscv32
-# counterpart of run-tiger.sh - see that script first, this one only
+# counterpart of run-tiger-x86.sh - see that script first, this one only
 # differs in the target. Like mips (and unlike ppc/sparc), riscv32 is
 # 32-bit *little*-endian, matching every cmm-pass/*.c-- source's own "target
 # byteorder little" exactly - no byteorder flip needed, and (unlike arm)
@@ -9,7 +9,7 @@
 # default too, so no float-metrics pragma splice either.
 #
 # Everything links against tiger/tigermain-riscv32.o and
-# tiger/stdlib-riscv32.a, which are checked in exactly like run-tiger.sh's
+# tiger/stdlib-riscv32.a, which are checked in exactly like run-tiger-x86.sh's
 # x86 versions, so - like that script, and unlike tests/run-native.sh -
 # this needs no fork-tiger checkout to run. Regenerate both with
 # tiger/regenerate-riscv32.sh after changing anything that affects the
@@ -25,7 +25,7 @@
 #
 # Results are checked against a recorded baseline (expected/tiger-riscv32.txt)
 # rather than "everything must pass" - same reasoning as every other script
-# here (run-tiger.sh's header has the fullest version of it).
+# here (run-tiger-x86.sh's header has the fullest version of it).
 #
 # Usage:
 #   ./run-tiger-riscv32.sh              run them all, check against the baseline

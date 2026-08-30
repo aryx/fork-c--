@@ -2,14 +2,14 @@
 # Behavioural tests: general native-backend regression suite (native.tests,
 # ported from arch/all.x86.tst + lua/l32files.lua).
 #
-# Unlike run-tiger.sh/run-rt.sh, these need no run-time system: upstream's
+# Unlike run-tiger-x86.sh/run-rt.sh, these need no run-time system: upstream's
 # all.x86.tst set Ld.rtend = "", and none of native.tests declares C--
 # globals or uses cut/thread. So this script does not link against
 # ../runtime's libqcmm.a or pcmap.ld - each test is just its own qc--
 # object(s), optionally a plain C "other" file, linked directly.
 #
 # -globals still goes on exactly the FIRST source of each test, same
-# reasoning as run-tiger.sh: qc references Cmm.globalsig.<hash> from every
+# reasoning as run-tiger-x86.sh: qc references Cmm.globalsig.<hash> from every
 # compiled unit regardless of whether it declares C-- globals, so exactly
 # one unit per program must define it (undeclared globals just hash to the
 # empty set - see run-rt.sh's header for the longer version).

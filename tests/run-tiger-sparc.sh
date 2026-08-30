@@ -1,11 +1,11 @@
 #!/bin/sh
 # Behavioural tests: Tiger programs, compiled by us for -sparc, run under
 # qemu-sparc32plus, and checked against stdout/exit code. The sparc
-# counterpart of run-tiger.sh - see that script first, this one only
+# counterpart of run-tiger-x86.sh - see that script first, this one only
 # differs in the target.
 #
 # Everything links against tiger/tigermain-sparc.o and tiger/stdlib-sparc.a,
-# which are checked in exactly like run-tiger.sh's x86 versions, so - like
+# which are checked in exactly like run-tiger-x86.sh's x86 versions, so - like
 # that script, and unlike tests/run-native.sh - this needs no fork-tiger
 # checkout to run. Regenerate both with tiger/regenerate-sparc.sh after
 # changing anything that affects the run-time data the compiler emits.
@@ -17,7 +17,7 @@
 #
 # Results are checked against a recorded baseline (expected/tiger-sparc.txt)
 # rather than "everything must pass" - same reasoning as every other script
-# here (run-tiger.sh's header has the fullest version of it).
+# here (run-tiger-x86.sh's header has the fullest version of it).
 #
 # Usage:
 #   ./run-tiger-sparc.sh              run them all, check against the baseline

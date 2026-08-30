@@ -1,10 +1,10 @@
 #!/bin/sh
 # Behavioural tests: Tiger programs, compiled by us for -arm, run under
 # qemu-arm, and checked against stdout/exit code. The arm counterpart of
-# run-tiger.sh - see that script first, this one only differs in the target.
+# run-tiger-x86.sh - see that script first, this one only differs in the target.
 #
 # Everything links against tiger/tigermain-arm.o and tiger/stdlib-arm.a,
-# which are checked in exactly like run-tiger.sh's x86 versions, so - like
+# which are checked in exactly like run-tiger-x86.sh's x86 versions, so - like
 # that script, and unlike tests/run-native.sh - this needs no fork-tiger
 # checkout to run. Regenerate both with tiger/regenerate-arm.sh after
 # changing anything that affects the run-time data the compiler emits.
@@ -19,7 +19,7 @@
 #
 # Results are checked against a recorded baseline (expected/tiger-arm.txt)
 # rather than "everything must pass" - same reasoning as every other script
-# here (run-tiger.sh's header has the fullest version of it).
+# here (run-tiger-x86.sh's header has the fullest version of it).
 #
 # Usage:
 #   ./run-tiger-arm.sh              run them all, check against the baseline

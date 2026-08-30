@@ -3,7 +3,7 @@
 # These two artefacts are checked in, and every behavioural test links
 # against them. They hold Tiger's support code - its main, its standard
 # library, its allocator and its garbage collector - built by *this*
-# compiler. Checking them in is what lets tests/run-tiger.sh, "make
+# compiler. Checking them in is what lets tests/run-tiger-x86.sh, "make
 # test-tiger" and the Docker build run with nothing but qc; requiring a
 # fork-tiger checkout would mean CI could not run this tier at all.
 #

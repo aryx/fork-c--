@@ -1,1 +1,0 @@
-run-tiger-x86.sh

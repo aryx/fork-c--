@@ -1,13 +1,13 @@
 #!/bin/sh
 # Regenerate tigermain-amd64.o and stdlib-amd64.a, the amd64/macOS
-# counterpart of regenerate-arm64.sh - see that script first, this one only
+# counterpart of regenerate-arm64-mach-o.sh - see that script first, this one only
 # differs in the target (and in needing an explicit cross-arch flag: unlike
 # arm64, this machine is arm64-apple-darwin, NOT x86_64-apple-darwin, so
 # plain "clang" would cross-assemble/link to the wrong architecture - see
 # driver/main.ml's default_amd64_cc comment).
 #
-#   ./regenerate-amd64.sh              rebuild from $TIGDIR
-#   TIGDIR=... ./regenerate-amd64.sh   from somewhere else
+#   ./regenerate-amd64-mach-o.sh              rebuild from $TIGDIR
+#   TIGDIR=... ./regenerate-amd64-mach-o.sh   from somewhere else
 
 set -e
 
@@ -19,11 +19,11 @@ ARAMD64=${ARAMD64:-ar}
 RT=$(cd "$here/../../runtime" && pwd)
 
 if [ ! -d "$TIGDIR/runtime" ]; then
-  echo "regenerate-amd64.sh: no fork-tiger at $TIGDIR; set TIGDIR" >&2
+  echo "regenerate-amd64-mach-o.sh: no fork-tiger at $TIGDIR; set TIGDIR" >&2
   exit 2
 fi
 if [ ! -x "$QC" ]; then
-  echo "regenerate-amd64.sh: no qc at $QC (run 'dune build' first)" >&2
+  echo "regenerate-amd64-mach-o.sh: no qc at $QC (run 'dune build' first)" >&2
   exit 2
 fi
 # claude: $CCAMD64 is two words ("clang -arch x86_64"), unlike every other
@@ -34,7 +34,7 @@ fi
 # matter since that script has real positional args to preserve).
 ccamd64_prog=${CCAMD64%% *}
 if ! command -v "$ccamd64_prog" >/dev/null 2>&1; then
-  echo "regenerate-amd64.sh: no $ccamd64_prog (Xcode command line tools not installed?)" >&2
+  echo "regenerate-amd64-mach-o.sh: no $ccamd64_prog (Xcode command line tools not installed?)" >&2
   exit 2
 fi
 
@@ -46,10 +46,10 @@ tmp=${TMPDIR:-/tmp}/qc-regen-amd64.$$
 mkdir -p "$tmp"
 trap 'rm -rf "$tmp"' EXIT
 
-# claude: same portable (no \b) flip64() as regenerate-arm64.sh, copied
+# claude: same portable (no \b) flip64() as regenerate-arm64-mach-o.sh, copied
 # verbatim rather than riscv64's \b-based one - this runs on the same
 # macOS/BSD-sed host amd64's own toolchain runs on, so the same "\b silently
-# matches nothing" bug regenerate-arm64.sh's own comment documents applies
+# matches nothing" bug regenerate-arm64-mach-o.sh's own comment documents applies
 # here too. See that script's comment for the full diagnosis.
 flip64() {
   sed -e 's/bits32/bits64/g' -e 's/+[ ]*4\([^0-9]\)/+8\1/g' "$1"
@@ -59,7 +59,7 @@ flip64() {
 # $TIGDIR/stdlib on -I makes tiger's own stdlib.h shadow the system one and
 # include itself forever.
 #
-# -fno-omit-frame-pointer is required, not cosmetic - see regenerate-arm64.sh's
+# -fno-omit-frame-pointer is required, not cosmetic - see regenerate-arm64-mach-o.sh's
 # comment for the full reasoning (the collector crosses C-- -> C -> C--
 # frames by following the frame-pointer chain - %rbp on x86-64, which
 # amd64call.ml reserves out of nvl_int for exactly this reason, mirroring
@@ -87,7 +87,7 @@ sed 's/^target byteorder little;/target byteorder little wordsize 64 pointersize
 # curr_exn's alignment directive (4 -> 8). NOT the EOF-sentinel rewrite
 # regenerate-riscv64.sh's own comment describes (0xFFFFFFFF -> the 64-bit -1
 # a bits64 ch actually compares against) - that rewrite is WRONG here, same
-# reason it is wrong for arm64 (see regenerate-arm64.sh's own comment):
+# reason it is wrong for arm64 (see regenerate-arm64-mach-o.sh's own comment):
 # x86-64, like AArch64, architecturally zero-extends a 32-bit register write
 # into the full 64-bit register (e.g. any 32-bit-destination instruction
 # zeroes the upper 32 bits) - unlike RISC-V64's LP64 ABI, which sign-extends.
@@ -100,9 +100,9 @@ sed 's/wordsize 32 pointersize 32/wordsize 64 pointersize 64/' \
 
 # Tiger's C--, compiled by us. None of these gets -globals: the global area
 # belongs to the one unit compiled at link time, which is the test itself.
-"$QC" -amd64 -stop .o -o "$here/tigermain-amd64.o" "$tmp/runtime.c--"
-"$QC" -amd64 -stop .o -o "$tmp/stdlibcmm.o"         "$tmp/stdlibcmm.c--"
-"$QC" -amd64 -stop .o -o "$tmp/alloc.o"             "$tmp/alloc.c--"
+"$QC" -amd64-mach-o -stop .o -o "$here/tigermain-amd64.o" "$tmp/runtime.c--"
+"$QC" -amd64-mach-o -stop .o -o "$tmp/stdlibcmm.o"         "$tmp/stdlibcmm.c--"
+"$QC" -amd64-mach-o -stop .o -o "$tmp/alloc.o"             "$tmp/alloc.c--"
 
 rm -f "$here/stdlib-amd64.a"
 $ARAMD64 cr "$here/stdlib-amd64.a" \

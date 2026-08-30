@@ -4,7 +4,7 @@
 #
 # They hold Tiger's support code - its main, its standard library, its
 # allocator and its garbage collector - and they are checked in so that
-# tests/run-tiger.sh, and therefore "make test-tiger" and the Docker build,
+# tests/run-tiger-x86.sh, and therefore "make test-tiger" and the Docker build,
 # need nothing but qc itself. Requiring a fork-tiger checkout to run the
 # tests would mean CI could not run them at all.
 #
@@ -73,4 +73,4 @@ $AR32 cr "$here/stdlib-x86.a" \
 echo "regenerated:"
 echo "  $here/tigermain-x86.o"
 echo "  $here/stdlib-x86.a"
-echo "now run ../run-tiger.sh and commit both if the results are what you expect"
+echo "now run ../run-tiger-x86.sh and commit both if the results are what you expect"

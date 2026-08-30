@@ -4,8 +4,8 @@
 # only differs in the target (and in needing no cross toolchain at all:
 # this machine IS arm64-apple-darwin).
 #
-#   ./regenerate-arm64.sh              rebuild from $TIGDIR
-#   TIGDIR=... ./regenerate-arm64.sh   from somewhere else
+#   ./regenerate-arm64-mach-o.sh              rebuild from $TIGDIR
+#   TIGDIR=... ./regenerate-arm64-mach-o.sh   from somewhere else
 
 set -e
 
@@ -17,15 +17,15 @@ ARARM64=${ARARM64:-ar}
 RT=$(cd "$here/../../runtime" && pwd)
 
 if [ ! -d "$TIGDIR/runtime" ]; then
-  echo "regenerate-arm64.sh: no fork-tiger at $TIGDIR; set TIGDIR" >&2
+  echo "regenerate-arm64-mach-o.sh: no fork-tiger at $TIGDIR; set TIGDIR" >&2
   exit 2
 fi
 if [ ! -x "$QC" ]; then
-  echo "regenerate-arm64.sh: no qc at $QC (run 'dune build' first)" >&2
+  echo "regenerate-arm64-mach-o.sh: no qc at $QC (run 'dune build' first)" >&2
   exit 2
 fi
 if ! command -v "$CCARM64" >/dev/null 2>&1; then
-  echo "regenerate-arm64.sh: no $CCARM64 (Xcode command line tools not installed?)" >&2
+  echo "regenerate-arm64-mach-o.sh: no $CCARM64 (Xcode command line tools not installed?)" >&2
   exit 2
 fi
 
@@ -110,9 +110,9 @@ sed 's/wordsize 32 pointersize 32/wordsize 64 pointersize 64/' \
 
 # Tiger's C--, compiled by us. None of these gets -globals: the global area
 # belongs to the one unit compiled at link time, which is the test itself.
-"$QC" -arm64 -stop .o -o "$here/tigermain-arm64.o" "$tmp/runtime.c--"
-"$QC" -arm64 -stop .o -o "$tmp/stdlibcmm.o"         "$tmp/stdlibcmm.c--"
-"$QC" -arm64 -stop .o -o "$tmp/alloc.o"             "$tmp/alloc.c--"
+"$QC" -arm64-mach-o -stop .o -o "$here/tigermain-arm64.o" "$tmp/runtime.c--"
+"$QC" -arm64-mach-o -stop .o -o "$tmp/stdlibcmm.o"         "$tmp/stdlibcmm.c--"
+"$QC" -arm64-mach-o -stop .o -o "$tmp/alloc.o"             "$tmp/alloc.c--"
 
 rm -f "$here/stdlib-arm64.a"
 $ARARM64 cr "$here/stdlib-arm64.a" \

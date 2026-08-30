@@ -1,13 +1,13 @@
 #!/bin/sh
 # Behavioural tests: the bits64 tiger64/ test programs, compiled by us for
 # -riscv64, run under qemu-riscv64, and checked against stdout/exit code.
-# The riscv64 counterpart of run-tiger.sh - see that script first, this
+# The riscv64 counterpart of run-tiger-x86.sh - see that script first, this
 # one only differs in the target (and in reading tiger64/ instead of
 # tiger/, see tests/tiger64/README).
 #
 # riscv64 is little-endian, matching tiger64/'s own "target byteorder
 # little wordsize 64 pointersize 64" sources exactly, so - like
-# run-tiger.sh/run-tiger-riscv32.sh and unlike run-tiger-ppc.sh/
+# run-tiger-x86.sh/run-tiger-riscv32.sh and unlike run-tiger-ppc.sh/
 # run-tiger-sparc.sh - no byteorder flip is needed. Also unlike riscv32
 # (see run-tiger-riscv32.sh's header comment), Ubuntu ships a real
 # riscv64-linux-gnu glibc cross toolchain, so this links the ordinary way
@@ -15,7 +15,7 @@
 #
 # Everything links against tiger64/tigermain-riscv64.o and
 # tiger64/stdlib-riscv64.a, which are checked in exactly like
-# run-tiger.sh's x86 versions, so this needs no fork-tiger checkout to
+# run-tiger-x86.sh's x86 versions, so this needs no fork-tiger checkout to
 # run. Regenerate both with tiger64/regenerate-riscv64.sh after changing
 # anything that affects the run-time data the compiler emits - see that
 # script's header for why it, unlike every other regenerate-*.sh, also
@@ -24,7 +24,7 @@
 #
 # Results are checked against a recorded baseline (expected/tiger64-riscv64.txt)
 # rather than "everything must pass" - same reasoning as every other
-# script here (run-tiger.sh's header has the fullest version of it).
+# script here (run-tiger-x86.sh's header has the fullest version of it).
 #
 # Usage:
 #   ./run-tiger64-riscv64.sh              run them all, check against the baseline

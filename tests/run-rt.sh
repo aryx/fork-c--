@@ -4,9 +4,9 @@
 #
 # These are the runtime's own regression tests for `cut to`,
 # `foreign "C-- thread"`, and stack unwinding via the .pcmap data - see
-# rt.tests for why they are worth having beyond what run-tiger.sh covers.
+# rt.tests for why they are worth having beyond what run-tiger-x86.sh covers.
 #
-# Like run-tiger.sh this is the expensive tier: it needs the i386 cross
+# Like run-tiger-x86.sh this is the expensive tier: it needs the i386 cross
 # toolchain and qemu's binfmt handler (see demos/Makefile for the
 # requirements).
 #
@@ -19,7 +19,7 @@
 # (see LIB below).
 #
 # Each test's own .c-- is compiled WITH -globals, same reasoning as
-# run-tiger.sh: the global-variable area is one object per program, and the
+# run-tiger-x86.sh: the global-variable area is one object per program, and the
 # prebuilt runtime pieces reference Cmm.global_area without defining it.
 #
 # Results are checked against a recorded baseline (expected/rt.txt) rather

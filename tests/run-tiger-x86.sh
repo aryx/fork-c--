@@ -33,9 +33,9 @@
 # testing is for, and the remaining failures stay visible in the output.
 #
 # Usage:
-#   ./run-tiger.sh              run them all, check against the baseline
-#   ./run-tiger.sh --update     re-record the baseline (review the diff!)
-#   ./run-tiger.sh hello wf     run only those, report but do not compare
+#   ./run-tiger-x86.sh              run them all, check against the baseline
+#   ./run-tiger-x86.sh --update     re-record the baseline (review the diff!)
+#   ./run-tiger-x86.sh hello wf     run only those, report but do not compare
 #
 # NB: goken's Plan 9 diff/sed/tail shadow the GNU ones on pad's PATH, so
 # this script sticks to plain "diff a b" and avoids diff -q.
@@ -68,16 +68,16 @@ T=tiger
 B=build/tiger
 
 if [ ! -x "$QC" ]; then
-  echo "run-tiger.sh: no qc at $QC (run 'dune build' first)" >&2
+  echo "run-tiger-x86.sh: no qc at $QC (run 'dune build' first)" >&2
   exit 2
 fi
 if ! command -v "$CCX86" >/dev/null 2>&1; then
-  echo "run-tiger.sh: no $CCX86; install the i386 cross toolchain:" >&2
+  echo "run-tiger-x86.sh: no $CCX86; install the i386 cross toolchain:" >&2
   echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
   exit 2
 fi
 if [ ! -f "$LIB" ]; then
-  echo "run-tiger.sh: building the run-time system first" >&2
+  echo "run-tiger-x86.sh: building the run-time system first" >&2
   # QC absolute: runtime/Makefile defaults to plain "qc" so that its
   # installed copy works, and make -C changes directory, so a relative path
   # would resolve against the wrong place.

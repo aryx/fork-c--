@@ -5,7 +5,7 @@
 # qc-- has no dependency on fork-tiger - it's the other way around
 # (fork-tiger depends on qc-- as its backend), so making the regular test
 # suite need a fork-tiger checkout would be circular. The checked-in .c--
-# files are what run-tiger.sh actually compiles, and that stays true
+# files are what run-tiger-x86.sh actually compiles, and that stays true
 # whether or not fork-tiger even exists on this machine.
 #
 # This script is a manual, occasional-use tool for when a checked-in .c--
@@ -60,4 +60,4 @@ for name; do
 done
 
 echo
-echo "review each -new.c--, then: mv <name>-new.c-- <name>.c-- and rerun ../run-tiger.sh"
+echo "review each -new.c--, then: mv <name>-new.c-- <name>.c-- and rerun ../run-tiger-x86.sh"

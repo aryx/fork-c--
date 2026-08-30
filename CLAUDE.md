@@ -32,7 +32,7 @@ qc -globals -o hello runtime/runtime.o stdlib/stdlib.a hello.c--
 
 **This milestone is met** — `qc` has a real `main_action` (compile, assemble,
 and link, dispatching on each input's suffix), a working x86 backend, and
-object-file/linking support, and `tests/run-tiger.sh` (`make test-tiger`) runs
+object-file/linking support, and `tests/run-tiger-x86.sh` (`make test-tiger`) runs
 the exact command above end to end against 15 tiger programs as a standing
 regression test. A `-ppc-elf` backend exists too, verified the same way via
 `tests/run-tiger-ppc.sh`, though with more known gaps (`tests/expected/tiger-ppc.txt`).

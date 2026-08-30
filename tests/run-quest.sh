@@ -2,7 +2,7 @@
 # Behavioural tests: calling conventions between qc-- and gcc, in both
 # directions - see quest.tests's header for what these check and why.
 #
-# Like run-tiger.sh/run-rt.sh this needs the i386 cross toolchain and
+# Like run-tiger-x86.sh/run-rt.sh this needs the i386 cross toolchain and
 # qemu's binfmt handler (see demos/Makefile for the requirements), but
 # unlike them it does not build or link runtime/build-x86/libqcmm.a: these
 # are pure ABI tests (argument/return-value passing), nothing here calls
@@ -28,7 +28,7 @@ CCX86=${CCX86:-i686-linux-gnu-gcc}
 # qc drives an external assembler/linker, defaulting to clang because that
 # is the one compiler able to target i386 from any host. We already have a
 # real i386 cross toolchain here, so point qc at it rather than requiring
-# both (same reasoning as run-tiger.sh).
+# both (same reasoning as run-tiger-x86.sh).
 QC_AS=${QC_AS:-$CCX86}
 QC_LD=${QC_LD:-$CCX86}
 export QC_AS QC_LD

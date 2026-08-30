@@ -18,12 +18,12 @@
 # Everything links against tiger64/tigermain-amd64.o and
 # tiger64/stdlib-amd64.a, which are checked in exactly like
 # run-tiger64-arm64-mach-o.sh's own, so this needs no fork-tiger checkout to run.
-# Regenerate both with tiger64/regenerate-amd64.sh after changing anything
+# Regenerate both with tiger64/regenerate-amd64-mach-o.sh after changing anything
 # that affects the run-time data the compiler emits.
 #
 # Results are checked against a recorded baseline (expected/tiger64-amd64-mach-o.txt)
 # rather than "everything must pass" - same reasoning as every other script
-# here (run-tiger.sh's header has the fullest version of it).
+# here (run-tiger-x86.sh's header has the fullest version of it).
 #
 # Usage:
 #   ./run-tiger64-amd64-mach-o.sh              run them all, check against the baseline

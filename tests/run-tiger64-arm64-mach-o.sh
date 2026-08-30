@@ -13,12 +13,12 @@
 # Everything links against tiger64/tigermain-arm64.o and
 # tiger64/stdlib-arm64.a, which are checked in exactly like
 # run-tiger64-riscv64.sh's own, so this needs no fork-tiger checkout to
-# run. Regenerate both with tiger64/regenerate-arm64.sh after changing
+# run. Regenerate both with tiger64/regenerate-arm64-mach-o.sh after changing
 # anything that affects the run-time data the compiler emits.
 #
 # Results are checked against a recorded baseline (expected/tiger64-arm64-mach-o.txt)
 # rather than "everything must pass" - same reasoning as every other script
-# here (run-tiger.sh's header has the fullest version of it).
+# here (run-tiger-x86.sh's header has the fullest version of it).
 #
 # Usage:
 #   ./run-tiger64-arm64-mach-o.sh              run them all, check against the baseline

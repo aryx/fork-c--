@@ -1,20 +1,20 @@
 #!/bin/sh
 # Behavioural tests: Tiger programs, compiled by us for -mips, run under
 # qemu-mipsel, and checked against stdout/exit code. The mips counterpart of
-# run-tiger.sh - see that script first, this one only differs in the target.
+# run-tiger-x86.sh - see that script first, this one only differs in the target.
 # Unlike run-tiger-sparc.sh/run-tiger-ppc.sh, mips is 32-bit *little*-endian,
 # matching every cmm-pass/*.c-- source's own "target byteorder little" exactly,
-# so - like run-tiger.sh - no byteorder flip is needed anywhere here.
+# so - like run-tiger-x86.sh - no byteorder flip is needed anywhere here.
 #
 # Everything links against tiger/tigermain-mips.o and tiger/stdlib-mips.a,
-# which are checked in exactly like run-tiger.sh's x86 versions, so - like
+# which are checked in exactly like run-tiger-x86.sh's x86 versions, so - like
 # that script, and unlike tests/run-native.sh - this needs no fork-tiger
 # checkout to run. Regenerate both with tiger/regenerate-mips.sh after
 # changing anything that affects the run-time data the compiler emits.
 #
 # Results are checked against a recorded baseline (expected/tiger-mips.txt)
 # rather than "everything must pass" - same reasoning as every other script
-# here (run-tiger.sh's header has the fullest version of it).
+# here (run-tiger-x86.sh's header has the fullest version of it).
 #
 # Usage:
 #   ./run-tiger-mips.sh              run them all, check against the baseline
