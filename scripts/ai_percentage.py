@@ -50,7 +50,8 @@ EXCLUDED_TOP_DIRS = ("tests", "TODO", "LUA")
 
 def run(cmd):
     return subprocess.run(
-        cmd, capture_output=True, text=True, check=True
+        cmd, capture_output=True, text=True, check=True,
+        encoding="utf-8", errors="replace",
     ).stdout
 
 
@@ -77,6 +78,7 @@ def blame_hashes(path):
     out = subprocess.run(
         ["git", "blame", *BLAME_FLAGS, "--line-porcelain", "--", path],
         capture_output=True, text=True,
+        encoding="utf-8", errors="replace",
     ).stdout
     hashes = []
     current_hash = None
