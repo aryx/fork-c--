@@ -66,6 +66,7 @@
 
 type
     (
+        't40,
         't39,
         't38,
         't37,
@@ -110,19 +111,20 @@ type
 nonterm
 =
     {
-        _Zx3: ( 't39 ) Camlburg.nt;
-        _Sx1: ( 't38 ) Camlburg.nt;
-        _Sub13: ( 't37 ) Camlburg.nt;
-        _Store9: ( 't36 ) Camlburg.nt;
-        _Store7: ( 't35 ) Camlburg.nt;
-        _Store5: ( 't34 ) Camlburg.nt;
-        _S2D16: ( 't33 ) Camlburg.nt;
+        _Zx3: ( 't40 ) Camlburg.nt;
+        _Sx1: ( 't39 ) Camlburg.nt;
+        _Sub13: ( 't38 ) Camlburg.nt;
+        _Store9: ( 't37 ) Camlburg.nt;
+        _Store7: ( 't36 ) Camlburg.nt;
+        _Store5: ( 't35 ) Camlburg.nt;
+        _S2D17: ( 't34 ) Camlburg.nt;
+        _Mul15: ( 't33 ) Camlburg.nt;
         _Goto8: ( 't32 ) Camlburg.nt;
         _Goto6: ( 't31 ) Camlburg.nt;
         _Goto4: ( 't30 ) Camlburg.nt;
         _Goto10: ( 't29 ) Camlburg.nt;
         _Fetch2: ( 't28 ) Camlburg.nt;
-        _D2S15: ( 't27 ) Camlburg.nt;
+        _D2S16: ( 't27 ) Camlburg.nt;
         _And14: ( 't26 ) Camlburg.nt;
         _Add12: ( 't25 ) Camlburg.nt;
         _Add11: ( 't24 ) Camlburg.nt;
@@ -181,13 +183,14 @@ inf =
     ;_Add11 = (Camlburg.infinity)
     ;_Add12 = (Camlburg.infinity)
     ;_And14 = (Camlburg.infinity)
-    ;_D2S15 = (Camlburg.infinity)
+    ;_D2S16 = (Camlburg.infinity)
     ;_Fetch2 = (Camlburg.infinity)
     ;_Goto10 = (Camlburg.infinity)
     ;_Goto4 = (Camlburg.infinity)
     ;_Goto6 = (Camlburg.infinity)
     ;_Goto8 = (Camlburg.infinity)
-    ;_S2D16 = (Camlburg.infinity)
+    ;_Mul15 = (Camlburg.infinity)
+    ;_S2D17 = (Camlburg.infinity)
     ;_Store5 = (Camlburg.infinity)
     ;_Store7 = (Camlburg.infinity)
     ;_Store9 = (Camlburg.infinity)
@@ -217,7 +220,7 @@ and update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 297 "mipsrec.mlb"
+# 302 "mipsrec.mlb"
                                 ( cat ["<";any;">"] )
                                 
 # 000 "/dev/stdout"
@@ -244,7 +247,7 @@ and update_const =
                             let const = x.const.Camlburg.action ()
                             in
                                 
-# 191 "mipsrec.mlb"
+# 192 "mipsrec.mlb"
                                 ( const                 )
                                 
 # 000 "/dev/stdout"
@@ -271,7 +274,7 @@ and update_f =
                             let f = x.f.Camlburg.action ()
                             in
                                 
-# 169 "mipsrec.mlb"
+# 170 "mipsrec.mlb"
                                 ( freg f )
                                 
 # 000 "/dev/stdout"
@@ -304,7 +307,7 @@ and update_imm =
                             let imm = x.imm.Camlburg.action ()
                             in
                                 
-# 186 "mipsrec.mlb"
+# 187 "mipsrec.mlb"
                                 ( imm                   )
                                 
 # 000 "/dev/stdout"
@@ -361,7 +364,7 @@ and update_r =
                             let r = x.r.Camlburg.action ()
                             in
                                 
-# 168 "mipsrec.mlb"
+# 169 "mipsrec.mlb"
                                 ( reg r  )
                                 
 # 000 "/dev/stdout"
@@ -394,7 +397,7 @@ and update_reg =
                             let reg = x.reg.Camlburg.action ()
                             in
                                 
-# 185 "mipsrec.mlb"
+# 186 "mipsrec.mlb"
                                 ( cat ["(";reg;")"]     )
                                 
 # 000 "/dev/stdout"
@@ -433,7 +436,7 @@ and update_symbol =
                             let symbol = x.symbol.Camlburg.action ()
                             in
                                 
-# 189 "mipsrec.mlb"
+# 190 "mipsrec.mlb"
                                 ( symbol                )
                                 
 # 000 "/dev/stdout"
@@ -448,7 +451,7 @@ and update_symbol =
                                 let symbol = x.symbol.Camlburg.action ()
                                 in
                                     
-# 192 "mipsrec.mlb"
+# 193 "mipsrec.mlb"
                                     ( symbol                )
                                     
 # 000 "/dev/stdout"
@@ -480,12 +483,12 @@ and update__And14 =
             x
         else
             { x with _And14 = (nt) }
-and update__D2S15 =
+and update__D2S16 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._D2S15.Camlburg.cost then
+        if nt.Camlburg.cost >= x._D2S16.Camlburg.cost then
             x
         else
-            { x with _D2S15 = (nt) }
+            { x with _D2S16 = (nt) }
 and update__Fetch2 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Fetch2.Camlburg.cost then
@@ -516,12 +519,18 @@ and update__Goto8 =
             x
         else
             { x with _Goto8 = (nt) }
-and update__S2D16 =
+and update__Mul15 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._S2D16.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Mul15.Camlburg.cost then
             x
         else
-            { x with _S2D16 = (nt) }
+            { x with _Mul15 = (nt) }
+and update__S2D17 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._S2D17.Camlburg.cost then
+            x
+        else
+            { x with _S2D17 = (nt) }
 and update__Store5 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Store5.Camlburg.cost then
@@ -578,7 +587,7 @@ conZx =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 310 "mipsrec.mlb"
+# 315 "mipsrec.mlb"
                             ( cat [ "Zx(";any;")" ] )
                             
 # 000 "/dev/stdout"
@@ -592,7 +601,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 299 "mipsrec.mlb"
+# 304 "mipsrec.mlb"
                     ( cat [ "True"  ] )
                     
 # 000 "/dev/stdout"
@@ -616,7 +625,7 @@ and conSx =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 309 "mipsrec.mlb"
+# 314 "mipsrec.mlb"
                             ( cat [ "Sx(";any;")" ] )
                             
 # 000 "/dev/stdout"
@@ -644,7 +653,7 @@ and conSub =
                         and y = arg2.any.Camlburg.action ()
                         in
                             
-# 308 "mipsrec.mlb"
+# 313 "mipsrec.mlb"
                             ( cat [ "Sub(";x;", ";y;")" ] )
                             
 # 000 "/dev/stdout"
@@ -699,7 +708,7 @@ and conStore =
                                 and w = arg3
                                 in
                                     
-# 317 "mipsrec.mlb"
+# 322 "mipsrec.mlb"
                                     ( cat [ "Store(";dst;",";src;",";width w;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -721,7 +730,7 @@ and conStore =
                                         and imm = arg2.imm.Camlburg.action ()
                                         in
                                             
-# 197 "mipsrec.mlb"
+# 198 "mipsrec.mlb"
                                             ( cat ["la"; " "; regl; ","; imm] )
                                             
 # 000 "/dev/stdout"
@@ -743,7 +752,7 @@ and conStore =
                                             arg2.const.Camlburg.action ()
                                         in
                                             
-# 200 "mipsrec.mlb"
+# 201 "mipsrec.mlb"
                                             ( cat ["li"; " "; regl; ","; const] )
                                             
 # 000 "/dev/stdout"
@@ -763,7 +772,7 @@ and conStore =
                                         and mem = arg2.mem.Camlburg.action ()
                                         in
                                             
-# 203 "mipsrec.mlb"
+# 204 "mipsrec.mlb"
                                             ( cat ["l"; suffix 32; " "; regl; ","; mem] )
                                             
 # 000 "/dev/stdout"
@@ -786,7 +795,7 @@ and conStore =
                                             let (mem, x) = _v1
                                             in
                                                 
-# 206 "mipsrec.mlb"
+# 207 "mipsrec.mlb"
                                                 ( cat ["l"; suffix w; sx; " "; regl; ","; mem] )
                                                 
 # 000 "/dev/stdout"
@@ -809,7 +818,7 @@ and conStore =
                                             let (mem, x) = _v1
                                             in
                                                 
-# 209 "mipsrec.mlb"
+# 210 "mipsrec.mlb"
                                                 ( cat ["l"; suffix w; zx; " "; regl; ","; mem] )
                                                 
 # 000 "/dev/stdout"
@@ -831,7 +840,7 @@ and conStore =
                                             arg2.const.Camlburg.action ()
                                         in
                                             
-# 212 "mipsrec.mlb"
+# 213 "mipsrec.mlb"
                                             ( sprintf "li $1, %s; mtc1 $1, %s" const fregl )
                                             
 # 000 "/dev/stdout"
@@ -851,7 +860,7 @@ and conStore =
                                         and mem = arg2.mem.Camlburg.action ()
                                         in
                                             
-# 216 "mipsrec.mlb"
+# 217 "mipsrec.mlb"
                                             ( cat ["l.s"; " "; fregl; ","; mem] )
                                             
 # 000 "/dev/stdout"
@@ -871,7 +880,7 @@ and conStore =
                                             arg2.const64.Camlburg.action ()
                                         in
                                             
-# 219 "mipsrec.mlb"
+# 220 "mipsrec.mlb"
                                             ( sprintf "li $1, %s; mtc1 $1, %s; li $1 %s; mtc1 $1, %s"
                        (const64 (lo b)) (freg f) (const64 (hi b)) (freg (f+1))
             )
@@ -892,7 +901,7 @@ and conStore =
                                         and w = arg3
                                         in
                                             
-# 224 "mipsrec.mlb"
+# 225 "mipsrec.mlb"
                                             ( cat ["s"; suffix w; " "; reg; ","; meml] )
                                             
 # 000 "/dev/stdout"
@@ -913,7 +922,7 @@ and conStore =
                                         and w = arg3
                                         in
                                             
-# 227 "mipsrec.mlb"
+# 228 "mipsrec.mlb"
                                             ( cat ["s.s "; freg; ","; meml] )
                                             
 # 000 "/dev/stdout"
@@ -933,7 +942,7 @@ and conStore =
                                         and reg = arg2.reg.Camlburg.action ()
                                         in
                                             
-# 230 "mipsrec.mlb"
+# 231 "mipsrec.mlb"
                                             ( cat ["move"; " "; regl; ","; reg] )
                                             
 # 000 "/dev/stdout"
@@ -955,7 +964,7 @@ and conStore =
                                             arg2.freg.Camlburg.action ()
                                         in
                                             
-# 233 "mipsrec.mlb"
+# 234 "mipsrec.mlb"
                                             ( cat ["mov.s"; " "; fregl; ","; freg] )
                                             
 # 000 "/dev/stdout"
@@ -977,7 +986,7 @@ and conStore =
                                             arg2.freg.Camlburg.action ()
                                         in
                                             
-# 236 "mipsrec.mlb"
+# 237 "mipsrec.mlb"
                                             ( cat ["mov.d"; " "; fregl; ","; freg] )
                                             
 # 000 "/dev/stdout"
@@ -997,7 +1006,7 @@ and conStore =
                                         and reg = arg2.reg.Camlburg.action ()
                                         in
                                             
-# 239 "mipsrec.mlb"
+# 240 "mipsrec.mlb"
                                             ( cat ["nop; mtc1"; " "; reg; ","; fregl] )
                                             
 # 000 "/dev/stdout"
@@ -1019,7 +1028,7 @@ and conStore =
                                             arg2.freg.Camlburg.action ()
                                         in
                                             
-# 242 "mipsrec.mlb"
+# 243 "mipsrec.mlb"
                                             ( cat ["nop; mfc1"; " "; regl; ","; freg] )
                                             
 # 000 "/dev/stdout"
@@ -1043,7 +1052,7 @@ and conStore =
                                             let (x, y) = _v1
                                             in
                                                 
-# 276 "mipsrec.mlb"
+# 277 "mipsrec.mlb"
                                                 ( cat ["add"; " "; dst; ","; x; ","; y] )
                                                 
 # 000 "/dev/stdout"
@@ -1067,7 +1076,7 @@ and conStore =
                                             let (x, y) = _v1
                                             in
                                                 
-# 279 "mipsrec.mlb"
+# 280 "mipsrec.mlb"
                                                 ( cat ["addi"; " "; dst; ","; x; ","; y] )
                                                 
 # 000 "/dev/stdout"
@@ -1091,7 +1100,7 @@ and conStore =
                                             let (x, y) = _v1
                                             in
                                                 
-# 283 "mipsrec.mlb"
+# 284 "mipsrec.mlb"
                                                 ( cat ["sub"; " "; dst; ","; x; ","; y] )
                                                 
 # 000 "/dev/stdout"
@@ -1115,8 +1124,32 @@ and conStore =
                                             let (x, y) = _v1
                                             in
                                                 
-# 287 "mipsrec.mlb"
+# 288 "mipsrec.mlb"
                                                 ( cat ["and"; " "; dst; ","; x; ","; y] )
+                                                
+# 000 "/dev/stdout"
+)
+                                }
+                                ;{Camlburg.cost =
+                                    (arg1.regl.Camlburg.cost
+                                    +
+                                    arg2._Mul15.Camlburg.cost
+                                    +
+                                    (Camlburg.matches 32) arg3)
+                                ;Camlburg.action =
+                                    (fun () ->
+                                        let
+                                            dst =
+                                            arg1.regl.Camlburg.action ()
+                                        and
+                                            _v1 =
+                                            arg2._Mul15.Camlburg.action ()
+                                        in
+                                            let (x, y) = _v1
+                                            in
+                                                
+# 292 "mipsrec.mlb"
+                                                ( cat ["mul"; " "; dst; ","; x; ","; y] )
                                                 
 # 000 "/dev/stdout"
 )
@@ -1124,7 +1157,7 @@ and conStore =
                                 ;{Camlburg.cost =
                                     (arg1.fregl.Camlburg.cost
                                     +
-                                    arg2._D2S15.Camlburg.cost
+                                    arg2._D2S16.Camlburg.cost
                                     +
                                     (Camlburg.matches 32) arg3)
                                 ;Camlburg.action =
@@ -1134,12 +1167,12 @@ and conStore =
                                             arg1.fregl.Camlburg.action ()
                                         and
                                             _v1 =
-                                            arg2._D2S15.Camlburg.action ()
+                                            arg2._D2S16.Camlburg.action ()
                                         in
                                             let x = _v1
                                             in
                                                 
-# 290 "mipsrec.mlb"
+# 295 "mipsrec.mlb"
                                                 ( cat ["cvt.s.d"; " "; dst; ","; x] )
                                                 
 # 000 "/dev/stdout"
@@ -1148,7 +1181,7 @@ and conStore =
                                 ;{Camlburg.cost =
                                     (arg1.fregl.Camlburg.cost
                                     +
-                                    arg2._S2D16.Camlburg.cost
+                                    arg2._S2D17.Camlburg.cost
                                     +
                                     (Camlburg.matches 64) arg3)
                                 ;Camlburg.action =
@@ -1158,12 +1191,12 @@ and conStore =
                                             arg1.fregl.Camlburg.action ()
                                         and
                                             _v1 =
-                                            arg2._S2D16.Camlburg.action ()
+                                            arg2._S2D17.Camlburg.action ()
                                         in
                                             let x = _v1
                                             in
                                                 
-# 293 "mipsrec.mlb"
+# 298 "mipsrec.mlb"
                                                 ( cat ["cvt.d.s"; " "; dst; ","; x] )
                                                 
 # 000 "/dev/stdout"
@@ -1172,7 +1205,7 @@ and conStore =
                             inf))))
 and conS2D =
     fun arg1 ->
-        (update__S2D16
+        (update__S2D17
             {Camlburg.cost = (arg1.freg.Camlburg.cost)
             ;Camlburg.action =
                 (fun () -> let x = arg1.freg.Camlburg.action () in x)
@@ -1188,7 +1221,7 @@ and conReg =
                     and n = arg2
                     in
                         
-# 314 "mipsrec.mlb"
+# 319 "mipsrec.mlb"
                         ( cat [ "Reg('";Char.escaped char;"',"; width n;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1201,7 +1234,7 @@ and conReg =
                         let n = arg2
                         in
                             
-# 165 "mipsrec.mlb"
+# 166 "mipsrec.mlb"
                             ( n )
                             
 # 000 "/dev/stdout"
@@ -1215,7 +1248,7 @@ and conReg =
                     ;Camlburg.action =
                         (fun () ->
                             
-# 171 "mipsrec.mlb"
+# 172 "mipsrec.mlb"
                             ( () )
                             
 # 000 "/dev/stdout"
@@ -1228,7 +1261,7 @@ and conReg =
                                 let n = arg2
                                 in
                                     
-# 166 "mipsrec.mlb"
+# 167 "mipsrec.mlb"
                                     ( n )
                                     
 # 000 "/dev/stdout"
@@ -1242,7 +1275,7 @@ and conReg =
                             ;Camlburg.action =
                                 (fun () ->
                                     
-# 173 "mipsrec.mlb"
+# 174 "mipsrec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -1256,7 +1289,7 @@ and conReg =
                                 ;Camlburg.action =
                                     (fun () ->
                                         
-# 172 "mipsrec.mlb"
+# 173 "mipsrec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -1274,7 +1307,7 @@ and conPar =
                     and r = arg2.any.Camlburg.action ()
                     in
                         
-# 324 "mipsrec.mlb"
+# 329 "mipsrec.mlb"
                         ( cat [ "Par(";l;",";r;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1296,7 +1329,7 @@ and conPar =
                                     let symbol = _v1
                                     in
                                         
-# 255 "mipsrec.mlb"
+# 256 "mipsrec.mlb"
                                         ( cat ["jal"; " "; symbol] )
                                         
 # 000 "/dev/stdout"
@@ -1316,7 +1349,7 @@ and conPar =
                                     let target = _v1
                                     in
                                         
-# 258 "mipsrec.mlb"
+# 259 "mipsrec.mlb"
                                         ( cat ["jalr"; " "; target] )
                                         
 # 000 "/dev/stdout"
@@ -1336,7 +1369,7 @@ and conPar =
                                     let target = _v1
                                     in
                                         
-# 262 "mipsrec.mlb"
+# 263 "mipsrec.mlb"
                                         ( sprintf "jr %s\n\tmove $29, %s" target nsp )
                                         
 # 000 "/dev/stdout"
@@ -1356,7 +1389,7 @@ and conPar =
                                     let syscall = _v1
                                     in
                                         
-# 266 "mipsrec.mlb"
+# 267 "mipsrec.mlb"
                                         ( "syscall" )
                                         
 # 000 "/dev/stdout"
@@ -1370,11 +1403,24 @@ and conNop =
             ;Camlburg.action =
                 (fun () ->
                     
-# 295 "mipsrec.mlb"
+# 300 "mipsrec.mlb"
                     ( "nop" )
                     
 # 000 "/dev/stdout"
 )
+            })
+            inf
+and conMul =
+    fun arg1 arg2 ->
+        (update__Mul15
+            {Camlburg.cost =
+                (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost)
+            ;Camlburg.action =
+                (fun () ->
+                    let x = arg1.reg.Camlburg.action ()
+                    and y = arg2.reg.Camlburg.action ()
+                    in
+                        (x ,y))
             })
             inf
 and conMem =
@@ -1386,7 +1432,7 @@ and conMem =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 313 "mipsrec.mlb"
+# 318 "mipsrec.mlb"
                         ( cat [ "Mem(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1399,7 +1445,7 @@ and conMem =
                         let addr = arg1.addr.Camlburg.action ()
                         in
                             
-# 182 "mipsrec.mlb"
+# 183 "mipsrec.mlb"
                             ( addr )
                             
 # 000 "/dev/stdout"
@@ -1415,7 +1461,7 @@ and conLobits =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 311 "mipsrec.mlb"
+# 316 "mipsrec.mlb"
                         ( cat [ "Lobits(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1432,7 +1478,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 301 "mipsrec.mlb"
+# 306 "mipsrec.mlb"
                         ( cat [ "Link(";x#mangled_text;",";width w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1446,7 +1492,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 163 "mipsrec.mlb"
+# 164 "mipsrec.mlb"
                             ( x#mangled_text )
                             
 # 000 "/dev/stdout"
@@ -1458,7 +1504,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 264 "mipsrec.mlb"
+# 265 "mipsrec.mlb"
                             ( guard (x#mangled_text =$= "syscall") )
                             
 # 000 "/dev/stdout"
@@ -1469,7 +1515,7 @@ and conLink =
                             and w = arg2
                             in
                                 
-# 264 "mipsrec.mlb"
+# 265 "mipsrec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -1486,7 +1532,7 @@ and conLate =
                     and w = arg2
                     in
                         
-# 302 "mipsrec.mlb"
+# 307 "mipsrec.mlb"
                         ( cat [ "Late(";string;",";width w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1502,7 +1548,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 318 "mipsrec.mlb"
+# 323 "mipsrec.mlb"
                         ( cat [ "Kill(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1520,7 +1566,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 321 "mipsrec.mlb"
+# 326 "mipsrec.mlb"
                         ( cat [ "Guarded(";guard;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1537,7 +1583,7 @@ and conGuarded =
                             let addr = _v1
                             in
                                 
-# 271 "mipsrec.mlb"
+# 272 "mipsrec.mlb"
                                 ( match cmp with 
                | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr]
             )
@@ -1584,7 +1630,7 @@ and conGoto =
                                     let any = arg1.any.Camlburg.action ()
                                     in
                                         
-# 325 "mipsrec.mlb"
+# 330 "mipsrec.mlb"
                                         ( cat [ "Goto(";any;")" ] )
                                         
 # 000 "/dev/stdout"
@@ -1602,7 +1648,7 @@ and conGoto =
                                                     ()
                                             in
                                                 
-# 247 "mipsrec.mlb"
+# 248 "mipsrec.mlb"
                                                 ( cat ["j"; " "; symbol] )
                                                 
 # 000 "/dev/stdout"
@@ -1617,7 +1663,7 @@ and conGoto =
                                                 arg1.reg.Camlburg.action ()
                                             in
                                                 
-# 250 "mipsrec.mlb"
+# 251 "mipsrec.mlb"
                                                 ( cat ["jr"; " "; reg] )
                                                 
 # 000 "/dev/stdout"
@@ -1643,7 +1689,7 @@ and conFetch =
                         and w = arg2
                         in
                             
-# 305 "mipsrec.mlb"
+# 310 "mipsrec.mlb"
                             ( cat [ "Fetch(";any;",";width w;")" ] )
                             
 # 000 "/dev/stdout"
@@ -1657,7 +1703,7 @@ and conFetch =
                             and w = arg2
                             in
                                 
-# 176 "mipsrec.mlb"
+# 177 "mipsrec.mlb"
                                 ( fregl  )
                                 
 # 000 "/dev/stdout"
@@ -1671,7 +1717,7 @@ and conFetch =
                                 and w = arg2
                                 in
                                     
-# 183 "mipsrec.mlb"
+# 184 "mipsrec.mlb"
                                     ( meml )
                                     
 # 000 "/dev/stdout"
@@ -1687,7 +1733,7 @@ and conFetch =
                                     let pcl = arg1.pcl.Camlburg.action ()
                                     in
                                         
-# 178 "mipsrec.mlb"
+# 179 "mipsrec.mlb"
                                         ( () )
                                         
 # 000 "/dev/stdout"
@@ -1703,7 +1749,7 @@ and conFetch =
                                         let ral = arg1.ral.Camlburg.action ()
                                         in
                                             
-# 180 "mipsrec.mlb"
+# 181 "mipsrec.mlb"
                                             ( () )
                                             
 # 000 "/dev/stdout"
@@ -1720,7 +1766,7 @@ and conFetch =
                                             and w = arg2
                                             in
                                                 
-# 175 "mipsrec.mlb"
+# 176 "mipsrec.mlb"
                                                 ( regl   )
                                                 
 # 000 "/dev/stdout"
@@ -1739,7 +1785,7 @@ and conFetch =
                                                         ()
                                                 in
                                                     
-# 179 "mipsrec.mlb"
+# 180 "mipsrec.mlb"
                                                     ( () )
                                                     
 # 000 "/dev/stdout"
@@ -1753,7 +1799,7 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 300 "mipsrec.mlb"
+# 305 "mipsrec.mlb"
                     ( cat [ "False" ] )
                     
 # 000 "/dev/stdout"
@@ -1762,7 +1808,7 @@ and conFalse =
             inf
 and conD2S =
     fun arg1 ->
-        (update__D2S15
+        (update__D2S16
             {Camlburg.cost = (arg1.freg.Camlburg.cost)
             ;Camlburg.action =
                 (fun () -> let x = arg1.freg.Camlburg.action () in x)
@@ -1780,7 +1826,7 @@ and conCmp =
                     and y = arg3.any.Camlburg.action ()
                     in
                         
-# 323 "mipsrec.mlb"
+# 328 "mipsrec.mlb"
                         ( cat [ "Cmp(";op;",";x;",";y;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1797,7 +1843,7 @@ and conCmp =
                             and y = arg3.reg.Camlburg.action ()
                             in
                                 
-# 268 "mipsrec.mlb"
+# 269 "mipsrec.mlb"
                                 ( (op,x,y) )
                                 
 # 000 "/dev/stdout"
@@ -1812,7 +1858,7 @@ and conCmp =
                             and y = arg3.const.Camlburg.action ()
                             in
                                 
-# 269 "mipsrec.mlb"
+# 270 "mipsrec.mlb"
                                 ( (op,x,y) )
                                 
 # 000 "/dev/stdout"
@@ -1828,7 +1874,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 303 "mipsrec.mlb"
+# 308 "mipsrec.mlb"
                         ( cat [ "Bits(b)" ] )
                         
 # 000 "/dev/stdout"
@@ -1839,7 +1885,7 @@ and conBits =
                     (let bits = arg1
                     in
                         
-# 162 "mipsrec.mlb"
+# 163 "mipsrec.mlb"
                         ( guard (Bits.width bits = 32)  )
                         
 # 000 "/dev/stdout"
@@ -1849,7 +1895,7 @@ and conBits =
                         let bits = arg1
                         in
                             
-# 162 "mipsrec.mlb"
+# 163 "mipsrec.mlb"
                             ( const32 bits )
                             
 # 000 "/dev/stdout"
@@ -1860,7 +1906,7 @@ and conBits =
                         (let bits = arg1
                         in
                             
-# 161 "mipsrec.mlb"
+# 162 "mipsrec.mlb"
                             ( guard (Bits.width bits = 64)  )
                             
 # 000 "/dev/stdout"
@@ -1870,7 +1916,7 @@ and conBits =
                             let bits = arg1
                             in
                                 
-# 161 "mipsrec.mlb"
+# 162 "mipsrec.mlb"
                                 (         bits )
                                 
 # 000 "/dev/stdout"
@@ -1922,7 +1968,7 @@ and conAdd =
                                 and reg = arg2.reg.Camlburg.action ()
                                 in
                                     
-# 187 "mipsrec.mlb"
+# 188 "mipsrec.mlb"
                                     ( cat [imm;"(";reg;")"] )
                                     
 # 000 "/dev/stdout"
@@ -1936,7 +1982,7 @@ and conAdd =
                                 and imm = arg2.imm.Camlburg.action ()
                                 in
                                     
-# 188 "mipsrec.mlb"
+# 189 "mipsrec.mlb"
                                     ( cat [imm;"(";reg;")"] )
                                     
 # 000 "/dev/stdout"
@@ -1951,7 +1997,7 @@ and conAdd =
                                 and y = arg2.any.Camlburg.action ()
                                 in
                                     
-# 307 "mipsrec.mlb"
+# 312 "mipsrec.mlb"
                                     ( cat [ "Add(";x;", ";y;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -1971,7 +2017,7 @@ and conAdd =
                                         and imm = arg2.imm.Camlburg.action ()
                                         in
                                             
-# 193 "mipsrec.mlb"
+# 194 "mipsrec.mlb"
                                             ( cat [symbol;"+";imm]  )
                                             
 # 000 "/dev/stdout"
@@ -1989,7 +2035,7 @@ and conAdd =
                                             arg2.symbol.Camlburg.action ()
                                         in
                                             
-# 194 "mipsrec.mlb"
+# 195 "mipsrec.mlb"
                                             ( cat [symbol;"+";imm]  )
                                             
 # 000 "/dev/stdout"
@@ -2008,7 +2054,7 @@ and conAdd =
                                             arg2.const.Camlburg.action ()
                                         in
                                             
-# 252 "mipsrec.mlb"
+# 253 "mipsrec.mlb"
                                             ( () )
                                             
 # 000 "/dev/stdout"
@@ -2039,6 +2085,7 @@ and conAdd =
       | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
       | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
       | RP.App(("and", [w]), [x; y])            -> conAnd (exp x) (exp y)
+      | RP.App(("mul", [w]), [x; y])            -> conMul (exp x) (exp y)
       | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x)
       | RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x)
       (* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store in this backend (see mips.ml's Post.lostore, its only producer) - a MIPS "sb"/"sh" store already truncates its source register to the store's own width, so the narrowing is a free no-op here, not a distinct instruction. Pass the inner value through unchanged rather than erroring "unknown operator lobits" (found via stdlib.c--'s tig_ord, a bits8L[...] := %lobits8(...) store). *)

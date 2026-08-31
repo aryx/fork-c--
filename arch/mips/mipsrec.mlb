@@ -79,6 +79,7 @@
       | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
       | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
       | RP.App(("and", [w]), [x; y])            -> conAnd (exp x) (exp y)
+      | RP.App(("mul", [w]), [x; y])            -> conMul (exp x) (exp y)
       | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x)
       | RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x)
       (* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store in this backend (see mips.ml's Post.lostore, its only producer) - a MIPS "sb"/"sh" store already truncates its source register to the store's own width, so the narrowing is a free no-op here, not a distinct instruction. Pass the inner value through unchanged rather than erroring "unknown operator lobits" (found via stdlib.c--'s tig_ord, a bits8L[...] := %lobits8(...) store). *)
@@ -285,6 +286,10 @@ inst:       Store(dst:regl, Sub(x:reg,y:reg), 32)
 (* claude: bitwise and, needed by fork-tiger's alloc.c-- (rounding a pointer/size to an alignment via a mask). No reg-imm "andi" form added yet, matching the empirically-driven scope of the other new rules here. *)
 inst:       Store(dst:regl, And(x:reg,y:reg), 32)
             {: cat ["and"; " "; dst; ","; x; ","; y] :}
+
+(* claude: no %mul rule existed at all - tiger array indexing multiplies by element size constantly, so this was blocking almost every tiger-mips test past hello. Uses the single-instruction "mul" (mips32r1+, this backend's default -march=mips32r2) rather than mult/mflo: mipsasm.ml emits ".set noreorder", so every "inst" is assumed to be exactly one real instruction that safely fills a branch delay slot - the mult+mflo pair broke that invariant whenever Mul landed right after a jal/jr, causing mflo to execute past the jump target (found via arrays/qsort/etc crashing with "stack smashing detected" / SIGSEGV / SIGILL at runtime despite compiling and assembling cleanly). *)
+inst:       Store(dst:regl, Mul(x:reg,y:reg), 32)
+            {: cat ["mul"; " "; dst; ","; x; ","; y] :}
 
 inst:       Store(dst:fregl, D2S(x:freg), 32)
             {: cat ["cvt.s.d"; " "; dst; ","; x] :}
