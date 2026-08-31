@@ -9812,7 +9812,30 @@ First, the machine-dependent register information.
 #define NUM_REGS 96 /* c(6)->0-5, f(32)->6-37, r(32)->38-69 = 70, same shape as riscv/alpha */
 #elif defined(__arm__)
 #define NUM_REGS 32 /* c(3)->0-2, r(16)->3-18 = 19; no float space (arm.ml: no FPU) */
-#elif defined(__i386__) || defined(__x86_64__)
+#elif defined(__aarch64__)
+/* claude: verified via a throwaway OCaml harness calling the real
+ * Target.mk_reg_ix_map on arm64.ml's actual T.spaces (not hand-derived by
+ * inspecting the SS.c/SS.r/SS.f `count` arguments the way the other
+ * targets' comments above were - that misses an off-by-one:
+ * Target.mk_reg_ix_map's space_to_regs generates indices 0..count
+ * INCLUSIVE, i.e. count+1 registers per space, not count. Confirmed
+ * result: x0->37, x28->65, x29(fp)->66, x30(lr)->67, sp(x31)->68, total=70 -
+ * c(3)->0-3 (4 slots, no npc/fp_mode/fp_fcmp: arm64regs.ml declares SS.c 3
+ * like arm.ml, not riscv64regs.ml's SS.c 6), f(32)->4-36 (33 slots),
+ * r(32)->37-69 (33 slots) = 70 total. */
+#define NUM_REGS 96 /* generous margin over the confirmed total=70, same margin style as riscv64/alpha/mips's own 96 */
+#elif defined(__x86_64__)
+/* claude: NOT the same branch as __i386__ below - amd64.ml's T.spaces
+ * (Space.Standard64-based: c(3), r(16), no float space) is a completely
+ * different register file from x86.ml's 32-bit one (Space.Standard32-based:
+ * c(3), r(7)), so i386's NUM_REGS=12/FP_REG=9 do not apply here at all -
+ * verified via the same throwaway-OCaml-harness approach as __aarch64__
+ * above (calling the real Target.mk_reg_ix_map on Amd64.target's actual
+ * T.spaces). Confirmed result: rax->4, rbp->9, r15->19, total=21 - c(3)->0-3
+ * (4 slots, same shape as every other target's c space), r(16)->4-20 (17
+ * slots, the same count+1 off-by-one every other target's r space hits). */
+#define NUM_REGS 96 /* generous margin over the confirmed total=21, same margin style as every other 64-bit target's own 96 */
+#elif defined(__i386__)
 <<machine-dependent macro definitions for the public interface ((x86-linux))>>
 #else
 #error "NUM_REGS/FP_REG not defined for this platform - see qc--runtime.h/gcc-linux.c"
@@ -10758,8 +10781,25 @@ pc_map_entry* Cmm_thread_start_dn_pcmap_entry = &startdn;
 The labels [[Cmm_pc_map]] and [[Cmm_pc_map_limit]] are inserted by the
 linker script in chunk [[<<pcmap.ld>>]].
 <<pcmap.c >>=
+/* claude: on every ELF host, Cmm_pc_map/Cmm_pc_map_limit are bound by
+ * pcmap.ld (a GNU-ld "-T" linker-script fragment that places every input
+ * object's .pcmap section together and defines these two symbols around
+ * it - see that file). Mach-O has no equivalent to "-T": ld64 does not
+ * support linker scripts at all. Empirically confirmed replacement: ld64
+ * already auto-synthesizes a "section$start$SEGMENT$section"/
+ * "section$end$SEGMENT$section" symbol pair for every section, with no
+ * script needed (verified with a standalone hand-assembled test .s/.c
+ * pair before relying on it here - see docs/claude_notes/notes_arm64.txt).
+ * arm64asm.ml emits the pcmap section as ".section __DATA,pcmap", so the
+ * two symbols below are exactly its start/end. No macOS counterpart to
+ * pcmap.ld is needed at all - this #ifdef is the whole story. */
+#ifdef __APPLE__
+extern pc_map_index Cmm_pc_map[]       __asm("section$start$__DATA$pcmap");
+extern pc_map_index Cmm_pc_map_limit[] __asm("section$end$__DATA$pcmap");
+#else
 extern pc_map_index Cmm_pc_map[];
 extern pc_map_index Cmm_pc_map_limit[];
+#endif
 #define pc_map_size (Cmm_pc_map_limit - Cmm_pc_map)
 @ 
 If we could rely on the compiler to sort the entries by PC, then the
@@ -11117,7 +11157,28 @@ stack frame on entry.
 #define FP_REG 68 /* $30/fp, flat index 38+30 - confirmed via ".frame $fp,..." */
 #elif defined(__arm__)
 #define FP_REG 10 /* r7, flat index 3+7 - confirmed via "push {r7}"/frame_needed=1 in a probe (this toolchain defaults to Thumb, where r7 is fp, not ARM mode's r11) */
-#elif defined(__i386__) || defined(__x86_64__)
+#elif defined(__aarch64__)
+#define FP_REG 66 /* x29/fp, flat index 37+29 - confirmed via a throwaway OCaml harness calling Target.mk_reg_ix_map on arm64.ml's real T.spaces (see qc--runtime.h's own NUM_REGS comment for the same harness/result), not a compiled-probe .frame directive (AArch64 has none - clang/gcc both just use the standard AAPCS64 x29 frame-record convention under -fno-omit-frame-pointer, so this is not toolchain-specific the way ARM32's Thumb-vs-ARM r7-vs-r11 choice was) */
+#elif defined(__x86_64__)
+#define FP_REG 9 /* %rbp, flat index 4+5 - confirmed via the same throwaway
+                    OCaml harness as qc--runtime.h's own __x86_64__ NUM_REGS
+                    comment (rbp is amd64regs.ml's r-space index 5, r-space
+                    starts at flat index 4) - NOT the same value as i386's
+                    FP_REG=9 below by coincidence of the number alone, that
+                    one is r[5] within a different, smaller register file
+                    (c(3) is only 4 slots wide either way, so both land on
+                    "c-space-width + r-space-index-5", but the two c/r
+                    spaces are unrelated register files - do not assume this
+                    numeric coincidence generalizes to any other value on
+                    this branch). Standard SysV AMD64 frame-pointer
+                    convention: clang/gcc -fno-omit-frame-pointer emit
+                    "push %rbp; mov %rsp,%rbp", same role x86-64's rbp plays
+                    as i386's ebp/AArch64's x29 - not independently probe-
+                    confirmed via a compiled prologue here, but this is
+                    universal, well-documented ABI convention, not a
+                    toolchain-specific choice the way ARM32's Thumb-vs-ARM
+                    r7-vs-r11 pick was. */
+#elif defined(__i386__)
 #define FP_REG 9 /* %ebp, r[5] */
 #else
 #error "NUM_REGS/FP_REG not defined for this platform - see qc--runtime.h/gcc-linux.c"

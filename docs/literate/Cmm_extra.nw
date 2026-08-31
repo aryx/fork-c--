@@ -34897,7 +34897,7 @@ method cfg_instr (cfg, proc) =
 module M : sig
   val is_instruction : Rtl.rtl -> bool
   (* claude: elf defaults to false (Mach-O's bare "r3" register syntax);
-   * ppcelfasm.ml passes ~elf:true for GNU as/clang's required "%r3". *)
+   * ppcasm.ml passes ~elf:true for GNU as/clang's required "%r3". *)
   val to_asm         : ?elf:bool -> Rtl.rtl -> string list -> string
 end
 @ 
@@ -34954,8 +34954,8 @@ let imports = ref ([] : string list)
  * distinguishing prefix "r3" reads as a symbol); they require
  * "%r3". Mach-O's assembler wants the bare form instead, so
  * this is a runtime switch rather than a hardcoded string -
- * set from to_asm's elf argument (see ppcelfasm.ml vs
- * ppcasm.ml). *)
+ * set from to_asm's elf argument (see ppcasm.ml vs
+ * ppcmach.ml). *)
 let elf_syntax = ref false
 let reg_str n = if !elf_syntax then s "%%r%d" n else s "r%d" n
 let cr0_str () = if !elf_syntax then "%cr0" else "cr0"
@@ -36192,7 +36192,7 @@ val make :
 <<sparcasm.ml>>=
 (* claude: was Cfgx.M (the older Cfg representation); Cfgutil.emit (the
  * only real caller, see sparcasm.mli) has since moved to Zipcfg/
- * Zipcfg.Rep, same as arch/ppc/ppcasm.ml already uses. *)
+ * Zipcfg.Rep, same as arch/ppc/ppcmach.ml already uses. *)
 module G  = Zipcfg
 module GR = Zipcfg.Rep
 module SM = Strutil.Map
@@ -36262,7 +36262,7 @@ method section name =
   (* claude: pcmap/pcmap_data must carry the ALLOC flag or the runtime
    * data lands outside every PT_LOAD segment and Cmm_lookup_entry
    * always reads zeroes - same fix/reasoning as arch/x86/x86asm.ml's
-   * and arch/ppc/ppcelfasm.ml's #section (GNU as only gives default
+   * and arch/ppc/ppcasm.ml's #section (GNU as only gives default
    * flags to the standard section names). Confirmed via gdb: without
    * this, the live pcmap table at Cmm_pc_map..Cmm_pc_map_limit was
    * entirely zero bytes, not just missing one entry. *)
@@ -36336,7 +36336,7 @@ method private instruction rtl =
   output_string _fd "\n"
 
 (* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
- * cal_altrets/cal_contedges) - see arch/ppc/ppcasm.ml's own `call`
+ * cal_altrets/cal_contedges) - see arch/ppc/ppcmach.ml's own `call`
  * method, same shape. The "ba ...\n\tnop" longjmp idiom (branch
  * always, with its mandatory delay-slot nop) is SPARC-specific,
  * kept from the original. *)
@@ -38396,7 +38396,7 @@ No suprises here. See the sepecification of the interface in
 (* claude: was "type node = Rtl.rtl Cfgx.M.node" (the older Cfg
  * representation) plus a #call/#cfg_instr pair built around it -
  * Cfgutil.emit (the only real caller, see alphaasm.mli) has since moved
- * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcelfasm.ml (the closest
+ * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcasm.ml (the closest
  * template: also a from-scratch Linux/ELF assembler, not a Mach-O/
  * windowed one) and arch/sparc/sparcasm.ml already use - see this file's
  * #call/#cfg_instr below for the corresponding fix. *)
@@ -38412,7 +38412,7 @@ let int64   = Bits.U.to_int64
 <<[[Alphaasm]] name mangler specification>>
 
 (* claude: 'cfg * (...) Proc.t, not just (...) Proc.t - same fix as
- * ppcelfasm.ml/sparcasm.ml's class type (Asm.assembler's type param now
+ * ppcasm.ml/sparcasm.ml's class type (Asm.assembler's type param now
  * pairs the Zipcfg.graph alongside the Proc.t record; see #cfg_instr
  * below, which receives that pair). *)
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
@@ -38457,7 +38457,7 @@ method section name =
     (* claude: pcmap/pcmap_data must carry the ALLOC flag or the
      * runtime data lands outside every PT_LOAD segment and
      * Cmm_lookup_entry always reads zeroes - same fix/reasoning as
-     * arch/x86/x86asm.ml's, arch/ppc/ppcelfasm.ml's, and
+     * arch/x86/x86asm.ml's, arch/ppc/ppcasm.ml's, and
      * arch/sparc/sparcasm.ml's #section (GNU as only gives default
      * flags to the standard section names). Applied proactively here
      * (not rediscovered via a crash) since it is now a known,
@@ -38474,7 +38474,7 @@ method org n    = unimp "no .org in Alpha assembler"
 
 (* claude: GNU as's .align on Alpha ELF (like PowerPC/MIPS/SPARC) is a
  * power-of-two exponent, not a byte count - same convention
- * ppcelfasm.ml's #align uses. *)
+ * ppcasm.ml's #align uses. *)
 method align  n       =
   let rec lg = function
     | 0 -> 0
@@ -38517,7 +38517,7 @@ method private instruction rtl =
     output_string _fd "\n"
 
 (* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
- * cal_altrets/cal_contedges) - see arch/ppc/ppcelfasm.ml's/
+ * cal_altrets/cal_contedges) - see arch/ppc/ppcasm.ml's/
  * arch/sparc/sparcasm.ml's own #call, same shape. Alpha has no
  * branch-delay slot (unlike SPARC's "ba ...\n\tnop"), so a longjmp
  * is just a plain unconditional branch. *)
@@ -40047,6 +40047,8 @@ let target =
                                    [ "add",     [32]
                                    ; "sub",     [32]
                                    ; "and",     [32]
+                                   ; "mul",     [32]
+                                   ; "quot",    [32]
                                    ; "eq",      [32]
                                    ; "ne",      [32]
                                    ; "lt",      [32]
@@ -40153,7 +40155,7 @@ let spec =
 (* claude: was "type node = Rtl.rtl Cfgx.M.node" (the older Cfg
  * representation) plus a #call/#cfg_instr pair built around it -
  * Cfgutil.emit (the only real caller, see mipsasm.mli) has since moved
- * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcelfasm.ml/arch/sparc/
+ * to Zipcfg/Zipcfg.Rep, same as arch/ppc/ppcasm.ml/arch/sparc/
  * sparcasm.ml/arch/alpha/alphaasm.ml - see this file's #call/#cfg_instr
  * below for the corresponding fix. *)
 module G  = Zipcfg
@@ -40168,7 +40170,7 @@ let int64   = Bits.U.to_int64
 <<name mangler specification>>
 
 (* claude: 'cfg * (...) Proc.t, not just (...) Proc.t - same fix as
- * ppcelfasm.ml/sparcasm.ml/alphaasm.ml's class type (Asm.assembler's type
+ * ppcasm.ml/sparcasm.ml/alphaasm.ml's class type (Asm.assembler's type
  * param now pairs the Zipcfg.graph alongside the Proc.t record; see
  * #cfg_instr below, which receives that pair). *)
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
@@ -40213,7 +40215,7 @@ method section name =
     (* claude: pcmap/pcmap_data must carry the ALLOC flag or the
      * runtime data lands outside every PT_LOAD segment and
      * Cmm_lookup_entry always reads zeroes - same fix/reasoning as
-     * arch/x86/x86asm.ml's, arch/ppc/ppcelfasm.ml's, arch/sparc/
+     * arch/x86/x86asm.ml's, arch/ppc/ppcasm.ml's, arch/sparc/
      * sparcasm.ml's, and arch/alpha/alphaasm.ml's #section (GNU as
      * only gives default flags to the standard section names).
      * Applied proactively here (not rediscovered via a crash) since
@@ -40230,7 +40232,7 @@ method org n    = unimp "no .org in mips assembler"
 
 (* claude: GNU as's .align on MIPS ELF (like PowerPC/SPARC/Alpha) is a
  * power-of-two exponent, not a byte count - same convention
- * ppcelfasm.ml's/alphaasm.ml's #align uses. *)
+ * ppcasm.ml's/alphaasm.ml's #align uses. *)
 method align  n       =
   let rec lg = function
     | 0 -> 0
@@ -40264,7 +40266,7 @@ method emit = ()
  * OCaml error, "this method is defined several times" - not just a
  * shadowing warning) - dropped the two later redefinitions, kept the
  * "#"-style comment since mips-linux-gnu-as (this ELF/Linux toolchain,
- * like ppcelfasm.ml's own "# %s") uses "#" for line comments. *)
+ * like ppcasm.ml's own "# %s") uses "#" for line comments. *)
 method comment s = fprintf _fd "#  %s   \n" s
 
 method const (s: Symbol.t) (b:Bits.bits) = 
@@ -40278,7 +40280,7 @@ method private instruction rtl =
     output_string _fd "\n"
 
 (* claude: adapted to the Zipcfg.Rep.call node shape (cal_i/
- * cal_altrets/cal_contedges) - see arch/ppc/ppcelfasm.ml's/arch/sparc/
+ * cal_altrets/cal_contedges) - see arch/ppc/ppcasm.ml's/arch/sparc/
  * sparcasm.ml's/arch/alpha/alphaasm.ml's own #call, same shape. MIPS
  * has a branch-delay slot (like SPARC, unlike Alpha/PPC), so a
  * longjmp needs an explicit trailing nop, same as sparcasm.ml's
@@ -40306,9 +40308,9 @@ method cfg_instr (cfg, proc) =
     let label l = this#label (try SM.find l _syms
                               with Not_found -> this#local l) in
     Printf.fprintf _fd ".set noreorder  /* HACK! mipsasm.nw did this */\n";
-    Printf.fprintf _fd ".abicalls       /* HACK! NetBSD needs this */\n";
+    (* claude: replaces ".abicalls"+".cpload $25" (which computed $gp from $25, on the assumption that every call site loads the callee's address into $25 before jumping there - untrue here, every call is a plain jal/bal, so $25/$gp were garbage in every callee, corrupting every gp-relative global access). mipsel-linux-gnu-gcc always passes the assembler "-KPIC" by default (confirmed via "gcc -v -c"), so merely dropping ".abicalls"/".cpload" from our own output is not enough - "-KPIC" still makes GAS expand things like "la" into GOT-relative code expecting a valid $gp. ".option pic0" is a GNU-as directive that overrides that command-line default and forces plain absolute (%hi/%lo) codegen for the rest of the file, matching what this backend's own recognizer already emits (imm:symbol has no gp/GOT case at all) and what a real "-fno-pic -mno-abicalls" compile does - verified end to end (hand-written non-PIC .o linked -static against gcc-mipsel-linux-gnu's libc, ld only warns "linking abicalls files with non-abicalls files", runs correctly under qemu-mipsel). *)
+    Printf.fprintf _fd ".option pic0\n";
     this#label symbol;
-    Printf.fprintf _fd ".cpload $25     /* HACK! NetBSD needs this */\n";
     (emitter proc cfg (this#call) (this#instruction) label : unit)
 @
 %$
@@ -41067,10 +41069,11 @@ inst:       Par(Goto(syscall), Store(ral,pc,32))
 <<rules(mipsrec.nw)>>=
 cmp:        Cmp(op:string,x:reg,y:reg)              {: (op,x,y) :}
 cmp:        Cmp(op:string,x:reg,y:const)            {: (op,x,y) :}
-inst:       Guarded(cmp,Goto(addr)) 
-            {: match cmp with 
-               | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr]
-            :}   
+(* claude: this rule had no delay-slot filler at all - under mipsasm.ml's ".set noreorder" the assembler never auto-inserts one, so whatever instruction the code-layout pass places right after this branch (e.g. an unconditional "j" closing the enclosing block, since code isn't always laid out with the true fall-through target immediately following) executes unconditionally IN the branch's delay slot. A branch/jump in a branch's own delay slot is itself illegal on MIPS - this is exactly the SIGILL seen at runtime in forloop.c-- ("j" sitting right after a "bnez"), and very likely most of the other SIGILL/SIGSEGV tiger-mips crashes too, since every guarded branch this backend emits was affected. Trailing "\n\tnop" mirrors the jr/longjmp rules elsewhere in this file that already fill their own delay slot explicitly. *)
+inst:       Guarded(cmp,Goto(addr))
+            {: match cmp with
+               | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr;"\n\tnop"]
+            :}
 @
 %%            
 %%\paragraph{Arithmetic}
@@ -41089,6 +41092,14 @@ inst:       Store(dst:regl, Sub(x:reg,y:reg), 32)
 (* claude: bitwise and, needed by fork-tiger's alloc.c-- (rounding a pointer/size to an alignment via a mask). No reg-imm "andi" form added yet, matching the empirically-driven scope of the other new rules here. *)
 inst:       Store(dst:regl, And(x:reg,y:reg), 32)
             {: cat ["and"; " "; dst; ","; x; ","; y] :}
+
+(* claude: no %mul rule existed at all - tiger array indexing multiplies by element size constantly, so this was blocking almost every tiger-mips test past hello. Uses the single-instruction "mul" (mips32r1+, this backend's default -march=mips32r2) rather than mult/mflo: mipsasm.ml emits ".set noreorder", under which every "inst" is assumed to be exactly one real instruction, safe to fill a branch delay slot - switching from mult+mflo to single-instruction mul turned out NOT to fix the arrays/qsort/etc crashes seen at the time (those were actually the .abicalls/$gp bug, fixed separately), but the single-instruction form is still the safer/simpler choice on general principle and costs nothing here. *)
+inst:       Store(dst:regl, Mul(x:reg,y:reg), 32)
+            {: cat ["mul"; " "; dst; ","; x; ","; y] :}
+
+(* claude: %quot (needed by tiger's array bounds-check/stride math wherever a size divides, e.g. colmajor's row/col arithmetic, and by ord/chr's ASCII math). MIPS32r2 has no single-instruction 3-operand division like "mul" - only classic 2-operand "div rs,rt" (quotient to lo, remainder to hi) + "mflo" to read it out, same as mult+mflo. Deliberately the raw 2-instruction sequence, not GAS's "div rd,rs,rt" pseudo-op (which macro-expands to ~10 instructions with divide-by-zero/INT_MIN-overflow traps) - matches ppc.ml's plain "divw" (no check) and keeps this consistent with the rest of this grammar's minimal, unchecked arithmetic. *)
+inst:       Store(dst:regl, Quot(x:reg,y:reg), 32)
+            {: cat ["div"; " "; x; ","; y; "\n\tmflo "; dst] :}
 
 inst:       Store(dst:fregl, D2S(x:freg), 32)
             {: cat ["cvt.s.d"; " "; dst; ","; x] :}
@@ -41216,6 +41227,8 @@ let cmp =
 | RP.App(("add", [w]), [x; y])            -> conAdd (exp x) (exp y)
 | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
 | RP.App(("and", [w]), [x; y])            -> conAnd (exp x) (exp y)
+| RP.App(("mul", [w]), [x; y])            -> conMul (exp x) (exp y)
+| RP.App(("quot", [w]), [x; y])           -> conQuot (exp x) (exp y)
 | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x)
 | RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x)
 (* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store in this backend (see mips.ml's Post.lostore, its only producer) - a MIPS "sb"/"sh" store already truncates its source register to the store's own width, so the narrowing is a free no-op here, not a distinct instruction. Pass the inner value through unchanged rather than erroring "unknown operator lobits" (found via stdlib.c--'s tig_ord, a bits8L[...] := %lobits8(...) store). *)

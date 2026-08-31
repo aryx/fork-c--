@@ -13,6 +13,9 @@ SRC_ORIG=Cmm.nw Cmm_extra.nw
 #TODO: ir/vfp.ml split from layout/vfprewrite.ml
 #TODO: main.ml
 #TODO: the arch/xxx/xxx{backend,cc}.ml arch/ppc/ppcelfasm.ml
+#TODO: now called ppcmach.ml
+# $TOP/arch/ppc/ppcasm.mli\
+# $TOP/arch/ppc/ppcasm.ml\
 
 SRC_VIEWS= \
  $TOP/libs/prelude/auxfuns.mli\
@@ -236,8 +239,6 @@ SRC_VIEWS= \
  \
  $TOP/arch/ppc/ppc.mli\
  $TOP/arch/ppc/ppc.ml\
- $TOP/arch/ppc/ppcasm.mli\
- $TOP/arch/ppc/ppcasm.ml\
  $TOP/arch/ppc/ppcrec.mli\
  $TOP/arch/ppc/ppcrec.mlb\
  \
@@ -285,6 +286,8 @@ SRC_VIEWS= \
 
 index:V:
     echo TODO
+
+sync_others:V: sync_runtime
 
 SYNCFLAGS2=-md5sum_in_auxfile -less_marks -lang C
 sync_runtime:VI:
