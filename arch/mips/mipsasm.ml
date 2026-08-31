@@ -162,9 +162,9 @@ object (this)
         let label l = this#label (try SM.find l _syms
                                   with Not_found -> this#local l) in
         Printf.fprintf _fd ".set noreorder  /* HACK! mipsasm.nw did this */\n";
-        Printf.fprintf _fd ".abicalls       /* HACK! NetBSD needs this */\n";
+        (* claude: replaces ".abicalls"+".cpload $25" (which computed $gp from $25, on the assumption that every call site loads the callee's address into $25 before jumping there - untrue here, every call is a plain jal/bal, so $25/$gp were garbage in every callee, corrupting every gp-relative global access). mipsel-linux-gnu-gcc always passes the assembler "-KPIC" by default (confirmed via "gcc -v -c"), so merely dropping ".abicalls"/".cpload" from our own output is not enough - "-KPIC" still makes GAS expand things like "la" into GOT-relative code expecting a valid $gp. ".option pic0" is a GNU-as directive that overrides that command-line default and forces plain absolute (%hi/%lo) codegen for the rest of the file, matching what this backend's own recognizer already emits (imm:symbol has no gp/GOT case at all) and what a real "-fno-pic -mno-abicalls" compile does - verified end to end (hand-written non-PIC .o linked -static against gcc-mipsel-linux-gnu's libc, ld only warns "linking abicalls files with non-abicalls files", runs correctly under qemu-mipsel). *)
+        Printf.fprintf _fd ".option pic0\n";
         this#label symbol;
-        Printf.fprintf _fd ".cpload $25     /* HACK! NetBSD needs this */\n";
         (emitter proc cfg (this#call) (this#instruction) label : unit)
     (*e: assembly methods(mipsasm.nw) *)
 end
