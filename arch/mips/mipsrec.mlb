@@ -80,6 +80,7 @@
       | RP.App(("sub", [w]), [x; y])            -> conSub (exp x) (exp y)
       | RP.App(("and", [w]), [x; y])            -> conAnd (exp x) (exp y)
       | RP.App(("mul", [w]), [x; y])            -> conMul (exp x) (exp y)
+      | RP.App(("quot", [w]), [x; y])           -> conQuot (exp x) (exp y)
       | RP.App(("f2f_implicit_round", [32;64]), [x])     -> conS2D (exp x)
       | RP.App(("f2f_implicit_round", [64;32]), [x])     -> conD2S (exp x)
       (* claude: %lobits only ever wraps a value immediately feeding a narrow-width memory store in this backend (see mips.ml's Post.lostore, its only producer) - a MIPS "sb"/"sh" store already truncates its source register to the store's own width, so the narrowing is a free no-op here, not a distinct instruction. Pass the inner value through unchanged rather than erroring "unknown operator lobits" (found via stdlib.c--'s tig_ord, a bits8L[...] := %lobits8(...) store). *)
@@ -268,10 +269,11 @@ inst:       Par(Goto(syscall), Store(ral,pc,32))
 (*x: rules(mipsrec.nw) *)
 cmp:        Cmp(op:string,x:reg,y:reg)              {: (op,x,y) :}
 cmp:        Cmp(op:string,x:reg,y:const)            {: (op,x,y) :}
-inst:       Guarded(cmp,Goto(addr)) 
-            {: match cmp with 
-               | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr]
-            :}   
+(* claude: this rule had no delay-slot filler at all - under mipsasm.ml's ".set noreorder" the assembler never auto-inserts one, so whatever instruction the code-layout pass places right after this branch (e.g. an unconditional "j" closing the enclosing block, since code isn't always laid out with the true fall-through target immediately following) executes unconditionally IN the branch's delay slot. A branch/jump in a branch's own delay slot is itself illegal on MIPS - this is exactly the SIGILL seen at runtime in forloop.c-- ("j" sitting right after a "bnez"), and very likely most of the other SIGILL/SIGSEGV tiger-mips crashes too, since every guarded branch this backend emits was affected. Trailing "\n\tnop" mirrors the jr/longjmp rules elsewhere in this file that already fill their own delay slot explicitly. *)
+inst:       Guarded(cmp,Goto(addr))
+            {: match cmp with
+               | (op,x,y) -> cat ["b";op;" ";x;",";y;",";addr;"\n\tnop"]
+            :}
 (*x: rules(mipsrec.nw) *)
 inst:       Store(dst:regl, Add(x:reg,y:reg), 32)
             {: cat ["add"; " "; dst; ","; x; ","; y] :}
@@ -287,9 +289,13 @@ inst:       Store(dst:regl, Sub(x:reg,y:reg), 32)
 inst:       Store(dst:regl, And(x:reg,y:reg), 32)
             {: cat ["and"; " "; dst; ","; x; ","; y] :}
 
-(* claude: no %mul rule existed at all - tiger array indexing multiplies by element size constantly, so this was blocking almost every tiger-mips test past hello. Uses the single-instruction "mul" (mips32r1+, this backend's default -march=mips32r2) rather than mult/mflo: mipsasm.ml emits ".set noreorder", so every "inst" is assumed to be exactly one real instruction that safely fills a branch delay slot - the mult+mflo pair broke that invariant whenever Mul landed right after a jal/jr, causing mflo to execute past the jump target (found via arrays/qsort/etc crashing with "stack smashing detected" / SIGSEGV / SIGILL at runtime despite compiling and assembling cleanly). *)
+(* claude: no %mul rule existed at all - tiger array indexing multiplies by element size constantly, so this was blocking almost every tiger-mips test past hello. Uses the single-instruction "mul" (mips32r1+, this backend's default -march=mips32r2) rather than mult/mflo: mipsasm.ml emits ".set noreorder", under which every "inst" is assumed to be exactly one real instruction, safe to fill a branch delay slot - switching from mult+mflo to single-instruction mul turned out NOT to fix the arrays/qsort/etc crashes seen at the time (those were actually the .abicalls/$gp bug, fixed separately), but the single-instruction form is still the safer/simpler choice on general principle and costs nothing here. *)
 inst:       Store(dst:regl, Mul(x:reg,y:reg), 32)
             {: cat ["mul"; " "; dst; ","; x; ","; y] :}
+
+(* claude: %quot (needed by tiger's array bounds-check/stride math wherever a size divides, e.g. colmajor's row/col arithmetic, and by ord/chr's ASCII math). MIPS32r2 has no single-instruction 3-operand division like "mul" - only classic 2-operand "div rs,rt" (quotient to lo, remainder to hi) + "mflo" to read it out, same as mult+mflo. Deliberately the raw 2-instruction sequence, not GAS's "div rd,rs,rt" pseudo-op (which macro-expands to ~10 instructions with divide-by-zero/INT_MIN-overflow traps) - matches ppc.ml's plain "divw" (no check) and keeps this consistent with the rest of this grammar's minimal, unchecked arithmetic. *)
+inst:       Store(dst:regl, Quot(x:reg,y:reg), 32)
+            {: cat ["div"; " "; x; ","; y; "\n\tmflo "; dst] :}
 
 inst:       Store(dst:fregl, D2S(x:freg), 32)
             {: cat ["cvt.s.d"; " "; dst; ","; x] :}
