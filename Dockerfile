@@ -56,19 +56,31 @@ RUN apt-get install -y diffutils libpcre3-dev libpcre2-dev
 RUN apt-get install -y gcc-i686-linux-gnu libc6-dev-i386-cross qemu-user
 
 # The other cross toolchains "make test-all" needs (ppc, riscv32, riscv64,
-# alpha, amd64, mips, sparc, arm - see ./configure's own comments for why
-# each one and which qc-- backend it serves). qemu-user above already ships
-# the qemu-ppc/qemu-riscv32/qemu-riscv64/qemu-alpha/qemu-x86_64/qemu-mipsel/
-# qemu-sparc32plus/qemu-arm binaries these need.
+# alpha, amd64, arm64, mips, sparc, arm - see ./configure's own comments for
+# why each one and which qc-- backend it serves). qemu-user above already
+# ships the qemu-ppc/qemu-riscv32/qemu-riscv64/qemu-alpha/qemu-x86_64/
+# qemu-aarch64/qemu-mipsel/qemu-sparc32plus/qemu-arm binaries these need,
+# on any host arch (it's an "any"-arch package bundling every emulator
+# regardless of what it's installed on).
 #
-# No gcc-x86-64-linux-gnu here: it doesn't exist as a package on an amd64
-# host - build-essential's own gcc already IS the amd64 compiler there and
-# comes with an x86_64-linux-gnu-gcc alias, so CCAMD64's default is already
-# satisfied. binutils-x86-64-linux-gnu/libc6-dev-amd64-cross are still real
-# (if mostly redundant) packages there, so no such special-casing needed for
-# them. On a non-amd64 host (arm64) that alias doesn't exist, so CCAMD64
-# needs the real cross-compiler package - installed conditionally below
-# since apt-get would fail with "no installation candidate" for it on amd64.
+# gcc-aarch64-linux-gnu, unlike gcc-x86-64-linux-gnu below, is a real
+# installable package on amd64 too (cross-compiling to arm64 is a common
+# enough case that Ubuntu ships it there, unlike amd64-hosted-targeting-amd64
+# which nobody needs) - so no host-arch conditional needed for it, straight
+# in the list below like every other target.
+#
+# No gcc-x86-64-linux-gnu here though: it doesn't exist as a package on an
+# amd64 host - build-essential's own gcc already IS the amd64 compiler
+# there and comes with an x86_64-linux-gnu-gcc alias, so CCAMD64's default
+# is already satisfied. binutils-x86-64-linux-gnu/libc6-dev-amd64-cross are
+# still real (if mostly redundant) packages there, so no such special-casing
+# needed for them. On a non-amd64 host (arm64) that alias doesn't exist, so
+# CCAMD64 needs the real cross-compiler package - installed conditionally
+# below since apt-get would fail with "no installation candidate" for it on
+# amd64. (CCARM64 has no such asymmetry to work around: an arm64 host's own
+# native gcc happens to also answer to aarch64-linux-gnu-gcc, same as
+# amd64's does to x86_64-linux-gnu-gcc, but since the cross package itself
+# installs everywhere there's no need to condition on host arch to get it.)
 #
 # gcc-sparc64-linux-gnu, not a plain 32-bit sparc-linux-gnu package: Ubuntu
 # ships no such thing, only sparc64-linux-gnu targeting 32-bit SPARC V8 via
@@ -86,6 +98,7 @@ RUN apt-get install -y \
       gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu libc6-dev-riscv64-cross \
       gcc-alpha-linux-gnu binutils-alpha-linux-gnu libc6.1-dev-alpha-cross \
       binutils-x86-64-linux-gnu libc6-dev-amd64-cross \
+      gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu libc6-dev-arm64-cross \
       gcc-mipsel-linux-gnu binutils-mipsel-linux-gnu libc6-dev-mipsel-cross \
       gcc-sparc64-linux-gnu binutils-sparc64-linux-gnu libc6-dev-sparc64-cross \
       libc6-dev-sparc-sparc64-cross gcc-multilib-sparc64-linux-gnu \
