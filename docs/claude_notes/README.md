@@ -85,6 +85,19 @@ Index:
   (`extb.l`/`ext.l`/an `and.l` mask, since m68k's byte/word `move` only
   touches the destination's low bits). Not done: FP, `-O3`, real A0-A5
   address-register allocation.
+- [notes_status.txt](notes_status.txt) — cross-backend status snapshot (13
+  backends, each backend's tiger-suite/native-suite score, endianness/
+  width/FPU at a glance) and candidates for what to add next, checked
+  against real Debian cross-gcc + qemu-user availability on this machine
+  rather than guessed: s390x (a genuinely different CISC ISA, the most
+  interesting next test of this fork's RISC-shaped assumptions), HPPA
+  (straightforward, retro-interesting), ppc64le (lowest effort — extends
+  the existing ppc.ml rather than a from-scratch ISA; note big-endian
+  ppc64 has no Debian/Ubuntu package at all anymore). Also records what
+  would NOT be a good fit (8-bit word sizes, GPU-style SIMD) and which
+  qemu-user targets have no matching cross-gcc yet (LoongArch among them —
+  worth revisiting if that changes). A snapshot, not living — scores rot
+  as individual backends get fixed; re-check tests/expected/*.txt.
 - [notes_riscv.txt](notes_riscv.txt) — how the RISC-V backends (RV64 and
   RV32, both new development, no upstream `.nw`) were built: mips.ml's
   Post design crossed with arm.ml's no-delay-slot call/cut_to ordering, at

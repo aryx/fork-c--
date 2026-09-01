@@ -1,0 +1,89 @@
+notes_status.txt — cross-backend status snapshot and candidates for what
+to add next.
+Written 2026-09-01, against commit e45aedf.
+
+This is a snapshot, not a living document - scores rot as fixes land on
+individual backends. Re-run the relevant tests/run-tiger-<arch>.sh /
+tests/run-native.sh before trusting a number here; the per-backend
+docs/claude_notes/notes_<arch>.txt files (and tests/expected/*.txt, the
+actual source of truth) are the place to check for updates.
+
+Current backends (13, plus dummy/interpreter test scaffolding)
+------------------------------------------------------------------
+Every backend below reaches the standing hello.c-- milestone end to end
+under qemu-user (compile -> assemble -> link -> run -> correct stdout/exit
+code) - that bar is met uniformly. Scores below 15/15 are recorded,
+understood gaps (see each backend's own notes_<arch>.txt), not unknowns.
+
+  backend            width  endian  FPU  tiger-suite      notes
+  ----------------   -----  ------  ---  ---------------  -----
+  x86                32     little  yes  15/15 (tiger.txt) default backend,
+                                                            upstream's own;
+                                                            native 66/66,
+                                                            incl. -O3
+  ppc / ppc-elf      32     big     yes  15/15             native 32/66
+                                                            (-O3: 25/66) -
+                                                            biggest native-
+                                                            suite gap
+  sparc (V8)         32     big     yes  5/15              register
+                                                            windows; an
+                                                            architectural
+                                                            register-
+                                                            recovery gap,
+                                                            unresolved
+  mips (mipsel)      32     little  yes  15/15
+  arm                32     little  no   11/15             shared cross-
+                                                            backend GC/
+                                                            liveness bug
+                                                            caps it below
+                                                            15
+  m68k               32     big     no   15/15             added
+                                                            2026-09-01, new
+                                                            dev, no
+                                                            upstream code
+                                                            at all - see
+                                                            notes_m68k.txt
+  riscv32            32     little  n/a  15/15             freestanding/
+                                                            picolibc (no
+                                                            glibc for this
+                                                            width on this
+                                                            host)
+  alpha              64     little  yes  12/15 (tiger64)
+  riscv64            64     little  yes  13/15 (tiger64)
+  arm64 (+ Mach-O)   64     little  yes  13/15 (tiger64)   native on this
+                                                            dev host
+  amd64 (+ Mach-O)   64     little  yes  9/15 (tiger64)
+
+dummy/interpreter are testing/bootstrap targets, not real backends.
+
+Candidates for what to add next
+------------------------------------------------------------------
+Checked against what this machine's Ubuntu actually ships (a real
+cross-gcc AND a qemu-user target - the same feasibility check m68k's own
+plan_toolchain_dispatcher-adjacent research did), not guessed:
+
+- s390x (IBM Z/zSeries) - the most interesting candidate. 64-bit,
+  big-endian, a genuinely different CISC ISA (rich addressing modes,
+  condition codes) - would exercise more of the design space than another
+  RISC clone. gcc-s390x-linux-gnu + qemu-s390x both real.
+- HPPA (PA-RISC) - 32-bit, big-endian RISC with real oddities (space
+  registers, no branch delay slot the usual way). Retro-interesting,
+  technically straightforward. gcc-hppa-linux-gnu + qemu-hppa both real.
+- ppc64le - lowest-effort of the three: extends the *existing* ppc.ml
+  infrastructure to a 64-bit little-endian sibling, the same way amd64/
+  arm64/riscv64 were grown from their 32-bit relatives, rather than a
+  from-scratch ISA. gcc-powerpc64le-linux-gnu + qemu-ppc64le both real.
+  (Big-endian ppc64 has no Debian/Ubuntu package at all anymore - only the
+  LE variant - so that's the only realistic PowerPC64 option.)
+
+Checked and NOT a good fit, worth recording so it isn't re-litigated:
+anything with a fundamentally different word size than this IR assumes
+(8-bit targets like 6502/Z80, or GPU-style SIMD ISAs) would need surgery
+to the compiler's own type/width assumptions, not just a new arch/
+directory - a different category of effort than everything done so far.
+
+Other qemu-user targets on this machine with no matching Debian cross-gcc
+found (so not immediately actionable without more toolchain work):
+LoongArch (loongarch64/loong64 - a genuinely modern, growing ISA, worth
+revisiting if Debian ever packages a cross-gcc for it), SuperH (sh4), ARC,
+Xtensa, MicroBlaze, OpenRISC (or1k), Nios II, Hexagon, CRIS.
