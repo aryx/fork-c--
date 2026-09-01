@@ -1154,6 +1154,74 @@ begin with, and assuming there was one is what produced the fabricated
 values.
 
 
+36. When one delay-slot bug is found, grep the whole recognizer for every
+    other branch/jump mnemonic before declaring victory
+---------------------------------------------------------------------------
+tests/run-tiger-mips.sh had already had one delay-slot fix (a conditional
+branch rule emitting no filler) that turned every SIGILL into a hang
+instead - progress, but 1/15 stayed 1/15. The temptation after a fix like
+that is to assume it was *the* bug and go looking for a different
+mechanism (register liveness, a runtime GC bug, etc.) for the remaining
+failures. Instead:
+
+    grep -n '"j"\|"b\|beq\|bne\|bgez\|bltz\|blez\|bgtz\|jal\|jr' mipsrec.mlb
+
+against the .mlb grammar source (not the generated .ml, which is much
+noisier) listed every single instruction-emission site that produces a
+branch or jump, in one screen. Two of them - the plain `Goto(reg)` ("jr
+$31", i.e. every ordinary function return) and the plain `Goto(symbol)`
+("j", i.e. every unconditional jump) - had no trailing "\n\tnop" at all,
+the exact same shape as the already-fixed rule, sitting a few lines away
+in the same file. objdump on the actual linked binary confirmed it
+immediately: every function's epilogue read "jr $31" followed directly by
+the *next function's* first prologue instruction, with the label boundary
+sitting right in between and no nop anywhere - i.e. every single return in
+the program executed one instruction of a neighboring, unrelated function
+in its delay slot before actually returning. Fixing both took the suite
+from 1/15 to 6/15 in two commits and eliminated every SIGSEGV/SIGBUS/SIGILL
+in the whole run, leaving only legitimate-looking runtime errors.
+
+General shape: a delay-slot (or any per-instruction-class) bug is a
+property of an *emission rule*, not of a *program*. Once you've found and
+fixed one instance, grep the grammar/recognizer for every other rule
+producing the same instruction family and check each one individually -
+don't assume the fix generalizes just because it's the same file, and
+don't assume the remaining failures need a different theory until you've
+ruled out "the same bug, a different rule" first. The three-line grep
+above cost nothing and found two more bugs of the exact same shape that a
+plausible-sounding "must be a liveness/register-allocation issue now"
+theory would have sent the investigation in a completely different,
+wrong direction.
+
+Also worth recording what did *not* work well this session, so it isn't
+retried the same way next time: interactive `gdb -ex "target remote
+:PORT"` sessions orchestrated across *separate* Bash tool calls (start
+qemu -g in one call, connect gdb in another, send SIGINT to interrupt a
+long `continue` in a third) were extremely unreliable in this sandboxed
+harness specifically - commands returned mysterious exit code 144,
+`timeout --signal=INT` did not reliably interrupt a blocked `continue`
+and instead waited out the full outer timeout, and processes backgrounded
+with plain shell `(cmd &)` sometimes vanished with no trace (see the
+existing "Tooling traps" entry on this, which covers the *reason* - an
+earlier nonzero exit aborting the rest of a multi-line block - but not
+this session's *additional* symptom of gdb-remote specifically wedging
+even when nothing else in the block failed). What worked reliably instead:
+the Bash tool's own `run_in_background: true` parameter (not shell `&`)
+for the long-lived qemu process, combined with plain *static* forensics -
+reading objdump output and the .s source by eye, and a long
+`qemu -d in_asm -D file` trace read only after it fully completed (via the
+harness's background-task-completion notification, not by polling) rather
+than trying to interrupt a live session. For this class of bug (a
+structural miscompilation visible in the assembly itself, not a
+data-dependent runtime value), static reading found the answer faster and
+far more reliably than any amount of live debugging - reserve live
+gdb-over-qemu-gdbserver (entry 25) for bugs that genuinely need a runtime
+value or a backtrace, and prefer keeping the whole gdb interaction inside
+a *single* Bash call (or accept the extra latency of the background-task
+notification path) rather than splitting a live session across multiple
+tool calls in this harness.
+
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
