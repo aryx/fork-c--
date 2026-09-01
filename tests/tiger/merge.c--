@@ -24,10 +24,15 @@ bits32 alloc_ptr;
 import space_end;
 
 section "data" { align 4;
+ align 4;
  Lgbl_130: bits32 { 1 }; bits8[] "-\000";
+ align 4;
  Lgbl_45: bits32 { 1 }; bits8[] "0\000";
+ align 4;
  Lgbl_63: bits32 { 1 }; bits8[] "\n\000";
+ align 4;
  Lgbl_59: bits32 { 1 }; bits8[] " \000";
+ align 4;
  Lgbl_50: bits32 { 1 }; bits8[] "9\000";
 }
 

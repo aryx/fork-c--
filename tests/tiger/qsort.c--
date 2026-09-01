@@ -24,21 +24,37 @@ bits32 alloc_ptr;
 import space_end;
 
 section "data" { align 4;
+ align 4;
  Lgbl_43: bits32 { 0 }; bits8[] "\000";
+ align 4;
  Lgbl_207: bits32 { 14 }; bits8[] "sorted by name\000";
+ align 4;
  Lgbl_104: bits32 { 6 }; bits8[] "Norman\000";
+ align 4;
  Lgbl_98: bits32 { 4 }; bits8[] "Omri\000";
+ align 4;
  Lgbl_107: bits32 { 4 }; bits8[] "Mike\000";
+ align 4;
  Lgbl_208: bits32 { 13 }; bits8[] "sorted by num\000";
+ align 4;
  Lgbl_113: bits32 { 3 }; bits8[] " :\n\000";
+ align 4;
  Lgbl_95: bits32 { 5 }; bits8[] "David\000";
+ align 4;
  Lgbl_80: bits32 { 4 }; bits8[] "Paul\000";
+ align 4;
  Lgbl_121: bits32 { 1 }; bits8[] "\t\000";
+ align 4;
  Lgbl_128: bits32 { 1 }; bits8[] "\n\000";
+ align 4;
  Lgbl_86: bits32 { 4 }; bits8[] "Joao\000";
+ align 4;
  Lgbl_83: bits32 { 6 }; bits8[] "Stuart\000";
+ align 4;
  Lgbl_89: bits32 { 5 }; bits8[] "Kevin\000";
+ align 4;
  Lgbl_101: bits32 { 9 }; bits8[] "Kathleeen\000";
+ align 4;
  Lgbl_92: bits32 { 3 }; bits8[] "Kim\000";
 }
 

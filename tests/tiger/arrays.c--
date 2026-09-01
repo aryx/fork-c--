@@ -24,8 +24,11 @@ bits32 alloc_ptr;
 import space_end;
 
 section "data" { align 4;
+ align 4;
  Lgbl_49: bits32 { 1 }; bits8[] "\n\000";
+ align 4;
  Lgbl_57: bits32 { 1 }; bits8[] " \000";
+ align 4;
  Lgbl_42: bits32 { 24 }; bits8[] "printing array of size: \000";
 }
 

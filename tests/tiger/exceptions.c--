@@ -25,12 +25,19 @@ bits32 alloc_ptr;
 import space_end;
 
 section "data" { align 4;
+ align 4;
  Lgbl_39: bits32 { 4 }; bits8[] "bye\n\000";
+ align 4;
  Lgbl_45: bits32 { 12 }; bits8[] "exception 1\n\000";
+ align 4;
  Lgbl_56: bits32 { 18 }; bits8[] "out of ex block 1\n\000";
+ align 4;
  Lgbl_60: bits32 { 12 }; bits8[] "exception 3\n\000";
+ align 4;
  Lgbl_76: bits32 { 18 }; bits8[] "out of ex block 2\n\000";
+ align 4;
  Lgbl_36: bits32 { 6 }; bits8[] "hello\n\000";
+ align 4;
  Lgbl_42: bits32 { 12 }; bits8[] "exception 2\n\000";
 }
 

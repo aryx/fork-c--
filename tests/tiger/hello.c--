@@ -24,6 +24,7 @@ bits32 alloc_ptr;
 import space_end;
 
 section "data" { align 4;
+ align 4;
  Lgbl_20: bits32 { 14 }; bits8[] "Hello, world.\n\000";
 }
 

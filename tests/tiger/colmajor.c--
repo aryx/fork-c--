@@ -25,9 +25,13 @@ bits32 alloc_ptr;
 import space_end;
 
 section "data" { align 4;
+ align 4;
  Lgbl_70: bits32 { 0 }; bits8[] "\000";
+ align 4;
  Lgbl_102: bits32 { 1 }; bits8[] " \000";
+ align 4;
  Lgbl_117: bits32 { 15 }; bits8[] "too many items\n\000";
+ align 4;
  Lgbl_83: bits32 { 1 }; bits8[] "\n\000";
 }
 

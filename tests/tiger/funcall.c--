@@ -24,8 +24,11 @@ bits32 alloc_ptr;
 import space_end;
 
 section "data" { align 4;
+ align 4;
  Lgbl_38: bits32 { 6 }; bits8[] " str2 \000";
+ align 4;
  Lgbl_40: bits32 { 6 }; bits8[] " str1 \000";
+ align 4;
  Lgbl_41: bits32 { 1 }; bits8[] "\n\000";
 }
 
