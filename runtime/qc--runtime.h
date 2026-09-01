@@ -28,6 +28,18 @@
 #define NUM_REGS 96 /* c(6)->0-5, f(32)->6-37, r(32)->38-69 = 70, same shape as riscv/alpha */
 #elif defined(__arm__)
 #define NUM_REGS 32 /* c(3)->0-2, r(16)->3-18 = 19; no float space (arm.ml: no FPU) */
+#elif defined(__m68k__)
+/* claude: verified via a throwaway OCaml harness calling the real
+ * Target.mk_reg_ix_map on m68k.ml's actual T.spaces (same method as
+ * __aarch64__/__x86_64__ below, not hand-derived - see those comments for
+ * why hand-deriving misses the off-by-one). Confirmed result: c(3)->0-3 (4
+ * slots), r(11)->4-15 (12 slots, the same count+1 off-by-one every other
+ * target's r space hits) = 16 total. m68k.ml folds d0-d7/a0(scratch)/a6(fp)/
+ * a7(sp) into this one 'r' space rather than a genuine split D/A-register
+ * space - see arch/m68k/m68kregs.ml's own header comment - so there is no
+ * separate float/address-register range the way ppc/riscv/alpha/mips have
+ * one; no float space either (m68k.ml: no FPU). */
+#define NUM_REGS 32 /* generous margin over the confirmed total=16, same margin style as arm's own 32 */
 #elif defined(__aarch64__)
 /* claude: verified via a throwaway OCaml harness calling the real
  * Target.mk_reg_ix_map on arm64.ml's actual T.spaces (not hand-derived by

@@ -45,6 +45,37 @@
 
   let reg n   = M68kregs.regname n
 
+  (* claude: m68k's move width suffixes - unlike ARM's ldst_suffix (empty
+   * for its one native width), m68k always needs an explicit .b/.w/.l,
+   * even for the "natural" 32-bit case. *)
+  let suffix = function
+      | 8  -> "b"
+      | 16 -> "w"
+      | 32 -> "l"
+      | w  -> error (sprintf "not an m68k move width: %d" w)
+
+  (* claude: plain "move.b"/"move.w" only ever write the LOW byte/word of a
+   * data register, leaving the upper bits whatever they were before - so a
+   * sign/zero-extending sub-word load needs a second instruction. "extb.l"
+   * (68020+, confirmed available: m68k-linux-gnu-gcc defaults to
+   * -mcpu=68020, see __mc68020__) sign-extends a register's own low byte
+   * into the full 32 bits; "ext.l" (plain 68000) does the same for a low
+   * word. Both fully overwrite the upper bits based on the low part's own
+   * sign, so the "move" instruction's own leftover garbage up there is
+   * harmless. *)
+  let sx_ext = function
+      | 8  -> "extb.l "
+      | 16 -> "ext.l "
+      | w  -> error (sprintf "not an m68k sign-extend width: %d" w)
+
+  (* claude: zero-extend is just a mask after the same low-byte/word move -
+   * the "and.l" fully determines the upper bits regardless of the move's
+   * own leftover garbage there, same reasoning as sx_ext above. *)
+  let zx_mask = function
+      | 8  -> "#0xff"
+      | 16 -> "#0xffff"
+      | w  -> error (sprintf "not an m68k zero-extend width: %d" w)
+
   let m68k_bcond = function
       | "m68k_eq" -> "beq"
       | "m68k_ne" -> "bne"
@@ -180,23 +211,29 @@ inst:       Store(regl, mem, 32)
             {: cat ["move.l "; mem; ","; regl] :}
 
 inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
-            {: cat ["move.l "; mem; ","; regl; " | sign-extend TODO"] :}
+            {: cat ["move."; suffix x; " "; mem; ","; regl; "\n\t"; sx_ext x; regl] :}
 
 inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int)
-            {: cat ["move.l "; mem; ","; regl; " | zero-extend TODO"] :}
+            {: cat ["move."; suffix x; " "; mem; ","; regl; "\n\tand.l "; zx_mask x; ","; regl] :}
 
 inst:       Store(meml, reg, w:int)
-            {: cat ["move.l "; reg; ","; meml] :}
+            {: cat ["move."; suffix w; " "; reg; ","; meml] :}
 
 inst:       Store(regl, reg, 32)
             {: cat ["move.l "; reg; ","; regl] :}
 
-(* claude: real code (hello_m68k.c--'s own incoming iargc/iargv stack parameters) computes an address as a plain D-register value (icontext/acontext are the same context here, see m68k.ml's header comment) and then dereferences it - something real m68k hardware can only do through an address register. These two rules materialize such a value into the dedicated a0 scratch register first (one extra "move.l dN,a0", same role as arm.ml's r12/ip scratch), then dereference through it - two real instructions from one production, same trick as armrec.mlb's own immediate-materialization rules. *)
+(* claude: real code (hello_m68k.c--'s own incoming iargc/iargv stack parameters, and tiger's own stdlib string/char code) computes an address as a plain D-register value (icontext/acontext are the same context here, see m68k.ml's header comment) and then dereferences it - something real m68k hardware can only do through an address register. These rules materialize such a value into the dedicated a0 scratch register first (one extra "move.l dN,a0", same role as arm.ml's r12/ip scratch), then dereference through it - two real instructions from one production, same trick as armrec.mlb's own immediate-materialization rules. *)
 inst:       Store(dst:regl, Fetch(Mem(Fetch(base:regl,32)),32), 32)
             {: cat ["move.l "; base; ",%a0\n\tmove.l (%a0),"; dst] :}
 
-inst:       Store(Mem(Fetch(base:regl,32)), src:reg, 32)
-            {: cat ["move.l "; base; ",%a0\n\tmove.l "; src; ",(%a0)"] :}
+inst:       Store(dst:regl, Sx(Fetch(Mem(Fetch(base:regl,32)),x:int)), w:int)
+            {: cat ["move.l "; base; ",%a0\n\tmove."; suffix x; " (%a0),"; dst; "\n\t"; sx_ext x; dst] :}
+
+inst:       Store(dst:regl, Zx(Fetch(Mem(Fetch(base:regl,32)),x:int)), w:int)
+            {: cat ["move.l "; base; ",%a0\n\tmove."; suffix x; " (%a0),"; dst; "\n\tand.l "; zx_mask x; ","; dst] :}
+
+inst:       Store(Mem(Fetch(base:regl,32)), src:reg, w:int)
+            {: cat ["move.l "; base; ",%a0\n\tmove."; suffix w; " "; src; ",(%a0)"] :}
 
 inst:       Goto(symbol)
             {: cat ["bra "; symbol] :}

@@ -47,6 +47,37 @@
 
   let reg n   = M68kregs.regname n
 
+  (* claude: m68k's move width suffixes - unlike ARM's ldst_suffix (empty
+   * for its one native width), m68k always needs an explicit .b/.w/.l,
+   * even for the "natural" 32-bit case. *)
+  let suffix = function
+      | 8  -> "b"
+      | 16 -> "w"
+      | 32 -> "l"
+      | w  -> error (sprintf "not an m68k move width: %d" w)
+
+  (* claude: plain "move.b"/"move.w" only ever write the LOW byte/word of a
+   * data register, leaving the upper bits whatever they were before - so a
+   * sign/zero-extending sub-word load needs a second instruction. "extb.l"
+   * (68020+, confirmed available: m68k-linux-gnu-gcc defaults to
+   * -mcpu=68020, see __mc68020__) sign-extends a register's own low byte
+   * into the full 32 bits; "ext.l" (plain 68000) does the same for a low
+   * word. Both fully overwrite the upper bits based on the low part's own
+   * sign, so the "move" instruction's own leftover garbage up there is
+   * harmless. *)
+  let sx_ext = function
+      | 8  -> "extb.l "
+      | 16 -> "ext.l "
+      | w  -> error (sprintf "not an m68k sign-extend width: %d" w)
+
+  (* claude: zero-extend is just a mask after the same low-byte/word move -
+   * the "and.l" fully determines the upper bits regardless of the move's
+   * own leftover garbage there, same reasoning as sx_ext above. *)
+  let zx_mask = function
+      | 8  -> "#0xff"
+      | 16 -> "#0xffff"
+      | w  -> error (sprintf "not an m68k zero-extend width: %d" w)
+
   let m68k_bcond = function
       | "m68k_eq" -> "beq"
       | "m68k_ne" -> "bne"
@@ -64,6 +95,9 @@
 
 type
     (
+        't54,
+        't53,
+        't52,
         't51,
         't50,
         't49,
@@ -120,34 +154,37 @@ type
 nonterm
 =
     {
-        _Zx3: ( 't51 ) Camlburg.nt;
-        _Sx1: ( 't50 ) Camlburg.nt;
-        _Subcc18: ( 't49 ) Camlburg.nt;
-        _Subcc17: ( 't48 ) Camlburg.nt;
-        _Sub22: ( 't47 ) Camlburg.nt;
-        _Sub21: ( 't46 ) Camlburg.nt;
-        _Store16: ( 't45 ) Camlburg.nt;
+        _Zx9: ( 't54 ) Camlburg.nt;
+        _Zx3: ( 't53 ) Camlburg.nt;
+        _Sx7: ( 't52 ) Camlburg.nt;
+        _Sx1: ( 't51 ) Camlburg.nt;
+        _Subcc21: ( 't50 ) Camlburg.nt;
+        _Subcc20: ( 't49 ) Camlburg.nt;
+        _Sub25: ( 't48 ) Camlburg.nt;
+        _Sub24: ( 't47 ) Camlburg.nt;
+        _Store19: ( 't46 ) Camlburg.nt;
+        _Store17: ( 't45 ) Camlburg.nt;
         _Store14: ( 't44 ) Camlburg.nt;
-        _Store11: ( 't43 ) Camlburg.nt;
-        _Store10: ( 't42 ) Camlburg.nt;
-        _Quot28: ( 't41 ) Camlburg.nt;
-        _Quot27: ( 't40 ) Camlburg.nt;
-        _Par9: ( 't39 ) Camlburg.nt;
-        _Mul26: ( 't38 ) Camlburg.nt;
-        _Mul25: ( 't37 ) Camlburg.nt;
-        _Mem5: ( 't36 ) Camlburg.nt;
-        _Goto8: ( 't35 ) Camlburg.nt;
-        _Goto13: ( 't34 ) Camlburg.nt;
-        _Goto12: ( 't33 ) Camlburg.nt;
-        _Fetch7: ( 't32 ) Camlburg.nt;
-        _Fetch6: ( 't31 ) Camlburg.nt;
-        _Fetch4: ( 't30 ) Camlburg.nt;
-        _Fetch2: ( 't29 ) Camlburg.nt;
-        _Fetch15: ( 't28 ) Camlburg.nt;
-        _And24: ( 't27 ) Camlburg.nt;
-        _And23: ( 't26 ) Camlburg.nt;
-        _Add20: ( 't25 ) Camlburg.nt;
-        _Add19: ( 't24 ) Camlburg.nt;
+        _Store13: ( 't43 ) Camlburg.nt;
+        _Quot31: ( 't42 ) Camlburg.nt;
+        _Quot30: ( 't41 ) Camlburg.nt;
+        _Par12: ( 't40 ) Camlburg.nt;
+        _Mul29: ( 't39 ) Camlburg.nt;
+        _Mul28: ( 't38 ) Camlburg.nt;
+        _Mem5: ( 't37 ) Camlburg.nt;
+        _Goto16: ( 't36 ) Camlburg.nt;
+        _Goto15: ( 't35 ) Camlburg.nt;
+        _Goto11: ( 't34 ) Camlburg.nt;
+        _Fetch8: ( 't33 ) Camlburg.nt;
+        _Fetch6: ( 't32 ) Camlburg.nt;
+        _Fetch4: ( 't31 ) Camlburg.nt;
+        _Fetch2: ( 't30 ) Camlburg.nt;
+        _Fetch18: ( 't29 ) Camlburg.nt;
+        _Fetch10: ( 't28 ) Camlburg.nt;
+        _And27: ( 't27 ) Camlburg.nt;
+        _And26: ( 't26 ) Camlburg.nt;
+        _Add23: ( 't25 ) Camlburg.nt;
+        _Add22: ( 't24 ) Camlburg.nt;
         symbol: ( 't23 ) Camlburg.nt;
         spinc: ( 't22 ) Camlburg.nt;
         spdec: ( 't21 ) Camlburg.nt;
@@ -200,34 +237,37 @@ inf =
     ;spdec = (Camlburg.infinity)
     ;spinc = (Camlburg.infinity)
     ;symbol = (Camlburg.infinity)
-    ;_Add19 = (Camlburg.infinity)
-    ;_Add20 = (Camlburg.infinity)
-    ;_And23 = (Camlburg.infinity)
-    ;_And24 = (Camlburg.infinity)
-    ;_Fetch15 = (Camlburg.infinity)
+    ;_Add22 = (Camlburg.infinity)
+    ;_Add23 = (Camlburg.infinity)
+    ;_And26 = (Camlburg.infinity)
+    ;_And27 = (Camlburg.infinity)
+    ;_Fetch10 = (Camlburg.infinity)
+    ;_Fetch18 = (Camlburg.infinity)
     ;_Fetch2 = (Camlburg.infinity)
     ;_Fetch4 = (Camlburg.infinity)
     ;_Fetch6 = (Camlburg.infinity)
-    ;_Fetch7 = (Camlburg.infinity)
-    ;_Goto12 = (Camlburg.infinity)
-    ;_Goto13 = (Camlburg.infinity)
-    ;_Goto8 = (Camlburg.infinity)
+    ;_Fetch8 = (Camlburg.infinity)
+    ;_Goto11 = (Camlburg.infinity)
+    ;_Goto15 = (Camlburg.infinity)
+    ;_Goto16 = (Camlburg.infinity)
     ;_Mem5 = (Camlburg.infinity)
-    ;_Mul25 = (Camlburg.infinity)
-    ;_Mul26 = (Camlburg.infinity)
-    ;_Par9 = (Camlburg.infinity)
-    ;_Quot27 = (Camlburg.infinity)
-    ;_Quot28 = (Camlburg.infinity)
-    ;_Store10 = (Camlburg.infinity)
-    ;_Store11 = (Camlburg.infinity)
+    ;_Mul28 = (Camlburg.infinity)
+    ;_Mul29 = (Camlburg.infinity)
+    ;_Par12 = (Camlburg.infinity)
+    ;_Quot30 = (Camlburg.infinity)
+    ;_Quot31 = (Camlburg.infinity)
+    ;_Store13 = (Camlburg.infinity)
     ;_Store14 = (Camlburg.infinity)
-    ;_Store16 = (Camlburg.infinity)
-    ;_Sub21 = (Camlburg.infinity)
-    ;_Sub22 = (Camlburg.infinity)
-    ;_Subcc17 = (Camlburg.infinity)
-    ;_Subcc18 = (Camlburg.infinity)
+    ;_Store17 = (Camlburg.infinity)
+    ;_Store19 = (Camlburg.infinity)
+    ;_Sub24 = (Camlburg.infinity)
+    ;_Sub25 = (Camlburg.infinity)
+    ;_Subcc20 = (Camlburg.infinity)
+    ;_Subcc21 = (Camlburg.infinity)
     ;_Sx1 = (Camlburg.infinity)
+    ;_Sx7 = (Camlburg.infinity)
     ;_Zx3 = (Camlburg.infinity)
+    ;_Zx9 = (Camlburg.infinity)
     }
 
 
@@ -257,7 +297,7 @@ and update_any =
                             let any = x.any.Camlburg.action ()
                             in
                                 
-# 274 "arch/m68k/m68krec.mlb"
+# 311 "arch/m68k/m68krec.mlb"
                                 ( cat ["<";any;">"] )
                                 
 # 000 "/dev/stdout"
@@ -278,7 +318,7 @@ and update_areg =
                             let areg = x.areg.Camlburg.action ()
                             in
                                 
-# 165 "arch/m68k/m68krec.mlb"
+# 196 "arch/m68k/m68krec.mlb"
                                 ( cat ["("; areg; ")"] )
                                 
 # 000 "/dev/stdout"
@@ -317,7 +357,7 @@ and update_const =
                             let const = x.const.Camlburg.action ()
                             in
                                 
-# 169 "arch/m68k/m68krec.mlb"
+# 200 "arch/m68k/m68krec.mlb"
                                 ( const )
                                 
 # 000 "/dev/stdout"
@@ -332,7 +372,7 @@ and update_const =
                                 let const = x.const.Camlburg.action ()
                                 in
                                     
-# 172 "arch/m68k/m68krec.mlb"
+# 203 "arch/m68k/m68krec.mlb"
                                     ( const  )
                                     
 # 000 "/dev/stdout"
@@ -413,7 +453,7 @@ and update_r =
                             let r = x.r.Camlburg.action ()
                             in
                                 
-# 147 "arch/m68k/m68krec.mlb"
+# 178 "arch/m68k/m68krec.mlb"
                                 ( reg r )
                                 
 # 000 "/dev/stdout"
@@ -458,7 +498,7 @@ and update_symbol =
                             let symbol = x.symbol.Camlburg.action ()
                             in
                                 
-# 173 "arch/m68k/m68krec.mlb"
+# 204 "arch/m68k/m68krec.mlb"
                                 ( symbol )
                                 
 # 000 "/dev/stdout"
@@ -466,36 +506,42 @@ and update_symbol =
                     })
                     x)
                 { x with symbol = (nt) }
-and update__Add19 =
+and update__Add22 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Add19.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Add22.Camlburg.cost then
             x
         else
-            { x with _Add19 = (nt) }
-and update__Add20 =
+            { x with _Add22 = (nt) }
+and update__Add23 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Add20.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Add23.Camlburg.cost then
             x
         else
-            { x with _Add20 = (nt) }
-and update__And23 =
+            { x with _Add23 = (nt) }
+and update__And26 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._And23.Camlburg.cost then
+        if nt.Camlburg.cost >= x._And26.Camlburg.cost then
             x
         else
-            { x with _And23 = (nt) }
-and update__And24 =
+            { x with _And26 = (nt) }
+and update__And27 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._And24.Camlburg.cost then
+        if nt.Camlburg.cost >= x._And27.Camlburg.cost then
             x
         else
-            { x with _And24 = (nt) }
-and update__Fetch15 =
+            { x with _And27 = (nt) }
+and update__Fetch10 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch15.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch10.Camlburg.cost then
             x
         else
-            { x with _Fetch15 = (nt) }
+            { x with _Fetch10 = (nt) }
+and update__Fetch18 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Fetch18.Camlburg.cost then
+            x
+        else
+            { x with _Fetch18 = (nt) }
 and update__Fetch2 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Fetch2.Camlburg.cost then
@@ -514,126 +560,138 @@ and update__Fetch6 =
             x
         else
             { x with _Fetch6 = (nt) }
-and update__Fetch7 =
+and update__Fetch8 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Fetch7.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Fetch8.Camlburg.cost then
             x
         else
-            { x with _Fetch7 = (nt) }
-and update__Goto12 =
+            { x with _Fetch8 = (nt) }
+and update__Goto11 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Goto12.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Goto11.Camlburg.cost then
             x
         else
-            { x with _Goto12 = (nt) }
-and update__Goto13 =
+            { x with _Goto11 = (nt) }
+and update__Goto15 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Goto13.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Goto15.Camlburg.cost then
             x
         else
-            { x with _Goto13 = (nt) }
-and update__Goto8 =
+            { x with _Goto15 = (nt) }
+and update__Goto16 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Goto8.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Goto16.Camlburg.cost then
             x
         else
-            { x with _Goto8 = (nt) }
+            { x with _Goto16 = (nt) }
 and update__Mem5 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Mem5.Camlburg.cost then
             x
         else
             { x with _Mem5 = (nt) }
-and update__Mul25 =
+and update__Mul28 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Mul25.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Mul28.Camlburg.cost then
             x
         else
-            { x with _Mul25 = (nt) }
-and update__Mul26 =
+            { x with _Mul28 = (nt) }
+and update__Mul29 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Mul26.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Mul29.Camlburg.cost then
             x
         else
-            { x with _Mul26 = (nt) }
-and update__Par9 =
+            { x with _Mul29 = (nt) }
+and update__Par12 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Par9.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Par12.Camlburg.cost then
             x
         else
-            { x with _Par9 = (nt) }
-and update__Quot27 =
+            { x with _Par12 = (nt) }
+and update__Quot30 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Quot27.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Quot30.Camlburg.cost then
             x
         else
-            { x with _Quot27 = (nt) }
-and update__Quot28 =
+            { x with _Quot30 = (nt) }
+and update__Quot31 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Quot28.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Quot31.Camlburg.cost then
             x
         else
-            { x with _Quot28 = (nt) }
-and update__Store10 =
+            { x with _Quot31 = (nt) }
+and update__Store13 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Store10.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Store13.Camlburg.cost then
             x
         else
-            { x with _Store10 = (nt) }
-and update__Store11 =
-    fun nt x ->
-        if nt.Camlburg.cost >= x._Store11.Camlburg.cost then
-            x
-        else
-            { x with _Store11 = (nt) }
+            { x with _Store13 = (nt) }
 and update__Store14 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Store14.Camlburg.cost then
             x
         else
             { x with _Store14 = (nt) }
-and update__Store16 =
+and update__Store17 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Store16.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Store17.Camlburg.cost then
             x
         else
-            { x with _Store16 = (nt) }
-and update__Sub21 =
+            { x with _Store17 = (nt) }
+and update__Store19 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sub21.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Store19.Camlburg.cost then
             x
         else
-            { x with _Sub21 = (nt) }
-and update__Sub22 =
+            { x with _Store19 = (nt) }
+and update__Sub24 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Sub22.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Sub24.Camlburg.cost then
             x
         else
-            { x with _Sub22 = (nt) }
-and update__Subcc17 =
+            { x with _Sub24 = (nt) }
+and update__Sub25 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Subcc17.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Sub25.Camlburg.cost then
             x
         else
-            { x with _Subcc17 = (nt) }
-and update__Subcc18 =
+            { x with _Sub25 = (nt) }
+and update__Subcc20 =
     fun nt x ->
-        if nt.Camlburg.cost >= x._Subcc18.Camlburg.cost then
+        if nt.Camlburg.cost >= x._Subcc20.Camlburg.cost then
             x
         else
-            { x with _Subcc18 = (nt) }
+            { x with _Subcc20 = (nt) }
+and update__Subcc21 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Subcc21.Camlburg.cost then
+            x
+        else
+            { x with _Subcc21 = (nt) }
 and update__Sx1 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Sx1.Camlburg.cost then
             x
         else
             { x with _Sx1 = (nt) }
+and update__Sx7 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Sx7.Camlburg.cost then
+            x
+        else
+            { x with _Sx7 = (nt) }
 and update__Zx3 =
     fun nt x ->
         if nt.Camlburg.cost >= x._Zx3.Camlburg.cost then
             x
         else
             { x with _Zx3 = (nt) }
+and update__Zx9 =
+    fun nt x ->
+        if nt.Camlburg.cost >= x._Zx9.Camlburg.cost then
+            x
+        else
+            { x with _Zx9 = (nt) }
 
 
 let rec
@@ -647,20 +705,28 @@ conZx =
                     in
                         let (mem, x) = _v1 in (mem ,x))
             })
-            ((update_any
-                {Camlburg.cost = (arg1.any.Camlburg.cost)
+            ((update__Zx9
+                {Camlburg.cost = (arg1._Fetch8.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
-                        let any = arg1.any.Camlburg.action ()
+                        let _v1 = arg1._Fetch8.Camlburg.action ()
                         in
-                            
-# 292 "arch/m68k/m68krec.mlb"
-                            ( cat [ "Zx(";any;")" ] )
-                            
+                            let (base, x) = _v1 in (base ,x))
+                })
+                ((update_any
+                    {Camlburg.cost = (arg1.any.Camlburg.cost)
+                    ;Camlburg.action =
+                        (fun () ->
+                            let any = arg1.any.Camlburg.action ()
+                            in
+                                
+# 329 "arch/m68k/m68krec.mlb"
+                                ( cat [ "Zx(";any;")" ] )
+                                
 # 000 "/dev/stdout"
 )
-                })
-                inf)
+                    })
+                    inf))
 and conTrue =
     fun () ->
         (update_any
@@ -668,7 +734,7 @@ and conTrue =
             ;Camlburg.action =
                 (fun () ->
                     
-# 276 "arch/m68k/m68krec.mlb"
+# 313 "arch/m68k/m68krec.mlb"
                     ( cat [ "True"  ] )
                     
 # 000 "/dev/stdout"
@@ -685,23 +751,31 @@ and conSx =
                     in
                         let (mem, x) = _v1 in (mem ,x))
             })
-            ((update_any
-                {Camlburg.cost = (arg1.any.Camlburg.cost)
+            ((update__Sx7
+                {Camlburg.cost = (arg1._Fetch8.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
-                        let any = arg1.any.Camlburg.action ()
+                        let _v1 = arg1._Fetch8.Camlburg.action ()
                         in
-                            
-# 291 "arch/m68k/m68krec.mlb"
-                            ( cat [ "Sx(";any;")" ] )
-                            
+                            let (base, x) = _v1 in (base ,x))
+                })
+                ((update_any
+                    {Camlburg.cost = (arg1.any.Camlburg.cost)
+                    ;Camlburg.action =
+                        (fun () ->
+                            let any = arg1.any.Camlburg.action ()
+                            in
+                                
+# 328 "arch/m68k/m68krec.mlb"
+                                ( cat [ "Sx(";any;")" ] )
+                                
 # 000 "/dev/stdout"
 )
-                })
-                inf)
+                    })
+                    inf))
 and conSubcc =
     fun arg1 arg2 ->
-        (update__Subcc17
+        (update__Subcc20
             {Camlburg.cost =
                 (arg1.reg.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -711,7 +785,7 @@ and conSubcc =
                     in
                         (x ,y))
             })
-            ((update__Subcc18
+            ((update__Subcc21
                 {Camlburg.cost =
                     (arg1.reg.Camlburg.cost + arg2.imm.Camlburg.cost)
                 ;Camlburg.action =
@@ -730,7 +804,7 @@ and conSubcc =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 289 "arch/m68k/m68krec.mlb"
+# 326 "arch/m68k/m68krec.mlb"
                                 ( cat [ "Subcc(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -739,7 +813,7 @@ and conSubcc =
                     inf))
 and conSub =
     fun arg1 arg2 ->
-        (update__Sub21
+        (update__Sub24
             {Camlburg.cost =
                 (arg1._Fetch6.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -749,7 +823,7 @@ and conSub =
                     in
                         let srcdst = _v1 in (srcdst ,y))
             })
-            ((update__Sub22
+            ((update__Sub25
                 {Camlburg.cost =
                     (arg1._Fetch6.Camlburg.cost + arg2.imm.Camlburg.cost)
                 ;Camlburg.action =
@@ -768,7 +842,7 @@ and conSub =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 285 "arch/m68k/m68krec.mlb"
+# 322 "arch/m68k/m68krec.mlb"
                                 ( cat [ "Sub(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -777,7 +851,7 @@ and conSub =
                     inf))
 and conStore =
     fun arg1 arg2 arg3 ->
-        (update__Store10
+        (update__Store13
             {Camlburg.cost =
                 (arg1.meml.Camlburg.cost + arg2.pcv.Camlburg.cost
                 +
@@ -789,7 +863,7 @@ and conStore =
                     in
                         (meml ,pcv))
             })
-            ((update__Store11
+            ((update__Store14
                 {Camlburg.cost =
                     (arg1.abase.Camlburg.cost + arg2.spdec.Camlburg.cost
                     +
@@ -801,7 +875,7 @@ and conStore =
                         in
                             (abase ,spdec))
                 })
-                ((update__Store14
+                ((update__Store17
                     {Camlburg.cost =
                         (arg1.abase.Camlburg.cost + arg2.spinc.Camlburg.cost
                         +
@@ -813,7 +887,7 @@ and conStore =
                             in
                                 (abase ,spinc))
                     })
-                    ((update__Store16
+                    ((update__Store19
                         {Camlburg.cost =
                             (arg1.abase.Camlburg.cost
                             +
@@ -839,7 +913,7 @@ and conStore =
                                     and w = arg3
                                     in
                                         
-# 299 "arch/m68k/m68krec.mlb"
+# 336 "arch/m68k/m68krec.mlb"
                                         ( cat [ "Store(";dst;",";src;",";string_of_int w;")" ] )
                                         
 # 000 "/dev/stdout"
@@ -863,7 +937,7 @@ and conStore =
                                                 arg2.limm.Camlburg.action ()
                                             in
                                                 
-# 177 "arch/m68k/m68krec.mlb"
+# 208 "arch/m68k/m68krec.mlb"
                                                 ( cat ["move.l #"; limm; ","; regl] )
                                                 
 # 000 "/dev/stdout"
@@ -885,7 +959,7 @@ and conStore =
                                                 arg2.mem.Camlburg.action ()
                                             in
                                                 
-# 180 "arch/m68k/m68krec.mlb"
+# 211 "arch/m68k/m68krec.mlb"
                                                 ( cat ["move.l "; mem; ","; regl] )
                                                 
 # 000 "/dev/stdout"
@@ -908,8 +982,8 @@ and conStore =
                                                 let (mem, x) = _v1
                                                 in
                                                     
-# 183 "arch/m68k/m68krec.mlb"
-                                                    ( cat ["move.l "; mem; ","; regl; " | sign-extend TODO"] )
+# 214 "arch/m68k/m68krec.mlb"
+                                                    ( cat ["move."; suffix x; " "; mem; ","; regl; "\n\t"; sx_ext x; regl] )
                                                     
 # 000 "/dev/stdout"
 )
@@ -931,8 +1005,8 @@ and conStore =
                                                 let (mem, x) = _v1
                                                 in
                                                     
-# 186 "arch/m68k/m68krec.mlb"
-                                                    ( cat ["move.l "; mem; ","; regl; " | zero-extend TODO"] )
+# 217 "arch/m68k/m68krec.mlb"
+                                                    ( cat ["move."; suffix x; " "; mem; ","; regl; "\n\tand.l "; zx_mask x; ","; regl] )
                                                     
 # 000 "/dev/stdout"
 )
@@ -952,8 +1026,8 @@ and conStore =
                                             and w = arg3
                                             in
                                                 
-# 189 "arch/m68k/m68krec.mlb"
-                                                ( cat ["move.l "; reg; ","; meml] )
+# 220 "arch/m68k/m68krec.mlb"
+                                                ( cat ["move."; suffix w; " "; reg; ","; meml] )
                                                 
 # 000 "/dev/stdout"
 )
@@ -974,7 +1048,7 @@ and conStore =
                                                 arg2.reg.Camlburg.action ()
                                             in
                                                 
-# 192 "arch/m68k/m68krec.mlb"
+# 223 "arch/m68k/m68krec.mlb"
                                                 ( cat ["move.l "; reg; ","; regl] )
                                                 
 # 000 "/dev/stdout"
@@ -999,8 +1073,54 @@ and conStore =
                                                 let base = _v1
                                                 in
                                                     
-# 196 "arch/m68k/m68krec.mlb"
+# 227 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; base; ",%a0\n\tmove.l (%a0),"; dst] )
+                                                    
+# 000 "/dev/stdout"
+)
+                                    }
+                                    ;{Camlburg.cost =
+                                        (arg1.regl.Camlburg.cost
+                                        +
+                                        arg2._Sx7.Camlburg.cost)
+                                    ;Camlburg.action =
+                                        (fun () ->
+                                            let
+                                                dst =
+                                                arg1.regl.Camlburg.action ()
+                                            and
+                                                _v1 =
+                                                arg2._Sx7.Camlburg.action ()
+                                            and w = arg3
+                                            in
+                                                let (base, x) = _v1
+                                                in
+                                                    
+# 230 "arch/m68k/m68krec.mlb"
+                                                    ( cat ["move.l "; base; ",%a0\n\tmove."; suffix x; " (%a0),"; dst; "\n\t"; sx_ext x; dst] )
+                                                    
+# 000 "/dev/stdout"
+)
+                                    }
+                                    ;{Camlburg.cost =
+                                        (arg1.regl.Camlburg.cost
+                                        +
+                                        arg2._Zx9.Camlburg.cost)
+                                    ;Camlburg.action =
+                                        (fun () ->
+                                            let
+                                                dst =
+                                                arg1.regl.Camlburg.action ()
+                                            and
+                                                _v1 =
+                                                arg2._Zx9.Camlburg.action ()
+                                            and w = arg3
+                                            in
+                                                let (base, x) = _v1
+                                                in
+                                                    
+# 233 "arch/m68k/m68krec.mlb"
+                                                    ( cat ["move.l "; base; ",%a0\n\tmove."; suffix x; " (%a0),"; dst; "\n\tand.l "; zx_mask x; ","; dst] )
                                                     
 # 000 "/dev/stdout"
 )
@@ -1008,9 +1128,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1._Mem5.Camlburg.cost
                                         +
-                                        arg2.reg.Camlburg.cost
-                                        +
-                                        (Camlburg.matches 32) arg3)
+                                        arg2.reg.Camlburg.cost)
                                     ;Camlburg.action =
                                         (fun () ->
                                             let
@@ -1019,12 +1137,13 @@ and conStore =
                                             and
                                                 src =
                                                 arg2.reg.Camlburg.action ()
+                                            and w = arg3
                                             in
                                                 let base = _v1
                                                 in
                                                     
-# 199 "arch/m68k/m68krec.mlb"
-                                                    ( cat ["move.l "; base; ",%a0\n\tmove.l "; src; ",(%a0)"] )
+# 236 "arch/m68k/m68krec.mlb"
+                                                    ( cat ["move.l "; base; ",%a0\n\tmove."; suffix w; " "; src; ",(%a0)"] )
                                                     
 # 000 "/dev/stdout"
 )
@@ -1032,7 +1151,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.ccl.Camlburg.cost
                                         +
-                                        arg2._Subcc17.Camlburg.cost
+                                        arg2._Subcc20.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1042,13 +1161,13 @@ and conStore =
                                                 arg1.ccl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Subcc17.Camlburg.action
+                                                arg2._Subcc20.Camlburg.action
                                                     ()
                                             in
                                                 let (x, y) = _v1
                                                 in
                                                     
-# 232 "arch/m68k/m68krec.mlb"
+# 269 "arch/m68k/m68krec.mlb"
                                                     ( cat ["cmp.l "; y; ","; x] )
                                                     
 # 000 "/dev/stdout"
@@ -1057,7 +1176,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.ccl.Camlburg.cost
                                         +
-                                        arg2._Subcc18.Camlburg.cost
+                                        arg2._Subcc21.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1067,13 +1186,13 @@ and conStore =
                                                 arg1.ccl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Subcc18.Camlburg.action
+                                                arg2._Subcc21.Camlburg.action
                                                     ()
                                             in
                                                 let (x, y) = _v1
                                                 in
                                                     
-# 234 "arch/m68k/m68krec.mlb"
+# 271 "arch/m68k/m68krec.mlb"
                                                     ( cat ["cmp.l #"; y; ","; x] )
                                                     
 # 000 "/dev/stdout"
@@ -1082,7 +1201,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._Add19.Camlburg.cost
+                                        arg2._Add22.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1092,13 +1211,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Add19.Camlburg.action
+                                                arg2._Add22.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 242 "arch/m68k/m68krec.mlb"
+# 279 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tadd.l "; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1107,7 +1226,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._Add20.Camlburg.cost
+                                        arg2._Add23.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1117,13 +1236,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Add20.Camlburg.action
+                                                arg2._Add23.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 245 "arch/m68k/m68krec.mlb"
+# 282 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tadd.l #"; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1132,7 +1251,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._Sub21.Camlburg.cost
+                                        arg2._Sub24.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1142,13 +1261,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Sub21.Camlburg.action
+                                                arg2._Sub24.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 248 "arch/m68k/m68krec.mlb"
+# 285 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tsub.l "; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1157,7 +1276,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._Sub22.Camlburg.cost
+                                        arg2._Sub25.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1167,13 +1286,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Sub22.Camlburg.action
+                                                arg2._Sub25.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 251 "arch/m68k/m68krec.mlb"
+# 288 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tsub.l #"; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1182,7 +1301,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._And23.Camlburg.cost
+                                        arg2._And26.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1192,13 +1311,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._And23.Camlburg.action
+                                                arg2._And26.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 254 "arch/m68k/m68krec.mlb"
+# 291 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tand.l "; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1207,7 +1326,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._And24.Camlburg.cost
+                                        arg2._And27.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1217,13 +1336,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._And24.Camlburg.action
+                                                arg2._And27.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 257 "arch/m68k/m68krec.mlb"
+# 294 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tand.l #"; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1232,7 +1351,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._Mul25.Camlburg.cost
+                                        arg2._Mul28.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1242,13 +1361,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Mul25.Camlburg.action
+                                                arg2._Mul28.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 261 "arch/m68k/m68krec.mlb"
+# 298 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tmuls.l "; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1257,7 +1376,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._Mul26.Camlburg.cost
+                                        arg2._Mul29.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1267,13 +1386,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Mul26.Camlburg.action
+                                                arg2._Mul29.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 264 "arch/m68k/m68krec.mlb"
+# 301 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tmuls.l #"; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1282,7 +1401,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._Quot27.Camlburg.cost
+                                        arg2._Quot30.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1292,13 +1411,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Quot27.Camlburg.action
+                                                arg2._Quot30.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 267 "arch/m68k/m68krec.mlb"
+# 304 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tdivs.l "; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1307,7 +1426,7 @@ and conStore =
                                     ;{Camlburg.cost =
                                         (arg1.regl.Camlburg.cost
                                         +
-                                        arg2._Quot28.Camlburg.cost
+                                        arg2._Quot31.Camlburg.cost
                                         +
                                         (Camlburg.matches 32) arg3)
                                     ;Camlburg.action =
@@ -1317,13 +1436,13 @@ and conStore =
                                                 arg1.regl.Camlburg.action ()
                                             and
                                                 _v1 =
-                                                arg2._Quot28.Camlburg.action
+                                                arg2._Quot31.Camlburg.action
                                                     ()
                                             in
                                                 let (srcdst, y) = _v1
                                                 in
                                                     
-# 270 "arch/m68k/m68krec.mlb"
+# 307 "arch/m68k/m68krec.mlb"
                                                     ( cat ["move.l "; srcdst; ","; dst; "\n\tdivs.l #"; y; ","; dst] )
                                                     
 # 000 "/dev/stdout"
@@ -1337,7 +1456,7 @@ and conReg =
                 (let n = arg2
                 in
                     
-# 154 "arch/m68k/m68krec.mlb"
+# 185 "arch/m68k/m68krec.mlb"
                     ( guard (n = M68kregs.fp_ix || n = M68kregs.sp_ix) )
                     
 # 000 "/dev/stdout"
@@ -1349,7 +1468,7 @@ and conReg =
                     let n = arg2
                     in
                         
-# 155 "arch/m68k/m68krec.mlb"
+# 186 "arch/m68k/m68krec.mlb"
                         ( reg n )
                         
 # 000 "/dev/stdout"
@@ -1363,7 +1482,7 @@ and conReg =
                         and n = arg2
                         in
                             
-# 296 "arch/m68k/m68krec.mlb"
+# 333 "arch/m68k/m68krec.mlb"
                             ( cat [ "Reg('";Char.escaped char;"',"; string_of_int n;")" ] )
                             
 # 000 "/dev/stdout"
@@ -1377,7 +1496,7 @@ and conReg =
                     ;Camlburg.action =
                         (fun () ->
                             
-# 151 "arch/m68k/m68krec.mlb"
+# 182 "arch/m68k/m68krec.mlb"
                             ( () )
                             
 # 000 "/dev/stdout"
@@ -1391,7 +1510,7 @@ and conReg =
                         ;Camlburg.action =
                             (fun () ->
                                 
-# 150 "arch/m68k/m68krec.mlb"
+# 181 "arch/m68k/m68krec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -1404,7 +1523,7 @@ and conReg =
                                     let n = arg2
                                     in
                                         
-# 146 "arch/m68k/m68krec.mlb"
+# 177 "arch/m68k/m68krec.mlb"
                                         ( n )
                                         
 # 000 "/dev/stdout"
@@ -1413,7 +1532,7 @@ and conReg =
                             inf))))
 and conQuot =
     fun arg1 arg2 ->
-        (update__Quot27
+        (update__Quot30
             {Camlburg.cost =
                 (arg1._Fetch6.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -1423,7 +1542,7 @@ and conQuot =
                     in
                         let srcdst = _v1 in (srcdst ,y))
             })
-            ((update__Quot28
+            ((update__Quot31
                 {Camlburg.cost =
                     (arg1._Fetch6.Camlburg.cost + arg2.imm.Camlburg.cost)
                 ;Camlburg.action =
@@ -1442,7 +1561,7 @@ and conQuot =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 288 "arch/m68k/m68krec.mlb"
+# 325 "arch/m68k/m68krec.mlb"
                                 ( cat [ "Quot(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1451,13 +1570,13 @@ and conQuot =
                     inf))
 and conPar =
     fun arg1 arg2 ->
-        (update__Par9
+        (update__Par12
             {Camlburg.cost =
-                (arg1._Store10.Camlburg.cost + arg2._Store11.Camlburg.cost)
+                (arg1._Store13.Camlburg.cost + arg2._Store14.Camlburg.cost)
             ;Camlburg.action =
                 (fun () ->
-                    let _v1 = arg1._Store10.Camlburg.action ()
-                    and _v2 = arg2._Store11.Camlburg.action ()
+                    let _v1 = arg1._Store13.Camlburg.action ()
+                    and _v2 = arg2._Store14.Camlburg.action ()
                     in
                         let (abase, spdec) = _v2
                         in
@@ -1474,7 +1593,7 @@ and conPar =
                         and r = arg2.any.Camlburg.action ()
                         in
                             
-# 304 "arch/m68k/m68krec.mlb"
+# 341 "arch/m68k/m68krec.mlb"
                             ( cat [ "Par(";l;",";r;")" ] )
                             
 # 000 "/dev/stdout"
@@ -1483,80 +1602,80 @@ and conPar =
                 ((update_inst
                     (Camlburg.choice
                         [{Camlburg.cost =
-                            (arg1._Goto8.Camlburg.cost
+                            (arg1._Goto11.Camlburg.cost
                             +
-                            arg2._Par9.Camlburg.cost)
+                            arg2._Par12.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
-                                let _v1 = arg1._Goto8.Camlburg.action ()
-                                and _v2 = arg2._Par9.Camlburg.action ()
+                                let _v1 = arg1._Goto11.Camlburg.action ()
+                                and _v2 = arg2._Par12.Camlburg.action ()
                                 in
                                     let (meml, pcv, abase, spdec) = _v2
                                     in
                                         let symbol = _v1
                                         in
                                             
-# 216 "arch/m68k/m68krec.mlb"
+# 253 "arch/m68k/m68krec.mlb"
                                             ( cat ["jsr "; symbol] )
                                             
 # 000 "/dev/stdout"
 )
                         }
                         ;{Camlburg.cost =
-                            (arg1._Goto12.Camlburg.cost
+                            (arg1._Goto15.Camlburg.cost
                             +
-                            arg2._Par9.Camlburg.cost)
+                            arg2._Par12.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
-                                let _v1 = arg1._Goto12.Camlburg.action ()
-                                and _v2 = arg2._Par9.Camlburg.action ()
+                                let _v1 = arg1._Goto15.Camlburg.action ()
+                                and _v2 = arg2._Par12.Camlburg.action ()
                                 in
                                     let (meml, pcv, abase, spdec) = _v2
                                     in
                                         let target = _v1
                                         in
                                             
-# 219 "arch/m68k/m68krec.mlb"
+# 256 "arch/m68k/m68krec.mlb"
                                             ( cat ["jsr ("; target; ")"] )
                                             
 # 000 "/dev/stdout"
 )
                         }
                         ;{Camlburg.cost =
-                            (arg1._Goto13.Camlburg.cost
+                            (arg1._Goto16.Camlburg.cost
                             +
-                            arg2._Store14.Camlburg.cost)
+                            arg2._Store17.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
-                                let _v1 = arg1._Goto13.Camlburg.action ()
-                                and _v2 = arg2._Store14.Camlburg.action ()
+                                let _v1 = arg1._Goto16.Camlburg.action ()
+                                and _v2 = arg2._Store17.Camlburg.action ()
                                 in
                                     let (abase, spinc) = _v2
                                     in
                                         let meml = _v1
                                         in
                                             
-# 224 "arch/m68k/m68krec.mlb"
+# 261 "arch/m68k/m68krec.mlb"
                                             ( "rts" )
                                             
 # 000 "/dev/stdout"
 )
                         }
                         ;{Camlburg.cost =
-                            (arg1._Goto12.Camlburg.cost
+                            (arg1._Goto15.Camlburg.cost
                             +
-                            arg2._Store16.Camlburg.cost)
+                            arg2._Store19.Camlburg.cost)
                         ;Camlburg.action =
                             (fun () ->
-                                let _v1 = arg1._Goto12.Camlburg.action ()
-                                and _v2 = arg2._Store16.Camlburg.action ()
+                                let _v1 = arg1._Goto15.Camlburg.action ()
+                                and _v2 = arg2._Store19.Camlburg.action ()
                                 in
                                     let (abase, nsp) = _v2
                                     in
                                         let target = _v1
                                         in
                                             
-# 228 "arch/m68k/m68krec.mlb"
+# 265 "arch/m68k/m68krec.mlb"
                                             ( cat ["move.l "; nsp; ",%a7\n\tjmp ("; target; ")"] )
                                             
 # 000 "/dev/stdout"
@@ -1570,7 +1689,7 @@ and conNop =
             ;Camlburg.action =
                 (fun () ->
                     
-# 272 "arch/m68k/m68krec.mlb"
+# 309 "arch/m68k/m68krec.mlb"
                     ( "nop" )
                     
 # 000 "/dev/stdout"
@@ -1579,7 +1698,7 @@ and conNop =
             inf
 and conMul =
     fun arg1 arg2 ->
-        (update__Mul25
+        (update__Mul28
             {Camlburg.cost =
                 (arg1._Fetch6.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -1589,7 +1708,7 @@ and conMul =
                     in
                         let srcdst = _v1 in (srcdst ,y))
             })
-            ((update__Mul26
+            ((update__Mul29
                 {Camlburg.cost =
                     (arg1._Fetch6.Camlburg.cost + arg2.imm.Camlburg.cost)
                 ;Camlburg.action =
@@ -1608,7 +1727,7 @@ and conMul =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 287 "arch/m68k/m68krec.mlb"
+# 324 "arch/m68k/m68krec.mlb"
                                 ( cat [ "Mul(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -1632,7 +1751,7 @@ and conMem =
                         let any = arg1.any.Camlburg.action ()
                         in
                             
-# 295 "arch/m68k/m68krec.mlb"
+# 332 "arch/m68k/m68krec.mlb"
                             ( cat [ "Mem(";any;")" ] )
                             
 # 000 "/dev/stdout"
@@ -1645,7 +1764,7 @@ and conMem =
                             let addr = arg1.addr.Camlburg.action ()
                             in
                                 
-# 161 "arch/m68k/m68krec.mlb"
+# 192 "arch/m68k/m68krec.mlb"
                                 ( addr )
                                 
 # 000 "/dev/stdout"
@@ -1661,7 +1780,7 @@ and conLobits =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 293 "arch/m68k/m68krec.mlb"
+# 330 "arch/m68k/m68krec.mlb"
                         ( cat [ "Lobits(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1678,7 +1797,7 @@ and conLink =
                     and w = arg2
                     in
                         
-# 278 "arch/m68k/m68krec.mlb"
+# 315 "arch/m68k/m68krec.mlb"
                         ( cat [ "Link(";x#mangled_text;",";string_of_int w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1692,7 +1811,7 @@ and conLink =
                         and w = arg2
                         in
                             
-# 144 "arch/m68k/m68krec.mlb"
+# 175 "arch/m68k/m68krec.mlb"
                             ( x#mangled_text )
                             
 # 000 "/dev/stdout"
@@ -1709,7 +1828,7 @@ and conLate =
                     and w = arg2
                     in
                         
-# 279 "arch/m68k/m68krec.mlb"
+# 316 "arch/m68k/m68krec.mlb"
                         ( cat [ "Late(";string;",";string_of_int w;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1725,7 +1844,7 @@ and conKill =
                     let any = arg1.any.Camlburg.action ()
                     in
                         
-# 300 "arch/m68k/m68krec.mlb"
+# 337 "arch/m68k/m68krec.mlb"
                         ( cat [ "Kill(";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1743,7 +1862,7 @@ and conGuarded =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 303 "arch/m68k/m68krec.mlb"
+# 340 "arch/m68k/m68krec.mlb"
                         ( cat [ "Guarded(";guard;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -1751,16 +1870,16 @@ and conGuarded =
             })
             ((update_inst
                 {Camlburg.cost =
-                    (arg1.cond.Camlburg.cost + arg2._Goto8.Camlburg.cost)
+                    (arg1.cond.Camlburg.cost + arg2._Goto11.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
                         let cond = arg1.cond.Camlburg.action ()
-                        and _v1 = arg2._Goto8.Camlburg.action ()
+                        and _v1 = arg2._Goto11.Camlburg.action ()
                         in
                             let symbol = _v1
                             in
                                 
-# 238 "arch/m68k/m68krec.mlb"
+# 275 "arch/m68k/m68krec.mlb"
                                 ( cat [m68k_bcond cond; " "; symbol] )
                                 
 # 000 "/dev/stdout"
@@ -1769,27 +1888,25 @@ and conGuarded =
                 inf)
 and conGoto =
     fun arg1 ->
-        (update__Goto12
-            {Camlburg.cost = (arg1.reg.Camlburg.cost)
+        (update__Goto11
+            {Camlburg.cost = (arg1.symbol.Camlburg.cost)
             ;Camlburg.action =
                 (fun () ->
-                    let target = arg1.reg.Camlburg.action () in target)
+                    let symbol = arg1.symbol.Camlburg.action () in symbol)
             })
-            ((update__Goto13
-                {Camlburg.cost = (arg1._Fetch15.Camlburg.cost)
+            ((update__Goto15
+                {Camlburg.cost = (arg1.reg.Camlburg.cost)
                 ;Camlburg.action =
                     (fun () ->
-                        let _v1 = arg1._Fetch15.Camlburg.action ()
-                        in
-                            let meml = _v1 in meml)
+                        let target = arg1.reg.Camlburg.action () in target)
                 })
-                ((update__Goto8
-                    {Camlburg.cost = (arg1.symbol.Camlburg.cost)
+                ((update__Goto16
+                    {Camlburg.cost = (arg1._Fetch18.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let symbol = arg1.symbol.Camlburg.action ()
+                            let _v1 = arg1._Fetch18.Camlburg.action ()
                             in
-                                symbol)
+                                let meml = _v1 in meml)
                     })
                     ((update_any
                         {Camlburg.cost = (arg1.any.Camlburg.cost)
@@ -1798,7 +1915,7 @@ and conGoto =
                                 let any = arg1.any.Camlburg.action ()
                                 in
                                     
-# 305 "arch/m68k/m68krec.mlb"
+# 342 "arch/m68k/m68krec.mlb"
                                     ( cat [ "Goto(";any;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -1814,7 +1931,7 @@ and conGoto =
                                             arg1.symbol.Camlburg.action ()
                                         in
                                             
-# 202 "arch/m68k/m68krec.mlb"
+# 239 "arch/m68k/m68krec.mlb"
                                             ( cat ["bra "; symbol] )
                                             
 # 000 "/dev/stdout"
@@ -1826,7 +1943,7 @@ and conGoto =
                                         let reg = arg1.reg.Camlburg.action ()
                                         in
                                             
-# 205 "arch/m68k/m68krec.mlb"
+# 242 "arch/m68k/m68krec.mlb"
                                             ( cat ["jmp ("; reg; ")"] )
                                             
 # 000 "/dev/stdout"
@@ -1835,143 +1952,134 @@ and conGoto =
                             inf))))
 and conFetch =
     fun arg1 arg2 ->
-        (update__Fetch15
+        (update__Fetch10
             {Camlburg.cost =
-                (arg1.meml.Camlburg.cost + (Camlburg.matches 32) arg2)
+                (arg1.abase.Camlburg.cost + (Camlburg.matches 32) arg2)
             ;Camlburg.action =
-                (fun () -> let meml = arg1.meml.Camlburg.action () in meml)
+                (fun () ->
+                    let abase = arg1.abase.Camlburg.action () in abase)
             })
-            ((update__Fetch2
-                {Camlburg.cost = (arg1.mem.Camlburg.cost)
+            ((update__Fetch18
+                {Camlburg.cost =
+                    (arg1.meml.Camlburg.cost + (Camlburg.matches 32) arg2)
                 ;Camlburg.action =
                     (fun () ->
-                        let mem = arg1.mem.Camlburg.action ()
-                        and x = arg2
-                        in
-                            (mem ,x))
+                        let meml = arg1.meml.Camlburg.action () in meml)
                 })
-                ((update__Fetch4
-                    {Camlburg.cost =
-                        (arg1._Mem5.Camlburg.cost
-                        +
-                        (Camlburg.matches 32) arg2)
+                ((update__Fetch2
+                    {Camlburg.cost = (arg1.mem.Camlburg.cost)
                     ;Camlburg.action =
                         (fun () ->
-                            let _v1 = arg1._Mem5.Camlburg.action ()
+                            let mem = arg1.mem.Camlburg.action ()
+                            and x = arg2
                             in
-                                let base = _v1 in base)
+                                (mem ,x))
                     })
-                    ((update__Fetch6
+                    ((update__Fetch4
                         {Camlburg.cost =
-                            (arg1.regl.Camlburg.cost
+                            (arg1._Mem5.Camlburg.cost
                             +
                             (Camlburg.matches 32) arg2)
                         ;Camlburg.action =
                             (fun () ->
-                                let base = arg1.regl.Camlburg.action ()
+                                let _v1 = arg1._Mem5.Camlburg.action ()
                                 in
-                                    base)
+                                    let base = _v1 in base)
                         })
-                        ((update__Fetch7
+                        ((update__Fetch6
                             {Camlburg.cost =
-                                (arg1.abase.Camlburg.cost
+                                (arg1.regl.Camlburg.cost
                                 +
                                 (Camlburg.matches 32) arg2)
                             ;Camlburg.action =
                                 (fun () ->
-                                    let abase = arg1.abase.Camlburg.action ()
+                                    let base = arg1.regl.Camlburg.action ()
                                     in
-                                        abase)
+                                        base)
                             })
-                            ((update_any
-                                {Camlburg.cost = (arg1.any.Camlburg.cost)
+                            ((update__Fetch8
+                                {Camlburg.cost = (arg1._Mem5.Camlburg.cost)
                                 ;Camlburg.action =
                                     (fun () ->
-                                        let any = arg1.any.Camlburg.action ()
-                                        and w = arg2
+                                        let
+                                            _v1 =
+                                            arg1._Mem5.Camlburg.action ()
+                                        and x = arg2
                                         in
-                                            
-# 282 "arch/m68k/m68krec.mlb"
-                                            ( cat [ "Fetch(";any;",";string_of_int w;")" ] )
-                                            
-# 000 "/dev/stdout"
-)
+                                            let base = _v1 in (base ,x))
                                 })
-                                ((update_areg
-                                    {Camlburg.cost =
-                                        (arg1.abase.Camlburg.cost)
+                                ((update_any
+                                    {Camlburg.cost = (arg1.any.Camlburg.cost)
                                     ;Camlburg.action =
                                         (fun () ->
                                             let
-                                                abase =
-                                                arg1.abase.Camlburg.action ()
+                                                any =
+                                                arg1.any.Camlburg.action ()
                                             and w = arg2
                                             in
                                                 
-# 156 "arch/m68k/m68krec.mlb"
-                                                ( abase )
+# 319 "arch/m68k/m68krec.mlb"
+                                                ( cat [ "Fetch(";any;",";string_of_int w;")" ] )
                                                 
 # 000 "/dev/stdout"
 )
                                     })
-                                    ((update_ccval
+                                    ((update_areg
                                         {Camlburg.cost =
-                                            (arg1.ccl.Camlburg.cost
-                                            +
-                                            (Camlburg.matches 32) arg2)
+                                            (arg1.abase.Camlburg.cost)
                                         ;Camlburg.action =
                                             (fun () ->
                                                 let
-                                                    ccl =
-                                                    arg1.ccl.Camlburg.action
+                                                    abase =
+                                                    arg1.abase.Camlburg.action
                                                         ()
+                                                and w = arg2
                                                 in
                                                     
-# 159 "arch/m68k/m68krec.mlb"
-                                                    ( () )
+# 187 "arch/m68k/m68krec.mlb"
+                                                    ( abase )
                                                     
 # 000 "/dev/stdout"
 )
                                         })
-                                        ((update_mem
+                                        ((update_ccval
                                             {Camlburg.cost =
-                                                (arg1.meml.Camlburg.cost)
+                                                (arg1.ccl.Camlburg.cost
+                                                +
+                                                (Camlburg.matches 32) arg2)
                                             ;Camlburg.action =
                                                 (fun () ->
                                                     let
-                                                        meml =
-                                                        arg1.meml.Camlburg.action
+                                                        ccl =
+                                                        arg1.ccl.Camlburg.action
                                                             ()
-                                                    and w = arg2
                                                     in
                                                         
-# 162 "arch/m68k/m68krec.mlb"
-                                                        ( meml )
+# 190 "arch/m68k/m68krec.mlb"
+                                                        ( () )
                                                         
 # 000 "/dev/stdout"
 )
                                             })
-                                            ((update_pc
+                                            ((update_mem
                                                 {Camlburg.cost =
-                                                    (arg1.pcl.Camlburg.cost
-                                                    +
-                                                    (Camlburg.matches 32)
-                                                        arg2)
+                                                    (arg1.meml.Camlburg.cost)
                                                 ;Camlburg.action =
                                                     (fun () ->
                                                         let
-                                                            pcl =
-                                                            arg1.pcl.Camlburg.action
+                                                            meml =
+                                                            arg1.meml.Camlburg.action
                                                                 ()
+                                                        and w = arg2
                                                         in
                                                             
-# 158 "arch/m68k/m68krec.mlb"
-                                                            ( () )
+# 193 "arch/m68k/m68krec.mlb"
+                                                            ( meml )
                                                             
 # 000 "/dev/stdout"
 )
                                                 })
-                                                ((update_pcv
+                                                ((update_pc
                                                     {Camlburg.cost =
                                                         (arg1.pcl.Camlburg.cost
                                                         +
@@ -1985,31 +2093,54 @@ and conFetch =
                                                                     ()
                                                             in
                                                                 
-# 208 "arch/m68k/m68krec.mlb"
+# 189 "arch/m68k/m68krec.mlb"
                                                                 ( () )
                                                                 
 # 000 "/dev/stdout"
 )
                                                     })
-                                                    ((update_reg
+                                                    ((update_pcv
                                                         {Camlburg.cost =
-                                                            (arg1.regl.Camlburg.cost)
+                                                            (arg1.pcl.Camlburg.cost
+                                                            +
+                                                            (Camlburg.matches
+                                                                32)
+                                                                arg2)
                                                         ;Camlburg.action =
                                                             (fun () ->
                                                                 let
-                                                                    regl =
-                                                                    arg1.regl.Camlburg.action
+                                                                    pcl =
+                                                                    arg1.pcl.Camlburg.action
                                                                         ()
-                                                                and w = arg2
                                                                 in
                                                                     
-# 148 "arch/m68k/m68krec.mlb"
-                                                                    ( regl )
+# 245 "arch/m68k/m68krec.mlb"
+                                                                    ( () )
                                                                     
 # 000 "/dev/stdout"
 )
                                                         })
-                                                        inf)))))))))))
+                                                        ((update_reg
+                                                            {Camlburg.cost =
+                                                                (arg1.regl.Camlburg.cost)
+                                                            ;Camlburg.action =
+                                                                (fun () ->
+                                                                    let
+                                                                        regl =
+                                                                        arg1.regl.Camlburg.action
+                                                                            ()
+                                                                    and
+                                                                        w =
+                                                                        arg2
+                                                                    in
+                                                                        
+# 179 "arch/m68k/m68krec.mlb"
+                                                                        ( regl )
+                                                                        
+# 000 "/dev/stdout"
+)
+                                                            })
+                                                            inf))))))))))))
 and conFalse =
     fun () ->
         (update_any
@@ -2017,7 +2148,7 @@ and conFalse =
             ;Camlburg.action =
                 (fun () ->
                     
-# 277 "arch/m68k/m68krec.mlb"
+# 314 "arch/m68k/m68krec.mlb"
                     ( cat [ "False" ] )
                     
 # 000 "/dev/stdout"
@@ -2034,7 +2165,7 @@ and conCond =
                     and any = arg2.any.Camlburg.action ()
                     in
                         
-# 290 "arch/m68k/m68krec.mlb"
+# 327 "arch/m68k/m68krec.mlb"
                         ( cat [ "Cond(";op;",";any;")" ] )
                         
 # 000 "/dev/stdout"
@@ -2048,7 +2179,7 @@ and conCond =
                         and ccval = arg2.ccval.Camlburg.action ()
                         in
                             
-# 236 "arch/m68k/m68krec.mlb"
+# 273 "arch/m68k/m68krec.mlb"
                             ( op )
                             
 # 000 "/dev/stdout"
@@ -2064,7 +2195,7 @@ and conBits =
                     let bits = arg1
                     in
                         
-# 280 "arch/m68k/m68krec.mlb"
+# 317 "arch/m68k/m68krec.mlb"
                         ( cat [ "Bits(b)" ] )
                         
 # 000 "/dev/stdout"
@@ -2075,7 +2206,7 @@ and conBits =
                     (let bits = arg1
                     in
                         
-# 143 "arch/m68k/m68krec.mlb"
+# 174 "arch/m68k/m68krec.mlb"
                         ( guard (Bits.width bits = 32)  )
                         
 # 000 "/dev/stdout"
@@ -2085,7 +2216,7 @@ and conBits =
                         let bits = arg1
                         in
                             
-# 143 "arch/m68k/m68krec.mlb"
+# 174 "arch/m68k/m68krec.mlb"
                             ( const32 bits )
                             
 # 000 "/dev/stdout"
@@ -2096,7 +2227,7 @@ and conBits =
                         (let bits = arg1
                         in
                             
-# 211 "arch/m68k/m68krec.mlb"
+# 248 "arch/m68k/m68krec.mlb"
                             ( guard (const_eq_int bits 4) )
                             
 # 000 "/dev/stdout"
@@ -2106,7 +2237,7 @@ and conBits =
                             let bits = arg1
                             in
                                 
-# 211 "arch/m68k/m68krec.mlb"
+# 248 "arch/m68k/m68krec.mlb"
                                 ( () )
                                 
 # 000 "/dev/stdout"
@@ -2117,7 +2248,7 @@ and conBits =
                             (let bits = arg1
                             in
                                 
-# 212 "arch/m68k/m68krec.mlb"
+# 249 "arch/m68k/m68krec.mlb"
                                 ( guard (const_eq_int bits (-4)) )
                                 
 # 000 "/dev/stdout"
@@ -2127,7 +2258,7 @@ and conBits =
                                 let bits = arg1
                                 in
                                     
-# 212 "arch/m68k/m68krec.mlb"
+# 249 "arch/m68k/m68krec.mlb"
                                     ( () )
                                     
 # 000 "/dev/stdout"
@@ -2136,7 +2267,7 @@ and conBits =
                         inf)))
 and conAnd =
     fun arg1 arg2 ->
-        (update__And23
+        (update__And26
             {Camlburg.cost =
                 (arg1._Fetch6.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -2146,7 +2277,7 @@ and conAnd =
                     in
                         let srcdst = _v1 in (srcdst ,y))
             })
-            ((update__And24
+            ((update__And27
                 {Camlburg.cost =
                     (arg1._Fetch6.Camlburg.cost + arg2.imm.Camlburg.cost)
                 ;Camlburg.action =
@@ -2165,7 +2296,7 @@ and conAnd =
                             and y = arg2.any.Camlburg.action ()
                             in
                                 
-# 286 "arch/m68k/m68krec.mlb"
+# 323 "arch/m68k/m68krec.mlb"
                                 ( cat [ "And(";x;", ";y;")" ] )
                                 
 # 000 "/dev/stdout"
@@ -2174,7 +2305,7 @@ and conAnd =
                     inf))
 and conAdd =
     fun arg1 arg2 ->
-        (update__Add19
+        (update__Add22
             {Camlburg.cost =
                 (arg1._Fetch6.Camlburg.cost + arg2.reg.Camlburg.cost)
             ;Camlburg.action =
@@ -2184,7 +2315,7 @@ and conAdd =
                     in
                         let srcdst = _v1 in (srcdst ,y))
             })
-            ((update__Add20
+            ((update__Add23
                 {Camlburg.cost =
                     (arg1._Fetch6.Camlburg.cost + arg2.imm.Camlburg.cost)
                 ;Camlburg.action =
@@ -2206,7 +2337,7 @@ and conAdd =
                                 and areg = arg2.areg.Camlburg.action ()
                                 in
                                     
-# 166 "arch/m68k/m68krec.mlb"
+# 197 "arch/m68k/m68krec.mlb"
                                     ( cat [imm; "("; areg; ")"] )
                                     
 # 000 "/dev/stdout"
@@ -2222,7 +2353,7 @@ and conAdd =
                                 and imm = arg2.imm.Camlburg.action ()
                                 in
                                     
-# 167 "arch/m68k/m68krec.mlb"
+# 198 "arch/m68k/m68krec.mlb"
                                     ( cat [imm; "("; areg; ")"] )
                                     
 # 000 "/dev/stdout"
@@ -2237,7 +2368,7 @@ and conAdd =
                                 and y = arg2.any.Camlburg.action ()
                                 in
                                     
-# 284 "arch/m68k/m68krec.mlb"
+# 321 "arch/m68k/m68krec.mlb"
                                     ( cat [ "Add(";x;", ";y;")" ] )
                                     
 # 000 "/dev/stdout"
@@ -2245,12 +2376,14 @@ and conAdd =
                         })
                         ((update_spdec
                             {Camlburg.cost =
-                                (arg1._Fetch7.Camlburg.cost
+                                (arg1._Fetch10.Camlburg.cost
                                 +
                                 arg2.minus_four.Camlburg.cost)
                             ;Camlburg.action =
                                 (fun () ->
-                                    let _v1 = arg1._Fetch7.Camlburg.action ()
+                                    let
+                                        _v1 =
+                                        arg1._Fetch10.Camlburg.action ()
                                     and
                                         minus_four =
                                         arg2.minus_four.Camlburg.action ()
@@ -2258,7 +2391,7 @@ and conAdd =
                                         let abase = _v1
                                         in
                                             
-# 213 "arch/m68k/m68krec.mlb"
+# 250 "arch/m68k/m68krec.mlb"
                                             ( () )
                                             
 # 000 "/dev/stdout"
@@ -2266,14 +2399,14 @@ and conAdd =
                             })
                             ((update_spinc
                                 {Camlburg.cost =
-                                    (arg1._Fetch7.Camlburg.cost
+                                    (arg1._Fetch10.Camlburg.cost
                                     +
                                     arg2.four.Camlburg.cost)
                                 ;Camlburg.action =
                                     (fun () ->
                                         let
                                             _v1 =
-                                            arg1._Fetch7.Camlburg.action ()
+                                            arg1._Fetch10.Camlburg.action ()
                                         and
                                             four =
                                             arg2.four.Camlburg.action ()
@@ -2281,7 +2414,7 @@ and conAdd =
                                             let abase = _v1
                                             in
                                                 
-# 222 "arch/m68k/m68krec.mlb"
+# 259 "arch/m68k/m68krec.mlb"
                                                 ( () )
                                                 
 # 000 "/dev/stdout"
@@ -2291,7 +2424,7 @@ and conAdd =
 
 
 
-# 59 "arch/m68k/m68krec.mlb"
+# 90 "arch/m68k/m68krec.mlb"
 
   let const = function
       | RP.Bool _                 -> error "boolean found"

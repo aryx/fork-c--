@@ -70,8 +70,21 @@ Index:
   `m68k-linux-gnu-as` needs `%`-prefixed register names (`%d0`, AT&T-style
   like x86) and byte-count `.align` (also like x86, not the power-of-two
   every other non-x86 ELF backend here uses) — both guessed wrong first.
-  Follow-up (not done): tiger-suite wiring, FP, `-O3`, sub-word memory
-  operands, real A0-A5 address-register allocation.
+  Follow-up (same day): `tests/run-tiger-m68k.sh` (`make test-tiger-m68k`)
+  reaches **15/15** on the first real attempt — the same bar as ppc/
+  riscv32/mips. Needed `qc--runtime.h`/`gcc-linux.c`'s NUM_REGS=16/
+  FP_REG=13 (confirmed via harness+probe, not hand-derived), a new
+  `runtime/m68kcont.s`, and a combined byteorder+float-none rewrite in
+  `runtime/Makefile`/the test scripts (m68k is the first backend here
+  needing both flips at once). Surfaced two real code-generation gaps the
+  hello milestone never exercised: every move-based load/store was
+  hardcoded to `.l` regardless of the actual width (would have silently
+  mis-sized byte/word memory writes), and the sign/zero-extending sub-word
+  load rules were unimplemented "TODO" stubs — both fixed with real
+  `.b`/`.w`/`.l` suffix selection and real extension sequences
+  (`extb.l`/`ext.l`/an `and.l` mask, since m68k's byte/word `move` only
+  touches the destination's low bits). Not done: FP, `-O3`, real A0-A5
+  address-register allocation.
 - [notes_riscv.txt](notes_riscv.txt) — how the RISC-V backends (RV64 and
   RV32, both new development, no upstream `.nw`) were built: mips.ml's
   Post design crossed with arm.ml's no-delay-slot call/cut_to ordering, at

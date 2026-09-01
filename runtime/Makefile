@@ -82,6 +82,17 @@ else ifeq ($(BACKEND),arm)
 CC32    ?= arm-linux-gnueabihf-gcc -march=armv7ve+fp -fno-stack-protector
 CONTOBJ  = $(B)/armcont.o
 QCFLAG   = -arm
+else ifeq ($(BACKEND),m68k)
+# claude: big-endian AND no FPU (arch/m68k/m68k.ml's T.float = Float.none) -
+# unlike every other BACKEND here, which needs at most ONE of the two
+# byteorder-flip/float-none rewrites in the $(B)/%.c-- rule below, m68k
+# needs BOTH at once. -fno-stack-protector included on the same precedent
+# as arm's own CC32 (untested whether m68k actually needs it - cheap
+# insurance, not a confirmed requirement the way arm's own comment
+# documents).
+CC32    ?= m68k-linux-gnu-gcc -fno-stack-protector
+CONTOBJ  = $(B)/m68kcont.o
+QCFLAG   = -m68k
 else ifeq ($(BACKEND),riscv32)
 # claude: Ubuntu ships no riscv32-linux-gnu glibc at all (unlike every
 # other BACKEND here) - see docs/claude_notes/notes_riscv.txt. CC32 here
@@ -153,7 +164,7 @@ CC32    ?= clang -arch x86_64
 CONTOBJ  = $(B)/amd64machocont.o
 QCFLAG   = -amd64-mach-o
 else
-$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, riscv32, riscv64, alpha, arm64, amd64, arm64-mach-o or amd64-mach-o)
+$(error unknown BACKEND=$(BACKEND) - expected x86, ppc, sparc, mips, arm, m68k, riscv32, riscv64, alpha, arm64, amd64, arm64-mach-o or amd64-mach-o)
 endif
 
 # Overridable so an installed, read-only copy can build elsewhere:
@@ -220,6 +231,8 @@ $(B)/mipscont.o: mipscont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/armcont.o: armcont.s | $(B)
 	$(CC32) -c $< -o $@
+$(B)/m68kcont.o: m68kcont.s | $(B)
+	$(CC32) -c $< -o $@
 $(B)/riscv32cont.o: riscv32cont.s | $(B)
 	$(CC32) -c $< -o $@
 $(B)/riscv32_syscalls.o: riscv32_syscalls.c | $(B)
@@ -262,6 +275,12 @@ ifeq ($(filter $(BACKEND),ppc sparc),$(BACKEND))
 else ifeq ($(BACKEND),arm)
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed 's/^target byteorder little\(.*\);/target byteorder little float "none"\1;/' > $@
+else ifeq ($(BACKEND),m68k)
+# claude: m68k needs BOTH the byteorder flip (ppc/sparc's rewrite) AND the
+# float "none" pragma (arm's rewrite) at once - see this BACKEND's own CC32
+# comment above.
+	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
+	  | sed 's/^target byteorder little\(.*\);/target byteorder big float "none"\1;/' > $@
 else ifeq ($(filter $(BACKEND),riscv64 alpha arm64 amd64 arm64-mach-o amd64-mach-o),$(BACKEND))
 	awk '{print} /^target byteorder/ && !d {print "$(GLOBALS_DECL)"; d=1}' $< \
 	  | sed -e 's/^target byteorder little;/target byteorder little wordsize 64 pointersize 64;/' \
@@ -274,4 +293,4 @@ $(B)/%.o: $(B)/%.c--
 	$(QC) $(QCFLAG) -stop .o -o $@ $<
 
 clean:
-	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-riscv32 build-riscv64 build-alpha build-arm64 build-amd64 build-arm64-mach-o build-amd64-mach-o
+	rm -rf $(B) build-x86 build-ppc build-sparc build-mips build-arm build-m68k build-riscv32 build-riscv64 build-alpha build-arm64 build-amd64 build-arm64-mach-o build-amd64-mach-o

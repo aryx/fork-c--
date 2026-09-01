@@ -13,6 +13,39 @@ by hand this session, not on the machine by default) + `qemu-m68k` (was
 already installed). `configure`'s m68k `detect_backend` block picks this
 up automatically once installed.
 
+Follow-up (same day): `tests/run-tiger-m68k.sh` (`make test-tiger-m68k`)
+reaches **15/15** on the first real attempt against the full tests/tiger/
+suite - the same bar as ppc/riscv32/mips, beating sparc/arm's own lower
+scores. Runtime wiring needed: `qc--runtime.h`/`gcc-linux.c`'s
+`NUM_REGS`/`FP_REG` (16 total register-index slots, `FP_REG=13` for `%a6`,
+confirmed via the same throwaway-OCaml-harness-plus-compiled-probe method
+as every other backend, not hand-derived - `m68k-linux-gnu-gcc
+-fno-omit-frame-pointer` confirmed `%a6`/`%fp` is its own frame-pointer
+register too, so no ARM32-Thumb-style mismatch to reconcile); a new
+`runtime/m68kcont.s` (an `illegal`-trapping stub, arm/mips/ppc/sparc's own
+pattern); and a `runtime/Makefile`/`run-tiger-m68k.sh`/
+`regenerate-m68k.sh` byteorder-AND-float-none combined rewrite, since
+m68k is the first backend here needing *both* flips at once (every other
+backend needs at most one). The only real code-generation gaps the tiger
+suite (much larger, more varied C-- than hello_m68k.c--) surfaced beyond
+the hello milestone: (1) every move-based load/store rule was hardcoded to
+".l" regardless of the actual store width, silently emitting a 4-byte
+write for what should have been a 1-byte one (`m68k-linux-gnu-gcc`
+compiling fine, but real byte-level Tiger string/char code would have
+silently corrupted adjacent memory at runtime, not just failed to
+assemble); (2) the sign/zero-extending sub-word load rules were
+placeholder "TODO" stubs that didn't actually extend anything. Both fixed
+in `m68krec.mlb` with real `.b`/`.w`/`.l` suffix selection (a `suffix`
+helper) and real extension sequences (`extb.l`/`ext.l` for sign, an
+`and.l` mask for zero) - m68k's plain byte/word `move` only ever touches
+the destination's low bits, leaving the rest as leftover garbage, so both
+extension paths need a second instruction regardless. These surfaced as
+assembler-level "junk at end of line" errors on the fallback `<...>`
+marker text (a real compile-time signal, not the m68k.ml background's own
+silent-runtime-corruption class of bug), caught building
+`tests/tiger/stdlibcmm.c--` via `regenerate-m68k.sh`, before any test
+program was even run.
+
 Design, and where it deliberately departs from the original sketch
 ------------------------------------------------------------------
 - Byte order big-endian, no FP (`T.float = Float.none`, matching arm.ml).
@@ -109,15 +142,14 @@ Other empirically-confirmed m68k-linux-gnu-as quirks (guessed wrong first)
   comment marker AND also happens to be ARM's reason for needing
   "%progbits" in the first place (ARM's own comment char IS "@").
 
-Known gaps / not done this session
+Known gaps / not done
 ------------------------------------------------------------------
-- Tiger-suite wiring (tests/run-tiger-m68k.sh, tests/expected/
-  tiger-m68k.txt, a runtime/ m68k branch) - later stage, modeled on
-  tests/run-tiger-arm.sh, not attempted here.
-- No floating point, no `-O3` testing, no sub-word (byte/word) memory
-  operand support beyond what this one demo exercises.
+- No floating point, no `-O3` testing (tests/run-tiger-m68k.sh only runs
+  at the default -O0, matching ppc/riscv32/mips's own tiger-suite scripts).
 - A0-A5 (dynamically-allocated address registers, real m68k addressing
   modes like `(An)+`/`-(An)`/indexed) are not modeled at all - would need
   the genuine `Space.Standard32.a`/`v` split this session deliberately
   avoided (see "Design" above) if real Tiger array/pointer-heavy programs
-  ever need it for code quality, not just correctness.
+  ever need it for code quality, not just correctness. 15/15 on the
+  existing tests/tiger/ suite suggests this isn't blocking anything today.
+- tests/tiger64/ (the bits64 tiger suite) doesn't apply - m68k is 32-bit.
