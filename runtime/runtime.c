@@ -54,6 +54,24 @@ static int normal_change(Cmm_Activation *a) {
 
   vfp = a->vfp;
   a->pc      = *(Cmm_Codeptr*)locptr(a, calleedata->return_addressp);
+  /* claude: real SPARC "call" hardware stores the call instruction's own
+   * address (not +4/+8) into the return register - the same fact
+   * Post.return already compensates for via its "jmpl %i7+8" epilogue
+   * (see arch/sparc/sparc.ml's `return` comment). But return_addressp
+   * hands back that same raw, unadjusted value, and this is a SEPARATE
+   * consumer: Cmm_lookup_entry below needs the actual resumption pc
+   * (call+8, skipping the call and its delay-slot nop) to match the
+   * pcmap table's own keys, which are built from the real continuation
+   * label placed after both instructions. Without this, every SPARC
+   * frame-walk (tig_gc's root scan, exception unwinding) looked up the
+   * wrong pc, got NULL back, and silently treated a live C-- frame as
+   * the C/host boundary - skipping its GC roots entirely. Confirmed via
+   * gdb: a real qsort.tig run had callee return_addressp = 0x1d69c (the
+   * call instruction itself) while the pcmap table's real entry for
+   * that call site's continuation was 0x1d6a4 = 0x1d69c + 8. */
+#ifdef __sparc__
+  a->pc = (Cmm_Codeptr)((char *)a->pc + 8);
+#endif
   update_saved_regs(a, a);
   /*s: possibly shout about caller's EBP */
   #define NOISY 0
