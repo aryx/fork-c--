@@ -1293,7 +1293,15 @@ session from a separate tool call (`timeout --signal=INT`, a bare
 reliably wedges instead of interrupting; if a breakpoint might not be
 hit, use `ignore <bpnum> <count>` or a bounded number of scripted
 `continue`s inside the *same* batch script instead of planning to
-interrupt from outside it.
+interrupt from outside it. One more wrinkle found later reusing this
+same setup repeatedly for a string of follow-on bugs: a `pkill` issued
+right before starting a *replacement* qemu instance - even on a
+freshly chosen, never-before-used port - reliably made that next
+`run_in_background` launch fail outright (empty log file, no process
+ever appears in `ps`). Stopped calling `pkill` at all and just started
+each new qemu fresh; every one of those launches worked on the first
+try. If a previous session's qemu needs replacing, prefer just moving
+to a new port over trying to kill the old one first.
 
 
 Tooling traps in this particular working copy
