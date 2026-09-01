@@ -245,8 +245,9 @@ inst:       Store(regl, freg, 32)
 
 
 (*x: rules(mipsrec.nw) *)
+(* claude: same missing-delay-slot bug as the Goto(reg)/jr rule below - unconditional "j" also has a delay slot, and whatever real instruction the code layout happens to place right after it (e.g. the fall-through block's own first instruction) executed unconditionally before the jump. Lucky for forloop's own backward loop-closing "j" (the stray instruction was a dead register load), but not safe in general. *)
 inst:       Goto(symbol)
-            {: cat ["j"; " "; symbol] :}
+            {: cat ["j"; " "; symbol; "\n\tnop"] :}
 
 (* claude: this rule had no delay-slot filler either - the Guarded rule's comment below claiming "mirrors the jr/longjmp rules elsewhere that already fill their own delay slot" was wrong about this one: it's the PLAIN "jr $31" function-return sequence every epilogue goes through, and objdump confirmed zero delay-slot instruction, so the next function's first prologue instruction silently executed on every single return - root cause of forloop.c--/etc. hanging even after the %mul/%quot/branch-nop fixes ("hello" only "passed" because tiger_main's own return is the last thing that runs before process exit, so the stray corruption never mattered there). *)
 inst:       Goto(reg)
