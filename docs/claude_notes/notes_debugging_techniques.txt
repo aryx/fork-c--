@@ -1222,6 +1222,80 @@ notification path) rather than splitting a live session across multiple
 tool calls in this harness.
 
 
+37. A stale, "leftover" register value from a previous call can be a real
+    clue, not just noise - if you catch it in the debugger deliberately
+    or by accident
+---------------------------------------------------------------------------
+Chasing SPARC's "GC never reaches tiger_main's own frame" mystery (open
+since a previous session, see sparc-backend-status memory), a `continue`
+issued one call too many landed the debugger back in `tig_gc`'s very
+first line, `void* tig_gc(Cmm_Cont* k) {` - before its own root-scan loop
+variable `a` had been assigned anything at all *this* call. Printing `a`
+anyway (out of habit, not expecting anything) showed `rtdata = <empty>`,
+`pc = 0x1d69c` - not garbage-looking noise, but a coherent, real-looking
+struct value. It was leftover stack content from the *previous* call to
+`tig_gc` (C doesn't zero locals), specifically that previous call's own
+final value of `a` right before its loop terminated - which is exactly
+the one piece of state the original investigation wanted and hadn't
+managed to capture cleanly. A breakpoint one line later would have
+overwritten it with real current-call data and this would never have been
+seen. General shape: when a debugger stops somewhere unexpected reachable
+only by an off-by-one in your own script (one `continue`/`next` too many),
+inspect the "wrong" state anyway before restarting - stack memory holding
+a previous call's final values is a legitimate, sometimes-easier way to
+see "what did the last iteration end with" than reconstructing it through
+extra print statements or watchpoints.
+
+That struct's `pc = 0x1d69c` was then cross-checked against a raw hex
+dump of the actual pcmap table read straight out of the binary
+(`objdump -s --start-address=<table start> --stop-address=<table end>`,
+entry 33's technique) - `0x1d69c` doesn't appear anywhere in the table,
+but `0x1d6a4` (exactly 8 bytes later) does, pointing at a real,
+well-formed descriptor. That one arithmetic coincidence (+8, the exact
+constant SPARC's `ret`/`restore` idiom already adds when returning) was
+enough to name the bug outright without any further instrumentation:
+`arch/sparc/sparc.ml`'s `call`/`callr` RTL claims to store `pc+4` into
+the return register (matching the pattern every other backend's real
+hardware actually does), but real SPARC `call` hardware ignores that
+claim and stores its own bare address regardless - a fact the return
+path (`Post.return`'s `"jmpl %i7+8"`) already knew and compensated for,
+but a second, independent consumer of the same raw value
+(`runtime.c`'s `normal_change`, used for the GC/exception stack walk, not
+for returning) did not. Fixed with a single `#ifdef __sparc__ pc += 8`
+at the point of use - see sparc-backend-status memory for the full
+writeup. General shape, sharpening entry 32's own lesson: when a value's
+*storage* convention doesn't match its *documented* RTL semantics on one
+particular target, grep for *every* place that value is later
+*consumed*, not just the one consumer you're currently debugging -
+"only one caller needed fixing before" is not evidence there's only one
+caller.
+
+Also worth recording what worked reliably for the gdb-over-qemu-
+gdbserver session itself, in contrast to a much flakier attempt earlier
+the same day (chasing a MIPS bug): do the *entire* interaction - connect,
+every breakpoint, every continue, every print, quit - inside one
+`gdb-multiarch -q -batch -x scriptfile` invocation, with `target remote
+localhost:PORT` as the very *first* line inside the script file itself
+(not a trailing `-ex` on the command line - `-x` and `-ex` do not
+reliably interleave in command-line order, and a script that assumes
+`-ex` ran first will silently fail every subsequent line with "The
+program is not being run"). Start the backgrounded `qemu-... -g PORT
+...` with the Bash tool's own `run_in_background: true` parameter, not
+shell `(cmd &)` - and confirm it's actually listening
+(`ss -tlnp | grep PORT`) in a separate call before trusting it, since a
+qemu that failed to bind (a stale process still holding the port from an
+earlier attempt) exits near-instantly and a `gdb` that dials in half a
+second later just times out with a confusing, generic "could not
+connect" that looks like a gdb problem rather than a "nothing is
+listening" one. Never try to interrupt a live, already-running gdb
+session from a separate tool call (`timeout --signal=INT`, a bare
+`pkill`) to break out of a blocked `continue` - in this sandbox that
+reliably wedges instead of interrupting; if a breakpoint might not be
+hit, use `ignore <bpnum> <count>` or a bounded number of scripted
+`continue`s inside the *same* batch script instead of planning to
+interrupt from outside it.
+
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.
