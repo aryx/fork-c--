@@ -56,11 +56,11 @@ RUN apt-get install -y diffutils libpcre3-dev libpcre2-dev
 RUN apt-get install -y gcc-i686-linux-gnu libc6-dev-i386-cross qemu-user
 
 # The other cross toolchains "make test-all" needs (ppc, riscv32, riscv64,
-# alpha, amd64, arm64, mips, sparc, arm - see ./configure's own comments for
-# why each one and which qc-- backend it serves). qemu-user above already
+# alpha, amd64, arm64, mips, sparc, arm, m68k - see ./configure's own comments
+# for why each one and which qc-- backend it serves). qemu-user above already
 # ships the qemu-ppc/qemu-riscv32/qemu-riscv64/qemu-alpha/qemu-x86_64/
-# qemu-aarch64/qemu-mipsel/qemu-sparc32plus/qemu-arm binaries these need,
-# on any host arch (it's an "any"-arch package bundling every emulator
+# qemu-aarch64/qemu-mipsel/qemu-sparc32plus/qemu-arm/qemu-m68k binaries these
+# need, on any host arch (it's an "any"-arch package bundling every emulator
 # regardless of what it's installed on).
 #
 # gcc-aarch64-linux-gnu, unlike gcc-x86-64-linux-gnu below, is a real
@@ -102,7 +102,8 @@ RUN apt-get install -y \
       gcc-mipsel-linux-gnu binutils-mipsel-linux-gnu libc6-dev-mipsel-cross \
       gcc-sparc64-linux-gnu binutils-sparc64-linux-gnu libc6-dev-sparc64-cross \
       libc6-dev-sparc-sparc64-cross gcc-multilib-sparc64-linux-gnu \
-      gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf libc6-dev-armhf-cross
+      gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf libc6-dev-armhf-cross \
+      gcc-m68k-linux-gnu binutils-m68k-linux-gnu libc6-dev-m68k-cross
 RUN if [ "$(dpkg --print-architecture)" != amd64 ]; then \
       apt-get install -y gcc-x86-64-linux-gnu; \
     fi
