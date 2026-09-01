@@ -248,8 +248,9 @@ inst:       Store(regl, freg, 32)
 inst:       Goto(symbol)
             {: cat ["j"; " "; symbol] :}
 
+(* claude: this rule had no delay-slot filler either - the Guarded rule's comment below claiming "mirrors the jr/longjmp rules elsewhere that already fill their own delay slot" was wrong about this one: it's the PLAIN "jr $31" function-return sequence every epilogue goes through, and objdump confirmed zero delay-slot instruction, so the next function's first prologue instruction silently executed on every single return - root cause of forloop.c--/etc. hanging even after the %mul/%quot/branch-nop fixes ("hello" only "passed" because tiger_main's own return is the last thing that runs before process exit, so the stray corruption never mattered there). *)
 inst:       Goto(reg)
-            {: cat ["jr"; " "; reg] :}
+            {: cat ["jr"; " "; reg; "\n\tnop"] :}
 (*x: rules(mipsrec.nw) *)
 next:       Add(pc,const)       {: () :}
 (* claude: the original "-- s/addr/symbol/g ?" note was right to be suspicious - addr also matches reg (as "(reg)"), which is not valid jal syntax at all (jal only ever takes a direct label/address, never a register). Tightened to symbol here and added a separate jalr rule below for the register case (an indirect call, e.g. through a function pointer) - found via runtime/thread.c-- emitting "jal ($2)", which mipsel-linux-gnu-as rejected outright. *)

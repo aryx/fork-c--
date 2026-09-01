@@ -1,8 +1,8 @@
-arrays FAIL
+arrays PASS
 colmajor FAIL
-exceptions FAIL
-forloop FAIL
-funcall FAIL
+exceptions PASS
+forloop PASS
+funcall PASS
 hello PASS
 merge FAIL
 qsort FAIL
