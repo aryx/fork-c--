@@ -2,7 +2,8 @@
 # the x86 backend, also reused as-is for -mips since its default 32-bit
 # little-endian metrics already match mipsel; hello_ppc.c-- for ppc-elf;
 # hello_sparc.c-- for -sparc; hello_alpha.c-- for -alpha; hello_arm.c--
-# for -arm; hello_riscv64.c-- for -riscv64; hello_arm64.c--/hello_amd64.c--
+# for -arm; hello_m68k.c-- for -m68k; hello_riscv64.c-- for -riscv64;
+# hello_arm64.c--/hello_amd64.c--
 # for -arm64/-amd64, and reused as-is for their own -arm64-mach-o/
 # -amd64-mach-o Mach-O siblings - same source, same metrics, just a
 # different flag/toolchain) end to end. arm64/amd64 are the only pair with
@@ -37,6 +38,7 @@
 #      sudo apt install gcc-alpha-linux-gnu libc6.1-dev-alpha-cross   # alpha
 #      sudo apt install gcc-mipsel-linux-gnu libc6-dev-mipsel-cross   # mips (mipsel)
 #      sudo apt install gcc-arm-linux-gnueabihf libc6-dev-armhf-cross # arm (armhf)
+#      sudo apt install gcc-m68k-linux-gnu libc6-dev-m68k-cross       # m68k
 #      sudo apt install gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu \
 #           libc6-dev-riscv64-cross                                  # riscv64
 #      sudo apt install gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
@@ -47,27 +49,28 @@
 #    sparc has no plain 32-bit sparc-linux-gnu cross compiler on Ubuntu -
 #    only sparc64, which targets 32-bit SPARC V8 via -m32 (same biarch
 #    trick x86_64 hosts use for -m32 i386; see hello_sparc.c--'s own
-#    comment). alpha, mips(el), arm(hf), and riscv64 are native cross
+#    comment). alpha, mips(el), arm(hf), m68k, and riscv64 are native cross
 #    toolchains, no -m32 trick needed. Ubuntu ships no riscv32-linux-gnu
 #    glibc toolchain at all - see docs/claude_notes/notes_riscv.txt for how
 #    the -riscv32 backend is verified instead.
 #
 # 3. To *run* the results on a host that isn't natively x86/ppc/sparc/
-#    alpha/mips/arm/riscv64, qemu's user-mode emulators:
+#    alpha/mips/arm/m68k/riscv64, qemu's user-mode emulators:
 #
 #      sudo apt install qemu-user
 #
-#    RUNX86/RUNPPC/RUNSPARC/RUNALPHA/RUNMIPS/RUNARM/RUNRISCV64 below name
-#    qemu-i386/qemu-ppc/qemu-sparc32plus/qemu-alpha/qemu-mipsel/qemu-arm/
-#    qemu-riscv64 explicitly rather than relying on binfmt_misc, which is a
-#    host-wide registration a container inherits only by accident - the
+#    RUNX86/RUNPPC/RUNSPARC/RUNALPHA/RUNMIPS/RUNARM/RUNM68K/RUNRISCV64 below
+#    name qemu-i386/qemu-ppc/qemu-sparc32plus/qemu-alpha/qemu-mipsel/
+#    qemu-arm/qemu-m68k/qemu-riscv64 explicitly rather than relying on
+#    binfmt_misc, which is a host-wide registration a container inherits
+#    only by accident - the
 #    kernel resolves the interpreter path in the container's own mount
 #    namespace, so the same image runs on one machine and not another. On a
 #    genuine host of that architecture, nothing is needed: "make RUNX86=
-#    run-x86" (or RUNPPC=/RUNSPARC=/RUNALPHA=/RUNMIPS=/RUNARM=/RUNRISCV64=
-#    with the matching run-* target). qemu-sparc32plus is required for sparc
-#    specifically, not plain qemu-sparc - see hello_sparc.c--'s own comment
-#    for why.
+#    run-x86" (or RUNPPC=/RUNSPARC=/RUNALPHA=/RUNMIPS=/RUNARM=/RUNM68K=/
+#    RUNRISCV64= with the matching run-* target). qemu-sparc32plus is
+#    required for sparc specifically, not plain qemu-sparc - see
+#    hello_sparc.c--'s own comment for why.
 #
 #    We link -static, so no sysroot/-L argument is required to run either
 #    binary.
@@ -81,6 +84,7 @@ CCSPARC ?= sparc64-linux-gnu-gcc -m32
 CCALPHA ?= alpha-linux-gnu-gcc
 CCMIPS  ?= mipsel-linux-gnu-gcc
 CCARM   ?= arm-linux-gnueabihf-gcc -march=armv7ve+fp
+CCM68K  ?= m68k-linux-gnu-gcc
 CCRISCV64 ?= riscv64-linux-gnu-gcc
 ASRISCV32 ?= riscv64-linux-gnu-as -march=rv32imac -mabi=ilp32
 LDRISCV32 ?= riscv64-linux-gnu-ld -m elf32lriscv -static -e _start
@@ -97,16 +101,17 @@ RUNSPARC ?= $(shell command -v qemu-sparc32plus 2>/dev/null)
 RUNALPHA ?= $(shell command -v qemu-alpha      2>/dev/null)
 RUNMIPS  ?= $(shell command -v qemu-mipsel     2>/dev/null)
 RUNARM   ?= $(shell command -v qemu-arm        2>/dev/null)
+RUNM68K  ?= $(shell command -v qemu-m68k       2>/dev/null)
 RUNRISCV64 ?= $(shell command -v qemu-riscv64  2>/dev/null)
 RUNRISCV32 ?= $(shell command -v qemu-riscv32  2>/dev/null)
 RUNARM64 ?= $(shell command -v qemu-aarch64    2>/dev/null)
 RUNAMD64 ?= $(shell command -v qemu-x86_64     2>/dev/null)
 
-.PHONY: all x86 ppc sparc alpha mips arm riscv64 riscv32 arm64 amd64 arm64-mach-o amd64-mach-o \
-        run run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 \
+.PHONY: all x86 ppc sparc alpha mips arm m68k riscv64 riscv32 arm64 amd64 arm64-mach-o amd64-mach-o \
+        run run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-m68k run-riscv64 run-riscv32 \
         run-arm64 run-amd64 run-arm64-mach-o run-amd64-mach-o clean
 
-all: x86 ppc sparc alpha mips arm riscv64 riscv32 arm64 amd64
+all: x86 ppc sparc alpha mips arm m68k riscv64 riscv32 arm64 amd64
 
 $(B):
 	mkdir -p $(B)
@@ -188,6 +193,19 @@ arm: $(B)/hello_arm
 
 run-arm: arm
 	@$(RUNARM) ./$(B)/hello_arm; echo "[exit status $$?]"
+
+# ---------------------------------------------------------------------------
+# m68k (hello_m68k.c--, byteorder big; needs its own demo file for both
+# reasons combined - big-endian like ppc/sparc, and no FPU like arm, so the
+# "float none" pragma is required too - see hello_m68k.c--'s own comment)
+# ---------------------------------------------------------------------------
+$(B)/hello_m68k: hello_m68k.c-- | $(B)
+	QC_AS="$(CCM68K)" QC_LD="$(CCM68K) -static" $(QC) -m68k -globals -o $@ $<
+
+m68k: $(B)/hello_m68k
+
+run-m68k: m68k
+	@$(RUNM68K) ./$(B)/hello_m68k; echo "[exit status $$?]"
 
 # ---------------------------------------------------------------------------
 # riscv64 (hello_riscv64.c--, 64-bit little-endian, the -riscv64 backend)
@@ -274,7 +292,7 @@ amd64-mach-o: $(B)/hello_amd64_mach_o
 run-amd64-mach-o: amd64-mach-o
 	@./$(B)/hello_amd64_mach_o; echo "[exit status $$?]"
 
-run: run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-riscv64 run-riscv32 run-arm64 run-amd64
+run: run-x86 run-ppc run-sparc run-alpha run-mips run-arm run-m68k run-riscv64 run-riscv32 run-arm64 run-amd64
 
 clean:
 	rm -rf $(B)

@@ -129,6 +129,11 @@ module Post = struct
     let talloc = Postexpander.Alloc.temp
     (*x: m68k postexpander *)
     let icontext = Context.of_space Spaces.t
+    (* claude: TODO(m68k) - addresses are computed in the same D-register
+     * context as plain integers, not a genuine address-register context.
+     * Deliberate, not an oversight - see arch/m68k/m68kregs.ml's header
+     * comment (the A0-A5 split was left unmodeled for a real soundness
+     * reason) and docs/claude_notes/notes_m68k.txt's "Known gaps". *)
     let acontext = icontext
     let itempwidth = 32
     let fcontext = (fun x y -> unimp "no floating point on m68k"), fun _ -> false

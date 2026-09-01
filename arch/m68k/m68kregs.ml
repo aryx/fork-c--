@@ -41,11 +41,17 @@
  * actually needs - a6 (frame pointer) and a7 (stack pointer, real m68k
  * hardware SP) - into this same 'r' space, at the two fixed indices above
  * the 8 general-purpose d0-d7 slots. A0-A5 are simply not modeled: nothing
- * here needs a dynamically-allocated address register yet (hello.c-- and the
- * tiger runtime's simple integer/pointer code do not), and this can grow
- * into a real 'a'/'v' split later without disturbing this fixed-index
- * scheme (see notes in docs/claude_notes/ once this backend's own note gets
- * written).
+ * here needs a dynamically-allocated address register yet (hello.c-- and
+ * the full tests/tiger/ suite - 15/15, see tests/run-tiger-m68k.sh - both
+ * pass without them), and this can grow into a real 'a'/'v' split later
+ * without disturbing this fixed-index scheme.
+ *
+ * TODO(m68k): if real indexed/pointer-heavy code ever needs more than one
+ * live address value at once (today only a0, the fixed materialize-and-
+ * dereference scratch below, and a6/a7 exist), that is the point to revisit
+ * this decision - see docs/claude_notes/notes_m68k.txt's "Known gaps"
+ * section for the full soundness argument against just widening the
+ * existing 'r' space instead.
  *)
 
 module R  = Rtl
