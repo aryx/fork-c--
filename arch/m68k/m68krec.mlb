@@ -1,0 +1,305 @@
+%head {:
+  (* claude: no upstream m68krec.nw exists to port (see m68kregs.ml's header
+   * comment: there is no upstream qc-- m68k code at all, and no TODO/
+   * staging either). This grammar is written from scratch, modeled on
+   * arch/arm/armrec.mlb's shape (%head/%tail structure, exp/loc/effect/
+   * guarded dispatch, the opaque cc-register comparison family) crossed
+   * with arch/x86/x86rec.mlb's call/return shape (m68k's "jsr"/"rts" push/
+   * pop the return address on the stack in hardware, like x86's "call"/
+   * "ret" - see m68k.ml's header comment). Only the subset of m68k actually
+   * needed by demos/hello_m68k.c-- (and, incidentally, the tiger runtime's
+   * simple integer/pointer code) is covered: immediate/symbol
+   * materialization into a data register, register-to-register move,
+   * frame/stack-relative addressing (base must be a6/a7 - real m68k
+   * hardware requires an *address* register as a memory-addressing base,
+   * never a data register, see m68kregs.ml's header comment on the
+   * flattened register space), jsr/rts, and the two-address add/sub/and/
+   * mul/quot family (an explicit "move.l srcdst,dst" is always emitted
+   * before the op itself, unconditionally - see that rule's own comment
+   * for why an equality guard doesn't work and isn't needed either).
+   *)
+  open Nopoly
+  module RP = Rtl.Private
+  module RU = Rtlutil
+  module Up = Rtl.Up
+  module Dn = Rtl.Dn
+  module SS = Space.Standard32
+
+  exception Error of string
+  let error msg = raise (Error msg)
+  let sprintf   = Printf.sprintf
+
+  let guard p = if p then 0 else Camlburg.inf_cost
+
+  (* claude: signed decimal, not unsigned - same reasoning as
+   * armrec.mlb's const32: a negative displacement/immediate must print as
+   * e.g. "-4", not "4294967292", or m68k-linux-gnu-as rejects/misreads it. *)
+  let const32 b =
+      assert (Bits.width b = 32);
+      Nativeint.to_string (Bits.S.to_native b)
+
+  let const_eq_int b n =
+      Bits.width b = 32 && Nativeint.to_int (Bits.S.to_native b) = n
+
+  let cat     = String.concat ""
+
+  let reg n   = M68kregs.regname n
+
+  let m68k_bcond = function
+      | "m68k_eq" -> "beq"
+      | "m68k_ne" -> "bne"
+      | "m68k_lt" -> "blt"
+      | "m68k_le" -> "ble"
+      | "m68k_gt" -> "bgt"
+      | "m68k_ge" -> "bge"
+      | "m68k_ls" -> "bls"
+      | "m68k_hi" -> "bhi"
+      | op        -> error (sprintf "not an m68k condition: %s" op)
+:}
+%tail {:
+  let const = function
+      | RP.Bool _                 -> error "boolean found"
+      | RP.Link(s,_,w)            -> conLink s w
+      | RP.Diff _                 -> error "PIC not supported"
+      | RP.Bits(b)                -> conBits b
+      | RP.Late(s,w)              -> error (sprintf "late constant %s found" s)
+
+  let rec exp = function
+      | RP.Const(k)               -> const k
+      | RP.Fetch(l,w)             -> conFetch (loc l) w
+      | RP.App(("add", [w]), [x; y])  -> conAdd (exp x) (exp y)
+      | RP.App(("sub", [w]), [x; y])  -> conSub (exp x) (exp y)
+      | RP.App(("and", [w]), [x; y])  -> conAnd (exp x) (exp y)
+      | RP.App(("mul", [w]), [x; y])  -> conMul (exp x) (exp y)
+      | RP.App(("quot", [w]), [x; y]) -> conQuot (exp x) (exp y)
+      | RP.App(("lobits", [_;_]), [x]) -> exp x
+      | RP.App((("m68k_subcc"), [w]), [x; y]) -> conSubcc (exp x) (exp y)
+      | RP.App((("m68k_eq"|"m68k_ne"|"m68k_lt"|"m68k_le"|"m68k_gt"|"m68k_ge"
+                |"m68k_ls"|"m68k_hi") as op, [32]), [c]) ->
+          conCond op (exp c)
+      | RP.App((o,_),_)           -> error (sprintf "unknown operator %s" o)
+
+  and loc = function
+      | RP.Reg((sp,_,_),i,w)      -> conReg sp i
+      | RP.Mem(('m',_,_),w,e,ass) -> conMem (exp e)
+      | RP.Mem((sp,_,_),_,_,_)    -> error (sprintf "mem-space space %c" sp)
+      | RP.Var   (s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Global(s,i,w)          -> error (sprintf "var %s found" s)
+      | RP.Slice _                -> error "cannot handle slice"
+
+  let effect = function
+      | RP.Store(RP.Reg(('c',_,_),i,w),r,_)
+        when i = SS.indices.SS.pc   -> conGoto (exp r)
+      | RP.Store(l,e,w)           -> conStore (loc l) (exp e) w
+      | RP.Kill(l)                -> error "cannot handle kill"
+
+  let guarded g stmt = match g with
+      | RP.Const(RP.Bool b)       -> if b then effect stmt else conNop ()
+      | _                         -> conGuarded (exp g) (effect stmt)
+
+  let rec geffects = function
+      | []                        -> conNop ()
+      | [g, s]                    -> guarded g s
+      | (g, s) :: t               -> conPar (guarded g s) (geffects t)
+
+  let rtl (RP.Rtl es) = geffects es
+
+  let rtl_to_string = RU.ToString.rtl
+
+  let dump msg rtl =
+      List.iter prerr_string
+      [ "error in recognizer: "
+      ; msg
+      ; " on "
+      ; rtl_to_string rtl
+      ; "\n"
+      ]
+
+  let to_string r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          Printf.sprintf "\t%s" (plan.inst.Camlburg.action ())
+      with
+          | Camlburg.Uncovered -> cat ["not an instruction: "
+                                      ; rtl_to_string r
+                                      ]
+          | Error msg          -> ( dump msg r
+                                  ; sprintf "error: %s" (rtl_to_string r)
+                                  )
+
+  let is_instruction r =
+      try
+          let plan = rtl (Dn.rtl r) in
+          plan.inst.Camlburg.cost < 100
+      with
+          | Camlburg.Uncovered -> false
+          | Error msg          -> ( dump msg r
+                                  ; false
+                                  )
+:}
+%term
+  bits n x w
+%%
+const:      Bits(bits) [{: guard (Bits.width bits = 32)  :}]{: const32 bits :}
+symbol:     Link(x, w:int)      {: x#mangled_text :}
+
+r:          Reg('r', n:int)  {: n :}
+regl:       r   {: reg r :}
+reg:        Fetch(regl,w:int)   {: regl :}
+
+pcl:        Reg('c',  0) {: () :}
+ccl:        Reg('c',  2) {: () :}
+
+(* claude: only a6/a7 may ever be a memory base - real m68k hardware requires an address register there, never a data register (see m68kregs.ml's header comment). *)
+abase:      Reg('r', n:int) [{: guard (n = M68kregs.fp_ix || n = M68kregs.sp_ix) :}]
+                                 {: reg n :}
+areg:       Fetch(abase,w:int)  {: abase :}
+
+pc:         Fetch(pcl,32)       {: () :}
+ccval:      Fetch(ccl,32)       {: () :}
+
+meml:       Mem(addr)     {: addr :}
+mem:        Fetch(meml,w:int)   {: meml :}
+
+(* claude: m68k's "(An)"/"d16(An)" addressing modes, a minimal subset (see %head comment) - displacement then "(base)", opposite of ARM's "[base, #imm]" style. *)
+addr:       areg                {: cat ["("; areg; ")"] :}
+addr:       Add(imm,areg)       {: cat [imm; "("; areg; ")"] :}
+addr:       Add(areg,imm)       {: cat [imm; "("; areg; ")"] :}
+
+imm:        const               {: const :}
+
+(* claude: operand of "move.l #X,dn" - a numeric constant or a symbol (m68k-as encodes a bare "#_sym" as an absolute relocation, no literal-pool trick needed unlike armrec.mlb's "ldr rX,=X"). *)
+limm:       const               {: const  :}
+limm:       symbol              {: symbol :}
+
+(* claude: "li"/"la" equivalent - one rule covers every 32-bit constant and every symbol address. *)
+inst:       Store(regl, limm, 32)
+            {: cat ["move.l #"; limm; ","; regl] :}
+
+inst:       Store(regl, mem, 32)
+            {: cat ["move.l "; mem; ","; regl] :}
+
+inst:       Store(regl, Sx(Fetch(mem,x:int)), w:int)
+            {: cat ["move.l "; mem; ","; regl; " | sign-extend TODO"] :}
+
+inst:       Store(regl, Zx(Fetch(mem,x:int)), w:int)
+            {: cat ["move.l "; mem; ","; regl; " | zero-extend TODO"] :}
+
+inst:       Store(meml, reg, w:int)
+            {: cat ["move.l "; reg; ","; meml] :}
+
+inst:       Store(regl, reg, 32)
+            {: cat ["move.l "; reg; ","; regl] :}
+
+(* claude: real code (hello_m68k.c--'s own incoming iargc/iargv stack parameters) computes an address as a plain D-register value (icontext/acontext are the same context here, see m68k.ml's header comment) and then dereferences it - something real m68k hardware can only do through an address register. These two rules materialize such a value into the dedicated a0 scratch register first (one extra "move.l dN,a0", same role as arm.ml's r12/ip scratch), then dereference through it - two real instructions from one production, same trick as armrec.mlb's own immediate-materialization rules. *)
+inst:       Store(dst:regl, Fetch(Mem(Fetch(base:regl,32)),32), 32)
+            {: cat ["move.l "; base; ",%a0\n\tmove.l (%a0),"; dst] :}
+
+inst:       Store(Mem(Fetch(base:regl,32)), src:reg, 32)
+            {: cat ["move.l "; base; ",%a0\n\tmove.l "; src; ",(%a0)"] :}
+
+inst:       Goto(symbol)
+            {: cat ["bra "; symbol] :}
+
+inst:       Goto(reg)
+            {: cat ["jmp ("; reg; ")"] :}
+
+(* claude: recognizes m68k.ml's Post.call/callr - "jsr" pushes the return address onto the stack in hardware (see m68k.ml's push'), same shape as arch/x86/x86rec.mlb's own "call" rule; "pcv"/"spdec" name the two pieces of that push. *)
+pcv:        Fetch(pcl,32)                   {: () :}
+(* claude: a named nonterminal, not a nested `Bits(b:bits)` pattern inside spdec/spinc directly - mlburg guards can only see terminal captures bound at their own production's top level, not values from a nested sub-match (only available later, inside the action closure). *)
+(* claude: m68k.ml's push'/pop_with both build their sp adjustment via RU.addk (always an Add node, with a possibly-negative encoded constant), never a Sub node - hit as a real mismatch ("not an instruction") before this fix. *)
+four:       Bits(bits) [{: guard (const_eq_int bits 4) :}] {: () :}
+minus_four: Bits(bits) [{: guard (const_eq_int bits (-4)) :}] {: () :}
+spdec:      Add(Fetch(abase,32), minus_four) {: () :}
+
+inst:       Par(Goto(symbol), Par(Store(meml,pcv,32), Store(abase,spdec,32)))
+            {: cat ["jsr "; symbol] :}
+
+inst:       Par(Goto(target:reg), Par(Store(meml,pcv,32), Store(abase,spdec,32)))
+            {: cat ["jsr ("; target; ")"] :}
+
+(* claude: recognizes m68k.ml's Post.return (pop_with) - "rts" pops the return address like real hardware; the pop-and-jump half is folded into a plain Goto by this file's own %tail's `effect` function. *)
+spinc:      Add(Fetch(abase,32), four) {: () :}
+inst:       Par(Goto(Fetch(meml,32)), Store(abase,spinc,32))
+            {: "rts" :}
+
+(* claude: recognizes m68k.ml's Post.cut_to's jump-through-register-while-updating-sp RTL, same role as armrec.mlb's own analogous rule. *)
+inst:       Par(Goto(target:reg), Store(abase, nsp:reg, 32))
+            {: cat ["move.l "; nsp; ",%a7\n\tjmp ("; target; ")"] :}
+
+(* claude: Post.subflags's "cmp"-equivalent - not exercised by demos/hello_m68k.c-- (no branches there), kept for parity with armrec.mlb/tiger runtime needs. *)
+inst:       Store(ccl, Subcc(x:reg,y:reg), 32)
+            {: cat ["cmp.l "; y; ","; x] :}
+inst:       Store(ccl, Subcc(x:reg,y:imm), 32)
+            {: cat ["cmp.l #"; y; ","; x] :}
+
+cond:       Cond(op:string, ccval) {: op :}
+inst:       Guarded(cond,Goto(symbol))
+            {: cat [m68k_bcond cond; " "; symbol] :}
+
+(* claude: two-address add/sub/and/mul/quot family. Originally assumed (per m68k.ml's Post.binop, which always builds this shape with the store target and the App's first operand being the literal same Rtl.loc) that srcdst always equals dst, printing just "op.l y,dst" - WRONG: M68kcall.ml's own stack-relative address computations (e.g. resolving the virtual frame pointer via Vfprewrite.replace_with) build the exact same "Store(freshtemp, Add(Fetch(sp,32), imm), 32)" shape with a genuinely DIFFERENT temp as the destination, and this rule fired for those too, silently using an uninitialized/wrong register as the implicit first operand - a real bug that only surfaced as a segfault at runtime (uninitialized d0 dereferenced), not a compile-time error. A dst==srcdst guard can't fix this (mlburg guards only see terminal fields of the CURRENT rule's own top-level pattern - hit "Unbound value dst"/"n1" trying), so instead always emit an explicit "move.l srcdst,dst" first, unconditionally - redundant (but harmless) self-move whenever srcdst already is dst (Post.binop's own case), and now actually correct for the Vfprewrite case too. *)
+inst:       Store(dst:regl, Add(Fetch(srcdst:regl,32),y:reg), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tadd.l "; y; ","; dst] :}
+
+inst:       Store(dst:regl, Add(Fetch(srcdst:regl,32),y:imm), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tadd.l #"; y; ","; dst] :}
+
+inst:       Store(dst:regl, Sub(Fetch(srcdst:regl,32),y:reg), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tsub.l "; y; ","; dst] :}
+
+inst:       Store(dst:regl, Sub(Fetch(srcdst:regl,32),y:imm), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tsub.l #"; y; ","; dst] :}
+
+inst:       Store(dst:regl, And(Fetch(srcdst:regl,32),y:reg), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tand.l "; y; ","; dst] :}
+
+inst:       Store(dst:regl, And(Fetch(srcdst:regl,32),y:imm), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tand.l #"; y; ","; dst] :}
+
+(* claude: real 68000 "muls"/"mulu" only produce a 16x16->32 result into a data register directly - close enough to this two-address shape for now. *)
+inst:       Store(dst:regl, Mul(Fetch(srcdst:regl,32),y:reg), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tmuls.l "; y; ","; dst] :}
+
+inst:       Store(dst:regl, Mul(Fetch(srcdst:regl,32),y:imm), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tmuls.l #"; y; ","; dst] :}
+
+inst:       Store(dst:regl, Quot(Fetch(srcdst:regl,32),y:reg), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tdivs.l "; y; ","; dst] :}
+
+inst:       Store(dst:regl, Quot(Fetch(srcdst:regl,32),y:imm), 32)
+            {: cat ["move.l "; srcdst; ","; dst; "\n\tdivs.l #"; y; ","; dst] :}
+
+inst:       Nop() {: "nop" :}
+
+inst: any [100]         {: cat ["<";any;">"] :}
+
+any : True  ()          {: cat [ "True"  ] :}
+any : False ()          {: cat [ "False" ] :}
+any : Link(x, w:int)    {: cat [ "Link(";x#mangled_text;",";string_of_int w;")" ] :}
+any : Late(string,w:int){: cat [ "Late(";string;",";string_of_int w;")" ] :}
+any : Bits(bits)        {: cat [ "Bits(b)" ] :}
+
+any : Fetch (any, w:int){: cat [ "Fetch(";any;",";string_of_int w;")" ] :}
+
+any : Add(x:any, y:any) {: cat [ "Add(";x;", ";y;")" ] :}
+any : Sub(x:any, y:any) {: cat [ "Sub(";x;", ";y;")" ] :}
+any : And(x:any, y:any) {: cat [ "And(";x;", ";y;")" ] :}
+any : Mul(x:any, y:any) {: cat [ "Mul(";x;", ";y;")" ] :}
+any : Quot(x:any, y:any){: cat [ "Quot(";x;", ";y;")" ] :}
+any : Subcc(x:any,y:any){: cat [ "Subcc(";x;", ";y;")" ] :}
+any : Cond(op:string,any) {: cat [ "Cond(";op;",";any;")" ] :}
+any : Sx(any)           {: cat [ "Sx(";any;")" ] :}
+any : Zx(any)           {: cat [ "Zx(";any;")" ] :}
+any : Lobits(any)       {: cat [ "Lobits(";any;")" ] :}
+
+any : Mem(any)   {: cat [ "Mem(";any;")" ] :}
+any : Reg(char, n:int)  {: cat [ "Reg('";Char.escaped char;"',"; string_of_int n;")" ] :}
+
+any : Store (dst:any, src:any, w:int)
+                        {: cat [ "Store(";dst;",";src;",";string_of_int w;")" ] :}
+any : Kill(any)         {: cat [ "Kill(";any;")" ] :}
+
+any : Guarded(guard:any, any)
+                        {: cat [ "Guarded(";guard;",";any;")" ] :}
+any : Par(l:any, r:any) {: cat [ "Par(";l;",";r;")" ] :}
+any : Goto(any)         {: cat [ "Goto(";any;")" ] :}

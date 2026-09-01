@@ -42,6 +42,36 @@ Index:
   cross-backend GC/register-allocator bug (a GC-required temp isn't kept
   live across every call site) — not specific to ARM, deliberately not
   fixed here (deep, shared, real regression risk to other backends).
+- [notes_m68k.txt](notes_m68k.txt) — how the m68k backend (new development,
+  no upstream `.nw`, no `TODO/` staging) was built: byte order big-endian,
+  no FP (arm.ml's shape), call/return modeled on x86.ml instead of arm.ml
+  (m68k's "jsr"/"rts" push/pop the return address on the stack in
+  hardware, no link register). Reached the `hello_m68k.c--` milestone
+  (`./bin/qc -m68k -globals -o hello_m68k demos/hello_m68k.c--`, verified
+  5x for flakiness), with `gcc-m68k-linux-gnu`/`libc6-dev-m68k-cross`
+  installed by hand (not on the machine by default; `qemu-m68k` already
+  was). Notable finds: a genuine split D-register/A-register space (the
+  plan's original sketch, and what `docs/adding_backend.tex` itself
+  recommends for "the 68000") was abandoned mid-session for a real
+  soundness reason — several m68k instructions require a Dn destination
+  specifically, so a shared allocatable pool could let the allocator
+  legally miscolor one onto an address register — replaced with arm.ml's
+  own trick (fold a6/a7, plus one new dedicated a0 scratch register, into
+  fixed high indices of a single flat register space); a real correctness
+  bug where a two-address instruction rule assumed "the first operand is
+  always the destination" (true for `Post.binop`, false for the calling-
+  convention machinery's own virtual-frame-pointer resolution) compiled
+  clean but only surfaced as a SIGSEGV at runtime, tracked down via `qemu
+  -strace` and `qemu-m68k -g` + `gdb-multiarch`; and a real mlburg
+  limitation (guards can only see terminal fields of a rule's own
+  top-level pattern, never a nested nonterminal's value) that made the
+  "obvious" fix (guard the equality at match time) impossible, forcing an
+  unconditional extra move instead. Also empirically confirmed real
+  `m68k-linux-gnu-as` needs `%`-prefixed register names (`%d0`, AT&T-style
+  like x86) and byte-count `.align` (also like x86, not the power-of-two
+  every other non-x86 ELF backend here uses) — both guessed wrong first.
+  Follow-up (not done): tiger-suite wiring, FP, `-O3`, sub-word memory
+  operands, real A0-A5 address-register allocation.
 - [notes_riscv.txt](notes_riscv.txt) — how the RISC-V backends (RV64 and
   RV32, both new development, no upstream `.nw`) were built: mips.ml's
   Post design crossed with arm.ml's no-delay-slot call/cut_to ordering, at

@@ -1,0 +1,34 @@
+/* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
+ *
+ * claude: same program as hello.c--, just byteorder big (like hello_ppc.c--)
+ * plus an explicit `float "none"` target pragma - arch/m68k/m68k.ml
+ * declares T.float = Float.none (this backend has no floating-point
+ * support at all, same as arm.ml), whereas plain hello.c-- relies on
+ * Metrics.default's "ieee754" - see demos/hello_arm.c--'s own comment for
+ * the full explanation of why the pragma is required.
+ *
+ *   qc -m68k -globals -stop .s -o hello_m68k.s demos/hello_m68k.c--
+ *   m68k-linux-gnu-as hello_m68k.s -o hello_m68k.o
+ *   m68k-linux-gnu-gcc -static hello_m68k.o -o hello_m68k
+ *   qemu-m68k hello_m68k          # prints "hello, world!", exits 0
+ *
+ * -globals is required at link time even for this one-file program: see
+ * driver/main.ml's comment on the exportglobals flag. m68k-linux-gnu-* is
+ * this fork's m68k cross toolchain (gcc-m68k-linux-gnu + libc6-dev-m68k-
+ * cross - not installed by default on this machine, unlike arm/alpha/
+ * riscv64's cross toolchains, see configure's m68k detect_backend block).
+ */
+
+target byteorder big float "none";
+
+import bits32 printf;
+export main, my_data;
+
+section "data" {
+  my_data: bits8 [] "hello, world!\n\0";
+}
+
+foreign "C" main("unsigned" bits32 iargc, "address" bits32 iargv) {
+  foreign "C" printf("address" my_data);
+  foreign "C" return(0);
+}

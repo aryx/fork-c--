@@ -74,6 +74,8 @@ CCMIPS=${CCMIPS:-}
 RUN_MIPS=${RUN_MIPS:-}
 CCARM=${CCARM:-}
 RUN_ARM=${RUN_ARM:-}
+CCM68K=${CCM68K:-}
+RUN_M68K=${RUN_M68K:-}
 CCRISCV32=${CCRISCV32:-}
 RUN_RISCV32=${RUN_RISCV32:-}
 CCRISCV64=${CCRISCV64:-}
@@ -93,6 +95,7 @@ for arg in "$@"; do
         --cc-alpha=*)   CCALPHA="${arg#--cc-alpha=}" ;;
         --cc-mips=*)    CCMIPS="${arg#--cc-mips=}" ;;
         --cc-arm=*)     CCARM="${arg#--cc-arm=}" ;;
+        --cc-m68k=*)    CCM68K="${arg#--cc-m68k=}" ;;
         --cc-riscv32=*) CCRISCV32="${arg#--cc-riscv32=}" ;;
         --cc-riscv64=*) CCRISCV64="${arg#--cc-riscv64=}" ;;
         --cc-arm64=*)   CCARM64="${arg#--cc-arm64=}" ;;
@@ -110,6 +113,7 @@ for arg in "$@"; do
             echo "  --cc-alpha=CMD     the 64-bit alpha C compiler (-alpha)"
             echo "  --cc-mips=CMD      the 32-bit mipsel C compiler (-mips)"
             echo "  --cc-arm=CMD       the 32-bit arm C compiler (-arm)"
+            echo "  --cc-m68k=CMD      the 32-bit m68k C compiler (-m68k)"
             echo "  --cc-riscv32=CMD   the 32-bit riscv32 C compiler (-riscv32)"
             echo "  --cc-riscv64=CMD   the 64-bit riscv64 C compiler (-riscv64)"
             echo "  --cc-arm64=CMD     the 64-bit arm64 C compiler (-arm64, Linux/ELF)"
@@ -310,6 +314,15 @@ detect_backend arm CCARM "arm-linux-gnueabihf-gcc -march=armv7ve+fp" \
     "sudo apt install gcc-arm-linux-gnueabihf libc6-dev-armhf-cross" \
     RUN_ARM qemu-arm "arm*"
 
+# m68k: 32-bit big-endian Motorola 68000. Ubuntu ships a real m68k-linux-gnu
+# glibc cross toolchain, no freestanding workaround needed - like arm/mips/
+# ppc/alpha, unlike riscv32. qemu-m68k is commonly already present even
+# without the cross-compiler (qemu-user ships every target's user-mode
+# emulator together).
+detect_backend m68k CCM68K "m68k-linux-gnu-gcc" \
+    "sudo apt install gcc-m68k-linux-gnu libc6-dev-m68k-cross" \
+    RUN_M68K qemu-m68k "m68k"
+
 # riscv32: 32-bit little-endian RISC-V (RV32IMAC). Ubuntu ships no
 # riscv32-linux-gnu glibc at all, so CCRISCV32 is a bare-metal
 # (gcc-riscv64-unknown-elf) compiler targeting rv32imac/ilp32 against
@@ -410,6 +423,10 @@ fi
     echo "# The 32-bit arm toolchain, for qc--'s -arm backend (optional)"
     echo "export CCARM=$CCARM"
     echo "export RUN_ARM=$RUN_ARM"
+    echo
+    echo "# The 32-bit m68k toolchain, for qc--'s -m68k backend (optional)"
+    echo "export CCM68K=$CCM68K"
+    echo "export RUN_M68K=$RUN_M68K"
     echo
     echo "# The 32-bit riscv32 (bare-metal/picolibc) toolchain, for qc--'s"
     echo "# -riscv32 backend (optional)"

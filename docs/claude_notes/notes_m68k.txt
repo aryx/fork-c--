@@ -1,0 +1,123 @@
+notes_m68k.txt — how the m68k backend was built (new development, no
+upstream .nw, no TODO/ staging - the same situation arm/riscv32/riscv64/
+arm64 were in).
+Written 2026-09-01, against the commit that reaches the hello_m68k.c--
+milestone.
+
+Verified: `./bin/qc -m68k -globals -o hello_m68k demos/hello_m68k.c--`
+followed by `qemu-m68k hello_m68k` prints "hello, world!" and exits 0,
+checked 5x in a row for flakiness. The one-shot form (`qc -m68k -globals
+-ld "m68k-linux-gnu-gcc -static" -o hello_m68k demos/hello_m68k.c--`) also
+works. Toolchain: `gcc-m68k-linux-gnu` + `libc6-dev-m68k-cross` (installed
+by hand this session, not on the machine by default) + `qemu-m68k` (was
+already installed). `configure`'s m68k `detect_backend` block picks this
+up automatically once installed.
+
+Design, and where it deliberately departs from the original sketch
+------------------------------------------------------------------
+- Byte order big-endian, no FP (`T.float = Float.none`, matching arm.ml).
+  Both proven-safe choices - mips/ppc/sparc already exercise big-endian in
+  production, and arm.ml already proves the "no FP" backend shape.
+- The plan going in called for a genuine split D-register/A-register
+  space (`Space.Standard32`'s `a`/`v` generators, which
+  docs/adding_backend.tex:155-157 explicitly motivates with "the 68000").
+  That was abandoned mid-implementation for a real correctness reason, not
+  just caution: several m68k instruction forms (plain ADD/SUB/AND/CMP)
+  require a Dn destination specifically, so letting the register allocator
+  freely color a temp used as such a destination onto an address register
+  would be unsound. Instead, `m68kregs.ml` folds everything into ONE `'r'`
+  space of 11 slots - d0-d7 (0-7, the only dynamically-allocated pool),
+  a0 (8, a dedicated scratch - see below), a6 (9, frame pointer), a7 (10,
+  stack pointer, real hardware SP) - the same trick arm.ml already uses
+  for r13/r14 within its own single 16-slot space. A0-A5 are simply not
+  modeled; nothing needed dynamically-allocated address registers yet.
+- A `Rtl.Identity`-aggregation register space must have exactly ONE width
+  (`Space.checked`'s own assert) - every other backend's GPR space is
+  single-width `[32]`; an initial `[8;16;32]` (modeling real D-register
+  byte/word/long sub-access) failed this assert at binary startup, not at
+  `dune build` time. Fixed to `[32]`; sub-word register access is future
+  work, not needed by anything built so far.
+- Call/return modeled on x86.ml, not arm.ml: m68k's "jsr"/"rts" push/pop
+  the return address on the *stack* in hardware, like x86's "call"/"ret" -
+  there is no link register the way ARM/MIPS/SPARC have one. `m68k.ml`'s
+  `push'`/`pop_with` and `Post.call`/`callr`/`return` are x86.ml's shape;
+  `m68kcall.ml`'s `ra = amem vfp` (a memory location, not a register) and
+  its prolog starting incoming args at `vfp+4` (skipping the saved-ra
+  word) are x86call.ml's shape. The real m68k SysV C ABI passes *every*
+  argument on the stack too (no register-passed args at all) - matters for
+  real interop, not just internal consistency, since demos/hello_m68k.c--
+  calls the real libc printf.
+- `m68kbackend.ml`'s stack-frame `layout` also had to be modeled on
+  x86backend.ml's `layout_c`/`ra_block` (a return-address slot explicitly
+  reserved in the frame), not arm.ml's simpler version - copying arm's
+  `layout` verbatim as a first draft produced "Eqn.t: unsolved equations"
+  at compile time (a stack-layout equation system that assumes register-
+  based ra has no free variable for a return-address slot's placement).
+
+A dedicated a0 scratch register - found the hard way
+------------------------------------------------------------------
+Real code (this milestone's own `iargc`/`iargv` incoming stack parameters)
+computes an address as a plain D-register value and then dereferences it -
+something real m68k hardware can only do through an address register.
+`m68krec.mlb` handles this with two dedicated rules that materialize such
+a value into a0 first (`move.l dN,%a0` then `move.l (%a0),dst` or the
+reverse for stores) - the same role arm.ml's r12/ip scratch register
+plays for its own immediate-materialization trick. This needed its own
+fixed register slot (index 8) since a6/a7 are already spoken for.
+
+The mlburg guard-visibility trap (the most time-consuming bug)
+------------------------------------------------------------------
+Tried repeatedly to guard a two-address instruction rule
+(`Store(dst:regl, Add(Fetch(srcdst:regl,32), y), 32)`) on `dst =$= srcdst`
+before accepting "Post.binop always builds it that way" on faith. Every
+attempt failed to compile ("Unbound value dst" / "Unbound value n1"), even
+using a raw `Reg('r', n:int)` terminal capture instead of the `regl`
+nonterminal - the real constraint is that **mlburg guards can only see
+terminal fields bound directly at the CURRENT rule's own top-level
+pattern**, never a value that only exists after a nested nonterminal's own
+reduction/action runs, regardless of nesting depth or terminal-vs-
+nonterminal-ness. Dropped the guard and assumed equality "by construction"
+instead (since `Post.binop` does always build it that way) - but that
+assumption was actually **wrong**: `M68kcall.ml`'s own stack-relative
+address computations (resolving the virtual frame pointer via
+`Vfprewrite.replace_with`) build the exact same tree shape with a
+genuinely different destination temp, and the rule fired for those too,
+silently using an uninitialized register as the implicit first operand.
+This compiled cleanly and only surfaced as a SIGSEGV at runtime (qemu
+`-strace` showed it crashing deep in glibc/TLS-adjacent code before ever
+reaching a byte of program logic that looked wrong; `qemu-m68k -g` +
+`gdb-multiarch` pinned it to `main+38`, dereferencing address 0x14 held in
+the scratch register a0). Fixed by unconditionally emitting an explicit
+"move.l srcdst,dst" ahead of every two-address op, accepting a redundant
+self-move in the (common) case where srcdst already is dst - correct in
+both cases, at a small code-quality cost `-O1`+'s optimizer already knows
+how to clean up.
+
+Other empirically-confirmed m68k-linux-gnu-as quirks (guessed wrong first)
+------------------------------------------------------------------
+- Registers need "%" prefixes (`%d0`, `%a7`) - AT&T-style like x86, not
+  the bare "d0"/"a7" real Motorola assemblers use. Guessed bare names
+  first; every instruction with an operand failed ("operands mismatch" /
+  "syntax error") until this was fixed.
+- ".align N" is a plain BYTE count, like x86's own `.align`, not a
+  power-of-two exponent like every OTHER non-x86 ELF backend here (mips/
+  sparc/ppc-elf/alpha/arm) - confirmed via `objdump -h` on a hand-
+  assembled test file, not guessed.
+- The end-of-line comment character ("|") and the ELF section-type
+  spelling ("@progbits", the generic one, not ARM's own "%progbits") were
+  both guessed and turned out right - no clash, since "|" isn't m68k's
+  comment marker AND also happens to be ARM's reason for needing
+  "%progbits" in the first place (ARM's own comment char IS "@").
+
+Known gaps / not done this session
+------------------------------------------------------------------
+- Tiger-suite wiring (tests/run-tiger-m68k.sh, tests/expected/
+  tiger-m68k.txt, a runtime/ m68k branch) - later stage, modeled on
+  tests/run-tiger-arm.sh, not attempted here.
+- No floating point, no `-O3` testing, no sub-word (byte/word) memory
+  operand support beyond what this one demo exercises.
+- A0-A5 (dynamically-allocated address registers, real m68k addressing
+  modes like `(An)+`/`-(An)`/indexed) are not modeled at all - would need
+  the genuine `Space.Standard32.a`/`v` split this session deliberately
+  avoided (see "Design" above) if real Tiger array/pointer-heavy programs
+  ever need it for code quality, not just correctness.
