@@ -46,7 +46,7 @@ add_mod_256_49(bits32 pfp,bits32 x,bits32 y) {
   temp_57 = temp_53;
   return(temp_57);
 }}
-section "data" {
+section "data" { align 4;
  add_mod_256_49_gc_data:
    bits32[] { 4,1,0,0,0 };
    bits32[] { 5,1,0,0,0,0 };
@@ -113,7 +113,7 @@ compute_bit_58(bits32 pfp,bits32 bit_value) {
   temp_83 = temp_79;
   return(temp_83);
 }}
-section "data" {
+section "data" { align 4;
  compute_bit_58_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 9,1,0,0,0,0,0,0,0,0 };
@@ -170,7 +170,7 @@ xor_50(bits32 pfp,bits32 x,bits32 y) {
   temp_84 = bits32[%add(fp, 12)];
   return(temp_84);
 }}
-section "data" {
+section "data" { align 4;
  xor_50_gc_data:
    bits32[] { 4,1,0,0,0 };
    bits32[] { 20,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -206,7 +206,7 @@ init_sbox_51(bits32 pfp) {
   temp_91 = 0;
   return(temp_91);
 }}
-section "data" {
+section "data" { align 4;
  init_sbox_51_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 8,1,0,0,0,1,0,0,0 };
@@ -249,7 +249,7 @@ swap_93(bits32 pfp,bits32 i,bits32 j) {
   temp_103 = 0;
   return(temp_103);
 }}
-section "data" {
+section "data" { align 4;
  swap_93_gc_data:
    bits32[] { 4,1,0,0,0 };
    bits32[] { 12,1,0,0,0,0,0,0,0,0,0,0,0 };
@@ -309,7 +309,7 @@ encrypt_94(bits32 pfp,bits32 ch) {
   temp_112 =  xor_50(bits32[bits32[fp]],bits32[%add(fp, 12)],bits32[%add(fp, 4)]) also aborts ;
   return(temp_112);
 }}
-section "data" {
+section "data" { align 4;
  encrypt_94_gc_data:
    bits32[] { 4,1,0,0,0 };
    bits32[] { 18,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -357,7 +357,7 @@ cypher_52(bits32 pfp) {
   temp_121 = bits32[%add(fp, 12)];
   return(temp_121);
 }}
-section "data" {
+section "data" { align 4;
  cypher_52_gc_data:
    bits32[] { 5,1,0,0,1,1 };
    bits32[] { 12,1,1,1,0,1,1,1,1,0,0,0,0 };
@@ -398,7 +398,7 @@ tiger_main(bits32 pfp) {
   temp_124 = temp_123;
   return(temp_124);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 8,1,1,0,1,1,0,0,0 };

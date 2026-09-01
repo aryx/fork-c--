@@ -10,6 +10,6 @@ queens PASS
 rc4 FAIL
 rb FAIL
 rbshort FAIL
-sieve FAIL
+sieve PASS
 wf FAIL
 wff FAIL

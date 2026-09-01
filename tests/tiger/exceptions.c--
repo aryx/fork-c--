@@ -52,7 +52,7 @@ throws_int_25(bits32 pfp,bits32 i) {
   temp_33 = temp_29;
   return(temp_33);
 }}
-section "data" {
+section "data" { align 4;
  throws_int_25_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 4,1,0,0,0 };
@@ -67,7 +67,7 @@ f_26(bits32 pfp,bits32 i) {
   temp_34 =  throws_int_25(bits32[fp],bits32[%add(fp, 4)]) also aborts ;
   return(temp_34);
 }}
-section "data" {
+section "data" { align 4;
  f_26_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 3,1,0,0 };
@@ -178,7 +178,7 @@ tiger_main(bits32 pfp) {
   temp_79 = temp_78;
   return(temp_79);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 1,1 };
    bits32[] { 24,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };

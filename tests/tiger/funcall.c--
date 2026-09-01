@@ -45,7 +45,7 @@ a_a_28(bits32 pfp,bits32 c,bits32 d) {
   temp_32 =  fb_27(bits32[bits32[fp]],bits32[%add(fp, 4)]) also aborts ;
   return(temp_32);
 }}
-section "data" {
+section "data" { align 4;
  a_a_28_gc_data:
    bits32[] { 3,1,0,1 };
    bits32[] { 6,1,0,1,0,0,0 };
@@ -69,7 +69,7 @@ fa_26(bits32 pfp,bits32 a,bits32 b) {
   temp_37 = temp_33;
   return(temp_37);
 }}
-section "data" {
+section "data" { align 4;
  fa_26_gc_data:
    bits32[] { 3,1,0,1 };
    bits32[] { 5,1,0,1,0,0 };
@@ -84,7 +84,7 @@ fb_27(bits32 pfp,bits32 d) {
   temp_39 =  fa_26(bits32[fp],bits32[%add(fp, 4)],Lgbl_38) also aborts ;
   return(temp_39);
 }}
-section "data" {
+section "data" { align 4;
  fb_27_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 3,1,0,0 };
@@ -105,7 +105,7 @@ tiger_main(bits32 pfp) {
   temp_44 = temp_43;
   return(temp_44);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 1,1 };
    bits32[] { 4,1,0,0,0 };

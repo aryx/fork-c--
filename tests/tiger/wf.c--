@@ -66,7 +66,7 @@ err_37(bits32 pfp,bits32 s) {
   temp_53 = temp_52;
   return(temp_53);
 }}
-section "data" {
+section "data" { align 4;
  err_37_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 11,1,1,0,0,0,0,0,0,0,0,0 };
@@ -136,7 +136,7 @@ insert_54(bits32 pfp,bits32 p) {
   temp_77 = temp_73;
   return(temp_77);
 }}
-section "data" {
+section "data" { align 4;
  insert_54_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 14,1,1,1,1,1,1,0,0,0,0,1,1,1,1 };
@@ -154,7 +154,7 @@ add_word_38(bits32 pfp,bits32 word) {
   temp_78 = 0;
   return(temp_78);
 }}
-section "data" {
+section "data" { align 4;
  add_word_38_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 4,1,1,0,1 };
@@ -202,7 +202,7 @@ tprint_39(bits32 pfp,bits32 tree) {
   temp_92 = temp_88;
   return(temp_92);
 }}
-section "data" {
+section "data" { align 4;
  tprint_39_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 12,1,1,0,0,0,0,0,0,0,0,0,0 };
@@ -293,7 +293,7 @@ isletter_40(bits32 pfp,bits32 c) {
   temp_129 = temp_125;
   return(temp_129);
 }}
-section "data" {
+section "data" { align 4;
  isletter_40_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 25,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -365,7 +365,7 @@ getword_41(bits32 pfp) {
   temp_149 = bits32[%add(fp, 4)];
   return(temp_149);
 }}
-section "data" {
+section "data" { align 4;
  getword_41_gc_data:
    bits32[] { 3,1,1,1 };
    bits32[] { 16,1,1,1,0,1,1,0,1,1,1,0,0,0,0,0,0 };
@@ -397,7 +397,7 @@ main_42(bits32 pfp) {
   temp_155 =  tprint_39(bits32[fp],bits32[%add(bits32[fp], 4)]) also aborts ;
   return(temp_155);
 }}
-section "data" {
+section "data" { align 4;
  main_42_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 6,1,1,1,0,0,0 };
@@ -412,7 +412,7 @@ tiger_main(bits32 pfp) {
   temp_156 =  main_42(fp) also aborts ;
   return(temp_156);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 2,1,0 };

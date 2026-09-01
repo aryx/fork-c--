@@ -72,7 +72,7 @@ isdigit_41(bits32 pfp,bits32 s) {
   temp_57 = temp_53;
   return(temp_57);
 }}
-section "data" {
+section "data" { align 4;
  isdigit_41_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 14,1,1,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -112,7 +112,7 @@ skipto_42(bits32 pfp) {
   temp_72 = 0;
   return(temp_72);
 }}
-section "data" {
+section "data" { align 4;
  skipto_42_gc_data:
    bits32[] { 1,1 };
    bits32[] { 8,1,0,0,0,0,0,0,1 };
@@ -157,7 +157,7 @@ readint_40(bits32 pfp,bits32 any) {
   temp_80 = bits32[%add(fp, 8)];
   return(temp_80);
 }}
-section "data" {
+section "data" { align 4;
  readint_40_gc_data:
    bits32[] { 3,1,1,0 };
    bits32[] { 12,1,1,0,0,0,0,0,0,1,0,0,0 };
@@ -208,7 +208,7 @@ readlist_81(bits32 pfp) {
   temp_98 = temp_94;
   return(temp_98);
 }}
-section "data" {
+section "data" { align 4;
  readlist_81_gc_data:
    bits32[] { 3,1,1,0 };
    bits32[] { 9,1,1,1,1,1,1,1,1,0 };
@@ -276,7 +276,7 @@ merge_82(bits32 pfp,bits32 a,bits32 b) {
   temp_119 = temp_115;
   return(temp_119);
 }}
-section "data" {
+section "data" { align 4;
  merge_82_gc_data:
    bits32[] { 3,1,1,1 };
    bits32[] { 13,1,1,1,1,1,1,1,1,1,1,1,1,1 };
@@ -314,7 +314,7 @@ f_120(bits32 pfp,bits32 i) {
   temp_129 = temp_125;
   return(temp_129);
 }}
-section "data" {
+section "data" { align 4;
  f_120_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 10,1,0,0,1,0,0,0,0,0,0 };
@@ -356,7 +356,7 @@ printint_83(bits32 pfp,bits32 i) {
   temp_143 = temp_139;
   return(temp_143);
 }}
-section "data" {
+section "data" { align 4;
  printint_83_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 9,1,0,0,0,0,0,0,0,0 };
@@ -391,7 +391,7 @@ printlist_84(bits32 pfp,bits32 l) {
   temp_152 = temp_148;
   return(temp_152);
 }}
-section "data" {
+section "data" { align 4;
  printlist_84_gc_data:
    bits32[] { 2,1,1 };
    bits32[] { 8,1,1,0,0,0,0,0,0 };
@@ -419,7 +419,7 @@ tiger_main(bits32 pfp) {
   temp_153 =  printlist_84(fp,temp_172) also aborts ;
   return(temp_153);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 4,1,1,1,1 };
    bits32[] { 7,1,1,1,1,1,1,0 };

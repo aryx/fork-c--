@@ -194,7 +194,7 @@ initlist_56(bits32 pfp) {
   temp_110 = 0;
   return(temp_110);
 }}
-section "data" {
+section "data" { align 4;
  initlist_56_gc_data:
    bits32[] { 1,1 };
    bits32[] { 44,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -264,7 +264,7 @@ print_list_57(bits32 pfp,bits32 s) {
   temp_133 = 0;
   return(temp_133);
 }}
-section "data" {
+section "data" { align 4;
  print_list_57_gc_data:
    bits32[] { 3,1,1,0 };
    bits32[] { 19,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -321,7 +321,7 @@ lte_134(bits32 pfp,bits32 i,bits32 j) {
   temp_153 = temp_149;
   return(temp_153);
 }}
-section "data" {
+section "data" { align 4;
  lte_134_gc_data:
    bits32[] { 3,1,0,0 };
    bits32[] { 17,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -378,7 +378,7 @@ gt_135(bits32 pfp,bits32 i,bits32 j) {
   temp_168 = temp_164;
   return(temp_168);
 }}
-section "data" {
+section "data" { align 4;
  gt_135_gc_data:
    bits32[] { 3,1,0,0 };
    bits32[] { 17,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -421,7 +421,7 @@ exchange_169(bits32 pfp,bits32 x,bits32 y) {
   temp_178 = 0;
   return(temp_178);
 }}
-section "data" {
+section "data" { align 4;
  exchange_169_gc_data:
    bits32[] { 4,1,0,0,1 };
    bits32[] { 12,1,0,0,0,0,0,0,0,0,0,0,0 };
@@ -485,7 +485,7 @@ partition_136(bits32 pfp,bits32 i,bits32 j) {
   temp_200 = bits32[%add(fp, 8)];
   return(temp_200);
 }}
-section "data" {
+section "data" { align 4;
  partition_136_gc_data:
    bits32[] { 4,1,0,0,0 };
    bits32[] { 9,1,0,0,0,0,0,0,0,0 };
@@ -513,7 +513,7 @@ qsort_137(bits32 pfp,bits32 lb,bits32 ub) {
   temp_205 = temp_201;
   return(temp_205);
 }}
-section "data" {
+section "data" { align 4;
  qsort_137_gc_data:
    bits32[] { 4,1,0,0,0 };
    bits32[] { 6,1,0,0,0,0,0 };
@@ -528,7 +528,7 @@ sort_58(bits32 pfp,bits32 by_name) {
   temp_206 =  qsort_137(fp,0,%sub(bits32[%add(bits32[fp], 4)], 1)) also aborts ;
   return(temp_206);
 }}
-section "data" {
+section "data" { align 4;
  sort_58_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 3,1,0,0 };
@@ -578,7 +578,7 @@ tiger_main(bits32 pfp) {
   temp_209 =  print_list_57(fp,Lgbl_208) also aborts ;
   return(temp_209);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 3,1,0,1 };
    bits32[] { 7,1,1,0,1,1,1,0 };

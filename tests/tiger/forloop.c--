@@ -57,7 +57,7 @@ tiger_main(bits32 pfp) {
   temp_30 = temp_29;
   return(temp_30);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 3,1,0,0 };
    bits32[] { 7,1,1,0,0,0,0,0 };

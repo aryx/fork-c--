@@ -82,7 +82,7 @@ printboard_61(bits32 pfp) {
   temp_85 = temp_84;
   return(temp_85);
 }}
-section "data" {
+section "data" { align 4;
  printboard_61_gc_data:
    bits32[] { 3,1,0,0 };
    bits32[] { 11,1,0,0,0,0,0,0,0,1,0,0 };
@@ -205,7 +205,7 @@ tryy_62(bits32 pfp,bits32 c) {
   temp_125 = temp_121;
   return(temp_125);
 }}
-section "data" {
+section "data" { align 4;
  tryy_62_gc_data:
    bits32[] { 3,1,0,0 };
    bits32[] { 27,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -296,7 +296,7 @@ tiger_main(bits32 pfp) {
   temp_126 =  tryy_62(fp,0) also aborts ;
   return(temp_126);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 6,1,0,1,1,1,1 };
    bits32[] { 14,1,1,0,1,1,0,1,1,0,1,1,0,1,0 };

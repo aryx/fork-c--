@@ -41,7 +41,7 @@ mod_48(bits32 pfp,bits32 n,bits32 m) {
   temp_51 = %sub(bits32[%add(fp, 4)], %mul(bits32[%add(fp, 8)], %quot(bits32[%add(fp, 4)], bits32[%add(fp, 8)])));
   return(temp_51);
 }}
-section "data" {
+section "data" { align 4;
  mod_48_gc_data:
    bits32[] { 3,1,0,0 };
    bits32[] { 4,1,0,0,0 };
@@ -65,7 +65,7 @@ cmfirst_49(bits32 pfp,bits32 sz,bits32 cls) {
   temp_52 = 0;
   return(temp_52);
 }}
-section "data" {
+section "data" { align 4;
  cmfirst_49_gc_data:
    bits32[] { 3,1,0,0 };
    bits32[] { 5,1,0,0,0,0 };
@@ -118,7 +118,7 @@ cmnext_50(bits32 pfp) {
   temp_69 = temp_65;
   return(temp_69);
 }}
-section "data" {
+section "data" { align 4;
  cmnext_50_gc_data:
    bits32[] { 2,1,0 };
    bits32[] { 7,1,0,0,0,0,0,0 };
@@ -165,7 +165,7 @@ getline_79(bits32 pfp) {
   temp_93 = bits32[%add(fp, 8)];
   return(temp_93);
 }}
-section "data" {
+section "data" { align 4;
  getline_79_gc_data:
    bits32[] { 3,1,1,1 };
    bits32[] { 10,1,1,0,0,0,0,0,1,1,1 };
@@ -205,7 +205,7 @@ print_width_94(bits32 pfp,bits32 n,bits32 s) {
   temp_107 = 0;
   return(temp_107);
 }}
-section "data" {
+section "data" { align 4;
  print_width_94_gc_data:
    bits32[] { 4,1,0,1,0 };
    bits32[] { 10,1,0,1,0,0,0,0,0,0,0 };
@@ -364,7 +364,7 @@ tiger_main(bits32 pfp) {
   temp_148 = temp_144;
   return(temp_148);
 }}
-section "data" {
+section "data" { align 4;
  tiger_main_gc_data:
    bits32[] { 18,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0 };
    bits32[] { 30,1,1,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
