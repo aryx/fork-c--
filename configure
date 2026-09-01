@@ -210,9 +210,15 @@ fi
 if [ -z "$CCX86" ]; then
     CCX86=i686-linux-gnu-gcc
 fi
-if ! command -v "$CCX86" >/dev/null 2>&1; then
+if command -v "${CCX86%% *}" >/dev/null 2>&1; then
+    echo "configure: found $CCX86 (-x86)"
+else
     echo "configure: warning: no $CCX86 on PATH (needed for -x86 and most of make test-*)" >&2
-    echo "  sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
+    echo "  install a 32-bit x86 (i686) cross toolchain for your OS - e.g. on" >&2
+    echo "  Debian/Ubuntu: sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
+    echo "  (other distros/OSes: look for the equivalent cross-gcc package in" >&2
+    echo "  your own package manager, e.g. pacman/dnf/brew, or build one with" >&2
+    echo "  crosstool-ng)" >&2
 fi
 
 if [ -z "$RUN_X86" ]; then
@@ -220,12 +226,18 @@ if [ -z "$RUN_X86" ]; then
     case "$ARCH" in
         i?86 | x86_64)
             RUN_X86=
+            echo "configure: -x86 runs natively on $ARCH, no emulator needed"
             ;;
         *)
             RUN_X86=`command -v qemu-i386 2>/dev/null || true`
-            if [ -z "$RUN_X86" ]; then
+            if [ -n "$RUN_X86" ]; then
+                echo "configure: found $RUN_X86 (-x86 emulation on $ARCH)"
+            else
                 echo "configure: warning: $ARCH host and no qemu-i386 on PATH" >&2
-                echo "  sudo apt install qemu-user" >&2
+                echo "  install qemu's user-mode emulation for your OS - e.g. on" >&2
+                echo "  Debian/Ubuntu: sudo apt install qemu-user" >&2
+                echo "  (other distros/OSes: pacman -S qemu-user on Arch, brew install" >&2
+                echo "  qemu on macOS, or your own package manager's qemu package)" >&2
             fi
             ;;
     esac
@@ -254,9 +266,14 @@ detect_backend() {
 
     if [ -z "$cc" ]; then cc=$default_cc; fi
     ccbin=${cc%% *}
-    if ! command -v "$ccbin" >/dev/null 2>&1; then
+    if command -v "$ccbin" >/dev/null 2>&1; then
+        echo "configure: found $cc (-$name)"
+    else
         echo "configure: warning: no $ccbin on PATH (only needed for -$name)" >&2
-        echo "  $apt_hint" >&2
+        echo "  install a $name cross toolchain for your OS - e.g. on Debian/Ubuntu:" >&2
+        echo "    $apt_hint" >&2
+        echo "  (other distros/OSes: look for the equivalent package in your own" >&2
+        echo "  package manager, e.g. pacman/dnf/brew, or build one with crosstool-ng)" >&2
     fi
 
     if [ -z "$run" ]; then
@@ -264,12 +281,18 @@ detect_backend() {
         case "$ARCH" in
             $native_pat)
                 run=
+                echo "configure: -$name runs natively on $ARCH, no emulator needed"
                 ;;
             *)
                 run=`command -v "$default_run" 2>/dev/null || true`
-                if [ -z "$run" ]; then
+                if [ -n "$run" ]; then
+                    echo "configure: found $run (-$name emulation on $ARCH)"
+                else
                     echo "configure: warning: $ARCH host and no $default_run on PATH (only needed for -$name)" >&2
-                    echo "  sudo apt install qemu-user" >&2
+                    echo "  install qemu's user-mode emulation for your OS - e.g. on" >&2
+                    echo "  Debian/Ubuntu: sudo apt install qemu-user" >&2
+                    echo "  (other distros/OSes: pacman -S qemu-user on Arch, brew install" >&2
+                    echo "  qemu on macOS, or your own package manager's qemu package)" >&2
                 fi
                 ;;
         esac
@@ -361,12 +384,16 @@ detect_backend amd64 CCAMD64 "x86_64-linux-gnu-gcc" \
 # tests/run-tiger64-amd64-mach-o.sh's own comment).
 if [ "`uname -s`" = "Darwin" ]; then
     if [ -z "$CCARM64MACHO" ]; then CCARM64MACHO=clang; fi
-    if ! command -v "${CCARM64MACHO%% *}" >/dev/null 2>&1; then
+    if command -v "${CCARM64MACHO%% *}" >/dev/null 2>&1; then
+        echo "configure: found $CCARM64MACHO (-arm64-mach-o, native)"
+    else
         echo "configure: warning: no ${CCARM64MACHO%% *} (only needed for -arm64-mach-o)" >&2
         echo "  xcode-select --install" >&2
     fi
     if [ -z "$CCAMD64MACHO" ]; then CCAMD64MACHO="clang -arch x86_64"; fi
-    if ! command -v "${CCAMD64MACHO%% *}" >/dev/null 2>&1; then
+    if command -v "${CCAMD64MACHO%% *}" >/dev/null 2>&1; then
+        echo "configure: found $CCAMD64MACHO (-amd64-mach-o, via Rosetta 2)"
+    else
         echo "configure: warning: no ${CCAMD64MACHO%% *} (only needed for -amd64-mach-o)" >&2
         echo "  xcode-select --install" >&2
     fi
