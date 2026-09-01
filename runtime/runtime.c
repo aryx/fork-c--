@@ -72,6 +72,36 @@ static int normal_change(Cmm_Activation *a) {
 #ifdef __sparc__
   a->pc = (Cmm_Codeptr)((char *)a->pc + 8);
 #endif
+  /* claude: a MIPS-specific mismatch in the opposite direction from
+   * sparc's above: here it's the RUNTIME value that's correct and the
+   * COMPILER's own pcmap-table key that's wrong. arch/mips's real "jal"
+   * hardware sets $31 (ra) to callsite+8 (skipping both the call and its
+   * one delay slot) - a fact runtime code reading return_addressp gets
+   * "for free," correctly, with no adjustment. But
+   * middle/translate/runtimedata.ml's emit_site_spans (target-
+   * independent, shared by every backend) keys the pcmap table entry off
+   * the raw "call successor" CFG label placed by cfg/zipcfg/zipcfg.ml's
+   * `call` (also shared, target-independent) - and on this backend that
+   * label lands at callsite+4 (right after the delay-slot nop), one
+   * MIPS instruction *before* where $31 actually points, because
+   * whatever compiles the call's "successor" block (the result-consuming
+   * move, or a placeholder nop when the result is discarded, as for
+   * call_gc()) is emitted as ordinary block content *after* the label
+   * rather than being accounted for in the label's own placement.
+   * Adjusting that label's placement is a target-independent, shared
+   * code path this fork wasn't able to isolate a safe local fix in - so,
+   * matching the sparc case above (same file, same function, opposite
+   * side of the mismatch), compensate at the one point that actually
+   * needs the two values to agree: subtract the same 4 bytes back off
+   * here so Cmm_lookup_entry's key matches what the table really has.
+   * Confirmed via gdb: qsort.tig's tiger_main resumed at 0x4037b4 (real
+   * $31, correct) while the pcmap table's actual entry for that call
+   * site was keyed at 0x4037b0 = 0x4037b4 - 4. Every non-hello/sieve
+   * tiger-mips failure at the time this was found showed the identical
+   * "array of size 0" / stale-GC-root symptom family this causes. */
+#ifdef __mips__
+  a->pc = (Cmm_Codeptr)((char *)a->pc - 4);
+#endif
   update_saved_regs(a, a);
   /*s: possibly shout about caller's EBP */
   #define NOISY 0

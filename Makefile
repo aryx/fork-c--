@@ -83,11 +83,11 @@ test-tiger-riscv32::
 # tests/tiger/tigermain-mips.o and stdlib-mips.a are checked in, regenerated
 # by hand with tests/tiger/regenerate-mips.sh (needs a fork-tiger checkout;
 # run-tiger-mips.sh itself only needs the mipsel cross toolchain + qemu-mipsel).
-# Only 1/15 (hello) - unlike ppc/riscv32's 15/15 bar, most of the mips
-# backend's instruction selection is still unimplemented. Included anyway,
-# at its current low bar: like every other tier here, this compares against
-# a recorded baseline (expected/tiger-mips.txt) rather than demanding 100%,
-# so it still catches regressions in what little works today.
+# Reaches 15/15, same bar as ppc/riscv32 (see mips-backend-status notes) -
+# the last fix was a runtime.c pc-adjustment bug (a MIPS call site's own
+# pcmap-table label lands 4 bytes before where $31/ra actually points after
+# a real "jal", breaking every GC-triggering frame walk; compensated for in
+# normal_change, mirroring the analogous sparc fix a few lines above it).
 test-tiger-mips::
 	tests/run-tiger-mips.sh
 
