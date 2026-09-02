@@ -134,7 +134,7 @@ for f in phases/regalloc/*.c--; do
 done
 
 # --- instruction selection: QCDEBUG=instrsel-cfg dump + the .s. Target is
-# picked by filename: a "*_ppc.c--" file compiles with -ppc-elf, anything
+# picked by filename: a "*_ppc.c--" file compiles with -ppc, anything
 # else compiles as plain x86 - see instrsel/max.c--'s header comment. ---
 for f in phases/instrsel/*.c--; do
   name=$(basename "$f" .c--)
@@ -143,7 +143,7 @@ for f in phases/instrsel/*.c--; do
   fi
 
   case "$name" in
-    *_ppc) flags="-ppc-elf" ;;
+    *_ppc) flags="-ppc" ;;
     *) flags="" ;;
   esac
 

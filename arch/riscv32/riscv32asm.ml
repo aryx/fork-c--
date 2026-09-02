@@ -76,7 +76,7 @@ object (this)
         _section <- name;
         (* claude: pcmap/pcmap_data must carry the ALLOC flag or the runtime
          * data lands outside every PT_LOAD segment - same recurring fix as
-         * every other ELF backend here (x86/ppc-elf/sparc/alpha/mips/arm),
+         * every other ELF backend here (x86/ppc/sparc/alpha/mips/arm),
          * "a",@progbits (not ARM's %progbits - riscv32-linux-gnu-as's
          * comment character is "#", same as MIPS/PowerPC/SPARC/Alpha, not
          * ARM's "@"). *)

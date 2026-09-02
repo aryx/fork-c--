@@ -1,6 +1,6 @@
 #!/bin/sh
-# Behavioural tests: Tiger programs, compiled by us for -ppc-elf, run under
-# qemu-ppc, and checked against stdout/exit code. The ppc-elf counterpart of
+# Behavioural tests: Tiger programs, compiled by us for -ppc, run under
+# qemu-ppc, and checked against stdout/exit code. The ppc counterpart of
 # run-tiger-x86.sh - see that script first, this one only differs in the target.
 #
 # Everything links against tiger/tigermain-ppc.o and tiger/stdlib-ppc.a,
@@ -83,7 +83,7 @@ while read -r name src rc stdin_file; do
   fi
 
   flip "$T/$src" "$B/$name.c--"
-  if ! "$QC" -globals -ppc-elf -stop .o -o "$B/$name.o" "$B/$name.c--" \
+  if ! "$QC" -globals -ppc -stop .o -o "$B/$name.o" "$B/$name.c--" \
        >"$B/$name.qcerr" 2>&1; then
     echo "FAIL $name (compile)"; echo "$name FAIL" >> "$B/actual.txt"; continue
   fi

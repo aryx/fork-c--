@@ -4,10 +4,10 @@
 # differs in the target (-arm64, not -arm64-mach-o) and toolchain (a real
 # aarch64-linux-gnu cross toolchain, native on this repo's own aarch64-linux
 # dev host - see configure's arm64 detect_backend comment). Bare "arm64"
-# filenames: -arm64 is itself the bare/default flag of the pair, matching
-# -ppc-elf's precedent inverted (see driver/main.ml's use_arm64 comment) -
-# the Mach-O sibling's own artefacts carry the explicit "-mach-o" suffix
-# instead.
+# filenames: -arm64 is itself the bare/default flag of the pair, same
+# "bare = Linux/ELF" convention -ppc/-ppc-mach-o now also follows (see
+# driver/CLI.ml's use_arm64 comment) - the Mach-O sibling's own artefacts
+# carry the explicit "-mach-o" suffix instead.
 #
 #   ./regenerate-arm64.sh              rebuild from $TIGDIR
 #   TIGDIR=... ./regenerate-arm64.sh   from somewhere else

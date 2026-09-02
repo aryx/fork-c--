@@ -14,7 +14,7 @@
  * is this fork's SPARC cross toolchain (Ubuntu ships no plain 32-bit
  * sparc-linux-gnu cross compiler, only sparc64, which targets 32-bit
  * SPARC V8 via -m32/-32 - same biarch trick as x86_64 hosts use for -m32
- * i386; see demos/hello_ppc.c-- for the ppc-elf equivalent). Needs
+ * i386; see demos/hello_ppc.c-- for the ppc equivalent). Needs
  * qemu-sparc32plus specifically, not plain qemu-sparc: this toolchain's
  * multilib -m32 output is SPARC32PLUS (v8plus) flagged, which plain
  * qemu-sparc (v8) rejects with "Invalid ELF image for this architecture"

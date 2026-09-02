@@ -89,3 +89,4 @@ external/stdlib/
 
 # written by ./configure, host-specific
 /Makefile.config
+/driver/Config.ml

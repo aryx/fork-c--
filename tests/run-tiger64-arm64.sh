@@ -15,8 +15,8 @@
 # tiger64/stdlib-arm64.a - the bare names, matching -arm64 itself being the
 # bare/default flag; the Mach-O sibling's own artefacts carry the explicit
 # tigermain-arm64-mach-o.o/stdlib-arm64-mach-o.a suffix instead now, freeing
-# these up (see driver/main.ml's use_arm64 comment for why the pair inverts
-# -ppc/-ppc-elf's "bare name = Mach-O" convention). Checked in exactly like
+# these up (see driver/CLI.ml's use_arm64 comment - -ppc/-ppc-mach-o now
+# follows the same "bare = Linux/ELF" convention). Checked in exactly like
 # run-tiger64-riscv64.sh's own, so this needs no fork-tiger checkout to run.
 # Regenerate both with tiger64/regenerate-arm64.sh after changing anything
 # that affects the run-time data the compiler emits.

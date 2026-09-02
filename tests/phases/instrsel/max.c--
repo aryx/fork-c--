@@ -3,7 +3,7 @@ target byteorder little;
 // Toy example for instruction selection (arch/x86/x86rec.mlb's burg
 // grammar, run as `X86.X.cfg` in arch/x86/x86backend.ml). A comparison
 // used by a branch is a classic case where target machines differ. Run
-// this file and max_ppc.c-- (same source, -ppc-elf) both with
+// this file and max_ppc.c-- (same source, -ppc) both with
 // QCDEBUG=instrsel-cfg and look at the cbranch guard in the AFTER dump:
 // x86 has no separate compare-and-branch instruction, only an implicit
 // EFLAGS register that a compare sets and a Jcc reads, so its grammar
@@ -17,7 +17,7 @@ target byteorder little;
 // that pattern to ppc's own two real instructions (cmpw then bc) is left
 // for assembly emission. Run:
 //   QCDEBUG=instrsel-cfg qc -stop .s -o /dev/null max.c--
-//   QCDEBUG=instrsel-cfg qc -ppc-elf -stop .s -o /dev/null max_ppc.c--
+//   QCDEBUG=instrsel-cfg qc -ppc -stop .s -o /dev/null max_ppc.c--
 export max;
 max(bits32 a, bits32 b) {
   bits32 m;

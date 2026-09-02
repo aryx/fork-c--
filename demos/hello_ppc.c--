@@ -1,10 +1,10 @@
 /* src: http://www.st.cs.uni-saarland.de/~lindig/#quick-cmm
  *
  * claude: same program as hello.c--, just byteorder big instead of
- * little, since that's what the ppc/ppc-elf targets require. Exercises
+ * little, since that's what the ppc/ppc targets require. Exercises
  * qc's Linux/ELF PowerPC backend end to end:
  *
- *   qc -ppc-elf -globals -stop .s -o hello_ppc.s demos/hello_ppc.c--
+ *   qc -ppc -globals -stop .s -o hello_ppc.s demos/hello_ppc.c--
  *   powerpc-linux-gnu-as hello_ppc.s -o hello_ppc.o
  *   powerpc-linux-gnu-gcc -static hello_ppc.o -o hello_ppc
  *   qemu-ppc hello_ppc            # prints "hello, world!"

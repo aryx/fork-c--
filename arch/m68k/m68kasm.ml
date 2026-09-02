@@ -25,7 +25,7 @@
  * documented m68k-specific end-of-line comment marker) and whether
  * ".align" takes a byte count or a power-of-two exponent (assumed
  * power-of-two here, matching every non-x86 ELF backend in this fork -
- * mips/sparc/ppc-elf/alpha/arm) - are NOT yet empirically verified against
+ * mips/sparc/ppc/alpha/arm) - are NOT yet empirically verified against
  * a real m68k-linux-gnu-as (this session did not have that cross-toolchain
  * installed). Confirm both the first time an actual .s file gets
  * assembled; arm's own "@progbits" vs "%progbits" surprise (armasm.ml's

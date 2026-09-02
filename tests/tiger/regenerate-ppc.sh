@@ -1,5 +1,5 @@
 #!/bin/sh
-# Regenerate tigermain-ppc.o and stdlib-ppc.a, the ppc-elf counterparts of
+# Regenerate tigermain-ppc.o and stdlib-ppc.a, the ppc counterparts of
 # regenerate.sh's tigermain-x86.o/stdlib-x86.a - see that script first, this
 # one only differs in the target.
 #
@@ -61,9 +61,9 @@ CFLAGS="-w -fcommon -fno-omit-frame-pointer -I $RT"
 flip "$TIGDIR/runtime/runtime.c--"   "$tmp/runtime.c--"
 flip "$TIGDIR/stdlib/stdlibcmm.c--"  "$tmp/stdlibcmm.c--"
 flip "$TIGDIR/runtime/alloc.c--"     "$tmp/alloc.c--"
-"$QC" -ppc-elf -stop .o -o "$here/tigermain-ppc.o" "$tmp/runtime.c--"
-"$QC" -ppc-elf -stop .o -o "$tmp/stdlibcmm.o"      "$tmp/stdlibcmm.c--"
-"$QC" -ppc-elf -stop .o -o "$tmp/alloc.o"          "$tmp/alloc.c--"
+"$QC" -ppc -stop .o -o "$here/tigermain-ppc.o" "$tmp/runtime.c--"
+"$QC" -ppc -stop .o -o "$tmp/stdlibcmm.o"      "$tmp/stdlibcmm.c--"
+"$QC" -ppc -stop .o -o "$tmp/alloc.o"          "$tmp/alloc.c--"
 
 rm -f "$here/stdlib-ppc.a"
 $ARPPC cr "$here/stdlib-ppc.a" \

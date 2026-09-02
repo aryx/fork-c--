@@ -1,6 +1,6 @@
 # claude: build and run the standalone hello-world demos (hello.c-- for
 # the x86 backend, also reused as-is for -mips since its default 32-bit
-# little-endian metrics already match mipsel; hello_ppc.c-- for ppc-elf;
+# little-endian metrics already match mipsel; hello_ppc.c-- for ppc;
 # hello_sparc.c-- for -sparc; hello_alpha.c-- for -alpha; hello_arm.c--
 # for -arm; hello_m68k.c-- for -m68k; hello_riscv64.c-- for -riscv64;
 # hello_arm64.c--/hello_amd64.c--
@@ -134,10 +134,10 @@ run-x86: x86
 	@$(RUNX86) ./$(B)/hello; echo "[exit status $$?]"
 
 # ---------------------------------------------------------------------------
-# ppc (hello_ppc.c--, byteorder big, the -ppc-elf backend)
+# ppc (hello_ppc.c--, byteorder big, the -ppc backend)
 # ---------------------------------------------------------------------------
 $(B)/hello_ppc: hello_ppc.c-- | $(B)
-	QC_AS="$(CCPPC)" QC_LD="$(CCPPC) -static" $(QC) -ppc-elf -globals -o $@ $<
+	QC_AS="$(CCPPC)" QC_LD="$(CCPPC) -static" $(QC) -ppc -globals -o $@ $<
 
 ppc: $(B)/hello_ppc
 

@@ -1,6 +1,6 @@
 target byteorder big;
 
-// ppc-elf counterpart of addr.c-- - see that file's header comment. Same
+// ppc counterpart of addr.c-- - see that file's header comment. Same
 // source, just byteorder big instead of little (like demos/hello_ppc.c--
 // vs demos/hello.c--: qc requires the source's declared byteorder to
 // match the target's).

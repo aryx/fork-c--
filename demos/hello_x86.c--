@@ -10,7 +10,7 @@
  * -globals is required at link time even for this one-file program: see
  * driver/main.ml's comment on the exportglobals flag. i686-linux-gnu-*
  * is this fork's i386 cross toolchain (see demos/hello_ppc.c-- for the
- * ppc-elf equivalent). qc's -as/-ld default (clang -target
+ * ppc equivalent). qc's -as/-ld default (clang -target
  * i386-unknown-linux-gnu) assembles fine but can't link on its own here -
  * the host's ld has no elf_i386 support - so the 3-command form above is
  * needed, or equivalently one shot:

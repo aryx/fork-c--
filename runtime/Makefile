@@ -45,7 +45,7 @@ QCFLAG   = -alpha
 else ifeq ($(BACKEND),ppc)
 CC32    ?= powerpc-linux-gnu-gcc
 CONTOBJ  = $(B)/ppccont.o
-QCFLAG   = -ppc-elf
+QCFLAG   = -ppc
 else ifeq ($(BACKEND),sparc)
 # claude: Ubuntu ships no plain 32-bit sparc-linux-gnu cross toolchain,
 # only sparc64-linux-gnu, which targets 32-bit SPARC V8 via -m32 (same

@@ -114,19 +114,24 @@ let output_file = ref ""
  *)
 let use_interp = ref false
 
-(* -ppc *)
+(* claude: -ppc, Linux/ELF assembly (arch/ppc/ppcasm.ml) - the bare,
+ * default flag of this pair, same "Linux is this fork's actual target"
+ * convention as -arm64/-amd64 below (this used to be inverted - bare
+ * "-ppc" meant Mach-O, for continuity with upstream's own original
+ * target - but was flipped to match arm64/amd64 instead of being the
+ * odd one out; see use_arm64's own comment for the shared reasoning). *)
 let use_ppc = ref false
 
-(* claude: -ppc-elf, a Linux/ELF-targeted sibling of -ppc kept separate
- * rather than replacing it, since -ppc's Mach-O output is what upstream's
- * arch/ppc/ppcmach.ml always emitted and is worth keeping (e.g. to target
- * macOS later); see arch/ppc/ppcasm.ml for why Mach-O can't be tested
+(* claude: -ppc-mach-o, the Mach-O/Darwin sibling of -ppc kept separate
+ * rather than dropped, since it is what upstream's arch/ppc/ppcmach.ml
+ * always emitted and is still worth keeping (e.g. to target macOS
+ * later); see arch/ppc/ppcasm.ml for why Mach-O can't be tested
  * end-to-end on a non-Mac machine. *)
-let use_ppc_elf = ref false
+let use_ppc_macho = ref false
 
 (* claude: -sparc, 32-bit big-endian SPARC V8 (see arch/sparc/sparc.ml -
  * the register choices there already match the real hardware windowed
- * ABI, unlike -ppc's Mach-O default this needed no separate ELF sibling
+ * ABI, unlike -ppc's Mach-O sibling this needed no separate ELF sibling
  * since arch/sparc/sparcasm.ml already emits GNU-as-compatible syntax). *)
 let use_sparc = ref false
 
@@ -160,18 +165,17 @@ let use_m68k = ref false
 let use_riscv64 = ref false
 
 (* claude: -arm64, 64-bit little-endian AArch64 (see arch/arm64/arm64.ml),
- * Linux/ELF assembly (arch/arm64/arm64asm.ml) - the bare, default flag
- * of this pair, unlike -ppc/-ppc-elf where the bare "-ppc" name is Mach-O:
- * -ppc's Mach-O default is upstream's own original target, kept as the
- * bare name for continuity; arm64/amd64 have no upstream lineage at all
- * (this fork invented both), were first brought up Mach-O-only on the
- * Apple Silicon Mac this fork was originally developed on, but this fork's
- * actual target platform is Linux (see CLAUDE.md's "What this is") - so
- * once a Linux/ELF sibling existed, it earned the bare name and Mach-O
- * moved to the explicit -arm64-mach-o suffix below. Native on an
- * aarch64-linux host (this repo's own current dev host - no cross
- * toolchain, no qemu needed), cross via qemu-aarch64 otherwise - see
- * default_arm64_cc below. *)
+ * Linux/ELF assembly (arch/arm64/arm64asm.ml) - the bare, default flag of
+ * this pair, same convention -ppc now also follows (see use_ppc's own
+ * comment): arm64/amd64 have no upstream lineage at all (this fork
+ * invented both), were first brought up Mach-O-only on the Apple Silicon
+ * Mac this fork was originally developed on, but this fork's actual
+ * target platform is Linux (see CLAUDE.md's "What this is") - so once a
+ * Linux/ELF sibling existed, it earned the bare name and Mach-O moved to
+ * the explicit -arm64-mach-o suffix below. Native on an aarch64-linux
+ * host (this repo's own current dev host - no cross toolchain, no qemu
+ * needed), cross via qemu-aarch64 otherwise - see effective_cc/Config.ml
+ * below for its cc. *)
 let use_arm64 = ref false
 
 (* claude: -arm64-mach-o, the Mach-O/Darwin sibling of -arm64 kept separate
@@ -184,7 +188,7 @@ let use_arm64_macho = ref false
  * Linux/ELF assembly (arch/amd64/amd64asm.ml) - the bare, default flag
  * of this pair, same "Linux is this fork's actual target" reasoning as
  * use_arm64's own comment. Needs qemu-x86_64 to run on this fork's own
- * aarch64-linux dev host - see default_amd64_cc below. *)
+ * aarch64-linux dev host - see effective_cc/Config.ml below for its cc. *)
 let use_amd64 = ref false
 
 (* claude: -amd64-mach-o, the Mach-O/Darwin sibling of -amd64 kept separate
@@ -226,98 +230,22 @@ let libs = ref []
  * only choice that is right everywhere. Override with -as/-ld or the
  * QC_AS/QC_LD environment variables.
  *)
-let default_i386_cc = "clang -target i386-unknown-linux-gnu"
-(* claude: for -ppc-elf; -ppc's Mach-O output is not meant for this cc at
- * all, so it has no default here (see effective_cc below). *)
-let default_powerpc_elf_cc = "clang -target powerpc-unknown-linux-gnu"
-(* claude: for -sparc. Same caveat as default_powerpc_elf_cc: clang cross-
- * assembles fine but has no sparc sysroot on this machine, so real static
- * linking against glibc needs an explicit -as/-ld (or QC_AS/QC_LD)
- * pointing at "sparc64-linux-gnu-gcc -m32" instead - Ubuntu ships no
- * plain 32-bit sparc-linux-gnu cross toolchain, only sparc64, which can
- * target 32-bit SPARC V8 via -m32 (paired with the libc6-dev-sparc-
- * sparc64-cross 32-bit cross libs), the same biarch trick x86_64 hosts
- * use for -m32 i386. *)
-let default_sparc_cc = "clang -target sparc-unknown-linux-gnu"
-(* claude: for -alpha. clang has an alpha backend but Ubuntu ships no
- * alpha sysroot for it to cross-assemble/link against, so - unlike
- * -sparc's clang-with-QC_AS/QC_LD-override default - there is no usable
- * clang default here at all: -alpha requires an explicit -as/-ld (or
- * QC_AS/QC_LD) pointing at a real gcc-alpha-linux-gnu cross toolchain
- * (see effective_cc below, same shape as -ppc's Mach-O "no default"
- * case). *)
-let default_alpha_cc () =
-  failwith "-alpha: pass -as/-ld (or QC_AS/QC_LD) explicitly, e.g. \
-            \"alpha-linux-gnu-gcc\" - no usable default cross assembler/linker \
-            for Alpha on this host"
-(* claude: for -mips. Same caveat as default_sparc_cc: clang cross-assembles
- * fine but has no mipsel sysroot on this machine, so real static linking
- * against glibc needs an explicit -as/-ld (or QC_AS/QC_LD) pointing at
- * "mipsel-linux-gnu-gcc" instead. *)
-let default_mips_cc = "clang -target mipsel-unknown-linux-gnu"
-(* claude: for -arm. Unlike -sparc/-mips (clang cross-assembles but has no
- * sysroot here for real static linking), Ubuntu ships a real
- * arm-linux-gnueabihf gcc cross toolchain on this machine, so it can be
- * the plain default (both assembler and linker), same as -ppc-elf's
- * default_powerpc_elf_cc pattern but with gcc directly instead of clang -
- * confirmed empirically that "arm-linux-gnueabihf-gcc -static" links.
- * -march=armv7ve+fp: plain armv7-a (this toolchain's own default,
- * "armv7-a+fp") has no integer divide instruction at all ("sdiv"/"udiv"
- * fail to assemble) - needed once armrec.mlb started emitting sdiv for
- * %quot (see notes_arm.txt). Confirmed the resulting binary still runs
- * fine under plain qemu-arm with no special -cpu flag. The "+fp" is not
- * optional: "-march=armv7ve" alone drops the "+fp" this toolchain's
- * default carries, and -mfloat-abi=hard (this toolchain's own default
- * ABI) then refuses to compile any real C source ("selected architecture
- * lacks an FPU") - hit runtime/Makefile's BACKEND=arm build (which
- * compiles runtime.c/pcmap.c/gcc-linux.c), even though plain assembling/
- * linking of .s/.o files (demos'/qc's own usage) never invoked cc1 and so
- * never surfaced it. Otherwise a strict superset of the plain armv7-a
- * this replaces, so every -march=armv7-a instruction this backend
- * already emits keeps assembling unchanged. *)
-let default_arm_cc = "arm-linux-gnueabihf-gcc -march=armv7ve+fp"
-(* claude: for -m68k. Ubuntu ships a real m68k-linux-gnu gcc/binutils/glibc
- * cross toolchain (gcc-m68k-linux-gnu + libc6-dev-m68k-cross), so this can
- * be the plain default, same pattern as default_arm_cc - confirm this
- * empirically links once that package is installed on the dev host (not
- * installed by default, unlike arm/alpha/riscv64's cross toolchains). *)
-let default_m68k_cc = "m68k-linux-gnu-gcc"
-(* claude: for -riscv64. Ubuntu ships a real riscv64-linux-gnu gcc/binutils/
- * glibc cross toolchain (native 64-bit, no multilib trick needed - same
- * situation as -alpha's gcc-alpha-linux-gnu), so this can be the plain
- * default, same pattern as default_arm_cc. Its default -march=rv64gc
- * already includes the M extension (mul/div), which riscv64rec.mlb's "mul"
- * rule needs - no march bump required, unlike -arm's own divide-instruction
- * fix. *)
-let default_riscv64_cc = "riscv64-linux-gnu-gcc"
-(* claude: for -riscv32. No riscv32-linux-gnu-gcc/libc exists on this
- * machine (see use_riscv32's comment), so this reuses the riscv64-linux-
- * gnu-gcc driver purely as a cross assembler/linker with -march=rv32imac
- * -mabi=ilp32 and -nostdlib (no libc to link against, no crt0 - the caller
- * must supply demos/riscv32_start.s, a hand-written freestanding _start, as
- * an extra input alongside the .c-- source; see hello_riscv32.c--'s own
- * comment for the full invocation). Unlike -alpha's "no usable default",
- * this one IS usable end to end - just not self-sufficient the way every
- * other -<arch> default is (it always needs that extra _start object). *)
-let default_riscv32_cc = "riscv64-linux-gnu-gcc -march=rv32imac -mabi=ilp32 -nostdlib"
-(* claude: for -arm64, the Linux/ELF backend and (unlike -ppc's Mach-O
- * default) the bare default for this pair - see use_arm64's own comment for
- * why amd64/arm64 invert -ppc/-ppc-elf's "bare name = Mach-O" convention.
- * Ubuntu ships a real aarch64-linux-gnu gcc/binutils/glibc toolchain
- * (native 64-bit, no multilib trick needed - same situation as
- * -riscv64's/-alpha's own default_*_cc), so this can be the plain default,
- * same pattern as default_riscv64_cc. On an aarch64-linux host (this
- * fork's own dev host as of this backend's addition) plain
- * "aarch64-linux-gnu-gcc" IS the native gcc too - qemu-aarch64 is only
- * needed to run the result on some other host. *)
-let default_arm64_cc = "aarch64-linux-gnu-gcc"
-(* claude: for -amd64, the Linux/ELF backend and the bare default - same
- * story as default_arm64_cc above. Ubuntu ships a real x86-64-linux-gnu
- * gcc/binutils/glibc toolchain (gcc-x86-64-linux-gnu), same "plain
- * default" situation - just cross rather than native on this fork's own
- * aarch64-linux dev host, so its output needs qemu-x86_64 to run here (see
- * tests/run-tiger64-amd64-mach-o.sh's own comment). *)
-let default_amd64_cc = "x86_64-linux-gnu-gcc"
+(* claude: every Linux/ELF backend's cross-compiler now comes solely from
+ * Config.ml (real ./configure-time detection - see effective_cc below);
+ * there used to be a hardcoded clang/gcc guess here for each one
+ * (default_i386_cc et al), removed because it was actively wrong on this
+ * repo's own dev host (default_i386_cc's "clang -target
+ * i386-unknown-linux-gnu" fails to statically link at all here -
+ * "unrecognised emulation mode: elf_i386", no i386 sysroot - while
+ * ./configure's own detected i686-linux-gnu-gcc works fine) and, more
+ * generally, silently substituting an unverified guess for "the toolchain
+ * detect_backend already tried and failed to find" was misleading rather
+ * than helpful - see docs/claude_notes/plan_toolchain_dispatcher.txt.
+ * effective_cc now fails loudly instead when Config.ml has no entry for a
+ * backend (no explicit -as/-ld/QC_AS/QC_LD either) - each backend's own
+ * toolchain caveats (sparc's -m32 biarch trick, riscv32's freestanding-
+ * only status, arm's -march=armv7ve+fp requirement, etc.) now live solely
+ * in configure's own detect_backend comments, not duplicated here. *)
 (* claude: for -arm64-mach-o, the Mach-O/Darwin sibling - this machine (the
  * Apple Silicon Mac this backend was originally developed on) IS
  * arm64-apple-darwin, so plain "clang" (no -target override, no
@@ -349,10 +277,9 @@ let getenv_or name default =
   | Some s -> s
   | None -> default
 
-(* claude: empty means "unset", resolved to a per-backend default by
+(* claude: empty means "unset", resolved to a per-backend cc by
  * effective_cc once the backend is known (main_action, after arg
- * parsing) - as_cmd/ld_cmd used to default to default_i386_cc directly
- * here, which was wrong for -ppc-elf. *)
+ * parsing). *)
 let as_cmd = ref (getenv_or "QC_AS" "")
 let ld_cmd = ref (getenv_or "QC_LD" "")
 
@@ -485,14 +412,19 @@ let dump_nelab caps file =
  *)
 type backend =
   | X86
-  (* 32-bit big-endian PowerPC, which is what gcc-powerpc-linux-gnu and
-   * qemu-ppc target. Emits Mach-O/Darwin assembly (arch/ppc/ppcmach.ml),
-   * upstream's original target. *)
+  (* claude: 32-bit big-endian PowerPC, which is what gcc-powerpc-linux-gnu
+   * and qemu-ppc target. Emits GNU-as-compatible Linux/ELF assembly
+   * (arch/ppc/ppcasm.ml) - the bare, default flag of this pair, same
+   * convention as Arm64/Amd64 below (this used to be inverted - bare
+   * "-ppc" meant Mach-O, for continuity with upstream's own original
+   * target - flipped so ppc isn't the odd one out; see use_ppc's own
+   * comment in driver/CLI.ml). *)
   | Ppc
-  (* claude: same PowerPC target as Ppc, but Linux/ELF assembly
-   * (arch/ppc/ppcasm.ml) instead of Mach-O, so it can actually be
-   * assembled and run (via qemu-ppc) on a non-Mac machine. *)
-  | PpcElf
+  (* 32-bit big-endian PowerPC, same target as Ppc but Mach-O/Darwin
+   * assembly (arch/ppc/ppcmach.ml) instead of Linux/ELF - upstream's
+   * original target, kept as the explicit -ppc-mach-o suffix now (see
+   * use_ppc_macho's own comment). *)
+  | PpcMachO
   (* claude: 32-bit big-endian SPARC V8, what qemu-sparc targets. Emits
    * GNU-as-compatible ELF/Linux assembly directly (arch/sparc/sparcasm.ml
    * already used that syntax, unlike ppc's Mach-O default - no separate
@@ -530,9 +462,9 @@ type backend =
    * this width on this machine - see use_riscv32's comment). *)
   | Riscv32
   (* claude: 64-bit little-endian AArch64. Emits Linux/ELF assembly
-   * (arch/arm64/arm64asm.ml) - the bare constructor of this pair, unlike
-   * Ppc/PpcElf, since Linux/ELF (not Mach-O) is this fork's actual target
-   * platform for arm64/amd64 - see use_arm64's own comment. *)
+   * (arch/arm64/arm64asm.ml) - the bare constructor of this pair, same
+   * "bare = Linux/ELF" convention Ppc/PpcMachO also follow above - see
+   * use_arm64's own comment. *)
   | Arm64
   (* claude: same AArch64 target as Arm64, but Mach-O/Darwin assembly
    * (arch/arm64/arm64mach.ml) instead of Linux/ELF, so it can still target
@@ -551,29 +483,47 @@ type backend =
    *)
   | Interp
 
+(* claude: a Config.ml entry with no detected toolchain (./configure ran
+ * but found nothing for this backend) used to silently fall back to a
+ * hardcoded clang/gcc guess - removed (see the comment above
+ * default_arm64_macho_cc) since a guess masquerading as a real toolchain
+ * is worse than failing loudly; this is also why -print-cc below never
+ * needs special-casing "no toolchain" itself, it just inherits this. *)
+let require_cc flag_name = function
+  | Some s -> s
+  | None -> failwith (spf "%s: no cross-compiler configured for this backend - \
+./configure found none (install one and re-run it), or pass -as/-ld/QC_AS/QC_LD \
+explicitly" flag_name)
+
 (* claude: as_cmd/ld_cmd default to "" (unset); this resolves that to a
- * per-backend clang cross-assembler/linker invocation, since -ppc-elf's
- * default cc must differ from X86's. -ppc (Mach-O) has no sensible
- * default cc on a Linux host, so it requires an explicit -as/-ld. *)
+ * per-backend cross-assembler/linker invocation. Preference order: an
+ * explicit -as/-ld/QC_AS/QC_LD always wins; failing that, Config.ml's
+ * real per-host detection (from ./configure - require_cc above fails
+ * loudly if it found nothing for this backend). arm64-mach-o/amd64-mach-o
+ * are the two exceptions: Darwin-only, no sysroot workaround needed, so
+ * plain clang always works there and Config.ml carries no entry for
+ * them at all (./configure never probes for them). -ppc-mach-o has no
+ * default at all, Darwin or not - see its own failwith below. *)
 let effective_cc backend cmd =
   match !cmd with
-  | "" -> (match backend with
-           | X86 -> default_i386_cc
-           | PpcElf -> default_powerpc_elf_cc
-           | Sparc -> default_sparc_cc
-           | Alpha -> default_alpha_cc ()
-           | Mips -> default_mips_cc
-           | Arm -> default_arm_cc
-           | M68k -> default_m68k_cc
-           | Riscv64 -> default_riscv64_cc
-           | Riscv32 -> default_riscv32_cc
-           | Arm64 -> default_arm64_cc
-           | Arm64MachO -> default_arm64_macho_cc
-           | Amd64 -> default_amd64_cc
-           | Amd64MachO -> default_amd64_macho_cc
-           | Ppc -> failwith "-ppc: pass -as/-ld (or QC_AS/QC_LD) explicitly \
-                               for the Mach-O assembler/linker to use"
-           | Interp -> failwith "-interp has no assembler/linker step")
+  | "" ->
+      (match backend with
+       | X86 -> require_cc "-x86" Config.cc_x86
+       | Ppc -> require_cc "-ppc" Config.cc_ppc
+       | Sparc -> require_cc "-sparc" Config.cc_sparc
+       | Alpha -> require_cc "-alpha" Config.cc_alpha
+       | Mips -> require_cc "-mips" Config.cc_mips
+       | Arm -> require_cc "-arm" Config.cc_arm
+       | M68k -> require_cc "-m68k" Config.cc_m68k
+       | Riscv64 -> require_cc "-riscv64" Config.cc_riscv64
+       | Riscv32 -> require_cc "-riscv32" Config.cc_riscv32
+       | Arm64 -> require_cc "-arm64" Config.cc_arm64
+       | Amd64 -> require_cc "-amd64" Config.cc_amd64
+       | Arm64MachO -> default_arm64_macho_cc
+       | Amd64MachO -> default_amd64_macho_cc
+       | PpcMachO -> failwith "-ppc-mach-o: pass -as/-ld (or QC_AS/QC_LD) explicitly \
+                                for the Mach-O assembler/linker to use"
+       | Interp -> failwith "-interp has no assembler/linker step")
   | s -> s
 
 (* qc--(1) says the default output name is the input with its extension
@@ -583,7 +533,7 @@ let effective_cc backend cmd =
 let default_output_file backend file =
   Filename.remove_extension file ^
   (match backend with
-   | X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO -> ".s"
+   | X86 | Ppc | PpcMachO | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO -> ".s"
    | Interp -> ".qs")
 
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
@@ -596,10 +546,10 @@ let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
     | X86 ->
         let asm = X86asm.make Cfgutil.emit chan in
         X86.target, asm, X86backend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
-    | Ppc ->
+    | PpcMachO ->
         let asm = Ppcmach.make Cfgutil.emit chan in
         Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
-    | PpcElf ->
+    | Ppc ->
         let asm = Ppcasm.make Cfgutil.emit chan in
         Ppc.target, asm, Ppcbackend.optimizer ~opt_level:!opt_level ~regalloc:!regalloc asm, true
     | Sparc ->
@@ -849,13 +799,13 @@ let stop_at_of_flag backend =
    *)
   | _, Interp when String.equal !stop_after "" -> Assembly
   | "", _ -> Executable
-  | (".s" | "s"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> Assembly
+  | (".s" | "s"), (X86 | Ppc | PpcMachO | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> Assembly
   | (".qs" | "qs"), Interp -> Assembly
-  | (".o" | "o"), (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> Object
+  | (".o" | "o"), (X86 | Ppc | PpcMachO | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> Object
   | ext, Interp ->
       failwith (spf
         "-stop %s: with -interp the only derived file is .qs (qc--(1))" ext)
-  | ext, (X86 | Ppc | PpcElf | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> failwith (spf "-stop %s: expected .s or .o" ext)
+  | ext, (X86 | Ppc | PpcMachO | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO) -> failwith (spf "-stop %s: expected .s or .o" ext)
 
 (* "The treatment of a file depends on its suffix" (qc--(1)). An
  * unrecognized suffix is passed to the linker, which is also how .o, .a
@@ -879,24 +829,29 @@ let classify file =
  * tiger's own Makefiles' `qc -stop .o -o x.o x.c--` invocations translated
  * into a standing test.
  *)
+(* claude: factored out of main_action so -print-cc (which needs the
+ * selected backend but has no input file to route through main_action)
+ * can reuse it instead of a second copy of this if/elif chain - see
+ * docs/claude_notes/plan_toolchain_dispatcher.txt. *)
+let backend_of_flags () =
+  if !use_interp then Interp
+  else if !use_ppc then Ppc
+  else if !use_ppc_macho then PpcMachO
+  else if !use_sparc then Sparc
+  else if !use_alpha then Alpha
+  else if !use_mips then Mips
+  else if !use_arm then Arm
+  else if !use_m68k then M68k
+  else if !use_riscv64 then Riscv64
+  else if !use_riscv32 then Riscv32
+  else if !use_arm64 then Arm64
+  else if !use_arm64_macho then Arm64MachO
+  else if !use_amd64 then Amd64
+  else if !use_amd64_macho then Amd64MachO
+  else X86
+
 let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
-  let backend =
-    if !use_interp then Interp
-    else if !use_ppc then Ppc
-    else if !use_ppc_elf then PpcElf
-    else if !use_sparc then Sparc
-    else if !use_alpha then Alpha
-    else if !use_mips then Mips
-    else if !use_arm then Arm
-    else if !use_m68k then M68k
-    else if !use_riscv64 then Riscv64
-    else if !use_riscv32 then Riscv32
-    else if !use_arm64 then Arm64
-    else if !use_arm64_macho then Arm64MachO
-    else if !use_amd64 then Amd64
-    else if !use_amd64_macho then Amd64MachO
-    else X86
-  in
+  let backend = backend_of_flags () in
   let stop = stop_at_of_flag backend in
   let files = List.map Fpath.to_string xs in
   if files =*= [] then failwith "no input file";
@@ -1001,10 +956,10 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     " <file> write the output to <file>";
     "-interp", Arg.Set use_interp,
     " generate bytecode for the C-- interpreter instead of x86 assembly";
-    "-ppc", Arg.Unit (fun () -> use_ppc := true; use_ppc_elf := false),
-    " generate 32-bit big-endian PowerPC Mach-O assembly instead of x86";
-    "-ppc-elf", Arg.Unit (fun () -> use_ppc_elf := true; use_ppc := false),
+    "-ppc", Arg.Unit (fun () -> use_ppc := true; use_ppc_macho := false),
     " generate 32-bit big-endian PowerPC Linux/ELF assembly instead of x86";
+    "-ppc-mach-o", Arg.Unit (fun () -> use_ppc_macho := true; use_ppc := false),
+    " generate 32-bit big-endian PowerPC Mach-O assembly instead of x86";
     "-sparc", Arg.Unit (fun () -> use_sparc := true),
     " generate 32-bit big-endian SPARC V8 Linux/ELF assembly instead of x86";
     "-alpha", Arg.Unit (fun () -> use_alpha := true),
@@ -1021,21 +976,21 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     " generate 32-bit little-endian RISC-V (RV32IMAC) Linux/ELF assembly instead of x86";
     "-arm64", Arg.Unit (fun () -> use_arm64 := true; use_arm64_macho := false),
     " generate 64-bit little-endian AArch64 Linux/ELF assembly instead of x86 \
-(default cc: " ^ default_arm64_cc ^ "; native on an aarch64-linux host, \
+(cc from ./configure, see -print-cc; native on an aarch64-linux host, \
 via qemu-aarch64 otherwise)";
     "-arm64-mach-o", Arg.Unit (fun () -> use_arm64_macho := true; use_arm64 := false),
     " generate 64-bit little-endian AArch64 Mach-O assembly instead of x86 \
 (on an arm64-apple-darwin host, no cross toolchain needed)";
     "-amd64", Arg.Unit (fun () -> use_amd64 := true; use_amd64_macho := false),
     " generate 64-bit little-endian x86-64 Linux/ELF assembly instead of x86 \
-(default cc: " ^ default_amd64_cc ^ "; needs qemu-x86_64 to run on a \
+(cc from ./configure, see -print-cc; needs qemu-x86_64 to run on a \
 non-x86_64 host)";
     "-amd64-mach-o", Arg.Unit (fun () -> use_amd64_macho := true; use_amd64 := false),
     " generate 64-bit little-endian x86-64 Mach-O assembly instead of x86 \
 (cross-assembled/linked via \"clang -arch x86_64\" on an arm64-apple-darwin \
 host, runs under Rosetta 2)";
     "-x86", Arg.Unit (fun () ->
-      use_interp := false; use_ppc := false; use_ppc_elf := false; use_sparc := false;
+      use_interp := false; use_ppc := false; use_ppc_macho := false; use_sparc := false;
       use_alpha := false; use_mips := false; use_arm := false; use_m68k := false;
       use_riscv64 := false;
       use_riscv32 := false; use_arm64 := false; use_arm64_macho := false;
@@ -1063,10 +1018,30 @@ original DFS linear-scan allocator - is only ever picked explicitly)";
     "-l", Arg.String (fun l -> libs := l :: !libs),
     " <name> link against library <name>";
     "-as", Arg.Set_string as_cmd,
-    " <cmd> the assembler to drive (default: " ^ default_i386_cc ^
-    " for x86, " ^ default_powerpc_elf_cc ^ " for -ppc-elf)";
+    " <cmd> the assembler to drive (default: per-backend, from ./configure - \
+see -print-cc)";
     "-ld", Arg.Set_string ld_cmd,
     " <cmd> the linker to drive (same default as -as)";
+
+    (* claude: for a client toolchain (e.g. fork-tiger's own configure) that
+     * needs to compile its own hand-written C sources with a compiler
+     * that's ABI/object-format-compatible with what -as produces for this
+     * backend (a client typically links -as's .o output together with its
+     * own C sources directly, e.g. fork-tiger's demos/Makefile links via
+     * $(CC_ARM64) rather than through qc's own -ld) - prints effective_cc's
+     * resolution (QC_AS / -as if set, else this backend's default_*_cc,
+     * same table -ld defaults from too) and exits, so it can be captured
+     * with e.g. "CC_ARM64=$(qc -arm64 -print-cc)" instead of a client
+     * re-deriving its own per-arch cross-toolchain default. Must come
+     * after the backend flag on the command line (e.g.
+     * "qc -arm64 -print-cc"), same order-sensitivity as -x86/-amd64/etc.
+     * already have. See docs/claude_notes/plan_toolchain_dispatcher.txt. *)
+    "-print-cc", Arg.Unit (fun () ->
+      print_string (effective_cc (backend_of_flags ()) as_cmd);
+      print_newline ();
+      exit 0),
+    " print the cross-compiler command this backend's -as would use \
+(after -<arch>/-as/QC_AS), then exit";
 
     (* claude: used to come from Arg_.options_of_actions action
      * (all_actions caps) - each entry just set `action` to its own flag

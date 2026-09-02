@@ -43,7 +43,7 @@
 #   ./run-native.sh                run them all, check against the baseline
 #   ./run-native.sh --update       re-record the baseline (review the diff!)
 #   ./run-native.sh add hello      run only those, report but do not compare
-#   BACKEND=ppc ./run-native.sh    same, for the ppc-elf backend
+#   BACKEND=ppc ./run-native.sh    same, for the ppc backend
 #   BACKEND=sparc ./run-native.sh  same, for the sparc backend
 #   OPT=3 ./run-native.sh          same, compiled at -O3 instead of the
 #                                  default -O0 - its own $B/baseline, same
@@ -72,7 +72,7 @@ OPT=${OPT:-0}
 
 case "$BACKEND" in
   x86)   CC32_DEFAULT=i686-linux-gnu-gcc;    RUN32_DEFAULT=qemu-i386;      QCFLAG= ;;
-  ppc)   CC32_DEFAULT=powerpc-linux-gnu-gcc; RUN32_DEFAULT=qemu-ppc;       QCFLAG=-ppc-elf ;;
+  ppc)   CC32_DEFAULT=powerpc-linux-gnu-gcc; RUN32_DEFAULT=qemu-ppc;       QCFLAG=-ppc ;;
   # claude: Ubuntu ships no plain 32-bit sparc-linux-gnu cross toolchain,
   # only sparc64-linux-gnu, which targets 32-bit SPARC V8 via -m32 (same
   # biarch trick x86_64 hosts use for -m32 i386) - so CC32_DEFAULT is
