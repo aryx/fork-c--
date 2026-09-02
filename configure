@@ -87,6 +87,12 @@ RUN_AMD64=${RUN_AMD64:-}
 CCARM64MACHO=${CCARM64MACHO:-}
 CCAMD64MACHO=${CCAMD64MACHO:-}
 SKIP_SUBMODULES=no
+# Set the first time we print the generic "other package managers" hint
+# below, so it appears once total instead of once per missing backend -
+# on a host missing most/all cross toolchains (e.g. a fresh macOS
+# checkout) that hint would otherwise repeat 9+ times verbatim.
+PKGMGR_HINTED=no
+QEMU_HINTED=no
 for arg in "$@"; do
     case "$arg" in
         --cc-x86=*)     CCX86="${arg#--cc-x86=}" ;;
@@ -132,6 +138,26 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+# Print the "other package managers" hint for a missing cross toolchain
+# once total, not once per backend (see PKGMGR_HINTED/QEMU_HINTED
+# above).
+note_other_pkgmgr() {
+    if [ "$PKGMGR_HINTED" = no ]; then
+        echo "  (other distros/OSes: look for the equivalent cross-gcc package in" >&2
+        echo "  your own package manager, e.g. pacman/dnf/brew, or build one with" >&2
+        echo "  crosstool-ng)" >&2
+        PKGMGR_HINTED=yes
+    fi
+}
+
+note_other_qemu() {
+    if [ "$QEMU_HINTED" = no ]; then
+        echo "  (other distros/OSes: pacman -S qemu-user on Arch, brew install" >&2
+        echo "  qemu on macOS, or your own package manager's qemu package)" >&2
+        QEMU_HINTED=yes
+    fi
+}
 
 ###############################################################################
 # dune and OCaml
@@ -216,9 +242,7 @@ else
     echo "configure: warning: no $CCX86 on PATH (needed for -x86 and most of make test-*)" >&2
     echo "  install a 32-bit x86 (i686) cross toolchain for your OS - e.g. on" >&2
     echo "  Debian/Ubuntu: sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
-    echo "  (other distros/OSes: look for the equivalent cross-gcc package in" >&2
-    echo "  your own package manager, e.g. pacman/dnf/brew, or build one with" >&2
-    echo "  crosstool-ng)" >&2
+    note_other_pkgmgr
 fi
 
 if [ -z "$RUN_X86" ]; then
@@ -236,8 +260,7 @@ if [ -z "$RUN_X86" ]; then
                 echo "configure: warning: $ARCH host and no qemu-i386 on PATH" >&2
                 echo "  install qemu's user-mode emulation for your OS - e.g. on" >&2
                 echo "  Debian/Ubuntu: sudo apt install qemu-user" >&2
-                echo "  (other distros/OSes: pacman -S qemu-user on Arch, brew install" >&2
-                echo "  qemu on macOS, or your own package manager's qemu package)" >&2
+                note_other_qemu
             fi
             ;;
     esac
@@ -272,8 +295,7 @@ detect_backend() {
         echo "configure: warning: no $ccbin on PATH (only needed for -$name)" >&2
         echo "  install a $name cross toolchain for your OS - e.g. on Debian/Ubuntu:" >&2
         echo "    $apt_hint" >&2
-        echo "  (other distros/OSes: look for the equivalent package in your own" >&2
-        echo "  package manager, e.g. pacman/dnf/brew, or build one with crosstool-ng)" >&2
+        note_other_pkgmgr
     fi
 
     if [ -z "$run" ]; then
@@ -291,8 +313,7 @@ detect_backend() {
                     echo "configure: warning: $ARCH host and no $default_run on PATH (only needed for -$name)" >&2
                     echo "  install qemu's user-mode emulation for your OS - e.g. on" >&2
                     echo "  Debian/Ubuntu: sudo apt install qemu-user" >&2
-                    echo "  (other distros/OSes: pacman -S qemu-user on Arch, brew install" >&2
-                    echo "  qemu on macOS, or your own package manager's qemu package)" >&2
+                    note_other_qemu
                 fi
                 ;;
         esac
