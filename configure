@@ -159,6 +159,25 @@ note_other_qemu() {
     fi
 }
 
+# "|"-separated pattern lists (e.g. "aarch64|arm64") only work as case-
+# alternatives when they're literal source text; a variable substituted
+# into a case pattern is matched as one literal glob, so "|" stops being
+# special and e.g. arm64 native_pat never matched real "arm64" uname -m
+# output. Split on "|" by hand instead so detect_backend's native_pat
+# argument can still carry more than one alternative.
+arch_is_native() {
+    pat=$1; arch=$2
+    old_ifs=$IFS
+    IFS='|'
+    for p in $pat; do
+        case "$arch" in
+            $p) IFS=$old_ifs; return 0 ;;
+        esac
+    done
+    IFS=$old_ifs
+    return 1
+}
+
 ###############################################################################
 # dune and OCaml
 ###############################################################################
@@ -243,6 +262,7 @@ else
     echo "  install a 32-bit x86 (i686) cross toolchain for your OS - e.g. on" >&2
     echo "  Debian/Ubuntu: sudo apt install gcc-i686-linux-gnu libc6-dev-i386-cross" >&2
     note_other_pkgmgr
+    CCX86=NONE
 fi
 
 if [ -z "$RUN_X86" ]; then
@@ -261,6 +281,7 @@ if [ -z "$RUN_X86" ]; then
                 echo "  install qemu's user-mode emulation for your OS - e.g. on" >&2
                 echo "  Debian/Ubuntu: sudo apt install qemu-user" >&2
                 note_other_qemu
+                RUN_X86=NONE
             fi
             ;;
     esac
@@ -296,27 +317,26 @@ detect_backend() {
         echo "  install a $name cross toolchain for your OS - e.g. on Debian/Ubuntu:" >&2
         echo "    $apt_hint" >&2
         note_other_pkgmgr
+        cc=NONE
     fi
 
     if [ -z "$run" ]; then
         ARCH=`uname -m`
-        case "$ARCH" in
-            $native_pat)
-                run=
-                echo "configure: -$name runs natively on $ARCH, no emulator needed"
-                ;;
-            *)
-                run=`command -v "$default_run" 2>/dev/null || true`
-                if [ -n "$run" ]; then
-                    echo "configure: found $run (-$name emulation on $ARCH)"
-                else
-                    echo "configure: warning: $ARCH host and no $default_run on PATH (only needed for -$name)" >&2
-                    echo "  install qemu's user-mode emulation for your OS - e.g. on" >&2
-                    echo "  Debian/Ubuntu: sudo apt install qemu-user" >&2
-                    note_other_qemu
-                fi
-                ;;
-        esac
+        if arch_is_native "$native_pat" "$ARCH"; then
+            run=
+            echo "configure: -$name runs natively on $ARCH, no emulator needed"
+        else
+            run=`command -v "$default_run" 2>/dev/null || true`
+            if [ -n "$run" ]; then
+                echo "configure: found $run (-$name emulation on $ARCH)"
+            else
+                echo "configure: warning: $ARCH host and no $default_run on PATH (only needed for -$name)" >&2
+                echo "  install qemu's user-mode emulation for your OS - e.g. on" >&2
+                echo "  Debian/Ubuntu: sudo apt install qemu-user" >&2
+                note_other_qemu
+                run=NONE
+            fi
+        fi
     fi
 
     eval "$ccvar=\$cc"
@@ -410,6 +430,7 @@ if [ "`uname -s`" = "Darwin" ]; then
     else
         echo "configure: warning: no ${CCARM64MACHO%% *} (only needed for -arm64-mach-o)" >&2
         echo "  xcode-select --install" >&2
+        CCARM64MACHO=NONE
     fi
     if [ -z "$CCAMD64MACHO" ]; then CCAMD64MACHO="clang -arch x86_64"; fi
     if command -v "${CCAMD64MACHO%% *}" >/dev/null 2>&1; then
@@ -417,6 +438,7 @@ if [ "`uname -s`" = "Darwin" ]; then
     else
         echo "configure: warning: no ${CCAMD64MACHO%% *} (only needed for -amd64-mach-o)" >&2
         echo "  xcode-select --install" >&2
+        CCAMD64MACHO=NONE
     fi
 fi
 
@@ -531,10 +553,14 @@ echo "  CCARM64    = $CCARM64"
 echo "  RUN_ARM64  = ${RUN_ARM64:-(native)}"
 echo "  CCAMD64    = $CCAMD64"
 echo "  RUN_AMD64  = ${RUN_AMD64:-(native)}"
-if [ -n "$CCARM64MACHO" ]; then
+if [ "$CCARM64MACHO" = NONE ]; then
+    echo "  CCARM64MACHO = NONE"
+elif [ -n "$CCARM64MACHO" ]; then
     echo "  CCARM64MACHO = $CCARM64MACHO  (native)"
 fi
-if [ -n "$CCAMD64MACHO" ]; then
+if [ "$CCAMD64MACHO" = NONE ]; then
+    echo "  CCAMD64MACHO = NONE"
+elif [ -n "$CCAMD64MACHO" ]; then
     echo "  CCAMD64MACHO = $CCAMD64MACHO  (Rosetta 2)"
 fi
 echo
