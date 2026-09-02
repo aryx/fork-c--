@@ -14,8 +14,8 @@
  ; and `dune install` has nothing to do for it.
  (public_name qc)
  (libraries
-  commons ; pull lots of deps
-  profiling
+  xix_commons
+  ;profiling
   cmm_commons2 cmm_error cmm_commons3
   cmm_parsing
   cmm_ir cmm_front_cfg

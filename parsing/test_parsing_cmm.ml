@@ -4,38 +4,39 @@ open Common
 (* Subsystem testing *)
 (*****************************************************************************)
 
-let test_tokens_cmm file = 
+let test_tokens_cmm caps file = 
 (*
   if not (file =~ ".*\\.c--") 
   then UCommon.pr2 "warning: seems not a .c-- file";
 *)
 
-  let toks = Parse_cmm.tokens file in
+  let toks = Parse_cmm.tokens caps file in
   toks |> List.iter (fun x ->
     let s = Scan.tok2str x in
-    UCommon.pr2 s
+    (* UCommon.pr2 s *)
+    print_string s
   );
   ()
 
 
-let test_parse_cmm file  =
+let test_parse_cmm caps file  =
 (*
   if not (file =~ ".*\\.c--") 
   then UCommon.pr2 "warning: seems not a .c-- file";
 *)
-  let ast = Parse_cmm.parse file in
+  let ast = Parse_cmm.parse caps file in
   print_string (Dumper.dump ast);
   ()
 
-let test_pp_cmm file  =
-  let ast = Parse_cmm.parse file in
+let test_pp_cmm caps file  =
+  let ast = Parse_cmm.parse caps file in
   let pp = Astpp.program ast in
   let s = Pp.ppToString 0 pp in
   print_string s;
   ()
 
-let test_dump_cmm file  =
-  let _ast = Parse_cmm.parse file in
+let test_dump_cmm caps file  =
+  let _ast = Parse_cmm.parse caps file in
   failwith "OLD: AstUtil.sexp_wr_toplevel_list ast chan"
 (*
   let s = Common.read_file temp in

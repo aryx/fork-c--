@@ -134,14 +134,9 @@ WORKDIR /src
 # them.
 COPY cmm.opam ./
 COPY caps/caps.opam caps/
-COPY semgrep-pfff-libs/commons.opam \
-     semgrep-pfff-libs/profiling.opam \
-     semgrep-pfff-libs/
-RUN opam install --deps-only -y \
-      ./cmm.opam \
-      ./caps/caps.opam \
-      ./semgrep-pfff-libs/commons.opam \
-      ./semgrep-pfff-libs/profiling.opam
+COPY libs/commons/commons.opam libs/commons/
+RUN opam install --deps-only -y ./cmm.opam ./caps/caps.opam ./libs/commons/commons.opam
+
 
 # Now let's build from source
 COPY . .

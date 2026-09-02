@@ -27,13 +27,13 @@ let is_eof tok =
   | Parse.EOF -> true
   | _ -> false
 
-let tokens file =
+let tokens caps file =
 
   let map = Srcmap.mk () in
   Srcmap.sync map 0 (file, 0, 0);
 
-  UFile.with_open_in (Fpath.v file) (fun chan -> 
-    let lexbuf = Lexing.from_channel chan in
+  (Fpath.v file) |> FS.with_open_in caps (fun (chan : Chan.i) -> 
+    let lexbuf = Lexing.from_channel chan.ic in
     
     let rec aux acc = 
       let tok = Scan.token lexbuf map in
@@ -49,15 +49,13 @@ let tokens file =
 (* Parsing *)
 (*****************************************************************************)
 
-let parse file =
+let parse caps file =
   let map = Srcmap.mk () in
   Srcmap.sync map 0 (file, 0, 0);
 
-  UFile.with_open_in (Fpath.v file) (fun chan ->
-    let lexbuf = Lexing.from_channel chan in
+  Fpath.v file |> FS.with_open_in caps (fun (chan : Chan.i) ->
+    let lexbuf = Lexing.from_channel chan.ic in
   
     let ast = Parse.program (fun lexbuf -> Scan.token lexbuf map) lexbuf in
     ast
   )
-
-

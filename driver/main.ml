@@ -7,6 +7,7 @@
  *    May you share freely, never taking more than you give.
  *)
 open Common
+open Eq.Operators
 
 module Common2 = Common
 
@@ -721,7 +722,7 @@ let test_driver_elab file =
       (srcmap, ast)
       assembler
   in
-  UCommon.pr2_gen env_and_compunit_maybe;
+  print_string (Dumper.dump env_and_compunit_maybe);
   ()
 
 let test_driver_compile file =
@@ -747,37 +748,43 @@ let test_driver_compile file =
 (* The command line actions *)
 (*---------------------------------------------------------------------------*)
 
-let extra_actions (caps : < Cap.stdout; ..>) = [
-    "-dump_tokens", "   <file>", 
-    Arg_.mk_action_1_arg dump_tokens;
-    "-dump_ast", "   <file>", 
-    Arg_.mk_action_1_arg (dump_ast caps);
-    "-pp_ast", "   <file>", 
-    Arg_.mk_action_1_arg (pp_ast caps);
-    "-dump_nast", "  <file>", 
-    Arg_.mk_action_1_arg (dump_nast caps);
-    "-dump_nelab", "  <file>", 
-    Arg_.mk_action_1_arg (dump_nelab caps);
+(* claude: was extra_actions, a list of (flag, doc, Arg_.mk_action_n_arg
+ * closure) triples consumed by Arg_.options_of_actions/Arg_.do_action.
+ * The vendored Arg_ library dropped that whole action-table mechanism (see
+ * libs/commons/Arg_.mli, now just parse_argv) - ~/xix/shell/CLI.ml's
+ * do_action, a plain pattern match on the action flag and its positional
+ * args, is the replacement shape every caller now uses; main's -xxx
+ * options just set `action` (see the options list below) and main calls
+ * this once after parsing, the same way CLI.ml's main does. *)
+let do_action (caps : < Cap.stdout; Cap.open_in; ..>) (action : string) (xs : string list) : unit =
+  match action, xs with
+  | "-dump_tokens", [file] -> dump_tokens file
+  | "-dump_ast", [file] -> dump_ast caps file
+  | "-pp_ast", [file] -> pp_ast caps file
+  | "-dump_nast", [file] -> dump_nast caps file
+  | "-dump_nelab", [file] -> dump_nelab caps file
 
-    "-driver_emit_asdl", "   <file>", 
-    Arg_.mk_action_1_arg test_emit_asdl;
-    "-driver_elab", "  <file>", 
-    Arg_.mk_action_1_arg test_driver_elab;
-    "-driver_compile", "  <file>", 
-    Arg_.mk_action_1_arg test_driver_compile;
+  | "-driver_emit_asdl", [file] -> test_emit_asdl file
+  | "-driver_elab", [file] -> test_driver_elab file
+  | "-driver_compile", [file] -> test_driver_compile file
 
+  | "-test_x86", [file] -> test_x86 caps file
+  | "-test_interp", [file] -> test_interp caps file
 
-    "-test_x86", "  <file>",
-    Arg_.mk_action_1_arg (test_x86 caps);
-    "-test_interp", "  <file>",
-    Arg_.mk_action_1_arg (test_interp caps);
+  | "-test_rtl", [file] -> test_rtl file
 
-    "-test_rtl", "  <file>", 
-    Arg_.mk_action_1_arg test_rtl;
+  | "-driver_version", [] -> test_driver_version ()
 
-    "-driver_version", "   ", 
-    Arg_.mk_action_0_arg test_driver_version;
-]
+  (* claude: these four used to come from Test_parsing_cmm.actions (),
+   * merged into all_actions - that function is gone too (same Arg_
+   * refactor, see parsing/test_parsing_cmm.ml), so call its
+   * test_xxx_cmm functions directly, same as every other action here. *)
+  | "-tokens_cmm", [file] -> Test_parsing_cmm.test_tokens_cmm caps file
+  | "-parse_cmm", [file] -> Test_parsing_cmm.test_parse_cmm caps file
+  | "-pp_cmm", [file] -> Test_parsing_cmm.test_pp_cmm caps file
+  | "-dump_cmm", [file] -> Test_parsing_cmm.test_dump_cmm caps file
+
+  | _ -> failwith (spf "action not supported or wrong number of arguments: %s" action)
 
 (*****************************************************************************)
 (* Main action *)
@@ -795,7 +802,7 @@ let extra_actions (caps : < Cap.stdout; ..>) = [
 (* The command strings are user-supplied and may carry options ("clang
  * -target i386-..."), so split on spaces to get Cmd.t's program and args.
  *)
-let run_external (caps : < Cap.exec; .. >) cmd_string args =
+let run_external (caps : < Cap.forkew ; .. >) cmd_string args =
   let cmd =
     match String.split_on_char ' ' (String.trim cmd_string) with
     | [] | [ "" ] -> failwith "empty command"
@@ -804,6 +811,12 @@ let run_external (caps : < Cap.exec; .. >) cmd_string args =
   (* -v raises the log level, so this is the man page's "print commands as
    * they are executed" *)
   Logs.info (fun m -> m "running: %s" (Cmd.to_string cmd));
+  let exit = Cmd.run caps cmd in
+  match exit with
+  | Exit.OK -> ()
+  | Exit.Err _ | Exit.Code _ ->
+      failwith (spf "%s failed %s" (Cmd.to_string cmd) (Exit.show exit))
+(*
   match CapExec.status_of_run caps#exec cmd with
   | Ok (`Exited 0) -> ()
   | Ok (`Exited n) ->
@@ -811,13 +824,14 @@ let run_external (caps : < Cap.exec; .. >) cmd_string args =
   | Ok (`Signaled n) ->
       failwith (spf "%s died with signal %d" (Cmd.to_string cmd) n)
   | Error (`Msg s) -> failwith (spf "could not run %s: %s" (Cmd.to_string cmd) s)
+*)
 
 let assemble caps backend ~src ~dest =
   run_external caps (effective_cc backend as_cmd) [ "-c"; src; "-o"; dest ]
 
 let link caps backend ~objs ~dest =
-  let dashl = List_.map (fun l -> "-l" ^ l) (List.rev !libs) in
-  let dashL = List_.map (fun d -> "-L" ^ d) (List.rev !libdirs) in
+  let dashl = List.map (fun l -> "-l" ^ l) (List.rev !libs) in
+  let dashL = List.map (fun d -> "-L" ^ d) (List.rev !libdirs) in
   run_external caps (effective_cc backend ld_cmd) (objs @ dashL @ dashl @ [ "-o"; dest ])
 
 (* Where the driver is told to stop. The man page spells these as
@@ -884,8 +898,8 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     else X86
   in
   let stop = stop_at_of_flag backend in
-  let files = List_.map Fpath.to_string xs in
-  if List_.null files then failwith "no input file";
+  let files = List.map Fpath.to_string xs in
+  if files =*= [] then failwith "no input file";
 
   (* -o names whatever the driver stops at, so it can only name one thing.
    * Tiger's Makefiles rely on the single-input form, e.g.
@@ -925,7 +939,7 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     | Asm_source -> Some file
     | For_linker -> None
   in
-  let derived = List_.map (fun f -> (f, assembly_of f)) files in
+  let derived = List.map (fun f -> (f, assembly_of f)) files in
 
   if stop =*= Assembly then Exit.OK
   else begin
@@ -948,7 +962,7 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
           assemble caps backend ~src:s ~dest;
           dest
     in
-    let objs = List_.map object_of derived in
+    let objs = List.map object_of derived in
 
     if stop =*= Object then Exit.OK
     else begin
@@ -961,15 +975,6 @@ let main_action (caps : < Cap.stdout; Cap.exec; ..>) (xs : Fpath.t list) =
     end
   end
 
-
-(*****************************************************************************)
-(* The options *)
-(*****************************************************************************)
-
-let all_actions caps =
- Test_parsing_cmm.actions () @
- extra_actions caps @
- []
 
 (*****************************************************************************)
 (* Main entry point *)
@@ -1062,35 +1067,75 @@ original DFS linear-scan allocator - is only ever picked explicitly)";
     " for x86, " ^ default_powerpc_elf_cc ^ " for -ppc-elf)";
     "-ld", Arg.Set_string ld_cmd,
     " <cmd> the linker to drive (same default as -as)";
-  ] @
-  Arg_.options_of_actions action (all_actions caps) @
-  [
-  "-version",   Arg.Unit (fun () -> 
-    UCommon.pr2 (spf "c-- version: %s" version);
-    exit 0;
-  ), 
- "  guess what";
+
+    (* claude: used to come from Arg_.options_of_actions action
+     * (all_actions caps) - each entry just set `action` to its own flag
+     * name, which is now spelled out directly (same as
+     * ~/xix/shell/CLI.ml's "-test_parser" option); do_action above
+     * dispatches on it once parsing is done. *)
+    "-dump_tokens", Arg.Unit (fun () -> action := "-dump_tokens"),
+    "   <file>";
+    "-dump_ast", Arg.Unit (fun () -> action := "-dump_ast"),
+    "   <file>";
+    "-pp_ast", Arg.Unit (fun () -> action := "-pp_ast"),
+    "   <file>";
+    "-dump_nast", Arg.Unit (fun () -> action := "-dump_nast"),
+    "  <file>";
+    "-dump_nelab", Arg.Unit (fun () -> action := "-dump_nelab"),
+    "  <file>";
+
+    "-driver_emit_asdl", Arg.Unit (fun () -> action := "-driver_emit_asdl"),
+    "   <file>";
+    "-driver_elab", Arg.Unit (fun () -> action := "-driver_elab"),
+    "  <file>";
+    "-driver_compile", Arg.Unit (fun () -> action := "-driver_compile"),
+    "  <file>";
+
+    "-test_x86", Arg.Unit (fun () -> action := "-test_x86"),
+    "  <file>";
+    "-test_interp", Arg.Unit (fun () -> action := "-test_interp"),
+    "  <file>";
+
+    "-test_rtl", Arg.Unit (fun () -> action := "-test_rtl"),
+    "  <file>";
+
+    "-driver_version", Arg.Unit (fun () -> action := "-driver_version"),
+    "   ";
+
+    "-tokens_cmm", Arg.Unit (fun () -> action := "-tokens_cmm"),
+    "   <file>";
+    "-parse_cmm", Arg.Unit (fun () -> action := "-parse_cmm"),
+    "   <file>";
+    "-pp_cmm", Arg.Unit (fun () -> action := "-pp_cmm"),
+    "   <file>";
+    "-dump_cmm", Arg.Unit (fun () -> action := "-dump_cmm"),
+    "   <file>";
+
+    "-version",   Arg.Unit (fun () ->
+      print_string (spf "c-- version: %s" version);
+      exit 0;
+    ),
+   "  guess what";
   ]
   in
+  let files = ref [] in
   (* This may raise ExitCode *)
-  let args = Arg_.parse_options options usage argv in
-  Logs_.setup ~level:!level ();
+  Arg_.parse_argv caps argv options (fun f -> files := f :: !files) usage;
+  Logs_.setup !level ();
   Logs.info (fun m -> m "ran from %s" (Sys.getcwd()));
+  let args = List.rev !files in
 
   (* must be done after Arg.parse, because Common.profile is set by it *)
-  Profiling.profile_code "Main total" (fun () -> 
+(*  Profiling.profile_code "Main total" (fun () -> *)
 
     (match args with
-   
+
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)
     (* --------------------------------------------------------- *)
-    | xs when List.mem !action (Arg_.action_list (all_actions caps)) -> 
-        Arg_.do_action !action xs (all_actions caps);
+    | xs when !action <> "" ->
+        do_action caps !action xs;
         Exit.OK
-
-    | _ when not (String_.empty !action) -> 
-        failwith ("unrecognized action or wrong params: " ^ !action)
 
     (* --------------------------------------------------------- *)
     (* main entry *)
@@ -1112,11 +1157,11 @@ original DFS linear-scan allocator - is only ever picked explicitly)";
     (* --------------------------------------------------------- *)
     (* empty entry *)
     (* --------------------------------------------------------- *)
-    | [] -> 
-        Arg_.usage usage options; 
+    | [] ->
+        Arg.usage options usage;
         failwith "too few arguments"
     )
-  )
+(*  ) *)
 
 
 

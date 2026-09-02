@@ -1062,7 +1062,7 @@ let degree_for_temp target cg temp =
                 let reads, writes = reads_writes instr spillee in
                 if reads || writes then
                   let (mem, spill_regs) = RM.find spillee spillMap in
-                  let tmp   = Talloc.Multiple.reg_like proc.Proc.temps spillee in
+                  let tmp   = Talloc.Multiple.reg_like proc.temps spillee in
                   let subst = fun x -> if Register.eq x spillee then tmp else x in 
                   let map = Rtlutil.Subst.reg ~map:subst in
                   let loads  =
@@ -1137,7 +1137,7 @@ let degree_for_temp target cg temp =
                 let last, loads, spillMap, newTemps =
                   if RSX.mem (R.Reg spillee_v) (last_extra_uses last) then
                     let (mem, spill_regs) = RM.find spillee_v spillMap in
-                    let tmp = Talloc.Multiple.reg_like proc.Proc.temps spillee_v in
+                    let tmp = Talloc.Multiple.reg_like proc.temps spillee_v in
                     let loads = tgt.T.machine.T.reload proc mem tmp :: loads in
                     let spillMap = RM.add tmp (mem, tmp :: spill_regs) spillMap in
                     (subst_last_extra_uses spillee_v tmp last, loads, spillMap, tmp :: newTemps)
@@ -1154,7 +1154,7 @@ let degree_for_temp target cg temp =
 
 
               let (head, last) = GR.goto_end (GR.unzip block) in
-              let m = (proc, tgt.T.machine, proc.P.exp_of_lbl) in
+              let m = (proc, tgt.T.machine, proc.exp_of_lbl) in
               let add_nodes shuffles (g : G.zgraph) =
                 let add_subgraph g block =
                   let (subg, _) = G.block2cfg m block in
@@ -1200,7 +1200,7 @@ let degree_for_temp target cg temp =
               let g = G.tozgraph ((GR.First (GR.first (GR.unzip block)), GR.Last last), blockMap) in
               fold_block (add_nodes loads g) head spillMap newTemps
             (*x: insert spills *)
-            let rewrite cfg ({Proc.target = PA.T target} as proc) spillees =
+            let rewrite cfg (Procedure.{target = PA.T target} as proc) spillees =
               let spillMap =
                 ilg_fold (fun s map -> RM.add s.v (spill_slot_for proc s.v, []) map)
                          spillees RM.empty in

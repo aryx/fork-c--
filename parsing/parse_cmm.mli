@@ -1,4 +1,4 @@
 
-val tokens: string -> Parse.token list
+val tokens: < Cap.open_in; ..> -> string -> Parse.token list
 
-val parse: string -> Ast.program
+val parse: < Cap.open_in; ..> -> string -> Ast.program

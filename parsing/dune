@@ -2,7 +2,7 @@
  (name cmm_parsing)
  (wrapped false)
  (libraries 
-   commons commons.unsafe; pull lots of deps ... but long term we want to use commons anyway no?
+   xix_commons
    cmm_commons2 cmm_commons3 cmm_error
    cmm_ast
 ))
