@@ -141,17 +141,21 @@ RUN opam install --deps-only -y ./cmm.opam ./caps/caps.opam ./libs/commons/commo
 # Now let's build from source
 COPY . .
 
+# Detect the cross toolchains installed above and write Makefile.config
+# and driver/Config.ml - now required before "dune build" (Config.ml is
+# gitignored, generated here, no checked-in fallback - see
+# docs/claude_notes/plan_toolchain_dispatcher.txt), so this now runs
+# before the Build step below, not after it.
+# --skip-submodules: .dockerignore drops the top-level .git, so this isn't
+# a git repository here and configure's own submodule check would fail;
+# the submodule content itself was already brought in by "COPY . ." above.
+RUN eval $(opam env) && ./configure --skip-submodules
+
 # Build
 RUN eval $(opam env) && dune build @install
 
 # Test
 RUN ./bin/qc --help
-
-# Detect the cross toolchains installed above and write Makefile.config.
-# --skip-submodules: .dockerignore drops the top-level .git, so this isn't
-# a git repository here and configure's own submodule check would fail;
-# the submodule content itself was already brought in by "COPY . ." above.
-RUN eval $(opam env) && ./configure --skip-submodules
 
 # Every regression tier this repo has, baseline-compared against
 # tests/expected/. See the Makefile's own test/test-tiger/test-rt/
