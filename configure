@@ -537,20 +537,51 @@ fi
 # toolchain detection into the qc binary itself, the same way
 # Makefile.config already works - generated here, gitignored, dune build
 # (hence "make", which depends on it) requires ./configure to have run
-# first - so a client's own configure (e.g. fork-tiger's) can ask
-# "qc -<arch> -print-cc" for a working cross-compiler instead of
-# re-deriving its own guess, and qc--'s own -as/-ld defaults stop relying
-# solely on default_i386_cc's clang guess, which does not always work
-# (confirmed: fails to statically link on this aarch64-linux host, no
-# i386 sysroot for clang there, while CCX86 above does).
+# first - so a client's own configure (e.g. fork-tiger's, or any other
+# future qc-- frontend) can ask "qc -<arch> -print-cc"/"-print-ar"/
+# "-print-run" for a working toolchain instead of re-deriving its own
+# guess (AR needs no detection of its own - qc derives it mechanically
+# from whatever -print-cc resolved to, see ar_of_cc in driver/CLI.ml).
+# Also fixes qc--'s own -as/-ld, which used to fall back to a hardcoded
+# clang guess that does not always work (confirmed: default_i386_cc's
+# plain "clang -target i386-unknown-linux-gnu" fails to statically link
+# on this aarch64-linux host, no i386 sysroot there, while CCX86 above
+# does) - removed entirely, see driver/CLI.ml's require_cc.
+# claude: "NONE" is detect_backend's own sentinel for "looked, found
+# nothing" (see its cc=NONE/run=NONE assignments above) - distinct from
+# a truly empty value (RUN_<ARCH> native case). ocaml_opt must treat it
+# as None too, not as the literal string "Some \"NONE\"" (a real bug,
+# latent until this was run on a host actually missing a toolchain -
+# every one of them happened to be found when this was first written).
 ocaml_opt() {
-    # arg1 = shell value (possibly empty = "not detected"); escapes \ and "
-    # so a user-supplied --cc-<arch>=... can't break the generated syntax.
-    if [ -n "$1" ]; then
+    # arg1 = shell value (possibly empty or "NONE" = "not detected");
+    # escapes \ and " so a user-supplied --cc-<arch>=... can't break the
+    # generated syntax.
+    if [ -n "$1" ] && [ "$1" != NONE ]; then
         val=`printf '%s' "$1" | sed 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g'`
         printf 'Some "%s"' "$val"
     else
         printf 'None'
+    fi
+}
+
+# claude: RUN_<ARCH> has three real states detect_backend can leave it
+# in - truly empty (native, run the binary directly, no wrapper needed),
+# a real qemu-* command (cross, needs that wrapper), or "NONE" (non-
+# native and no emulator found - a real gap, not the same as "native").
+# Config.ml keeps that three-way distinction explicit (a plain
+# string option would conflate native and "not found" into the same
+# None) so qc's -print-run (see driver/CLI.ml) can fail loudly on the
+# "NONE" case instead of silently telling a caller to just run the
+# binary directly, same "don't guess" reasoning as require_cc's.
+ocaml_run() {
+    if [ "$1" = NONE ]; then
+        printf 'Run_unavailable'
+    elif [ -n "$1" ]; then
+        val=`printf '%s' "$1" | sed 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g'`
+        printf 'Run_via "%s"' "$val"
+    else
+        printf 'Run_native'
     fi
 }
 
@@ -570,6 +601,20 @@ ocaml_opt() {
     echo "let cc_riscv64 : string option = `ocaml_opt "$CCRISCV64"`"
     echo "let cc_arm64 : string option = `ocaml_opt "$CCARM64"`"
     echo "let cc_amd64 : string option = `ocaml_opt "$CCAMD64"`"
+    echo
+    echo "type run = Run_native | Run_via of string | Run_unavailable"
+    echo
+    echo "let run_x86 : run = `ocaml_run "$RUN_X86"`"
+    echo "let run_ppc : run = `ocaml_run "$RUN_PPC"`"
+    echo "let run_sparc : run = `ocaml_run "$RUN_SPARC"`"
+    echo "let run_alpha : run = `ocaml_run "$RUN_ALPHA"`"
+    echo "let run_mips : run = `ocaml_run "$RUN_MIPS"`"
+    echo "let run_arm : run = `ocaml_run "$RUN_ARM"`"
+    echo "let run_m68k : run = `ocaml_run "$RUN_M68K"`"
+    echo "let run_riscv32 : run = `ocaml_run "$RUN_RISCV32"`"
+    echo "let run_riscv64 : run = `ocaml_run "$RUN_RISCV64"`"
+    echo "let run_arm64 : run = `ocaml_run "$RUN_ARM64"`"
+    echo "let run_amd64 : run = `ocaml_run "$RUN_AMD64"`"
 } > driver/Config.ml
 
 echo "wrote driver/Config.ml (re-run 'dune build' to pick it up)"

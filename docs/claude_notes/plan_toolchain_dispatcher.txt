@@ -344,3 +344,85 @@ Two more corrections, same session (2026-09-02)
   `tests/run-tiger-ppc.sh` and `tests/run-tiger-x86.sh` both still
   15/15, matching their recorded baselines, after `make -C runtime
   BACKEND=ppc` and a clean `dune build`.
+
+`-available-archs` landed (2026-09-02, commit fa9b651)
+------------------------------------------------------------------
+Per "Proposed design" step 4 above: lists every `-<arch>` `Config.ml` has
+`Some` for, one per line, reading `Config.cc_<backend>` directly - no
+live `command -v` probing needed, `./configure` already did that.
+Verified: `qc -available-archs` prints all 11 Linux/ELF backends this
+host has (matches `./configure`'s own report). Also fixed, same commit:
+a stray `] | Arg.align` (invalid OCaml, `|` is not `|>`) that landed in
+`driver/CLI.ml` from a concurrent edit outside this session while this
+was in progress - flagged to the user rather than silently fixed, since
+it looked like it might be their own in-progress work; they fixed it
+(`|>`) and asked to commit.
+
+AR/RUN: centralized in qc-- after all (2026-09-02, same day)
+------------------------------------------------------------------
+The "Open questions" AR/RUN (a)-vs-(b) fork above is resolved: user
+"tiger should not do any toolchain detection on its own; it should rely
+on what was done by qc. same for AR" - then, prompted about `-print-run`
+specifically: "to avoid again repeating the same thing in both qc and
+tiger and possible other c-- frontend". So (a): qc-- now answers for
+CC, AR, and RUN, not just CC - fork-tiger's `configure` should end up
+doing zero toolchain detection of its own once it switches over (not
+done yet - still the last remaining step).
+
+- **`-print-ar`** needed no new detection at all: a cross gcc is always
+  `<triple>-gcc` with matching binutils `<triple>-ar` (the same trick
+  fork-tiger's own `configure` already used for `AR32`/`AR_<ARCH>` -
+  `configure:210-221`/`:250-251` there). `ar_of_cc` (`driver/CLI.ml`,
+  right before `compile_file`) derives it from whatever `-print-cc`
+  already resolved to (first word only, to handle multi-word cc's like
+  `-sparc`'s `"sparc64-linux-gnu-gcc -m32"`), falling back to plain
+  `"ar"` for anything not `<triple>-gcc` (the two Mach-O `clang`
+  defaults). No `-ar`/`QC_AR` override was added to parallel `-as`/
+  `QC_AS` - qc-- itself never builds an archive, so there is nothing
+  internal for such an override to affect; a client that wants a
+  different `ar` just ignores `-print-ar`'s output and uses its own.
+- **`-print-run`** needed real new detection to flow through:
+  `detect_backend` already finds `RUN_<ARCH>` (for qc--'s own
+  `tests/run-tiger-<arch>.sh`), so `configure` now also writes
+  `run_<backend>` into `Config.ml`, alongside `cc_<backend>`. Unlike CC,
+  a plain `string option` would have been wrong here: `RUN_<ARCH>` has
+  three real states from `detect_backend` - truly empty (native, no
+  wrapper), a real `qemu-*` path (cross), or `NONE` (non-native, no
+  emulator found) - and collapsing "native" and "not found" into the
+  same `None` would have made `-print-run` unable to fail loudly on the
+  second one, same "don't guess" principle as `require_cc`'s. So
+  `Config.ml` now also carries `type run = Run_native | Run_via of
+  string | Run_unavailable`, written by a new `ocaml_run` (next to
+  `ocaml_opt`). `-print-run` prints nothing on `Run_native` (a client
+  just runs the binary directly), the wrapper command on `Run_via`, and
+  fails on `Run_unavailable`. The two Mach-O backends aren't probed by
+  `./configure` at all but are still `Run_native` in `-print-run`'s own
+  match (Rosetta 2 is OS-transparent - `amd64-mach-o`'s binaries run via
+  plain `./a.out` same as any native one, no wrapper command exists to
+  print).
+- **Real bug found and fixed along the way**: `ocaml_opt` (the CC/
+  `Config.ml` writer from the first `-print-cc` round) only checked
+  `[ -n "$1" ]` (non-empty), not `detect_backend`'s own `NONE` sentinel
+  for "not found" - so a backend `./configure` failed to find a
+  toolchain for would have produced `Some "NONE"` in `Config.ml`,
+  `effective_cc` would have returned the literal string `"NONE"` as if
+  it were a real command, and `-print-cc`/`-as`/`-ld` would all have
+  failed with a confusing `sh: NONE: command not found` instead of
+  `require_cc`'s clear message. Latent until now because every backend
+  happened to be found on this dev host in every `./configure` run so
+  far - never actually exercised the `NONE` path. Fixed by teaching
+  `ocaml_opt` (and the new `ocaml_run`) to treat literal `"NONE"` as
+  "not detected" too.
+- Verified by hand: `qc -arm64 -print-ar` -> `aarch64-linux-gnu-ar`;
+  `qc -sparc -print-ar` -> `sparc64-linux-gnu-ar` (multi-word cc handled
+  correctly); `qc -amd64-mach-o -print-ar` -> `ar` (clang fallback);
+  `qc -arm64 -print-run` -> nothing, exit 0 (native on this host);
+  `qc -amd64 -print-run` -> `/usr/bin/qemu-x86_64`; `qc -amd64-mach-o
+  -print-run` -> nothing, exit 0; `qc -ppc-mach-o -print-run` -> fails,
+  exit 2, clear message. `tests/run-compile.sh` still matches baseline
+  after all of this.
+
+Still not done: fork-tiger's `configure` itself hasn't been touched -
+it should now be reducible to calling `qc -available-archs` plus
+`-print-cc`/`-print-ar`/`-print-run` per backend, with none of its own
+`detect_backend` left at all.

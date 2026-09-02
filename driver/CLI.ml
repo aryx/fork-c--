@@ -536,6 +536,25 @@ let default_output_file backend file =
    | X86 | Ppc | PpcMachO | Sparc | Alpha | Mips | Arm | M68k | Riscv64 | Riscv32 | Arm64 | Arm64MachO | Amd64 | Amd64MachO -> ".s"
    | Interp -> ".qs")
 
+(* claude: AR needs no detection of its own (unlike CC/RUN, ./configure
+ * never looks for one) - a cross gcc is always <triple>-gcc with
+ * matching binutils <triple>-ar, so this derives one from whatever cc
+ * -print-cc already resolved to (same trick fork-tiger's own configure
+ * used before this existed - see docs/claude_notes/
+ * plan_toolchain_dispatcher.txt). Operates on cc's first word since
+ * several (sparc, arm, riscv32) carry extra flags after the compiler
+ * name (e.g. "sparc64-linux-gnu-gcc -m32"). Falls back to plain "ar" for
+ * anything not a "<triple>-gcc" (clang's default_arm64_macho_cc/
+ * default_amd64_macho_cc, or any -as/QC_AS override that isn't gcc). *)
+let ar_of_cc cc =
+  let first_word = match String.index_opt cc ' ' with
+    | Some i -> String.sub cc 0 i
+    | None -> cc
+  in
+  if Filename.check_suffix first_word "-gcc"
+  then Filename.chop_suffix first_word "-gcc" ^ "-ar"
+  else "ar"
+
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
   let (srcmap, ast) = Driver.parse file in
   Logs.info (fun m -> m "writing in %s" dest);
@@ -1054,6 +1073,60 @@ see -print-cc)";
       exit 0),
     " print the cross-compiler command this backend's -as would use \
 (after -<arch>/-as/QC_AS), then exit";
+
+    (* claude: derived from -print-cc's own resolution (see ar_of_cc
+     * above) - no separate detection, so it fails exactly when -print-cc
+     * would (no cc means no matching ar either). No -ar/QC_AR override
+     * exists to parallel -as/QC_AS since qc-- itself never builds an
+     * archive - this is purely for a client like -print-cc is. *)
+    "-print-ar", Arg.Unit (fun () ->
+      print_string (ar_of_cc (effective_cc (backend_of_flags ()) as_cmd));
+      print_newline ();
+      exit 0),
+    " print the archiver this backend's cc implies (<triple>-ar, or plain \
+\"ar\"), then exit";
+
+    (* claude: unlike -print-cc/-print-ar, native has a real answer of its
+     * own (print nothing - run the binary directly, no wrapper) rather
+     * than falling back to -as/QC_AS - there is no "-run"/QC_RUN
+     * override to fall back to at all, since qc-- itself never runs a
+     * binary either; a client that wants to override just ignores this
+     * output. Config.run_<backend> (see driver/Config.ml, written by
+     * ./configure) is a 3-way Run_native/Run_via/Run_unavailable, not a
+     * plain string option, specifically so this can fail loudly on
+     * Run_unavailable instead of conflating "no wrapper needed" with "no
+     * wrapper found" - same "don't guess" reasoning as require_cc's. The
+     * two Mach-O backends need no wrapper either (Rosetta 2 kicks in
+     * transparently for amd64-mach-o, same as running any other native
+     * binary) even though ./configure never probes for them. *)
+    "-print-run", Arg.Unit (fun () ->
+      let run = match backend_of_flags () with
+        | X86 -> Config.run_x86
+        | Ppc -> Config.run_ppc
+        | Sparc -> Config.run_sparc
+        | Alpha -> Config.run_alpha
+        | Mips -> Config.run_mips
+        | Arm -> Config.run_arm
+        | M68k -> Config.run_m68k
+        | Riscv64 -> Config.run_riscv64
+        | Riscv32 -> Config.run_riscv32
+        | Arm64 -> Config.run_arm64
+        | Amd64 -> Config.run_amd64
+        | Arm64MachO | Amd64MachO -> Config.Run_native
+        | PpcMachO -> failwith "-print-run: -ppc-mach-o has no working \
+default at all (see -print-cc/-ppc-mach-o's own failwith) - nothing to run"
+        | Interp -> failwith "-print-run: -interp produces bytecode, not a \
+native binary - not applicable"
+      in
+      (match run with
+       | Config.Run_native -> ()
+       | Config.Run_via cmd -> print_string cmd; print_newline ()
+       | Config.Run_unavailable ->
+           failwith "-print-run: no emulator configured for this backend - \
+./configure found none (install one and re-run it)");
+      exit 0),
+    " print the command to prefix this backend's binaries with to run \
+them (nothing printed if native), then exit";
 
     (* claude: lists every -<arch> flag (bare/Linux-ELF spelling only -
      * the Mach-O siblings are Darwin-only and ./configure never probes
