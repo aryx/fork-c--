@@ -422,7 +422,48 @@ done yet - still the last remaining step).
   exit 2, clear message. `tests/run-compile.sh` still matches baseline
   after all of this.
 
-Still not done: fork-tiger's `configure` itself hasn't been touched -
-it should now be reducible to calling `qc -available-archs` plus
-`-print-cc`/`-print-ar`/`-print-run` per backend, with none of its own
-`detect_backend` left at all.
+fork-tiger's `configure` switched over (2026-09-02, fork-tiger commit
+40d3a59)
+------------------------------------------------------------------
+Done: fork-tiger's own `detect_backend` (a near line-for-line duplicate
+of this repo's own, per the very first "Prompted by" section above) is
+gone. Every `CC_<ARCH>`/`AR_<ARCH>`/`RUN_<ARCH>` (including the primary
+`CC32`/`AR32`/`RUN32`) now comes from `qc -<arch> -print-cc`/`-print-ar`/
+`-print-run`, unless explicitly overridden via the environment (kept -
+not "detection" - but the ~11 per-backend `--cc-<arch>=` CLI flags were
+dropped, per the user: "is it still useful if we gonna start to rely on
+[...] qc?" - env vars alone cover the same escape hatch with no
+per-backend flag-parsing/`--help` bulk). `AR_<ARCH>` is re-derived via
+`QC_AS=$cc qc -<arch> -print-ar` (not a separate independent qc query)
+so it always matches whatever cc fork-tiger actually ends up using,
+override included. `arm`'s `-fno-stack-protector` (tiger's own C
+sources trip gcc's default stack protector on that toolchain - not
+something qc needs to know about) is appended in fork-tiger's own
+`configure` after querying qc, matching its previous behavior exactly -
+the one case where a tiger-specific fact still lives on tiger's side by
+design, not an oversight.
+
+Also fixed, found only because of this switch-over: fork-tiger's
+`runtime/Makefile`/`stdlib/Makefile`/`demos/Makefile`/
+`tests/run-tests.sh` still invoked the now-renamed `-ppc-elf` (this
+repo's own `-ppc`/`-ppc-mach-o` rename, above) - broken against current
+qc-- since that commit, now fixed alongside.
+
+Verified: `Makefile.config` diffs to only the intentional `-ppc-elf` ->
+`-ppc` comment changes against a pre-refactor copy (every actual
+`CC_<ARCH>`/`AR_<ARCH>`/`RUN_<ARCH>` value byte-identical, `arm`'s
+`-fno-stack-protector` included); full `make test` (x86) and
+`make test-all` (every backend) pass with zero regressions against
+every recorded baseline - some backends (sparc, alpha, mips, and
+`colmajor` - the documented shared GC/register-allocator bug - on both
+arm64 and riscv64) now pass *more* tests than their baseline expects,
+unrelated to this change (no codegen touched on either side), most
+likely from unrelated concurrent qc-- work happening the same session
+(see the `Arg.align`/`Main.ml`-split finding above) - left for
+fork-tiger's own maintainer to decide whether to re-record.
+
+This closes out the plan's original goal. Remaining open items, not
+blocking: the (a)/(b) fork on whether AR/RUN belonged in qc-- at all
+(resolved: (a), see above) is closed; `-cc`/`-ar`/`-run` exec-dispatch
+modes (vs. today's print-and-let-the-caller-capture) and goken-family
+support are still just ideas, not started.
