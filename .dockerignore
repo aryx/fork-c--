@@ -27,6 +27,8 @@
 # version control
 .git
 
+**/*.cm*
+
 # build directories of the demos, the run-time system and the test runners
 demos/build
 runtime/build
