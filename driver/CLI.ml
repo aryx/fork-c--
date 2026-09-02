@@ -555,6 +555,37 @@ let ar_of_cc cc =
   then Filename.chop_suffix first_word "-gcc" ^ "-ar"
   else "ar"
 
+(* claude: for -print-metrics below. Every backend's own Xxx.target(') is
+ * already a plain value, no chan/asm/input file needed to build it (see
+ * compile_file's identical match a few lines down, which pulls the very
+ * same values out of the very same modules) - so, like backend_of_flags,
+ * metrics_of_backend needs none of those either. Every Xxx.target(') has
+ * the same monomorphic type Preast2ir.tgt (a `T of (...) Target.t`, not a
+ * polymorphic Target.t in its own right - see preast2ir.mli), which is
+ * why compile_file can put them all in one match arm returning a common
+ * type in the first place; this function leans on the same fact to
+ * destructure the PA.T wrapper once, after the match, rather than once
+ * per arm. *)
+module PA = Preast2ir
+module T = Target
+
+let metrics_of_backend backend =
+  let (PA.T tgt) = match backend with
+    | X86 -> X86.target
+    | PpcMachO | Ppc -> Ppc.target
+    | Sparc -> Sparc.target
+    | Alpha -> Alpha.target
+    | Mips -> Mips.target
+    | Arm -> Arm.target
+    | M68k -> M68k.target
+    | Riscv64 -> Riscv64.target
+    | Riscv32 -> Riscv32.target
+    | Arm64 | Arm64MachO -> Arm64.target
+    | Amd64 | Amd64MachO -> Amd64.target
+    | Interp -> Interp.target'
+  in
+  tgt.T.byteorder, tgt.T.wordsize, tgt.T.pointersize, tgt.T.float
+
 let compile_file (caps : < Cap.stdout; ..>) backend ~dest file =
   let (srcmap, ast) = Driver.parse file in
   Logs.info (fun m -> m "writing in %s" dest);
@@ -1127,6 +1158,44 @@ native binary - not applicable"
       exit 0),
     " print the command to prefix this backend's binaries with to run \
 them (nothing printed if native), then exit";
+
+    (* claude: for a client (e.g. fork-tiger's own ./configure) that needs
+     * to know, per backend, which of its own hand-written C-- sources'
+     * "target byteorder little ..." pragma line the backend actually
+     * accepts - qc-- refuses a metrics mismatch ("metrics of source code
+     * don't match the target", see driver/driver.ml's metrics_ok) rather
+     * than silently reinterpreting it. Before this, such a client had no
+     * way to ask qc-- itself and had to hardcode the answer per backend by
+     * hand (see fork-tiger's docs/claude_notes/ for the table this
+     * replaces) - same "ask qc, don't re-detect" motivation as -print-cc/
+     * -print-ar/-print-run, just for target metrics instead of toolchain
+     * paths. Four lines, in a fixed "key value" order so a client can grab
+     * any one of them by its first word rather than by line number:
+     *   byteorder little|big
+     *   wordsize <bits>
+     *   pointersize <bits>
+     *   float ieee754|none
+     * -interp reports the values compile_file's own Interp branch
+     * hardcodes at its call site (Rtl.LittleEndian, ptrsize 32 - note
+     * Interpasm.asm' has no separate wordsize, only memsize/ptrsize, so
+     * wordsize here is reported as pointersize's own value), since the
+     * interpreter's Target.t (interp.ml's target') carries no float field
+     * of its own to read back - Interp is not one of fork-tiger's own
+     * backends, this is just for completeness with every other -<arch>
+     * flag above. *)
+    "-print-metrics", Arg.Unit (fun () ->
+      let byteorder, wordsize, pointersize, float = metrics_of_backend (backend_of_flags ()) in
+      Printf.printf "byteorder %s\n"
+        (match byteorder with
+         | Rtl.LittleEndian -> "little"
+         | Rtl.BigEndian -> "big"
+         | Rtl.Identity -> "identity");
+      Printf.printf "wordsize %d\n" wordsize;
+      Printf.printf "pointersize %d\n" pointersize;
+      Printf.printf "float %s\n" (Float.name float);
+      exit 0),
+    " print this backend's byteorder/wordsize/pointersize/float target \
+metrics (one \"key value\" per line), then exit";
 
     (* claude: lists every -<arch> flag (bare/Linux-ELF spelling only -
      * the Mach-O siblings are Darwin-only and ./configure never probes
