@@ -5,8 +5,10 @@ open Common
 (*****************************************************************************)
 
 let test_tokens_cmm file = 
+(*
   if not (file =~ ".*\\.c--") 
   then UCommon.pr2 "warning: seems not a .c-- file";
+*)
 
   let toks = Parse_cmm.tokens file in
   toks |> List.iter (fun x ->
@@ -17,18 +19,19 @@ let test_tokens_cmm file =
 
 
 let test_parse_cmm file  =
+(*
   if not (file =~ ".*\\.c--") 
   then UCommon.pr2 "warning: seems not a .c-- file";
-
+*)
   let ast = Parse_cmm.parse file in
-  UCommon.pr2_gen ast;
+  print_string (Dumper.dump ast);
   ()
 
 let test_pp_cmm file  =
   let ast = Parse_cmm.parse file in
   let pp = Astpp.program ast in
   let s = Pp.ppToString 0 pp in
-  UCommon.pr2 s;
+  print_string s;
   ()
 
 let test_dump_cmm file  =
@@ -45,20 +48,3 @@ let test_dump_cmm file  =
   | Sexp.Cont _ ->
       failwith "parse error on sexp"
 *)  
-
-
-
-(*****************************************************************************)
-(* Main entry for Arg *)
-(*****************************************************************************)
-let actions () = [
-    "-parse_cmm", "   <file>", 
-    Arg_.mk_action_1_arg test_parse_cmm;
-    "-tokens_cmm", "   <file>", 
-    Arg_.mk_action_1_arg test_tokens_cmm;
-    "-pp_cmm", "   <file>", 
-    Arg_.mk_action_1_arg test_pp_cmm;
-    "-dump_cmm", "   <file>", 
-    Arg_.mk_action_1_arg test_dump_cmm;
-
-]

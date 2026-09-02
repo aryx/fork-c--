@@ -1,6 +1,8 @@
 
-(* This makes accessible the different test_xxx functions above from 
- * the command line, e.g. '$ pfff -parse_cmm foo.c-- will call the 
- * test_parse_cmm function.
- *)
-val actions : unit -> Arg_.cmdline_actions
+val test_tokens_cmm : string -> unit
+
+val test_parse_cmm : string -> unit
+
+val test_pp_cmm : string -> unit
+
+val test_dump_cmm : string -> unit
