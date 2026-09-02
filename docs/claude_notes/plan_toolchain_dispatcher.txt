@@ -1,0 +1,177 @@
+plan_toolchain_dispatcher.txt — turn qc--'s already-detected cross
+toolchains into a queryable/dispatchable interface, so client languages
+(fork-tiger) stop re-deriving the same detection logic in their own
+configure scripts.
+Written 2026-09-01, against commit 7387646.
+
+Prompted by: fork-tiger's `configure` has its own `detect_backend` function
+that duplicates this repo's `configure` `detect_backend` almost line for
+line (same toolchain package names, same apt-get hints, same
+native-uname-m patterns) just to know, per backend, which cross-compiler/
+archiver/qemu-user binary to use for building fork-tiger's own runtime/
+stdlib C and C-- sources. Considered (and rejected) making qc-- compile C
+itself; landed on: qc-- becomes a thin *dispatcher* over toolchains it
+already locates, not a Zig-cc-style bundled toolchain manager (no bundled
+clang/libc/crt objects — out of scope, much bigger effort, not the goal
+here).
+
+Verified: current state
+------------------------------------------------------------------
+- `configure`'s `detect_backend` (called once per backend: ppc-elf, sparc,
+  alpha, mips, arm, riscv32, riscv64, arm64, amd64, plus the always-on x86
+  block and the Darwin-only arm64-mach-o/amd64-mach-o block) is the single
+  source of truth for CC_<ARCH>/AR_<ARCH>/RUN_<ARCH> — package hints,
+  qemu-user binary names, and native-arch detection all live here.
+- This is written to `Makefile.config`, read only by shell Makefiles/test
+  scripts (`tests/run-tiger-<arch>.sh` etc.) in *this* repo.
+- The `qc` binary itself (`driver/main.ml`, OCaml, `Arg`-based options,
+  already carries a `Cap.exec` capability in `main`'s type) has **zero**
+  runtime knowledge of any of this — `Makefile.config` is invisible to it.
+  `driver/this.ml`/`this.in` (an `@this@`-substitution template) look like
+  leftover machinery from the original mk(1)-based build, not currently
+  wired into the dune build, and not a precedent worth reusing here.
+- No `QCLIB` concept exists in this repo at all — it's a fork-tiger-side
+  convention (fork-tiger's own `configure` derives it from `qc`'s install
+  location). So there is currently no stable, install-time location where
+  this repo publishes anything for another repo to read.
+- Existing flag convention (`driver/main.ml:961-1049`): single-dash,
+  **one flag per backend** (`-x86`, `-ppc-elf`, `-arm64`, `-arm64-mach-o`,
+  `-amd64`, `-amd64-mach-o`, `-riscv32`, `-riscv64`, `-arm`, `-mips`,
+  `-sparc`, `-alpha`), not a generic `-arch <name>` parameter — this
+  matters because it already disambiguates cases a plain arch string
+  wouldn't (arm64 ELF vs Mach-O are separate flags). `-as <cmd>`/
+  `-ld <cmd>` already exist as override flags for the assembler/linker qc--
+  itself drives when assembling/linking its own emitted output — these are
+  a different concept from the new dispatcher (qc-- doesn't compile C
+  today; there is no existing `-cc`).
+
+Alternatives considered
+------------------------------------------------------------------
+- qc-- compiles fork-tiger's C sources (runtime.c, alloc.c, etc.) itself,
+  becoming the one place cross-compilation happens. Rejected: qc-- compiles
+  C--, not C — fork-tiger's runtime/stdlib C files are a fork-tiger-side
+  concern qc-- has no reason to own; doing this would turn qc-- into a
+  general C-toolchain manager just to solve fork-tiger's duplication.
+- Full Zig-cc-style toolchain manager: bundle clang plus libc headers/crt
+  objects per target so no system cross-toolchain install is needed at
+  all. Rejected for now as much bigger in scope than the actual problem
+  (fork-tiger's `configure` re-deriving detection qc-- already does) and
+  explicitly not this plan's goal — qc-- stays a *dispatcher* over
+  whatever cross-toolchains are already on the host, same assumption
+  `detect_backend` already makes today.
+- Client repos source a shell fragment / this repo's raw `Makefile.config`
+  directly, instead of going through the `qc` binary. Considered as a
+  lighter first cut; superseded by the `-print-*` design because it keeps
+  the contract at `qc`'s CLI (discoverable via `-help`, works from an
+  install prefix without the client needing to know this repo's
+  build-tree layout) rather than a second ad hoc file format another
+  repo's `configure` has to locate and parse.
+- Generic `-arch <name>` parameter (e.g. `qc -arch arm64 -print-cc`, or
+  `qc -print-cc=arm64`) instead of reusing the existing per-backend
+  boolean flags. Rejected: the per-backend flags already exist and already
+  disambiguate cases a plain arch string doesn't (`-arm64` vs
+  `-arm64-mach-o` are separate flags, not one arch name plus a second flag
+  to pick ELF vs Mach-O), and matches this file's own established
+  convention (`-x86`, `-ppc-elf`, ... one flag per backend) instead of
+  introducing a second, parallel arch-naming scheme alongside it.
+
+Proposed design
+------------------------------------------------------------------
+1. `configure`: no change to `detect_backend`'s detection logic. In
+   addition to `Makefile.config`, also install a small plain `key=value`
+   file (e.g. `$prefix/lib/qc--/toolchains.conf`, next to wherever `qc`
+   itself gets installed) so the info survives past the build tree — this
+   is the missing "QCLIB-equivalent" stable location another repo's
+   configure can rely on.
+
+2. New `qc` flags, reusing the existing per-backend flags rather than
+   inventing an `-arch <name>` parameter, paired with new *mode* flags:
+   - `qc -available-archs` — list backends with a resolved CC (mirrors
+     what `detect_backend` found at configure time).
+   - `qc -<arch> -print-cc` / `-print-as` / `-print-ar` / `-print-run` —
+     print the resolved command string for that backend, for a client
+     `configure` to capture (e.g. `CC_ARM64=$(qc -arm64 -print-cc)`) and
+     write into its own `Makefile.config`, unchanged in shape from today.
+   - `qc -<arch> -cc -- <args...>` / `-ar -- ...` / `-run -- ...` — actual
+     dispatch mode, `Cap.exec`'s the resolved tool with the trailing args.
+     Lower priority than `-print-*` — start without it, add only if a
+     client actually wants to invoke through `qc` directly instead of via
+     its own `Makefile.config`.
+   - All of the above read `toolchains.conf` from qc's own install
+     location at runtime, not `Makefile.config` (that file is this repo's
+     build-tree-local artifact, not meant to be read by other repos).
+
+3. fork-tiger's `configure`: delete its own `detect_backend` copy
+   (currently ~configure:257-380, see fork-tiger's own CLAUDE.md
+   "Other qc-- backends" section) and its per-arch `detect_backend` calls;
+   replace with `qc -available-archs` to decide which backends to probe,
+   and `qc -<arch> -print-cc`/`-print-ar`/`-print-run` to fill
+   CC_<ARCH>/AR_<ARCH>/RUN_<ARCH> into fork-tiger's own `Makefile.config`
+   exactly as today. `stdlib/Makefile`, `runtime/Makefile`,
+   `tests/run-tests.sh` are untouched — they only ever read
+   `Makefile.config`'s `CC_<ARCH>` etc., never `qc` directly.
+
+Future consideration: goken as an alternate toolchain family
+------------------------------------------------------------------
+Raised mid-plan: the user may, at some point, want CC_<ARCH> (the compiler
+used for fork-tiger's own hand-written runtime/stdlib C files, and by
+extension AR_<ARCH>/RUN_<ARCH>) to be able to point at `~/goken`
+(goken9cc, at commit 2aa40ce25 as of this writing) instead of a GNU cross
+toolchain — as an *additional option*, not a replacement for GNU/clang.
+Checked `~/goken` to see what this implies for the design above:
+
+- goken is a self-hosted Plan 9-lineage toolchain (per-arch compiler/
+  assembler/linker triples: `8c`/`8a`/`8l` for x86, `6c`/`6a`/`6l` for
+  amd64, `7c`/`7a`/`7l` for arm64, `vc`/`va`/`vl` for mips,
+  `ic`/`ia`/`il` for riscv64, etc. — single-letter arch codes, not GNU
+  triples), with its own object-file convention (`.5`/`.6`/`.7`/`.8`/...
+  extensions, not `.o`) and its own archiver (`compilers/.../ar` in
+  `lib_toolchain/`). Raw `Xc`/`Xa`/`Xl` do not share gcc's CLI (separate
+  compile/assemble/link steps, different flags) or a unified driver.
+- `compilers/pcc/pcc.c` (goken's "portable wrapper", built for Plan 9 APE)
+  *is* a gcc-workalike front end — takes `-c`/`-o`, shells out to `gcc -E`
+  for preprocessing, then drives the right per-arch `Xc`/`Xa`/`Xl` steps
+  itself. This looks like the right integration point for CC_<ARCH>: `qc
+  -<arch> -print-cc` resolving to something like `~/goken/bin/pcc` (with
+  whatever arch-selection env/flag goken's own build uses) keeps
+  CC_<ARCH> gcc-flag-shaped regardless of which family backs it, which is
+  what fork-tiger's Makefiles already assume — not verified end to end
+  (haven't test-compiled fork-tiger's runtime.c through pcc), just
+  plausible from pcc.c's flag handling.
+- Consequence for the design above: `detect_backend` per arch needs to
+  become "detect a toolchain *family* per arch" (GNU cross / clang /
+  goken), not just "detect the one cross-gcc for this arch" — closer to
+  how the arm64-mach-o/amd64-mach-o block already branches gnu-cross vs
+  clang by host today. A `configure --toolchain=gnu|clang|goken` (or
+  per-backend override, `--toolchain-arm64=goken`) selecting among
+  candidates, defaulting to whatever's actually found, seems the natural
+  extension — and `-available-archs`/`-print-cc` output should say which
+  family backs each arch (e.g. "arm64 (goken)" vs "arm64 (gnu)"), not
+  just yes/no.
+- Explicitly out of scope for this design and NOT resolved here: whether
+  a goken-produced `.o` can actually be linked together with what qc--
+  itself assembles. qc--'s own `-as`/`-ld` (assembling/linking qc--'s
+  *emitted C-- output*, e.g. `driver/main.ml`'s `-as`/`-ld` flags) is a
+  separate, GNU-binutils-syntax-bound pipeline, untouched by a CC_<ARCH>
+  swap — but fork-tiger's final link combines runtime.o (built via
+  CC_<ARCH>) with qc--'s own GNU-assembled object code into one binary,
+  so object-format/ABI compatibility between the two is a real question
+  a goken CC_<ARCH> would raise, independent of and larger than this
+  plan's CLI/detection design. Flagged, not investigated further here.
+
+Open questions / not yet decided
+------------------------------------------------------------------
+- Exact `toolchains.conf` format/location — needs to work whether `qc` is
+  run from `_build/install/default/bin` (dev) or a real install prefix.
+- Whether `-print-*` alone is enough or the exec-dispatch mode
+  (`-cc -- ...`) earns its keep later — deferred per above.
+- Darwin-only arm64-mach-o/amd64-mach-o toolchains (`clang`, not a
+  cross-gcc) still need `-print-cc` to work sensibly — should fall out of
+  reusing `detect_backend`'s existing values, but worth double-checking
+  when implementing.
+
+Suggested order: implement `-available-archs`/`-print-*` in qc-- first
+(smaller, self-contained, testable from this repo alone), then switch
+fork-tiger's `configure` over and delete its duplicated `detect_backend`,
+confirming `tests/run-tests.sh` / `make test-all` still pass unchanged
+across every backend.
