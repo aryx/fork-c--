@@ -520,4 +520,4 @@ echo
 echo "Next: dune build && make test"
 echo "(make test-tiger, test-native-ppc, etc. need the toolchains reported"
 echo "above as warnings, if any - see this script's own comments for the"
-echo "apt package to install)"
+echo "packages to install)"
