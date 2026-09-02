@@ -1,5 +1,5 @@
-(*s: front_ir/proc.mli *)
-(*s: proc.mli  *)
+(*s: front_ir/procedure.ml *)
+(*s: proc.ml  *)
 (*s: type t(proc.nw) *)
 type overflow = (Block.t list, Block.t list) Call.split_blocks
 type ('automaton, 'cfg, 'cc, 'tgt) t = 
@@ -26,5 +26,5 @@ type ('automaton, 'cfg, 'cc, 'tgt) t =
     ; exp_of_lbl:     (Unique.uid * string) -> Rtl.exp (* exp of code label *)
     }
 (*e: type t(proc.nw) *)
-(*e: proc.mli  *)
-(*e: front_ir/proc.mli *)
+(*e: proc.ml  *)
+(*e: front_ir/procedure.ml *)
