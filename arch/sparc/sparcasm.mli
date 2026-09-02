@@ -4,8 +4,8 @@
  * caller, per the comment below) has since moved to the newer
  * Zipcfg.Rep-based "call" node, same shape arch/ppc/ppcasm.mli uses. *)
 val make :
-  (('a, 'b, 'c, 'd) Proc.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
+  (('a, 'b, 'c, 'd) Procedure.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
             (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
-  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Proc.t) Asm.assembler
+  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Procedure.t) Asm.assembler
   (* pass Cfgutil.emit *)
 (*e: sparcasm.mli *)

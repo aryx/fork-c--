@@ -62,7 +62,7 @@ let matches next = match next with
 | Some (u, l) -> (fun (u', l') -> Unique.eq u u')
 
 let emit proc cfg call_emit rtl_emit sym_emit =
-  let PA.T tgt = proc.P.target in
+  let PA.T tgt = proc.Procedure.target in
   let rec seq_emit = function  (* emit sequence of RTLs only *)
     | DG.Rtl r -> rtl_emit r
     | DG.Seq (a, b) -> seq_emit a; seq_emit b
@@ -79,7 +79,7 @@ let emit proc cfg call_emit rtl_emit sym_emit =
     | GR.Branch (_, tgt) when matches next tgt -> ()
     | GR.Cbranch (_, ttgt, ftgt) when not (matches next ftgt) ->
         rtl_emit (GR.last_instr l);
-        let (b, r) = tgt.T.machine.T.goto.T.embed proc (proc.P.exp_of_lbl ftgt) in
+        let (b, r) = tgt.T.machine.T.goto.T.embed proc (proc.exp_of_lbl ftgt) in
         seq_emit b;
         rtl_emit r
     | GR.Call c -> call_emit c

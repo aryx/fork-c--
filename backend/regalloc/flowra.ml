@@ -77,9 +77,9 @@ type info = {liveset : RS.t;
              dists : int * (int * VM.def_dist RM.t * VM.use_dist RM.t);
              prefs : Register.t Register.Map.t * Register.t list Register.Map.t}
 (*e: type definitions used internally by the register allocator *)
-let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
+let ralloc v (g, (Procedure.{cc = cc; target = Preast2ir.T tgt} as proc)) =
   let debug = Debug.on "flowra" in
-  let m              = (proc, tgt.T.machine, proc.Proc.exp_of_lbl) in
+  let m              = (proc, tgt.T.machine, proc.exp_of_lbl) in
   let regs           = RS.elements (cc.Call.volregs ++ cc.Call.pre_nvregs) in
   let is_tmp (s,_,_) = T.is_tmp tgt s in
   let is_vfp t       = Vfp.is_vfp (Dn.loc (Rtl.reg t)) in
@@ -93,7 +93,7 @@ let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
   let get_spill_loc ((_, _, ms), _, c as temp) =
     try RM.find temp (!spillMap)
     with Not_found ->
-      let l = Automaton.allocate proc.Proc.priv ~width:(Cell.to_width ms c)
+      let l = Automaton.allocate proc.priv ~width:(Cell.to_width ms c)
                                  ~kind:"" ~align:1 in
       spillMap := RM.add temp l (!spillMap);
       l in

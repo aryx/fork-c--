@@ -288,7 +288,7 @@ let strconcatmap x y z = String.concat x (List.map y z)
 let is_hardware_register proc loc =
   match loc with
   | RP.Global (_, i, w) ->
-      (match Dn.exp (proc.Proc.global_map.(i).Automaton.fetch w) with
+      (match Dn.exp (proc.Procedure.global_map.(i).Automaton.fetch w) with
       | RP.Fetch (l, _) -> RU.is_hardware l
       | _ -> false)
   | _ -> RU.is_hardware loc
@@ -1004,8 +1004,8 @@ let needs_widening t r =
   let RP.Rtl es = Dn.rtl r in
   List.fold_left (fun b e -> b || guard e) false es
 (*x: widen.ml  *)
-let dpwiden (g,proc) r =
-  let PA.T t      = proc.Proc.target in
+let dpwiden ((g,proc) : Ast2ir.proc) r =
+  let PA.T t      = proc.target in
   let targetwidth = t.Target.wordsize in
   let ptrwidth    = t.Target.pointersize in
   let rm          =

@@ -120,18 +120,18 @@ let with_tailcall_ras first_index blocks =
 
 (* the part every x86 layout has in common, given its finished old_end *)
 let frame_of_ends ((_, p) as proc : Ast2ir.proc) ~old_end =
-  let young = p.Proc.youngblocks in
+  let young = p.youngblocks in
   let young_end =
     Block.cathl_list w
       [ F.overlap_low w young.Call.caller
-      ; p.Proc.sp
+      ; p.sp
       ; F.overlap_high w young.Call.callee
       ]
   in
   Block.cathl_list w
     [ old_end                    (* <-- high addresses *)
-    ; p.Proc.stackd
-    ; p.Proc.conts
+    ; p.stackd
+    ; p.conts
     ; F.spills proc
     ; young_end                  (* <-- low addresses *)
     ]
@@ -141,7 +141,7 @@ let frame_of_ends ((_, p) as proc : Ast2ir.proc) ~old_end =
  * blocks are overlapped underneath it.
  *)
 let layout_c ((_, p) as proc : Ast2ir.proc) =
-  let old = p.Proc.oldblocks in
+  let old = p.oldblocks in
   let ra = ra_block proc "return address" Block.at ~size:4 ~alignment:4 in
   let callee = F.overlap_high w (with_tailcall_ras 1 old.Call.callee) in
   let pre_ra_tail = Block.cathl_list w [ra; F.vfp_block proc] in
@@ -156,7 +156,7 @@ let layout_c ((_, p) as proc : Ast2ir.proc) =
  * sp".
  *)
 let layout_cmm ((_, p) as proc : Ast2ir.proc) =
-  let old = p.Proc.oldblocks in
+  let old = p.oldblocks in
   let ra = ra_block proc "return address" Block.at ~size:4 ~alignment:4 in
   let vfp = F.vfp_block proc in
   let callee = match old.Call.callee with
@@ -175,7 +175,7 @@ let layout_cmm ((_, p) as proc : Ast2ir.proc) =
  * joined to the incoming block.
  *)
 let layout_cmm_thread ((_, p) as proc : Ast2ir.proc) =
-  let old = p.Proc.oldblocks in
+  let old = p.oldblocks in
   let vfp = F.vfp_block proc in
   let caller = match old.Call.caller with
     | [] -> [ vfp ]

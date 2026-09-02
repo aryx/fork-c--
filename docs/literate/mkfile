@@ -157,8 +157,8 @@ SRC_VIEWS= \
  $TOP/target/target.mli\
  $TOP/target/target.ml\
  \
- $TOP/middle/proc/proc.mli\
- $TOP/middle/proc/proc.ml\
+ $TOP/middle/proc/procedure.mli\
+ $TOP/middle/proc/procedure.ml\
  $TOP/middle/proc/call.mli\
  $TOP/middle/proc/call.ml\
  $TOP/middle/proc/contn.mli\

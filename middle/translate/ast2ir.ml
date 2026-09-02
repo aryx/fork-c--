@@ -603,36 +603,37 @@ let translate target env ~optimizer ~defineglobals =
       proc.N.formals in
     let (i : proc) =    
       g,
-      { Proc.symbol      = proc.N.sym
-      ; Proc.cc          = proc_cc
-      ; Proc.target      = T target
-      ; Proc.formals     = formals
-      ; Proc.temps       = temps
-      ; Proc.mk_symbol   = Fenv.Clean.symbol env
-      ; Proc.cfg         = ()
-      ; Proc.oldblocks   = (* parms must be first, so call List.rev *)
+      Procedure.{ 
+        symbol      = proc.N.sym
+      ; cc          = proc_cc
+      ; target      = T target
+      ; formals     = formals
+      ; temps       = temps
+      ; mk_symbol   = Fenv.Clean.symbol env
+      ; cfg         = ()
+      ; oldblocks   = (* parms must be first, so call List.rev *)
           { C.callee = List.rev (oldblocks.callee); 
             C.caller = List.rev (oldblocks.caller); }
-      ; Proc.youngblocks = (* order doesn't matter *)
+      ; youngblocks = (* order doesn't matter *)
           { C.callee = youngblocks.callee; 
             C.caller = youngblocks.caller; }
-      ; Proc.stackd         = proc.N.stackmem     (* stack data block *)
+      ; stackd         = proc.N.stackmem     (* stack data block *)
 
-      ; Proc.priv           = Block.relative vfp "private"
+      ; priv           = Block.relative vfp "private"
                               (aligned_mem ~align:proc_cc.C.sp_align) target
   (*
       ; Proc.priv           = AT.of_methods {AT.allocate = allocate ; AT.freeze = freeze}
   *)
-      ; Proc.sp             = Block.at proc_cc.C.stable_sp_loc 0 proc_cc.C.sp_align 
-      ; Proc.eqns           = List.concat (!constraints)
-      ; Proc.conts          = contblocks
-      ; Proc.vars           = nvars              (* number of variables *)
-      ; Proc.nvregs         = RS.cardinal nvregs (* number of non-volatile regs *)
-      ; Proc.var_map        = Array.make nvars None
-      ; Proc.global_map     = global_map
-      ; Proc.bodylbl        = bodylbl
-      ; Proc.headroom       = !headroom
-      ; Proc.exp_of_lbl     = exp_of_code_label
+      ; sp             = Block.at proc_cc.C.stable_sp_loc 0 proc_cc.C.sp_align 
+      ; eqns           = List.concat (!constraints)
+      ; conts          = contblocks
+      ; vars           = nvars              (* number of variables *)
+      ; nvregs         = RS.cardinal nvregs (* number of non-volatile regs *)
+      ; var_map        = Array.make nvars None
+      ; global_map     = global_map
+      ; bodylbl        = bodylbl
+      ; headroom       = !headroom
+      ; exp_of_lbl     = exp_of_code_label
       } in
   (*x: definition of [[proc]], which translates one procedure *)
     (* claude: upstream called Optimize.trim_unreachable_code right here,

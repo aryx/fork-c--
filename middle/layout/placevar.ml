@@ -59,13 +59,13 @@ type counts = { mutable intc   : float
               ; mutable boolc  : float
               }
 (*e: define context count structures *)
-let context autmtn _ (g, ({ Proc.target = PA.T tgt; Proc.formals = formals;
-                            Proc.var_map = tMap} as proc)) =
+let context autmtn _ (g, (Procedure.{ target = PA.T tgt; formals = formals;
+                            var_map = tMap} as proc)) =
   let changed = ref false in
   let autmtn  = autmtn (g, proc) in
   (*s: initialize context count structures *)
   let new_count _ = { intc = 0.0; floatc = 0.0; addrc = 0.0; boolc = 0.0}        in
-  let var_counts = Array.init proc.Proc.vars new_count                           in
+  let var_counts = Array.init proc.vars new_count                           in
   let inc_int   i f = let record = var_counts.(i)                                in
                       record.intc <- record.intc +. f                            in
   let inc_float i f = let record = var_counts.(i)                                in
@@ -139,11 +139,11 @@ let context autmtn _ (g, ({ Proc.target = PA.T tgt; Proc.formals = formals;
       let acnt = cnts.addrc     in
       let (cnt,ctxt) = if icnt >=. fcnt then (icnt,"int") else (fcnt, "float") in
       if cnt >=. acnt then ctxt else "address" in
-    Array.init proc.Proc.vars elect in
+    Array.init proc.vars elect in
   (*e: choose a context for each variable *)
   (*s: replace variables with temps *)
   (*s: context replace var *)
-  let formal_arr = Array.make proc.Proc.vars None in
+  let formal_arr = Array.make proc.vars None in
   let () = List.iter (fun (i,v) -> formal_arr.(i) <- Some v) formals in
   let choose_ty i elected_kind = 
     let space_name = function "signed" | "unsigned" | "" -> "int"
@@ -180,8 +180,8 @@ let context autmtn _ (g, ({ Proc.target = PA.T tgt; Proc.formals = formals;
   let fetch_var     (s, i, w) = (get_placer i w).A.fetch                w in
   (*e: context replace var *)
   (*s: fetch and store globals *)
-  let store_global exp (s, i, w) = proc.P.global_map.(i).A.store (R.Up.exp exp) w in
-  let fetch_global     (s, i, w) = proc.P.global_map.(i).A.fetch                w in
+  let store_global exp (s, i, w) = proc.global_map.(i).A.store (R.Up.exp exp) w in
+  let fetch_global     (s, i, w) = proc.global_map.(i).A.fetch                w in
   (*e: fetch and store globals *)
   let update rtl = replace_var store_var fetch_var store_global fetch_global rtl in
   let g = G.map_rtls update g in
@@ -215,23 +215,23 @@ let () = Debug.register "placevar" "variable placer"
 let ( *> ) = A.( *> )
 
 let from_temps proc space = (* stage to allocate a temporary location *)
-  let allocator = Talloc.Multiple.loc proc.Proc.temps space in
+  let allocator = Talloc.Multiple.loc proc.Procedure.temps space in
   let alloc ~width:w ~alignment:a ~kind:h = A.of_loc (allocator w) in
   A.wrap (fun methods -> {A.allocate = alloc; A.freeze = methods.A.freeze})
 
 let debug lbl w h a ctr =
   Printf.eprintf "Placevar %s w=%d h=%s a=%d ctr=%d\n" lbl w h a ctr
 
-let mk_automaton ~warn ~vfp ~memspace mk_stage (g, proc) =
+let mk_automaton ~warn ~vfp ~memspace mk_stage ((g, proc) : Ast2ir.proc) =
   let warn methods =
     let alloc ~width:w ~alignment:a ~kind:h =
       warn ~width:w ~alignment:a ~kind:h;
       methods.A.allocate w a h in
     {A.allocate = alloc; A.freeze = methods.A.freeze} in
   Block.srelative vfp "variables placed in memory" (A.at memspace)
-  ( A.wrap warn *> mk_stage ~temps:(from_temps proc) *> A.as_stage proc.Proc.priv )
+  ( A.wrap warn *> mk_stage ~temps:(from_temps proc) *> A.as_stage proc.priv )
 (*x: placevar.ml  *)
-let replace_globals _ (g, ({ Proc.target = tgt; Proc.global_map = gmap} as proc)) =
+let replace_globals _ (g, (Procedure.{ target = tgt; global_map = gmap} as proc)) =
   let subst = RU.Subst.aloc ~guard:(function RP.Global _ -> true | _ -> false)
                 ~map:(function RP.Global (_, i, _) -> gmap.(i)
                              | l -> Impossible.impossible "global replacement") in

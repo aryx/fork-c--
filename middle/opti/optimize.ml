@@ -25,7 +25,7 @@ let simplify_exps _ (g, proc) =
   let g = G.map_rtls (fun r -> changed := true; Simplify.rtl r) g in
   (g, proc), !changed
 (*x: optimize.ml  *)
-let trim_unreachable_code _ {Proc.cfg = cfg} =
+let trim_unreachable_code _ {Procedure.cfg = cfg} =
   let module IS = Set.Make (struct type t = int let compare x y = x - y end) in
   let nodes_from_entry =
     let _add_labels n lset = 
@@ -128,8 +128,8 @@ let badrtl r =
     (* if you want to do the following, extend Target.t with a to_asm function *)
     (*  Printf.eprintf "x86 rec says %s\n" (X86rec.M.to_asm r) *)
   
-let validate _ (g, proc) =
-  let PA.T tgt = proc.P.target in
+let validate _ ((g, proc) : Ast2ir.proc) =
+  let PA.T tgt = proc.target in
   let check r = if not (tgt.T.is_instruction r) then badrtl r else () in
   let first _ = () in
   let middle m = if GR.is_executable m then check (GR.mid_instr m) in

@@ -224,9 +224,9 @@ module New = struct
             )
           | None -> printer "{}" in
         ( printer (Printf.sprintf "CMM.procedure ('%s',%d,%d,"
-                      (proc.Proc.symbol#mangled_text)
-                      proc.Proc.vars
-                      (Block.size proc.Proc.stackd+Block.size proc.Proc.conts))
+                      (proc.symbol#mangled_text)
+                      proc.vars
+                      (Block.size proc.stackd+Block.size proc.conts))
         ; stackdata_decls printer
         ; printer ")\n"
         ; Interpemit.proc (cfg,proc) printer

@@ -150,7 +150,7 @@ let usesl last =
   R.promote_rxset (G.add_inedge_uses last (R.rset_to_rxset uses))
 (*x: colorgraph.ml  *)
 let spill_slot_for proc ((_,_,ms), _, c)  =
-  Automaton.allocate proc.Proc.priv (Cell.to_width ms c) "" 1
+  Automaton.allocate proc.Procedure.priv (Cell.to_width ms c) "" 1
 module type COLOR = sig
   type t 
   type set
@@ -479,7 +479,7 @@ let degree_for_temp target cg temp =
                  }
             (*x: init cgInfo *)
             let allocatable cc = CS.of_regs (cc.Call.pre_nvregs ++ cc.Call.volregs)
-            let clearCGInfo cg (cfg, ({Proc.cc = colors} as proc)) = 
+            let clearCGInfo cg (cfg, (Procedure.{cc = colors} as proc)) = 
               let pre = ref None in
               let init = ref None in
               let simp = ref None in
@@ -599,7 +599,7 @@ let degree_for_temp target cg temp =
               let block b rst = GR.fold_fwd_block first middle last b rst in
               G.fold_blocks block RS.empty cfg
 
-            let build cg (cfg, ({Proc.target = PA.T target} as proc)) =
+            let build cg (cfg, (Procedure.{target = PA.T target} as proc)) =
               Debug.eprintf "color" "color::build()\n"; flush stderr;
               let () = if is_some (!(cg.tempLG Initial)) then
                 Impossible.impossible "Temps on initial list prematurely" in
@@ -724,7 +724,7 @@ let degree_for_temp target cg temp =
                 end
             (*e: remove temp *)
 
-            let simplify cg (cfg, ({Proc.target = PA.T t} as proc)) =
+            let simplify cg (cfg, (Procedure.{target = PA.T t} as proc)) =
               (*Debug.eprintf "color" "color::simplify()\n"; flush stderr;*)
               (match !(cg.tempLG SimplifyWorklist) with
               | Some temp ->
@@ -814,7 +814,7 @@ let degree_for_temp target cg temp =
               )
             (*e: coalesce move *)
 
-            let coalesce cg (cfg, ({Proc.target = PA.T target} as proc)) =
+            let coalesce cg (cfg, (Procedure.{target = PA.T target} as proc)) =
               (*Debug.eprintf "color" "color::coalesce()\n"; flush stderr;*)
                 (match !(cg.moveLG WorklistMove) with
                 | Some move ->
@@ -952,7 +952,7 @@ let degree_for_temp target cg temp =
             (*s: assignColors *)
             exception GraphColoring
 
-            let assignColors cg (cfg, ({Proc.target = PA.T target} as proc)) =
+            let assignColors cg (cfg, ({Procedure.target = PA.T target} as proc)) =
               Debug.eprintf "color" "color::assignColors()\n"; flush stderr;
               (*s: colorTemp *)
               let colorLookup temp cmap =
@@ -1023,7 +1023,7 @@ let degree_for_temp target cg temp =
                 ) in
               G.iter_blocks block cfg
             (*e: define span updating functions *)
-            let applyColors cg (cfg, ({Proc.target = PA.T target; Proc.var_map = vMap} as proc)) =
+            let applyColors cg (cfg, ({Procedure.target = PA.T target; Procedure.var_map = vMap} as proc)) =
               let find (((s,_,_), i, _) as t) =
                 try RM.find t cg.colorMap
                 with Not_found -> impossf "Uncolored temp %c%d" s i in
@@ -1054,7 +1054,7 @@ let degree_for_temp target cg temp =
             let updateBlock proc spillees uid block (blockMap, spillMap, newTemps) =
               let len = ilg_fold (fun _ rst -> rst + 1) spillees 0 in
               Debug.eprintf "color" "  color::updateBlock(%d)\n" len; flush stderr;
-              let PA.T tgt = proc.Proc.target in
+              let PA.T tgt = proc.Procedure.target in
               (*s: define update functions for each type of node in the cfg *)
               let updateInstr map_rtl instr spillee
                               (node, loads, spillMap, spills, newTemps as accum) =

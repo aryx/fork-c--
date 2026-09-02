@@ -102,15 +102,15 @@ let layout () ((_, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
   let w = 32 in
   let block =
     Block.cathl_list w
-      [ p.Proc.conts
-      ; p.Proc.stackd
+      [ p.conts
+      ; p.stackd
       ; F.vfp_block proc
-      ; p.Proc.sp
+      ; p.sp
       ; F.spills proc
-      ; F.overlap_low  w p.Proc.oldblocks.Call.caller
-      ; F.overlap_low  w p.Proc.oldblocks.Call.callee
-      ; F.overlap_high w p.Proc.youngblocks.Call.caller
-      ; F.overlap_high w p.Proc.youngblocks.Call.callee
+      ; F.overlap_low  w p.oldblocks.Call.caller
+      ; F.overlap_low  w p.oldblocks.Call.callee
+      ; F.overlap_high w p.youngblocks.Call.caller
+      ; F.overlap_high w p.youngblocks.Call.callee
       ]
   in
   (Stack.freeze proc block, true)

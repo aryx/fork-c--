@@ -10,33 +10,33 @@ module PA = Preast2ir
 module T  = Target
 module RP = Rtl.Private
 (*x: stack.ml *)
-let blocks' frozen_block block list table (g, p) =
+let blocks' frozen_block block list table ((g, p) : Ast2ir.proc) =
     let blockspair p = table [ "callee", list (List.map block p.Call.callee)
                              ; "caller", list (List.map block p.Call.caller) ] in
-    let PA.T tgt = p.Proc.target in
+    let PA.T tgt = p.Procedure.target in
     let vfp = tgt.T.vfp in
-        [ "sp"            , block p.Proc.sp
-        ; "vfp"           , block (Block.at vfp 0 (Block.alignment p.Proc.sp))
-        ; "oldblocks"     , blockspair p.Proc.oldblocks
-        ; "youngblocks"   , blockspair p.Proc.youngblocks
-        ; "stackdata"     , block p.Proc.stackd            
-        ; "continuations" , block p.Proc.conts
-        ; "spills"        , block (frozen_block p.Proc.priv)
+        [ "sp"            , block p.Procedure.sp
+        ; "vfp"           , block (Block.at vfp 0 (Block.alignment p.sp))
+        ; "oldblocks"     , blockspair p.oldblocks
+        ; "youngblocks"   , blockspair p.youngblocks
+        ; "stackdata"     , block p.stackd            
+        ; "continuations" , block p.conts
+        ; "spills"        , block (frozen_block p.priv)
         ]
 
 let blocks x = blocks' (fun a -> (Automaton.freeze a).Automaton.overflow) x
 
-let freeze' apply_to_proc (g, p) (stack:Block.t) = 
-    let PA.T tgt = p.Proc.target in
+let freeze' apply_to_proc ((g, p) : Ast2ir.proc) (stack:Block.t) = 
+    let PA.T tgt = p.target in
     let pointer  = tgt.T.pointersize in            
-    let eqns     = p.Proc.eqns @ Block.constraints stack in
+    let eqns     = p.eqns @ Block.constraints stack in
     let solution = 
         try Rtleqn.solve pointer eqns 
         with Rtleqn.Can'tSolve -> 
         (*s: complain of unsolved [[eqns]] for [[p]] *)
         let eqns = List.map Rtleqn.to_string eqns in
         Impossible.impossible 
-          ("for procedure " ^ p.Proc.symbol#original_text ^ "; can't solve these eqns:\n" ^
+          ("for procedure " ^ p.symbol#original_text ^ "; can't solve these eqns:\n" ^
            String.concat "\n" eqns)
         (*e: complain of unsolved [[eqns]] for [[p]] *)
       in

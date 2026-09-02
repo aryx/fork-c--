@@ -228,8 +228,8 @@ let rewrite_tail is_instruction tail changed =
   in
   go Avail.unknown tail
 
-let eliminate _v (g, proc) =
-  let PA.T tgt = proc.P.target in
+let eliminate _v ((g, proc) : Ast2ir.proc) =
+  let PA.T tgt = proc.target in
   let is_instruction = tgt.T.is_instruction in
   let changed = ref false in
   let blocks =

@@ -68,7 +68,7 @@ let liveness () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
  * remove_nops is not run (TODO/optimizers/); it is an optimization.
  *)
 let rmvfp () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
-  let g, changed = p.Proc.cc.Call.replace_vfp g in
+  let g, changed = p.cc.Call.replace_vfp g in
   (g, p), changed
 
 (* Lua's Runtime.emit_data, the "*emit_data" phase that closes
@@ -91,5 +91,5 @@ let rmvfp () ((g, p) : Ast2ir.proc) : Ast2ir.proc * bool =
  * nil, which is why the interpreter pipeline does not run it.
  *)
 let emit_data asm () ((g, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
-  Runtimedata.emit_as_asm p.Proc.target asm ~procsym:p.Proc.symbol g;
+  Runtimedata.emit_as_asm p.target asm ~procsym:p.symbol g;
   (proc, false)

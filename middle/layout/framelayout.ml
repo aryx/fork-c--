@@ -41,8 +41,8 @@
  * pointer, aligned like sp. It contributes no space, only the anchor.
  *)
 let vfp_block ((_, p) : Ast2ir.proc) : Block.t =
-  let Preast2ir.T tgt = p.Proc.target in
-  Block.at ~base:tgt.Target.vfp ~size:0 ~alignment:(Block.alignment p.Proc.sp)
+  let Preast2ir.T tgt = p.target in
+  Block.at ~base:tgt.Target.vfp ~size:0 ~alignment:(Block.alignment p.sp)
 
 (* "spills" in Stack.blocks. Proc.priv is still an open automaton at this
  * point; freezing it yields the block holding the spill slots. On a route
@@ -50,7 +50,7 @@ let vfp_block ((_, p) : Ast2ir.proc) : Block.t =
  * in the layout.
  *)
 let spills ((_, p) : Ast2ir.proc) : Block.t =
-  (Automaton.freeze p.Proc.priv).Automaton.overflow
+  (Automaton.freeze p.priv).Automaton.overflow
 
 (* Lua's Block.overlap_high turned this exception into a diagnostic rather
  * than letting it escape (LUA/lua-cmm-driver/lualink.ml:357).
@@ -65,4 +65,4 @@ let overlap_low w bs = Block.overlap_list w Block.Low bs
  * which is what the x86 and ppc layouts dispatch on. Lua reached it
  * through Stack.ccname (LUA/lua-cmm-driver/lualink.ml:545).
  *)
-let ccname ((_, p) : Ast2ir.proc) : string = p.Proc.cc.Call.name
+let ccname ((_, p) : Ast2ir.proc) : string = p.cc.Call.name

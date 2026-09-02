@@ -31,7 +31,7 @@ let spec =
             }
 (*e: definition of [[manglespec]] (for the name mangler) *)
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
-  : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler =
+  : ['cfg * ('a, 'b, 'c, 'd) Procedure.t] Asm.assembler =
 object (this)
     val         _fd       = fd
     val         _mangle  = (Mangle.mk spec)   
@@ -148,7 +148,7 @@ object (this)
     method cfg_instr (cfg, proc) =
       (* We have to emit a label for the procedure's
          entry point. This is what symbol is for. Simply use this#label?  *)
-      let symbol = proc.Proc.symbol in
+      let symbol = proc.Procedure.symbol in
       let label l = this#label (try SM.find l _syms with Not_found -> this#local l) in
         this#label symbol;
         (emitter proc cfg (this#call) (this#instruction) label : unit)

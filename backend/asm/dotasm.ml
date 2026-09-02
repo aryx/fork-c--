@@ -61,7 +61,7 @@ object (this)
     method cfg_instr (proc : 'proc) =
       print_string "pad: Dotasm.cfg_instr\n";
       let (cfg, proc) = proc in
-      let s   = proc.Proc.symbol in
+      let s   = proc.Procedure.symbol in
       let mangle  = Mangle.mk spec in
       output_string fd (cfg2dot ~name:(mangle s#mangled_text) cfg)
 

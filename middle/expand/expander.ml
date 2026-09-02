@@ -160,7 +160,7 @@ module IntFloatAddr (Post : Postexpander.S) = struct
   let ok    (allocate, check) reg = check reg
   (*x: generic expander *)
   let expand proc =
-    let PA.T tgt = proc.Proc.target in
+    let PA.T tgt = proc.Procedure.target in
     (*s: stack-slot allocation *)
     let exchange_slot =
       let slots = ref [] in
@@ -193,7 +193,7 @@ module IntFloatAddr (Post : Postexpander.S) = struct
             | _ -> false in
       t [] l in
     (*e: functions for dealing with trivial guards *)
-    let contextmap (allocator, checker) = (allocator proc.Proc.temps, checker) in
+    let contextmap (allocator, checker) = (allocator proc.temps, checker) in
     let icontext = contextmap Post.icontext in
     let acontext = contextmap Post.acontext in
     let fcontext = contextmap Post.fcontext in
@@ -224,7 +224,7 @@ module IntFloatAddr (Post : Postexpander.S) = struct
       | RP.Fetch (l, _) -> Post.is_stack_top_proxy l
       | _ -> false in
     (*e: context guessing *)
-    let alloc_direct (allocator, _) = allocator proc.Proc.temps in
+    let alloc_direct (allocator, _) = allocator proc.temps in
     (*s: definition of [[temp_in_context]] *)
     let temp_in_context t context instructions =
       if ok context t then
@@ -1025,10 +1025,10 @@ module IntFloatAddr (Post : Postexpander.S) = struct
   let number = 999
   (*e: generic expander *)
   (*s: generic flow-graph expander *)
-  let expand f proc =
+  let expand f (proc : PA.basic_proc) =
     let modified = ref false in
-    let PA.T tgt = proc.Proc.target in
-    let machine  = proc, tgt.Target.machine, proc.Proc.exp_of_lbl in
+    let PA.T tgt = proc.target in
+    let machine  = proc, tgt.Target.machine, proc.exp_of_lbl in
     (*s: block-conversion functions *)
     let update (g, m)    = (if m then modified := true; g) in
     let block_before b g = update (G.block_before machine b g) in
@@ -1041,7 +1041,7 @@ module IntFloatAddr (Post : Postexpander.S) = struct
       if Postexpander.Alloc.isValid () then
         f expanders (block_before, block2cfg, cbranch2cfg)
       else
-        (Postexpander.remember_allocators proc.Proc.temps proc.Proc.priv;
+        (Postexpander.remember_allocators proc.temps proc.priv;
          Postexpander.remember_expanders expand_block expand_branch expand_cbranch;
          let g = f expanders (block_before, block2cfg, cbranch2cfg) in
          Postexpander.forget_allocators();
@@ -1049,8 +1049,8 @@ module IntFloatAddr (Post : Postexpander.S) = struct
          g) in
     g, !modified
 
-  let cfg _ (cfg, proc) =
-    let PA.T tgt = proc.Proc.target in
+  let cfg _ ((cfg, proc) : Preast2ir.proc) =
+    let PA.T tgt = proc.target in
     let m = tgt.Target.machine in
     let expand_cfg (expand_block, expand_branch, expand_cbranch, expand_call,
                     expand_jump, expand_cut)

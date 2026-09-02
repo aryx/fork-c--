@@ -48,8 +48,8 @@ let peephole = "peephole"  (* avoid allocating again and again... *)
 let () = Debug.register peephole "peephole optimizer"
 let debug = Debug.on peephole
 (*x: peephole.ml  *)
-let tx (g, proc) =
-  let PA.T tgt = proc.P.target in
+let tx ((g, proc) : Ast2ir.proc) =
+  let PA.T tgt = proc.target in
   let replace =
     if debug then
       (fun rtl old ->

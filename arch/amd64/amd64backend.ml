@@ -99,13 +99,13 @@ let w = 64
  * sibling, arch/amd64/amd64mach.ml, shares this same layout() and so was
  * equally misaligned the whole time - this fixes it too, silently). *)
 let retaddr_block ((_, p) : Ast2ir.proc) : Block.t =
-  let Preast2ir.T tgt = p.Proc.target in
+  let Preast2ir.T tgt = p.target in
   Block.at ~base:(RU.addk 64 tgt.Target.vfp (-8)) ~size:8
-    ~alignment:(Block.alignment p.Proc.sp)
+    ~alignment:(Block.alignment p.sp)
 
 let layout () ((_, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
-  let old = p.Proc.oldblocks in
-  let young = p.Proc.youngblocks in
+  let old = p.oldblocks in
+  let young = p.youngblocks in
   let vfp = retaddr_block proc in
 
   let old_callee = F.overlap_high w old.Call.callee in
@@ -120,10 +120,10 @@ let layout () ((_, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
       [ Block.cathl_list w [ old_caller; old_callee ]
       ; vfp
       ; F.spills proc
-      ; p.Proc.conts
-      ; p.Proc.stackd
+      ; p.conts
+      ; p.stackd
       ; youngparms
-      ; p.Proc.sp
+      ; p.sp
       ]
   in
   let block = Block.adjust block in

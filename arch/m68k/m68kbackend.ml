@@ -59,8 +59,8 @@ let w = 32
 let ra_block proc = Block.relative (Block.base (F.vfp_block proc))
 
 let layout () ((_, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
-  let old = p.Proc.oldblocks in
-  let young = p.Proc.youngblocks in
+  let old = p.oldblocks in
+  let young = p.youngblocks in
   let ra = ra_block proc "return address" Block.at ~size:4 ~alignment:4 in
   let callee = F.overlap_high w old.Call.callee in
   let pre_ra_tail = Block.cathl_list w [ ra; F.vfp_block proc ] in
@@ -70,15 +70,15 @@ let layout () ((_, p) as proc : Ast2ir.proc) : Ast2ir.proc * bool =
   let young_end =
     Block.cathl_list w
       [ F.overlap_low w young.Call.caller
-      ; p.Proc.sp
+      ; p.sp
       ; F.overlap_high w young.Call.callee
       ]
   in
   let block =
     Block.cathl_list w
       [ old_end
-      ; p.Proc.stackd
-      ; p.Proc.conts
+      ; p.stackd
+      ; p.conts
       ; F.spills proc
       ; young_end
       ]

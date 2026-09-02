@@ -178,11 +178,11 @@ let time str f x =
 (*e: [[Dls]] utilities *)
 (*e: dls type declarations and utilities *)
 (*s: dls algorithm *)
-let dls _ (cfg, ({Proc.cc = cc; Proc.target = PA.T tgt} as proc)) =
+let dls _ (cfg, (Procedure.{cc = cc; target = PA.T tgt} as proc)) =
   let machine = tgt.T.machine in
-  let l2e = proc.P.exp_of_lbl in
+  let l2e = proc.exp_of_lbl in
   let m = (proc, machine, l2e) in
-  let () = Debug.eprintf "dls" "DLS(%s)\n" proc.Proc.symbol#original_text in
+  let () = Debug.eprintf "dls" "DLS(%s)\n" proc.symbol#original_text in
   (*s: set up [[spillMap]] *)
   let spillMap = ref RM.empty in
   (*e: set up [[spillMap]] *)
@@ -208,7 +208,7 @@ let dls _ (cfg, ({Proc.cc = cc; Proc.target = PA.T tgt} as proc)) =
     let get_spill_loc ((_, _, ms), _, c as temp) =
       try RM.find temp (!spillMap)
       with Not_found ->
-        let l = Automaton.allocate proc.Proc.priv ~width:(Cell.to_width ms c)
+        let l = Automaton.allocate proc.priv ~width:(Cell.to_width ms c)
                                    ~kind:"" ~align:1 in
         let () = spillMap := RM.add temp l (!spillMap) in
         l in
@@ -375,7 +375,7 @@ let dls _ (cfg, ({Proc.cc = cc; Proc.target = PA.T tgt} as proc)) =
         impossf "%s %s %s %s %s %s %s %s"
                 "DLS register allocator error in shuffle(): Temp" (printReg temp)
                 "allocated in succ" (blockname succ) "but not pred" (blockname pred)
-                "map in function" (proc.Proc.symbol#original_text) in
+                "map in function" (proc.symbol#original_text) in
       let _fail () = VM.print "Pred VM:" pred_vm;
                     VM.print "Succ VM:" succ_vm;
                     impossf "Varmap has temp in unexpected locations" in
