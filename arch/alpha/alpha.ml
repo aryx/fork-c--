@@ -162,8 +162,96 @@ module Post = struct
     let unop ~dst op x =
         rtl (R.store (tloc dst) (R.app (Up.opr op) [tval x]) (twidth dst))
 
-    let binop ~dst op x y =
-        rtl (R.store (tloc dst) (R.app (Up.opr op) [tval x;tval y]) (twidth dst))
+    (* claude: Alpha has no integer divide instruction in any generation -
+     * a deliberate RISC design choice, not a gap in this backend - so
+     * "%quot" can't be a single alpharec.mlb rule the way every other
+     * binop here is (see armrec.mlb/etc.'s own single Store(dst,App(op,
+     * [x;y])) shape, which is exactly what the generic `binop` case below
+     * still handles for every OTHER operator). Real Alpha toolchains
+     * handle this by calling a library routine (__divq, a non-standard
+     * ABI: args in $24/$25, result in $27, return address in $23 not
+     * $26 - confirmed by disassembling alpha-linux-gnu-gcc's own output)
+     * but embedding that call from here would need this postexpander to
+     * mark $24/$25/$27/$23 as clobbered mid-block, which nothing in this
+     * fork's Dag/Expander machinery supports (RP.Kill reaches every
+     * recognizer, including alpharec.mlb's own, as a hard "cannot handle
+     * kill" error - it's assumed already consumed upstream, never
+     * something a postexpander emits itself). A genuine runtime loop
+     * (Dag.While) is also not an option: middle/expand/expander.ml's own
+     * block-lowering has "| DG.While (e, b) -> Impossible.unimp "expand
+     * loop"" - never implemented for any backend.
+     *
+     * So this computes unsigned binary long division via DG.If instead,
+     * unrolled 64 times at compile time (an "exp Dag.block", the same
+     * representation - and the same PX.Expand.block lowering step - that
+     * ppc.ml's/x86.ml's own Rewrite.(mod)/popcnt use for their own multi-
+     * instruction operator expansions), on the operands' absolute values,
+     * with the sign fixed up afterward to match %quot's truncating-
+     * toward-zero convention. Each iteration is branchless: the "did this
+     * bit make the remainder >= divisor" test is materialized as a 0/1
+     * integer via zx(bit(cmp)) (the same structural shape codegen/
+     * expander.ml's own boolean-to-value case handles for every backend,
+     * confirmed working here) rather than a real conditional store, so
+     * the whole 64-step loop is just adds/subs/muls/comparisons - real
+     * Alpha instructions throughout, ~4 per iteration. `neg e = 0 - e`
+     * is used for the absolute value instead of a dedicated negate,
+     * which is correct even for INT64_MIN: 0 - INT64_MIN wraps (mod
+     * 2^64) to INT64_MIN's own bit pattern, which read as UNSIGNED is
+     * exactly 2^63 - the correct magnitude, needing no special case. *)
+    module O = Rewrite.Ops
+    let quot64 ~dst x y =
+        let w = 64 in
+        let zero = O.signed w 0 in
+        let xval, yval = tval x, tval y in
+        let anloc = tloc (talloc 't' w) in  (* shrinking |x|-derived working copy *)
+        let adloc = tloc (talloc 't' w) in  (* |y|, fixed for the whole loop *)
+        let rloc  = tloc (talloc 't' w) in  (* running remainder *)
+        let qloc  = tloc (talloc 't' w) in  (* running quotient *)
+        let store loc e = DG.Rtl (R.store loc e w) in
+        let absto loc e =
+            DG.If (DG.cond (O.lt w e zero), store loc (O.sub w zero e), store loc e) in
+        (* claude: every intermediate gets its OWN fresh temp, written by its
+         * OWN instruction, in an order where a location is never READ
+         * (even indirectly, via an embedded subexpression) by an
+         * instruction SEQUENCED AFTER an earlier instruction in this same
+         * step already overwrote it - each `DG.Rtl` node here is lowered
+         * independently, so an old `nv`/`rv`/etc. reference embedded
+         * inside a LATER store's source expression re-reads the location
+         * as of THAT point, not as "captured" when the OCaml `let` ran.
+         * First version stored straight back into anloc/rloc/qloc while
+         * still referencing their old values from a later store's nested
+         * expression - confirmed via a standalone smoke test (7 %quot 7
+         * came out 4, not 1) and by reading the emitted alpha .s, which
+         * showed anloc's doubling computed twice: once into anloc itself,
+         * then again from inside the next store's lowering, reading the
+         * now-already-doubled value. *)
+        let step () =
+            let nv, rv, qv, adv =
+                R.fetch anloc w, R.fetch rloc w, R.fetch qloc w, R.fetch adloc w in
+            let dnloc = tloc (talloc 't' w) in
+            let cyloc = tloc (talloc 't' w) in
+            let rbloc = tloc (talloc 't' w) in
+            let geloc = tloc (talloc 't' w) in
+            store dnloc (O.add w nv nv) <:>
+            store cyloc (O.zx 1 w (O.bit (O.ltu w (R.fetch dnloc w) nv))) <:>
+            store rbloc (O.add w (O.add w rv rv) (R.fetch cyloc w)) <:>
+            store geloc (O.zx 1 w (O.bit (O.geu w (R.fetch rbloc w) adv))) <:>
+            store rloc  (O.sub w (R.fetch rbloc w) (O.mul w adv (R.fetch geloc w))) <:>
+            store qloc  (O.add w (O.add w qv qv) (R.fetch geloc w)) <:>
+            store anloc (R.fetch dnloc w) in
+        let rec steps n = if n <= 0 then DG.Nop else steps (n-1) <:> step () in
+        let init =
+            absto anloc xval <:> absto adloc yval <:> store rloc zero <:> store qloc zero in
+        let q, neg_q = R.fetch qloc w, O.sub w zero (R.fetch qloc w) in
+        let fixup =
+            DG.If (DG.cond (O.lt w xval zero),
+                   DG.If (DG.cond (O.lt w yval zero), store (tloc dst) q, store (tloc dst) neg_q),
+                   DG.If (DG.cond (O.lt w yval zero), store (tloc dst) neg_q, store (tloc dst) q)) in
+        init <:> steps 64 <:> fixup
+
+    let binop ~dst op x y = match op with
+        | "quot", [64] -> PX.Expand.block (quot64 ~dst x y)
+        | _ -> rtl (R.store (tloc dst) (R.app (Up.opr op) [tval x;tval y]) (twidth dst))
 
     let unrm  ~dst op x rm   = Impossible.unimp "floating point with rounding mode"
     let binrm ~dst op x y rm = Impossible.unimp "floating point with rounding mode"
@@ -436,6 +524,7 @@ let target =
                                    [ "add",     [64]
                                    ; "sub",     [64]
                                    ; "mul",     [64]
+                                   ; "quot",    [64]
                                    ; "and",     [64]
                                    ; "com",     [64]
                                    ; "eq",      [64]
@@ -453,6 +542,8 @@ let target =
                                    ; "disjoin", []
                                    ; "conjoin", []
                                    ; "bit",     []
+                                   ; "sx",      [1;64]
+                                   ; "zx",      [1;64]
                                    ; "lobits",  [64;8]
                                    ; "lobits",  [64;16]
                                    ; "lobits",  [64;32]
