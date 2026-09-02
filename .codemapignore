@@ -20,8 +20,8 @@ Cmm_extra.nw
 /TODO/tdpe/sparcRtl*.ml
 
 # submodules:
-/semgrep-pfff-libs
-/caps
+#/lib_core/commons
+#/caps
 
 #old: for codegraph_build
 #dir: h_camlburg/parsing
