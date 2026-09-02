@@ -323,3 +323,11 @@ test-macos:: $(TEST_ARM64_MACHO) $(TEST_AMD64_MACHO)
 build-docker:
 	docker build -t "cmm" .
 
+
+###############################################################################
+# Developer targets
+###############################################################################
+
+# see https://github.com/semgrep/semgrep
+check:
+	osemgrep --experimental --config semgrep.jsonnet --strict --error
