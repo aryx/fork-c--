@@ -11,7 +11,7 @@ SRC_ORIG=Cmm.nw Cmm_extra.nw
 
 #TODO: sync also ast.ml!
 #TODO: ir/vfp.ml split from layout/vfprewrite.ml
-#TODO: main.ml
+#TODO: Main.ml CLI.ml
 #TODO: the arch/xxx/xxx{backend,cc}.ml arch/ppc/ppcelfasm.ml
 #TODO: now called ppcmach.ml
 # $TOP/arch/ppc/ppcasm.mli\
