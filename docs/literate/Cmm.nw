@@ -9812,6 +9812,18 @@ First, the machine-dependent register information.
 #define NUM_REGS 96 /* c(6)->0-5, f(32)->6-37, r(32)->38-69 = 70, same shape as riscv/alpha */
 #elif defined(__arm__)
 #define NUM_REGS 32 /* c(3)->0-2, r(16)->3-18 = 19; no float space (arm.ml: no FPU) */
+#elif defined(__m68k__)
+/* claude: verified via a throwaway OCaml harness calling the real
+ * Target.mk_reg_ix_map on m68k.ml's actual T.spaces (same method as
+ * __aarch64__/__x86_64__ below, not hand-derived - see those comments for
+ * why hand-deriving misses the off-by-one). Confirmed result: c(3)->0-3 (4
+ * slots), r(11)->4-15 (12 slots, the same count+1 off-by-one every other
+ * target's r space hits) = 16 total. m68k.ml folds d0-d7/a0(scratch)/a6(fp)/
+ * a7(sp) into this one 'r' space rather than a genuine split D/A-register
+ * space - see arch/m68k/m68kregs.ml's own header comment - so there is no
+ * separate float/address-register range the way ppc/riscv/alpha/mips have
+ * one; no float space either (m68k.ml: no FPU). */
+#define NUM_REGS 32 /* generous margin over the confirmed total=16, same margin style as arm's own 32 */
 #elif defined(__aarch64__)
 /* claude: verified via a throwaway OCaml harness calling the real
  * Target.mk_reg_ix_map on arm64.ml's actual T.spaces (not hand-derived by
@@ -10058,6 +10070,54 @@ static int normal_change(Cmm_Activation *a) {
 
   vfp = a->vfp;
   a->pc      = *(Cmm_Codeptr*)locptr(a, calleedata->return_addressp);
+  /* claude: real SPARC "call" hardware stores the call instruction's own
+   * address (not +4/+8) into the return register - the same fact
+   * Post.return already compensates for via its "jmpl %i7+8" epilogue
+   * (see arch/sparc/sparc.ml's `return` comment). But return_addressp
+   * hands back that same raw, unadjusted value, and this is a SEPARATE
+   * consumer: Cmm_lookup_entry below needs the actual resumption pc
+   * (call+8, skipping the call and its delay-slot nop) to match the
+   * pcmap table's own keys, which are built from the real continuation
+   * label placed after both instructions. Without this, every SPARC
+   * frame-walk (tig_gc's root scan, exception unwinding) looked up the
+   * wrong pc, got NULL back, and silently treated a live C-- frame as
+   * the C/host boundary - skipping its GC roots entirely. Confirmed via
+   * gdb: a real qsort.tig run had callee return_addressp = 0x1d69c (the
+   * call instruction itself) while the pcmap table's real entry for
+   * that call site's continuation was 0x1d6a4 = 0x1d69c + 8. */
+#ifdef __sparc__
+  a->pc = (Cmm_Codeptr)((char *)a->pc + 8);
+#endif
+  /* claude: a MIPS-specific mismatch in the opposite direction from
+   * sparc's above: here it's the RUNTIME value that's correct and the
+   * COMPILER's own pcmap-table key that's wrong. arch/mips's real "jal"
+   * hardware sets $31 (ra) to callsite+8 (skipping both the call and its
+   * one delay slot) - a fact runtime code reading return_addressp gets
+   * "for free," correctly, with no adjustment. But
+   * middle/translate/runtimedata.ml's emit_site_spans (target-
+   * independent, shared by every backend) keys the pcmap table entry off
+   * the raw "call successor" CFG label placed by cfg/zipcfg/zipcfg.ml's
+   * `call` (also shared, target-independent) - and on this backend that
+   * label lands at callsite+4 (right after the delay-slot nop), one
+   * MIPS instruction *before* where $31 actually points, because
+   * whatever compiles the call's "successor" block (the result-consuming
+   * move, or a placeholder nop when the result is discarded, as for
+   * call_gc()) is emitted as ordinary block content *after* the label
+   * rather than being accounted for in the label's own placement.
+   * Adjusting that label's placement is a target-independent, shared
+   * code path this fork wasn't able to isolate a safe local fix in - so,
+   * matching the sparc case above (same file, same function, opposite
+   * side of the mismatch), compensate at the one point that actually
+   * needs the two values to agree: subtract the same 4 bytes back off
+   * here so Cmm_lookup_entry's key matches what the table really has.
+   * Confirmed via gdb: qsort.tig's tiger_main resumed at 0x4037b4 (real
+   * $31, correct) while the pcmap table's actual entry for that call
+   * site was keyed at 0x4037b0 = 0x4037b4 - 4. Every non-hello/sieve
+   * tiger-mips failure at the time this was found showed the identical
+   * "array of size 0" / stale-GC-root symptom family this causes. */
+#ifdef __mips__
+  a->pc = (Cmm_Codeptr)((char *)a->pc - 4);
+#endif
   update_saved_regs(a, a);
   <<possibly shout about caller's EBP>>
   callerdata = Cmm_lookup_entry(a->pc);
@@ -11157,6 +11217,8 @@ stack frame on entry.
 #define FP_REG 68 /* $30/fp, flat index 38+30 - confirmed via ".frame $fp,..." */
 #elif defined(__arm__)
 #define FP_REG 10 /* r7, flat index 3+7 - confirmed via "push {r7}"/frame_needed=1 in a probe (this toolchain defaults to Thumb, where r7 is fp, not ARM mode's r11) */
+#elif defined(__m68k__)
+#define FP_REG 13 /* %a6/%fp, flat index 4+9 - confirmed via "link.w %fp,#-4"/"unlk %fp" in a probe (m68k-linux-gnu-gcc -fno-omit-frame-pointer); flat index derived from the same throwaway-OCaml-harness numbering as qc--runtime.h's own __m68k__ NUM_REGS comment (a6 is m68k.ml's own r-space index 9, the qc-- target's own frame-pointer register too - see arch/m68k/m68kregs.ml, so no mismatch to reconcile the way __arm__'s Thumb-vs-ARM r7-vs-r11 choice needed) */
 #elif defined(__aarch64__)
 #define FP_REG 66 /* x29/fp, flat index 37+29 - confirmed via a throwaway OCaml harness calling Target.mk_reg_ix_map on arm64.ml's real T.spaces (see qc--runtime.h's own NUM_REGS comment for the same harness/result), not a compiled-probe .frame directive (AArch64 has none - clang/gcc both just use the standard AAPCS64 x29 frame-record convention under -fno-omit-frame-pointer, so this is not toolchain-specific the way ARM32's Thumb-vs-ARM r7-vs-r11 choice was) */
 #elif defined(__x86_64__)
