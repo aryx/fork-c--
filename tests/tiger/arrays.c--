@@ -18,6 +18,7 @@ import bits32 "tig_bounds_check" as bounds_check;
 import bits32 "tig_set_handler" as set_handler;
 import bits32 "tig_raise" as raise;
 import bits32 "tig_unwind" as unwind;
+import bits32 "tig_spawn" as spawn;
 export tiger_main;
 
 bits32 alloc_ptr;
@@ -25,9 +26,9 @@ import space_end;
 
 section "data" { align 4;
  align 4;
- Lgbl_49: bits32 { 1 }; bits8[] "\n\000";
- align 4;
  Lgbl_57: bits32 { 1 }; bits8[] " \000";
+ align 4;
+ Lgbl_49: bits32 { 1 }; bits8[] "\n\000";
  align 4;
  Lgbl_42: bits32 { 24 }; bits8[] "printing array of size: \000";
 }
@@ -67,9 +68,9 @@ tiger_main(bits32 pfp) {
   bits32 temp_26;
   bits32 temp_23;
   bits32 temp_22;
-  if(%gt(%add(alloc_ptr, 48), bits32[space_end])) {goto Lalc_gc_27;} else {goto Lalc_gc_27;}
+  if(%gt(%add(alloc_ptr, 48), bits32[space_end])) {goto Lalc_gc_27;} else {goto Lalc_28;}
   Lalc_gc_27:
-   call_gc() also aborts ;
+   call_gc(48) also aborts ;
   Lalc_28:
   bits32[alloc_ptr] = 48;
   temp_26 = %add(alloc_ptr, 4);

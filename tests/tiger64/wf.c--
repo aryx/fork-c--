@@ -25,13 +25,21 @@ bits64 alloc_ptr;
 import space_end;
 
 section "data" { align 8;
+ align 8;
  Lgbl_160: bits64 { 0 }; bits8[] "\000";
+ align 8;
  Lgbl_125: bits64 { 1 }; bits8[] "a\000";
+ align 8;
  Lgbl_137: bits64 { 1 }; bits8[] "z\000";
+ align 8;
  Lgbl_91: bits64 { 1 }; bits8[] "\t\000";
+ align 8;
  Lgbl_111: bits64 { 1 }; bits8[] "Z\000";
+ align 8;
  Lgbl_43: bits64 { 2 }; bits8[] "? \000";
+ align 8;
  Lgbl_48: bits64 { 1 }; bits8[] "\n\000";
+ align 8;
  Lgbl_103: bits64 { 1 }; bits8[] "A\000";
 }
 
@@ -67,7 +75,7 @@ err_37(bits64 pfp,bits64 s) {
   temp_53 = temp_52;
   return(temp_53);
 }}
-section "data" {
+section "data" { align 8;
  err_37_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 11::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -98,7 +106,7 @@ insert_54(bits64 pfp,bits64 p) {
   LifTrue_84:
   if(%gt(%add(alloc_ptr, 40), bits64[space_end])) {goto Lalc_gc_57;} else {goto Lalc_58;}
   Lalc_gc_57:
-   call_gc() also aborts ;
+   call_gc(40) also aborts ;
   Lalc_58:
   bits64[alloc_ptr] = 40;
   temp_56 = %add(alloc_ptr, 8);
@@ -157,7 +165,7 @@ insert_54(bits64 pfp,bits64 p) {
   temp_87 = temp_83;
   return(temp_87);
 }}
-section "data" {
+section "data" { align 8;
  insert_54_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 18::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,1::bits32,1::bits32,1::bits32,1::bits32 };
@@ -175,7 +183,7 @@ add_word_38(bits64 pfp,bits64 word) {
   temp_88 = 0;
   return(temp_88);
 }}
-section "data" {
+section "data" { align 8;
  add_word_38_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 4::bits32,1::bits32,1::bits32,0::bits32,1::bits32 };
@@ -224,7 +232,7 @@ tprint_39(bits64 pfp,bits64 tree) {
   temp_102 = temp_98;
   return(temp_102);
 }}
-section "data" {
+section "data" { align 8;
  tprint_39_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 12::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -355,7 +363,7 @@ isletter_40(bits64 pfp,bits64 c) {
   temp_159 = temp_155;
   return(temp_159);
 }}
-section "data" {
+section "data" { align 8;
  isletter_40_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 33::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -447,7 +455,7 @@ getword_41(bits64 pfp) {
   temp_189 = bits64[%add(fp, 8)];
   return(temp_189);
 }}
-section "data" {
+section "data" { align 8;
  getword_41_gc_data:
    bits32[] { 3::bits32,1::bits32,1::bits32,1::bits32 };
    bits32[] { 20::bits32,1::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -479,7 +487,7 @@ main_42(bits64 pfp) {
   temp_195 =  tprint_39(bits64[fp],bits64[%add(bits64[fp], 8)]) also aborts ;
   return(temp_195);
 }}
-section "data" {
+section "data" { align 8;
  main_42_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 6::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
@@ -494,7 +502,7 @@ tiger_main(bits64 pfp) {
   temp_196 =  main_42(fp) also aborts ;
   return(temp_196);
 }}
-section "data" {
+section "data" { align 8;
  tiger_main_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 2::bits32,1::bits32,0::bits32 };

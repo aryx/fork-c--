@@ -25,6 +25,7 @@ bits64 alloc_ptr;
 import space_end;
 
 section "data" { align 8;
+ align 8;
  Lgbl_92: bits64 { 0 }; bits8[] "\000";
 }
 
@@ -47,7 +48,7 @@ add_mod_256_49(bits64 pfp,bits64 x,bits64 y) {
   temp_57 = temp_53;
   return(temp_57);
 }}
-section "data" {
+section "data" { align 8;
  add_mod_256_49_gc_data:
    bits32[] { 4::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
    bits32[] { 5::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -114,7 +115,7 @@ compute_bit_58(bits64 pfp,bits64 bit_value) {
   temp_83 = temp_79;
   return(temp_83);
 }}
-section "data" {
+section "data" { align 8;
  compute_bit_58_gc_data:
    bits32[] { 2::bits32,1::bits32,0::bits32 };
    bits32[] { 9::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -171,7 +172,7 @@ xor_50(bits64 pfp,bits64 x,bits64 y) {
   temp_84 = bits64[%add(fp, 24)];
   return(temp_84);
 }}
-section "data" {
+section "data" { align 8;
  xor_50_gc_data:
    bits32[] { 4::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
    bits32[] { 20::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -207,7 +208,7 @@ init_sbox_51(bits64 pfp) {
   temp_91 = 0;
   return(temp_91);
 }}
-section "data" {
+section "data" { align 8;
  init_sbox_51_gc_data:
    bits32[] { 2::bits32,1::bits32,0::bits32 };
    bits32[] { 8::bits32,1::bits32,0::bits32,0::bits32,0::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
@@ -250,7 +251,7 @@ swap_93(bits64 pfp,bits64 i,bits64 j) {
   temp_103 = 0;
   return(temp_103);
 }}
-section "data" {
+section "data" { align 8;
  swap_93_gc_data:
    bits32[] { 4::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
    bits32[] { 12::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -310,7 +311,7 @@ encrypt_94(bits64 pfp,bits64 ch) {
   temp_112 =  xor_50(bits64[bits64[fp]],bits64[%add(fp, 24)],bits64[%add(fp, 8)]) also aborts ;
   return(temp_112);
 }}
-section "data" {
+section "data" { align 8;
  encrypt_94_gc_data:
    bits32[] { 4::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
    bits32[] { 18::bits32,1::bits32,0::bits32,1::bits32,0::bits32,0::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -368,7 +369,7 @@ cypher_52(bits64 pfp) {
   temp_126 = bits64[%add(fp, 24)];
   return(temp_126);
 }}
-section "data" {
+section "data" { align 8;
  cypher_52_gc_data:
    bits32[] { 5::bits32,1::bits32,0::bits32,0::bits32,1::bits32,1::bits32 };
    bits32[] { 14::bits32,1::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -387,7 +388,7 @@ tiger_main(bits64 pfp) {
   bits64 temp_127;
   if(%gt(%add(alloc_ptr, 2064), bits64[space_end])) {goto Lalc_gc_45;} else {goto Lalc_46;}
   Lalc_gc_45:
-   call_gc() also aborts ;
+   call_gc(2064) also aborts ;
   Lalc_46:
   bits64[alloc_ptr] = 2064;
   temp_44 = %add(alloc_ptr, 8);
@@ -409,7 +410,7 @@ tiger_main(bits64 pfp) {
   temp_129 = temp_128;
   return(temp_129);
 }}
-section "data" {
+section "data" { align 8;
  tiger_main_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 8::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };

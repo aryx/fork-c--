@@ -25,6 +25,7 @@ bits64 alloc_ptr;
 import space_end;
 
 section "data" { align 8;
+ align 8;
  Lgbl_59: bits64 { 1 }; bits8[] "\n\000";
 }
 
@@ -38,7 +39,7 @@ mod_36(bits64 pfp,bits64 n,bits64 m) {
   temp_39 = %sub(bits64[%add(fp, 8)], %mul(bits64[%add(fp, 16)], %quot(bits64[%add(fp, 8)], bits64[%add(fp, 16)])));
   return(temp_39);
 }}
-section "data" {
+section "data" { align 8;
  mod_36_gc_data:
    bits32[] { 3::bits32,1::bits32,0::bits32,0::bits32 };
    bits32[] { 4::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
@@ -83,7 +84,7 @@ mark_multiples_37(bits64 pfp,bits64 n) {
   temp_52 = 0;
   return(temp_52);
 }}
-section "data" {
+section "data" { align 8;
  mark_multiples_37_gc_data:
    bits32[] { 3::bits32,1::bits32,0::bits32,0::bits32 };
    bits32[] { 9::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -130,7 +131,7 @@ step_38(bits64 pfp,bits64 n) {
   temp_66 = temp_62;
   return(temp_66);
 }}
-section "data" {
+section "data" { align 8;
  step_38_gc_data:
    bits32[] { 2::bits32,1::bits32,0::bits32 };
    bits32[] { 12::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -147,7 +148,7 @@ tiger_main(bits64 pfp) {
   bits64[%add(fp, 8)] = 1000;
   if(%gt(%add(alloc_ptr, %mul(%add(%add(bits64[%add(fp, 8)], 1), 1), 8)), bits64[space_end])) {goto Lalc_gc_33;} else {goto Lalc_34;}
   Lalc_gc_33:
-   call_gc() also aborts ;
+   call_gc(%mul(%add(%add(bits64[%add(fp, 8)], 1), 1), 8)) also aborts ;
   Lalc_34:
   bits64[alloc_ptr] = %mul(%add(%add(bits64[%add(fp, 8)], 1), 1), 8);
   temp_32 = %add(alloc_ptr, 8);
@@ -172,7 +173,7 @@ tiger_main(bits64 pfp) {
   temp_70 = 0;
   return(temp_70);
 }}
-section "data" {
+section "data" { align 8;
  tiger_main_gc_data:
    bits32[] { 4::bits32,1::bits32,0::bits32,1::bits32,0::bits32 };
    bits32[] { 5::bits32,1::bits32,0::bits32,1::bits32,0::bits32,1::bits32 };

@@ -18,6 +18,7 @@ import bits32 "tig_bounds_check" as bounds_check;
 import bits32 "tig_set_handler" as set_handler;
 import bits32 "tig_raise" as raise;
 import bits32 "tig_unwind" as unwind;
+import bits32 "tig_spawn" as spawn;
 export tiger_main;
 
 bits32 alloc_ptr;
@@ -25,37 +26,37 @@ import space_end;
 
 section "data" { align 4;
  align 4;
+ Lgbl_89: bits32 { 5 }; bits8[] "Kevin\000";
+ align 4;
  Lgbl_43: bits32 { 0 }; bits8[] "\000";
  align 4;
  Lgbl_207: bits32 { 14 }; bits8[] "sorted by name\000";
- align 4;
- Lgbl_104: bits32 { 6 }; bits8[] "Norman\000";
- align 4;
- Lgbl_98: bits32 { 4 }; bits8[] "Omri\000";
- align 4;
- Lgbl_107: bits32 { 4 }; bits8[] "Mike\000";
  align 4;
  Lgbl_208: bits32 { 13 }; bits8[] "sorted by num\000";
  align 4;
  Lgbl_113: bits32 { 3 }; bits8[] " :\n\000";
  align 4;
- Lgbl_95: bits32 { 5 }; bits8[] "David\000";
- align 4;
- Lgbl_80: bits32 { 4 }; bits8[] "Paul\000";
- align 4;
- Lgbl_121: bits32 { 1 }; bits8[] "\t\000";
- align 4;
- Lgbl_128: bits32 { 1 }; bits8[] "\n\000";
- align 4;
  Lgbl_86: bits32 { 4 }; bits8[] "Joao\000";
  align 4;
- Lgbl_83: bits32 { 6 }; bits8[] "Stuart\000";
- align 4;
- Lgbl_89: bits32 { 5 }; bits8[] "Kevin\000";
+ Lgbl_121: bits32 { 1 }; bits8[] "\t\000";
  align 4;
  Lgbl_101: bits32 { 9 }; bits8[] "Kathleeen\000";
  align 4;
  Lgbl_92: bits32 { 3 }; bits8[] "Kim\000";
+ align 4;
+ Lgbl_95: bits32 { 5 }; bits8[] "David\000";
+ align 4;
+ Lgbl_107: bits32 { 4 }; bits8[] "Mike\000";
+ align 4;
+ Lgbl_104: bits32 { 6 }; bits8[] "Norman\000";
+ align 4;
+ Lgbl_83: bits32 { 6 }; bits8[] "Stuart\000";
+ align 4;
+ Lgbl_128: bits32 { 1 }; bits8[] "\n\000";
+ align 4;
+ Lgbl_98: bits32 { 4 }; bits8[] "Omri\000";
+ align 4;
+ Lgbl_80: bits32 { 4 }; bits8[] "Paul\000";
 }
 
 initlist_56(bits32 pfp) {
@@ -453,43 +454,44 @@ partition_136(bits32 pfp,bits32 i,bits32 j) {
   bits32 temp_216;
   bits32 temp_200;
   bits32 temp_194;
-  bits32 temp_188;
-  bits32 temp_181;
+  bits32 temp_187;
+  bits32 temp_180;
   bits32[%add(fp, 12)] = bits32[%add(fp, 4)];
   Lloop_start_198:
   if(%lt(bits32[%add(fp, 4)], bits32[%add(fp, 8)])) {goto Lloop_body_199;} else {goto Lloop_end_179;}
   Lloop_body_199:
   Lloop_start_185:
   temp_216 =  lte_134(bits32[fp],bits32[%add(fp, 4)],bits32[%add(fp, 12)]) also aborts ;
-  if(%ne(temp_216, 0)) {goto LifTrue_182;} else {goto LifFalse_183;}
-  LifTrue_182:
-  temp_181 = %sx32(%bit(%lt(bits32[%add(fp, 4)], bits32[%add(fp, 8)])));
-  goto LifEnd_184;
-  LifFalse_183:
-  temp_181 = 0;
-  LifEnd_184:
-  if(%ne(temp_181, 0)) {goto Lloop_body_186;} else {goto Lloop_end_180;}
+  if(%ne(temp_216, 0)) {goto LifTrue_181;} else {goto LifFalse_182;}
+  LifTrue_181:
+  temp_180 = %sx32(%bit(%lt(bits32[%add(fp, 4)], bits32[%add(fp, 8)])));
+  goto LifEnd_183;
+  LifFalse_182:
+  temp_180 = 0;
+  LifEnd_183:
+  if(%ne(temp_180, 0)) {goto Lloop_body_186;} else {goto Lloop_end_184;}
   Lloop_body_186:
   bits32[%add(fp, 4)] = %add(bits32[%add(fp, 4)], 1);
   goto Lloop_start_185;
-  Lloop_end_180:
+  Lloop_end_184:
   Lloop_start_192:
   temp_217 =  gt_135(bits32[fp],bits32[%add(fp, 8)],bits32[%add(fp, 12)]) also aborts ;
-  if(%ne(temp_217, 0)) {goto LifTrue_189;} else {goto LifFalse_190;}
-  LifTrue_189:
-  temp_188 = %sx32(%bit(%ge(bits32[%add(fp, 8)], bits32[%add(fp, 4)])));
-  goto LifEnd_191;
-  LifFalse_190:
-  temp_188 = 0;
-  LifEnd_191:
-  if(%ne(temp_188, 0)) {goto Lloop_body_193;} else {goto Lloop_end_187;}
+  if(%ne(temp_217, 0)) {goto LifTrue_188;} else {goto LifFalse_189;}
+  LifTrue_188:
+  temp_187 = %sx32(%bit(%ge(bits32[%add(fp, 8)], bits32[%add(fp, 4)])));
+  goto LifEnd_190;
+  LifFalse_189:
+  temp_187 = 0;
+  LifEnd_190:
+  if(%ne(temp_187, 0)) {goto Lloop_body_193;} else {goto Lloop_end_191;}
   Lloop_body_193:
   bits32[%add(fp, 8)] = %sub(bits32[%add(fp, 8)], 1);
   goto Lloop_start_192;
-  Lloop_end_187:
+  Lloop_end_191:
   if(%lt(bits32[%add(fp, 4)], bits32[%add(fp, 8)])) {goto LifTrue_195;} else {goto LifFalse_196;}
   LifTrue_195:
-  temp_194 =  exchange_169(fp,bits32[%add(fp, 4)],bits32[%add(fp, 8)]) also aborts ;
+   exchange_169(fp,bits32[%add(fp, 4)],bits32[%add(fp, 8)]) also aborts ;
+  temp_194 = 0;
   goto LifEnd_197;
   LifFalse_196:
   temp_194 = 0;
@@ -521,7 +523,8 @@ qsort_137(bits32 pfp,bits32 lb,bits32 ub) {
   temp_218 =  partition_136(bits32[fp],bits32[%add(fp, 4)],bits32[%add(fp, 8)]) also aborts ;
   bits32[%add(fp, 12)] = temp_218;
    qsort_137(bits32[fp],bits32[%add(fp, 4)],%sub(bits32[%add(fp, 12)], 1)) also aborts ;
-  temp_201 =  qsort_137(bits32[fp],%add(bits32[%add(fp, 12)], 1),bits32[%add(fp, 8)]) also aborts ;
+   qsort_137(bits32[fp],%add(bits32[%add(fp, 12)], 1),bits32[%add(fp, 8)]) also aborts ;
+  temp_201 = 0;
   goto LifEnd_204;
   LifFalse_203:
   temp_201 = 0;
@@ -561,9 +564,9 @@ tiger_main(bits32 pfp) {
   bits32 temp_44;
   bits32 temp_209;
   bits32[%add(fp, 4)] = 10;
-  if(%gt(%add(alloc_ptr, %mul(%add(%add(bits32[%add(fp, 4)], 1), 1), 4)), bits32[space_end])) {goto Lalc_gc_54;} else {goto Lalc_gc_54;}
+  if(%gt(%add(alloc_ptr, %mul(%add(%add(bits32[%add(fp, 4)], 1), 1), 4)), bits32[space_end])) {goto Lalc_gc_54;} else {goto Lalc_55;}
   Lalc_gc_54:
-   call_gc() also aborts ;
+   call_gc(%mul(%add(%add(bits32[%add(fp, 4)], 1), 1), 4)) also aborts ;
   Lalc_55:
   bits32[alloc_ptr] = %mul(%add(%add(bits32[%add(fp, 4)], 1), 1), 4);
   temp_53 = %add(alloc_ptr, 4);
@@ -572,9 +575,9 @@ tiger_main(bits32 pfp) {
   bits32[temp_49] = bits32[%add(fp, 4)];
   temp_50 = 1;
   Linit_start_51:
-  if(%gt(%add(alloc_ptr, 12), bits32[space_end])) {goto Lalc_gc_46;} else {goto Lalc_gc_46;}
+  if(%gt(%add(alloc_ptr, 12), bits32[space_end])) {goto Lalc_gc_46;} else {goto Lalc_47;}
   Lalc_gc_46:
-   call_gc() also aborts ;
+   call_gc(12) also aborts ;
   Lalc_47:
   bits32[alloc_ptr] = 12;
   temp_45 = %add(alloc_ptr, 4);

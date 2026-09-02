@@ -18,6 +18,7 @@ import bits32 "tig_bounds_check" as bounds_check;
 import bits32 "tig_set_handler" as set_handler;
 import bits32 "tig_raise" as raise;
 import bits32 "tig_unwind" as unwind;
+import bits32 "tig_spawn" as spawn;
 export tiger_main;
 
 bits32 alloc_ptr;
@@ -64,7 +65,8 @@ fa_26(bits32 pfp,bits32 a,bits32 b) {
   bits32 temp_33;
   if(%lt(bits32[%add(fp, 4)], 5)) {goto LifTrue_34;} else {goto LifFalse_35;}
   LifTrue_34:
-  temp_33 =  a_a_28(fp,%add(bits32[%add(fp, 4)], 1),bits32[%add(fp, 8)]) also aborts ;
+   a_a_28(fp,%add(bits32[%add(fp, 4)], 1),bits32[%add(fp, 8)]) also aborts ;
+  temp_33 = 0;
   goto LifEnd_36;
   LifFalse_35:
   temp_33 = 0;

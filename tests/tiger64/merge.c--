@@ -25,10 +25,15 @@ bits64 alloc_ptr;
 import space_end;
 
 section "data" { align 8;
+ align 8;
  Lgbl_140: bits64 { 1 }; bits8[] "-\000";
+ align 8;
  Lgbl_50: bits64 { 1 }; bits8[] "9\000";
+ align 8;
  Lgbl_45: bits64 { 1 }; bits8[] "0\000";
+ align 8;
  Lgbl_58: bits64 { 1 }; bits8[] " \000";
+ align 8;
  Lgbl_67: bits64 { 1 }; bits8[] "\n\000";
 }
 
@@ -73,7 +78,7 @@ isdigit_41(bits64 pfp,bits64 s) {
   temp_57 = temp_53;
   return(temp_57);
 }}
-section "data" {
+section "data" { align 8;
  isdigit_41_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 14::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -133,7 +138,7 @@ skipto_42(bits64 pfp) {
   temp_82 = 0;
   return(temp_82);
 }}
-section "data" {
+section "data" { align 8;
  skipto_42_gc_data:
    bits32[] { 1::bits32,1::bits32 };
    bits32[] { 12::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,1::bits32 };
@@ -178,7 +183,7 @@ readint_40(bits64 pfp,bits64 any) {
   temp_90 = bits64[%add(fp, 16)];
   return(temp_90);
 }}
-section "data" {
+section "data" { align 8;
  readint_40_gc_data:
    bits32[] { 3::bits32,1::bits32,1::bits32,0::bits32 };
    bits32[] { 12::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };
@@ -198,7 +203,7 @@ readlist_91(bits64 pfp) {
   bits64 temp_100;
   if(%gt(%add(alloc_ptr, 16), bits64[space_end])) {goto Lalc_gc_97;} else {goto Lalc_98;}
   Lalc_gc_97:
-   call_gc() also aborts ;
+   call_gc(16) also aborts ;
   Lalc_98:
   bits64[alloc_ptr] = 16;
   temp_96 = %add(alloc_ptr, 8);
@@ -212,7 +217,7 @@ readlist_91(bits64 pfp) {
   LifTrue_105:
   if(%gt(%add(alloc_ptr, 24), bits64[space_end])) {goto Lalc_gc_102;} else {goto Lalc_103;}
   Lalc_gc_102:
-   call_gc() also aborts ;
+   call_gc(24) also aborts ;
   Lalc_103:
   bits64[alloc_ptr] = 24;
   temp_101 = %add(alloc_ptr, 8);
@@ -229,7 +234,7 @@ readlist_91(bits64 pfp) {
   temp_108 = temp_104;
   return(temp_108);
 }}
-section "data" {
+section "data" { align 8;
  readlist_91_gc_data:
    bits32[] { 3::bits32,1::bits32,1::bits32,0::bits32 };
    bits32[] { 9::bits32,1::bits32,1::bits32,1::bits32,1::bits32,0::bits32,1::bits32,1::bits32,1::bits32,1::bits32 };
@@ -265,7 +270,7 @@ merge_92(bits64 pfp,bits64 a,bits64 b) {
   LifTrue_118:
   if(%gt(%add(alloc_ptr, 24), bits64[space_end])) {goto Lalc_gc_111;} else {goto Lalc_112;}
   Lalc_gc_111:
-   call_gc() also aborts ;
+   call_gc(24) also aborts ;
   Lalc_112:
   bits64[alloc_ptr] = 24;
   temp_110 = %add(alloc_ptr, 8);
@@ -279,7 +284,7 @@ merge_92(bits64 pfp,bits64 a,bits64 b) {
   LifFalse_119:
   if(%gt(%add(alloc_ptr, 24), bits64[space_end])) {goto Lalc_gc_115;} else {goto Lalc_116;}
   Lalc_gc_115:
-   call_gc() also aborts ;
+   call_gc(24) also aborts ;
   Lalc_116:
   bits64[alloc_ptr] = 24;
   temp_114 = %add(alloc_ptr, 8);
@@ -297,7 +302,7 @@ merge_92(bits64 pfp,bits64 a,bits64 b) {
   temp_129 = temp_125;
   return(temp_129);
 }}
-section "data" {
+section "data" { align 8;
  merge_92_gc_data:
    bits32[] { 3::bits32,1::bits32,1::bits32,1::bits32 };
    bits32[] { 13::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32 };
@@ -336,7 +341,7 @@ f_130(bits64 pfp,bits64 i) {
   temp_139 = temp_135;
   return(temp_139);
 }}
-section "data" {
+section "data" { align 8;
  f_130_gc_data:
    bits32[] { 2::bits32,1::bits32,0::bits32 };
    bits32[] { 10::bits32,1::bits32,0::bits32,0::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -360,29 +365,25 @@ printint_93(bits64 pfp,bits64 i) {
   temp_142 = foreign "C"  print(Lgbl_140) also aborts ;
   alloc_ptr = temp_141;
   /* eliminated: temp_142 */
-   f_130(fp,%sub(0, bits64[%add(fp, 8)])) also aborts ;
-  temp_149 = 0;
+  temp_149 =  f_130(fp,%sub(0, bits64[%add(fp, 8)])) also aborts ;
   goto LifEnd_152;
   LifFalse_151:
   if(%gt(bits64[%add(fp, 8)], 0)) {goto LifTrue_146;} else {goto LifFalse_147;}
   LifTrue_146:
-   f_130(fp,bits64[%add(fp, 8)]) also aborts ;
-  temp_145 = 0;
+  temp_145 =  f_130(fp,bits64[%add(fp, 8)]) also aborts ;
   goto LifEnd_148;
   LifFalse_147:
   temp_143 = alloc_ptr;
   temp_144 = foreign "C"  print(Lgbl_45) also aborts ;
   alloc_ptr = temp_143;
-  /* eliminated: temp_144 */
-  temp_145 = 0;
+  temp_145 = temp_144;
   LifEnd_148:
-  /* eliminated: temp_145 */
-  temp_149 = 0;
+  temp_149 = temp_145;
   LifEnd_152:
   temp_153 = temp_149;
   return(temp_153);
 }}
-section "data" {
+section "data" { align 8;
  printint_93_gc_data:
    bits32[] { 2::bits32,1::bits32,0::bits32 };
    bits32[] { 9::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -404,8 +405,7 @@ printlist_94(bits64 pfp,bits64 l) {
   temp_154 = alloc_ptr;
   temp_155 = foreign "C"  print(Lgbl_67) also aborts ;
   alloc_ptr = temp_154;
-  /* eliminated: temp_155 */
-  temp_158 = 0;
+  temp_158 = temp_155;
   goto LifEnd_161;
   LifFalse_160:
    printint_93(bits64[fp],bits64[%add(bits64[%add(fp, 8)], 0)]) also aborts ;
@@ -413,13 +413,12 @@ printlist_94(bits64 pfp,bits64 l) {
   temp_157 = foreign "C"  print(Lgbl_58) also aborts ;
   alloc_ptr = temp_156;
   /* eliminated: temp_157 */
-   printlist_94(bits64[fp],bits64[%add(bits64[%add(fp, 8)], 8)]) also aborts ;
-  temp_158 = 0;
+  temp_158 =  printlist_94(bits64[fp],bits64[%add(bits64[%add(fp, 8)], 8)]) also aborts ;
   LifEnd_161:
   temp_162 = temp_158;
   return(temp_162);
 }}
-section "data" {
+section "data" { align 8;
  printlist_94_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 8::bits32,1::bits32,1::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32,0::bits32 };
@@ -447,7 +446,7 @@ tiger_main(bits64 pfp) {
   temp_163 =  printlist_94(fp,temp_182) also aborts ;
   return(temp_163);
 }}
-section "data" {
+section "data" { align 8;
  tiger_main_gc_data:
    bits32[] { 4::bits32,1::bits32,1::bits32,1::bits32,1::bits32 };
    bits32[] { 7::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,1::bits32,0::bits32 };

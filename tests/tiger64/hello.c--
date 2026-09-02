@@ -25,6 +25,7 @@ bits64 alloc_ptr;
 import space_end;
 
 section "data" { align 8;
+ align 8;
  Lgbl_20: bits64 { 14 }; bits8[] "Hello, world.\n\000";
 }
 
@@ -42,7 +43,7 @@ tiger_main(bits64 pfp) {
   temp_24 = temp_23;
   return(temp_24);
 }}
-section "data" {
+section "data" { align 8;
  tiger_main_gc_data:
    bits32[] { 2::bits32,1::bits32,1::bits32 };
    bits32[] { 4::bits32,1::bits32,0::bits32,0::bits32,0::bits32 };

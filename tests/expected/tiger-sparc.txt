@@ -9,7 +9,7 @@ qsort PASS
 queens PASS
 rc4 FAIL
 rb FAIL
-rbshort FAIL
+rbshort PASS
 sieve PASS
-wf PASS
-wff PASS
+wf FAIL
+wff FAIL
