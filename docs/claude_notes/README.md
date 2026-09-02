@@ -202,6 +202,25 @@ Index:
   `notes_riscv.txt` and `tests/tiger64/README` for the riscv64-specific and
   tiger-suite-specific detail respectively.
 
+- [plan_macos_clang_cross_compiling.txt](plan_macos_clang_cross_compiling.txt)
+  — investigates whether `./configure` can default `CC<ARCH>` to clang on
+  macOS instead of the apt-only `<arch>-linux-gnu-gcc` it looks for today.
+  Verified on a real macOS/arm64 machine: clang (System clang covers x86/
+  arm/arm64 only; Homebrew's keg-only clang 20 additionally covers ppc/
+  mips/sparc/riscv, still no m68k/alpha) can cross-*assemble* ELF objects
+  for these targets, but cannot *link* any of them — no `lld` is
+  installed and Apple's system `ld64` rejects ELF outright
+  (`ld: unknown option: --hash-style=gnu`), and no glibc sysroot is
+  present even if it could. Since every `tests/run-*.sh` uses one
+  `CC<ARCH>` for both assembling and `-static` linking, naively
+  defaulting to clang on Darwin would report backends as "found" that
+  then fail later at the link step — worse than today's honest `NONE`.
+  Leans towards a smaller fix instead: keep `detect_backend`'s actual
+  `command -v` detection unchanged, just replace the apt-flavored hint
+  text with a macOS-appropriate one (a cross-toolchain brew tap) and add
+  a more accurate "clang can assemble but not link this" diagnostic.
+  Not yet implemented — next session's job.
+
 Retired: `plan_tiger_hello.md` and `plan_end_to_end.md` planned the path to
 `tigerc demos/hello.tig | qc ... | ./hello` actually running. That milestone
 was met (2026-08-10) and is now a standing regression test

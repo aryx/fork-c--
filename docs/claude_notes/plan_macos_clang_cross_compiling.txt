@@ -1,0 +1,181 @@
+plan_macos_clang_cross_compiling.txt — whether ./configure's detect_backend
+can default CC<ARCH> to clang on macOS instead of the apt-only
+"<arch>-linux-gnu-gcc" it looks for today, so a fresh macOS checkout gets
+a sensible default instead of 9 "no <arch>-linux-gnu-gcc on PATH ... sudo
+apt install ..." warnings that don't even apply to the host.
+Written 2026-09-02, against commit e876893, on an actual macOS 26.6.2 /
+arm64 (Apple Silicon) machine - every claim below is VERIFIED by running
+the commands, not inferred.
+
+What prompted this
+------------------------------------------------------------------
+The user's own framing: "when on macos, the cross compiling toolchain is
+clang, not a <arch>-linux-gcc thing". True as far as it goes -
+driver/main.ml already defaults QC_AS/QC_LD to clang for -x86/-ppc-elf/
+-sparc/-mips today (default_i386_cc etc., see main.ml:222-256) precisely
+because clang's integrated assembler is a cross assembler on ANY host.
+But "clang can assemble for this target" and "clang alone is a working
+cross toolchain for this target on macOS" turned out to be two different
+claims - see "Verified: what actually works" below. This file is the
+investigation before touching ./configure, not a description of a change
+already made.
+
+Verified: what actually works on this machine
+------------------------------------------------------------------
+- System clang (Apple clang 16.0.0, Command Line Tools,
+  /Library/Developer/CommandLineTools/usr/bin/clang) has only 3 target
+  families registered ("clang -print-targets"): aarch64(+_32/_be),
+  arm(+eb/thumb), x86/x86-64. No ppc, sparc, mips, riscv, m68k, alpha.
+- Homebrew's llvm formula IS installed here (20.1.4,
+  /opt/homebrew/opt/llvm/bin/clang, NOT on PATH by default - Homebrew
+  deliberately keeps it "keg-only" so it doesn't shadow Xcode's clang) and
+  has a full LLVM target list: adds ppc32/ppc32le/ppc64/ppc64le, mips/
+  mipsel/mips64/mips64el, sparc/sparcv9, riscv32/riscv64, loongarch,
+  and more. Still no m68k (no upstream LLVM backend at all - matches
+  qc--'s own m68k backend needing gcc, never clang, on Linux too) and no
+  alpha (same "no usable clang default" case main.ml:241-251's
+  default_alpha_cc already documents on Linux).
+- Assembling cross-target genuinely works with either clang: "clang
+  -target i386-unknown-linux-gnu -c hello.c -o hello.o" and "clang
+  -target aarch64-unknown-linux-gnu -c hello.c -o hello.o" both produced
+  real "ELF 32/64-bit LSB relocatable" objects (checked with "file").
+  "clang -target powerpc-unknown-linux-gnu -c ..." failed on system clang
+  ("no available targets are compatible") exactly as the registered-
+  target list above predicts - would work with the Homebrew clang instead.
+- Linking does NOT work, for any target, with either clang: "clang
+  -target i386-unknown-linux-gnu -static hello.o -o hello" fails with
+  "ld: unknown option: --hash-style=gnu" (a GNU-ld/lld-only flag clang's
+  driver appends unconditionally for a Linux target) - because on macOS,
+  with no "-fuse-ld=" override, clang always calls the SYSTEM linker
+  (Apple's ld64, at /usr/bin/ld), and ld64 understands Mach-O, not ELF, so
+  it cannot link the ELF object clang just produced regardless of which
+  clang did the assembling.
+- No lld is present anywhere on this machine to fix that: Homebrew's llvm
+  formula does NOT bundle lld (checked - only lldb/lldb-server/etc, no
+  ld.lld/lld binary in its Cellar), and "brew install lld" was not run
+  (not tapped/installed - "brew list" shows only "qemu" among anything
+  toolchain/emulation-related, "brew tap" is empty). "clang
+  -fuse-ld=lld ..." errors immediately with "invalid linker name" since
+  the binary doesn't exist.
+- Even a working lld would not be enough by itself: real "-static" linking
+  against glibc needs the target's actual libc/crt objects (a sysroot),
+  which nothing installed on this machine provides either. This is the
+  exact same gap main.ml's own default_powerpc_elf_cc/default_sparc_cc/
+  default_mips_cc comments already flag for the LINUX dev host ("clang
+  cross-assembles fine but has no <arch> sysroot ... real static linking
+  needs an explicit -as/-ld pointing at a real toolchain") - it just
+  normally goes unnoticed there because ./configure's detect_backend finds
+  a real apt-installed cross-gcc (with its own sysroot) FIRST and only
+  falls back to letting the driver's own clang default apply when nothing
+  is configured at all. On macOS there is no equivalent "apt" to have
+  already solved this, so the gap is directly visible.
+
+Consequence for ./configure
+------------------------------------------------------------------
+Every tests/run-*.sh script uses one CC<ARCH> value for BOTH QC_AS and
+QC_LD (e.g. tests/run-tiger-x86.sh:58-59's "QC_AS=${QC_AS:-$CCX86};
+QC_LD=${QC_LD:-$CCX86}"), and links with "-static". Given the above, a
+plain "on Darwin, default CC<ARCH> to clang -target <arch>-unknown-linux-
+gnu" change to detect_backend would report each backend as CONFIGURED
+(configure prints "found") when it in fact is not usable end to end - the
+matching "make test-*" tier would still fail, just later, at the link
+step, with a less obvious error than today's honest "NONE". That is a
+worse failure mode than the status quo, not a better one - a "found" that
+silently doesn't work is more confusing than a clear "not found" with a
+correct hint. This is true even for -x86, the one primary/non-optional
+backend, since CCX86 has exactly the same double-duty QC_AS+QC_LD role.
+
+So "detect macOS and default to clang" is NOT, by itself, a fix that
+makes any new backend actually work here - it was the user's own initial
+framing, tested directly, and found insufficient. What clang genuinely
+buys on macOS today is assembling only, which nothing here currently asks
+for standalone.
+
+Options considered
+------------------------------------------------------------------
+1. Default CC<ARCH> to clang on Darwin anyway. Rejected as described
+   above - reports false positives, breaks silently later at link time
+   instead of clearly at configure time.
+2. Leave detect_backend's actual detection logic unchanged (it already
+   just does "command -v $ccbin", architecture-agnostic - if a real
+   "<arch>-linux-gnu-gcc" ever appears on PATH, e.g. from a brew tap, it
+   is found exactly as today with zero code changes needed), but fix the
+   parts of the NONE-path message that are Linux-specific and wrong on
+   macOS:
+   - note_other_pkgmgr's "sudo apt install ..." / "pacman/dnf/brew" hint
+     text presumes a Linux distro; on Darwin the real fix is a brew tap
+     that ships a full cross toolchain WITH a sysroot (e.g.
+     "messense/macos-cross-toolchains", which packages "<arch>-linux-
+     gnu-gcc" cross toolchains prebuilt for macOS hosts) - not plain
+     Homebrew clang, which (per above) cannot link. Not verified that
+     this specific tap covers every one of qc--'s 9 non-x86 backends -
+     would need checking per architecture before citing it as the fix in
+     the printed hint.
+   - note_other_qemu's brew hint is already correct for Darwin
+     ("brew install qemu on macOS" is literally in the existing text) -
+     no change needed there, just confirms qemu detection itself needs no
+     macOS special-casing (already brew-friendly).
+3. Add a THIRD, more informative outcome beyond found/NONE on Darwin: when
+   no real cross-gcc is on PATH but clang (system or Homebrew) has that
+   target registered, say so explicitly - e.g. "configure: no
+   <arch>-linux-gnu-gcc on PATH; clang can assemble -<name> objects but
+   cannot LINK them here (no lld, no <arch> sysroot) - see docs/
+   claude_notes/plan_macos_clang_cross_compiling.txt" - strictly a better
+   diagnostic than today's blind apt hint, still leaves CC<ARCH>=NONE (so
+   make test-* still fails cleanly at configure/dependency-check time, not
+   confusingly at link time). Cheap, safe, and independently worth doing
+   regardless of which other option is picked.
+4. Install lld + a real sysroot by hand (brew install lld, then obtain
+   glibc sysroots for each target some other way) so clang really can
+   link. Not investigated further here - out of scope for a ./configure
+   change, closer to plan_toolchain_dispatcher.txt's explicitly-rejected
+   "bundle a whole toolchain" idea, and nothing at hand confirms glibc
+   sysroots for 9 architectures are readily obtainable this way even if
+   lld itself were installed.
+5. Point CC<ARCH> at the brew-tapped cross-gcc from option 2 AS the real
+   fix, and treat clang as what it already is elsewhere in this codebase
+   (driver/main.ml's own QC_AS/QC_LD fallback default, used only when the
+   user gives no override at all) rather than something ./configure
+   itself should promote to a detected/reported toolchain.
+
+Leaning towards: 2 + 3 together (fix the wrong Linux-flavored hint text on
+Darwin, and add the more honest clang-can-assemble-but-not-link diagnostic
+in the same place) as the actual ./configure change - smallest change that
+removes the actively wrong "sudo apt install" advice on macOS and replaces
+it with an accurate one, without ANY risk of the false "found, but
+actually broken" regression option 1 would introduce. Not yet implemented
+- this file is the investigation, next session's job is to open
+./configure's note_other_pkgmgr/detect_backend and make this change, then
+verify the printed text on this same machine.
+
+Open questions / not yet decided
+------------------------------------------------------------------
+- Whether "messense/macos-cross-toolchains" (or some other tap) actually
+  covers ppc/sparc/alpha/mips/arm/m68k/riscv32/riscv64/arm64/amd64 - only
+  the tap's existence was confirmed by memory/reasoning here, not by
+  actually tapping and listing it on this machine. Verify before citing a
+  specific tap name in the printed hint text, or keep the hint generic
+  ("look for a macOS cross-toolchain tap, e.g. via brew search") if not
+  confirmed by then.
+- Whether it's worth having ./configure also probe for Homebrew's clang
+  specifically (/opt/homebrew/opt/llvm/bin/clang or
+  /usr/local/opt/llvm/bin/clang on Intel Macs) to report a MORE accurate
+  "clang can assemble this" diagnostic (option 3) than checking only
+  system clang's narrower target list - system clang alone would
+  incorrectly say "clang can't assemble -ppc-elf either" on a machine
+  that in fact has Homebrew's fuller clang just not on PATH, like this
+  one. Leaning yes if option 3 is implemented, since the whole point of
+  that diagnostic is being accurate.
+- The arm64-mach-o/amd64-mach-o block (configure:426-443) is unaffected
+  by any of this - it already gets Darwin right (Mach-O output via plain
+  "clang"/"clang -arch x86_64", not a "<arch>-linux-gnu-gcc" pattern) and
+  is not the "<arch>-linux-gcc thing" the user's framing was about; this
+  plan is entirely about the OTHER, Linux/ELF-targeted optional backends
+  (ppc-elf, sparc, alpha, mips, arm, m68k, riscv32, riscv64, arm64, amd64)
+  and the always-on x86 block, all of which currently look only for a
+  "<arch>-linux-gnu-gcc"-shaped binary with an apt-flavored hint.
+- Related but explicitly out of scope here: plan_toolchain_dispatcher.txt
+  already sketches a much larger "qc -print-cc" dispatcher design;
+  whatever ./configure prints/decides on Darwin should stay consistent
+  with that file's own detect_backend contract if both are ever
+  implemented, but this file does not attempt to merge the two designs.
