@@ -24098,11 +24098,11 @@ val tgt : basic_proc -> (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
 let tgt {Proc.target = T t} = t
 @ 
 \section{[[front_ir/proc.nw]]}
-<<front_ir/proc.ml>>=
+<<front_ir/procedure.ml>>=
 <<proc.ml >>
 @
 
-<<front_ir/proc.mli>>=
+<<front_ir/procedure.mli>>=
 <<proc.mli >>
 @
 
