@@ -32,11 +32,17 @@ understood gaps (see each backend's own notes_<arch>.txt), not unknowns.
                                                             recovery gap,
                                                             unresolved
   mips (mipsel)      32     little  yes  15/15
-  arm                32     little  no   11/15             shared cross-
-                                                            backend GC/
-                                                            liveness bug
-                                                            caps it below
-                                                            15
+  arm                32     little  no   15/15             was 11/15 -
+                                                            tests/tiger/
+                                                            tigermain-arm.o/
+                                                            stdlib-arm.a
+                                                            were just stale
+                                                            (regenerating
+                                                            against current
+                                                            qc-- fixed all
+                                                            4 failures, no
+                                                            compiler bug -
+                                                            see notes_arm.txt)
   m68k               32     big     no   15/15             added
                                                             2026-09-01, new
                                                             dev, no

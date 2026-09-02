@@ -373,3 +373,79 @@ Not attempted
   count rather than a genuine different mechanism, but not verified) or
   whether other, still-undiscovered bugs remain underneath.
 - -O3 (already a known gap from the first pass, unaffected by this one).
+
+===============================================================================
+Follow-up: tests/tiger/ reaches 15/15 - the "shared GC/liveness bug" above
+was never the blocker for THIS backend; tigermain-arm.o/stdlib-arm.a were
+just stale (2026-09-02, commit-adjacent to c8d73ed)
+===============================================================================
+
+Re-investigated the 11/15 baseline (tests/expected/tiger-arm.txt had
+improved from the 6/15 above to 11/15 sometime between 2026-08-17 and now,
+via unrelated shared-code fixes - colmajor/qsort/rc4/merge were the 4 still
+failing). Confirmed under gdb-multiarch attached to qemu-arm -g that
+colmajor/merge/qsort DO crash the way the "Root cause CONFIRMED" section
+above predicts: tests/build/tiger-arm/merge segfaulted inside readlist_81
+(a self-recursive list-builder) at "str r0, [r1]" with r1 = r4+4 and
+r4 = 0x39 - a callee-saved register (r4, holding the cons-cell pointer
+being built, live across readlist_81's own recursive call to itself)
+corrupted to a small-integer garbage value, exactly the "GC-relevant value
+kept alive purely by ordinary register-allocator liveness, invisible to
+tig_gc's root scan" failure mode this file's root-cause section describes.
+
+Before chasing a fix inside qc--'s regalloc/GC-descriptor machinery (which
+the section above explicitly flagged as deep, cross-backend, and
+regression-risky), checked whether the bug was still real against
+TODAY's compiler rather than the 2026-08-17 one tests/tiger/tigermain-
+arm.o/stdlib-arm.a were last built with (git log shows both files' last
+real content change was commit b1ba094, the day this backend's tiger
+suite was first brought up - never regenerated since, even though
+tests/expected/tiger-arm.txt's own PASS count moved from 6 to 11 in the
+meantime, meaning ARM had already been silently benefiting from unrelated
+shared-code fixes landing on OTHER backends - colorgraph-hang, the -O3
+Flowra/Colorgraph coalescing fixes, the NUM_REGS/FP_REG audit
+(1c52f02, which added arm's own NUM_REGS=32/FP_REG=10 - previously
+silently reusing x86's too-small values), sparc/mips/riscv/alpha's own
+register and pcmap fixes - without ever getting the one-line
+`tests/tiger/regenerate-arm.sh` re-run needed to actually pick them up in
+ARM's own checked-in test binaries).
+
+Ran `tests/tiger/regenerate-arm.sh` fresh (rebuilds tigermain-arm.o from
+runtime/runtime.c-- and stdlib-arm.a from fork-tiger's stdlib.c/gc.c/
+stdlibcmm.c--/alloc.c--, all via TODAY's qc--) and re-ran the suite:
+15/15, colmajor/merge/qsort/rc4 all now genuinely PASS, byte-for-byte
+correct output, exit codes matching. Reproduced from a fully clean rebuild
+(dune build + rm -rf runtime/build-arm + regenerate-arm.sh) to rule out
+stale artifacts on the fixing side too, and re-ran demos/hello_arm.c--
+under qemu-arm to confirm no regression. tigermain-arm.o came out
+byte-identical to the old one (runtime.c-- itself apparently never hit the
+bug's shape); stdlib-arm.a changed (18790 -> 18810 bytes) - the fix lives
+in whichever of gc.c/stdlib.c/stdlibcmm.c--/alloc.c--'s compiled code
+actually contains readlist-shaped live-across-call recursion, picked up
+purely by recompiling with the current qc--, no source edited here.
+
+So: no qc--/runtime source change was needed for THIS backend to reach
+15/15 - the deep GC/liveness gap this file spent its longest section
+describing is real (confirmed by design, and the crash signature matches
+it exactly), but by 2026-09-02 it had already been narrowed enough by
+other backends' fixes that it no longer actually reproduces on any of
+tests/tiger/'s 15 programs for arm specifically - only ARM's own stale
+checked-in binaries were still exhibiting it. tests/expected/tiger-arm.txt
+updated to all-PASS; tests/tiger/stdlib-arm.a regenerated and committed
+(tigermain-arm.o unchanged, so not re-committed).
+
+Lesson for next time a `tests/expected/*.txt` baseline looks stuck below
+15/15 with no open bug explaining the gap: check `git log` on that
+backend's own checked-in tests/tiger/*.o/*.a first - `regenerate-<arch>.sh`
+is a manual, easy-to-forget step, and this fork's shared codegen/regalloc/
+runtime code moves fast enough that a backend can silently go stale
+relative to it in a couple of weeks.
+
+Whether the underlying deep bug (register-allocated GC roots invisible to
+tig_gc, described in full above) is *actually* fully fixed everywhere, or
+just no longer triggered by these 15 particular programs on this
+particular backend, was NOT re-examined - sparc's own notes_sparc.txt
+still records unresolved failures with the same symptom family
+(colmajor/rc4/rb/rbshort/merge/exceptions) as of its own last update, so
+treat the general bug as still open/unverified fixed, just not currently
+observable through arm's tiger suite.
