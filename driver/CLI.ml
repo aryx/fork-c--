@@ -950,12 +950,16 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     " ";
     "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
     " trace the main functions";
+
     "-backtrace", Arg.Set backtrace,
     " show backtraces for erros";
+
     "-o", Arg.Set_string output_file,
     " <file> write the output to <file>";
+
     "-interp", Arg.Set use_interp,
     " generate bytecode for the C-- interpreter instead of x86 assembly";
+
     "-ppc", Arg.Unit (fun () -> use_ppc := true; use_ppc_macho := false),
     " generate 32-bit big-endian PowerPC Linux/ELF assembly instead of x86";
     "-ppc-mach-o", Arg.Unit (fun () -> use_ppc_macho := true; use_ppc := false),
@@ -996,12 +1000,15 @@ host, runs under Rosetta 2)";
       use_riscv32 := false; use_arm64 := false; use_arm64_macho := false;
       use_amd64 := false; use_amd64_macho := false),
     " generate x86 assembly (the default)";
+
     "-globals", Arg.Set exportglobals,
     " export the global-variable area";
+
     "-O0", Arg.Unit (fun () -> opt_level := 0),
     " disable the opti/ passes (default)";
     "-O3", Arg.Unit (fun () -> opt_level := 3),
     " enable the opti/ passes (simplify_exps, remove_nops, validate, peephole)";
+
     "-regalloc", Arg.String (fun s -> regalloc := Some (match s with
       | "flowra" -> Ralloc_choice.Flowra
       | "colorgraph" -> Ralloc_choice.Colorgraph
@@ -1011,12 +1018,15 @@ host, runs under Rosetta 2)";
     " <flowra|colorgraph|dls> force a register allocator, independent of \
 -O0/-O3 (default: flowra at -O0, colorgraph at -O3; dls - upstream's \
 original DFS linear-scan allocator - is only ever picked explicitly)";
+
     "-stop", Arg.Set_string stop_after,
     " .<ext> stop after producing .s or .o (cc's -S and -c)";
+
     "-L", Arg.String (fun d -> libdirs := d :: !libdirs),
     " <dir> add <dir> to the linker's library search path";
     "-l", Arg.String (fun l -> libs := l :: !libs),
     " <name> link against library <name>";
+
     "-as", Arg.Set_string as_cmd,
     " <cmd> the assembler to drive (default: per-backend, from ./configure - \
 see -print-cc)";
@@ -1029,11 +1039,13 @@ see -print-cc)";
      * backend (a client typically links -as's .o output together with its
      * own C sources directly, e.g. fork-tiger's demos/Makefile links via
      * $(CC_ARM64) rather than through qc's own -ld) - prints effective_cc's
-     * resolution (QC_AS / -as if set, else this backend's default_*_cc,
-     * same table -ld defaults from too) and exits, so it can be captured
-     * with e.g. "CC_ARM64=$(qc -arm64 -print-cc)" instead of a client
-     * re-deriving its own per-arch cross-toolchain default. Must come
-     * after the backend flag on the command line (e.g.
+     * resolution (QC_AS/-as if set, else Config.ml's ./configure-detected
+     * cc for this backend - same source -ld resolves from too) and exits,
+     * so it can be captured with e.g. "CC_ARM64=$(qc -arm64 -print-cc)"
+     * instead of a client re-deriving its own per-arch cross-toolchain
+     * detection. Fails (see require_cc above) if ./configure found
+     * nothing for this backend and no -as/QC_AS override is given. Must
+     * come after the backend flag on the command line (e.g.
      * "qc -arm64 -print-cc"), same order-sensitivity as -x86/-amd64/etc.
      * already have. See docs/claude_notes/plan_toolchain_dispatcher.txt. *)
     "-print-cc", Arg.Unit (fun () ->
@@ -1042,6 +1054,36 @@ see -print-cc)";
       exit 0),
     " print the cross-compiler command this backend's -as would use \
 (after -<arch>/-as/QC_AS), then exit";
+
+    (* claude: lists every -<arch> flag (bare/Linux-ELF spelling only -
+     * the Mach-O siblings are Darwin-only and ./configure never probes
+     * for them, so they're not "detected" in the sense this reports) for
+     * which ./configure found a real cross-compiler - i.e. every backend
+     * -print-cc would succeed for with no -as/QC_AS override. One name
+     * per line, each usable directly as e.g. "qc -<name> -print-cc"; -x86
+     * always appears since ./configure hard-fails without it. A client
+     * configure can use this to decide which backends to even ask about,
+     * instead of probing all of them and handling failures one by one.
+     * See docs/claude_notes/plan_toolchain_dispatcher.txt. *)
+    "-available-archs", Arg.Unit (fun () ->
+      let archs = [
+        "x86", Config.cc_x86;
+        "ppc", Config.cc_ppc;
+        "sparc", Config.cc_sparc;
+        "alpha", Config.cc_alpha;
+        "mips", Config.cc_mips;
+        "arm", Config.cc_arm;
+        "m68k", Config.cc_m68k;
+        "riscv64", Config.cc_riscv64;
+        "riscv32", Config.cc_riscv32;
+        "arm64", Config.cc_arm64;
+        "amd64", Config.cc_amd64;
+      ] in
+      List.iter (fun (name, cc) ->
+        if cc <> None then print_string (name ^ "\n")) archs;
+      exit 0),
+    " list every -<arch> ./configure found a real cross-compiler for \
+(one per line), then exit";
 
     (* claude: used to come from Arg_.options_of_actions action
      * (all_actions caps) - each entry just set `action` to its own flag
@@ -1091,7 +1133,7 @@ see -print-cc)";
       exit 0;
     ),
    "  guess what";
-  ]
+  ] |> Arg.align
   in
   let files = ref [] in
   (* This may raise ExitCode *)
