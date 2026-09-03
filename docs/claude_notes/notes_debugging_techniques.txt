@@ -1304,6 +1304,137 @@ try. If a previous session's qemu needs replacing, prefer just moving
 to a new port over trying to kill the old one first.
 
 
+38. The big-heap escape hatch: bypass the collector entirely to get a
+    one-command yes/no on "is this GC-related at all"
+---------------------------------------------------------------------------
+Chasing amd64's tests/tiger64 failures (colmajor/rc4/rb/wf/wff, 5/15 -
+see notes_amd64.txt's own follow-up section), the previous session had
+only a *hypothesis* that these were GC-related, never confirmed. Rather
+than starting with gdb or instrumentation, first answer the cheaper
+question: does the bug still happen if the collector never runs at all?
+Regenerated a throwaway tigermain-amd64.o with the runtime's HEAP_SIZE
+constant (runtime/runtime.c--, "const HEAP_SIZE = 8192") bumped to
+something the whole test could never exhaust (8388608), relinked each
+failing test against it, and reran. All 5 passed byte-for-byte. That one
+experiment (a few minutes, no debugger) converted "maybe GC-related" into
+"provably 100% GC-triggered, on every one of the 5" - worth doing before
+any deeper tool, since a "no" answer would have ruled out an entire large
+class of hypothesis just as cheaply. Two things make this safe to reuse:
+it only touches a throwaway copy of the generated runtime object (never
+the checked-in tests/tiger64/tigermain-*.o baseline), and it is a
+*diagnostic*, never a fix - a bigger static heap is exactly the kind of
+"bump a constant" workaround this project's own author rejects (see
+user-wants-general-fixes memory); its only job is to isolate the
+hypothesis, then get thrown away once real instrumentation replaces it.
+
+
+39. Instrument the C runtime's own root-scan loop directly with fprintf,
+    splice the rebuilt .o back into the archive - cheaper than reading
+    disassembly for a runtime-side (not codegen-side) bug
+---------------------------------------------------------------------------
+Once entry 38 confirmed the amd64 bug was GC-related, the next question
+was *where* in the collector's C-- stack walk it goes wrong - a question
+about fork-tiger/runtime/gc.c's and this repo's runtime/runtime.c's own
+control flow, not about generated machine code, so gdb-over-qemu (entry
+25) is the wrong tool: it answers "what instruction faulted", not "what
+did the root-scan loop see three activations ago." Instead: patch a
+throwaway copy of the relevant .c file with `fprintf(stderr, ...)` at the
+point of interest (here: every activation tig_gc's while-loop visits, and
+every stack-slot forward it performs), recompile just that one
+translation unit with the same flags the real build uses, then splice the
+rebuilt .o into a COPY of the target archive (`ar x` the original archive
+into a scratch dir, overwrite the one .o, `ar cr` a new archive) rather
+than rebuilding the whole stdlib/regenerate pipeline - this keeps every
+other checked-in object (the ones NOT being debugged) byte-identical to
+the real build, so nothing else in the picture changes. Relink the
+failing test against this patched archive plus the UNMODIFIED
+tigermain-*.o, run it, read stderr. This is a print-statement debugger for
+C code that happens to be cross-compiled and run under qemu - obvious in
+hindsight, easy to reach for gdb instead when "cross-compiled" is in the
+picture.
+
+
+40. When this dev host's own native architecture (aarch64) matches one of
+    the backends under test, use it as a zero-cost oracle for A/B against
+    a suspect backend
+---------------------------------------------------------------------------
+This repository's own dev host is aarch64-linux. tests/run-tiger64-arm64.sh
+already runs natively for exactly that reason (see its own header comment)
+- but the same fact is also a debugging tool, not just a test-runner
+convenience: any throwaway instrumentation built for one backend's C
+runtime (entry 39) can be recompiled with plain `gcc` (no cross toolchain,
+no qemu, no `-g` gdbstub port to manage) against arm64's own already-
+checked-in tests/tiger64/tigermain-arm64.o/stdlib-arm64.a and run directly
+as a normal Linux process. Doing exactly this - same instrumented gc.c,
+same Tiger source, only the target swapped - turned "amd64's GC walk looks
+suspicious" into a decisive A/B: the identical walk that derailed after 4
+activations on amd64 (landing on a bogus pc with a NULL frame pointer)
+continued correctly for 9 activations on arm64 and went on to run many
+more full collections over the rest of the program. Same shared C source
+on both sides rules out the runtime.c/gc.c walking algorithm itself as the
+culprit and pins the bug to something backend-specific (frame-size
+metadata, as it turned out - see notes_amd64.txt), in one comparison,
+instead of trying to reason about whether the shared C code *could* be
+wrong in the abstract. General shape: before assuming a bug is in shared
+runtime/middle-end code just because the bug manifests while that shared
+code is running, check whether a *differently-targeted* build reproduces
+it too - and on this project, on this host, arm64 (and riscv64, also
+native-capable here) are the cheapest possible builds to check with, no
+cross-toolchain or emulator required.
+
+
+41. Get the compiler to dump its OWN compiled metadata directly, instead
+    of only inferring it from disassembly + hand arithmetic
+---------------------------------------------------------------------------
+When chasing a suspected mismatch between what a compiler's runtime-
+support metadata SAYS (e.g. this project's pcmap entries: inalloc/
+outalloc/return_addressp/register-recovery pairs) and what the real
+generated code actually does, don't only reconstruct the metadata by
+reading disassembly and re-deriving offsets by hand (error-prone, and
+easy to misattribute a value to the wrong call site when nearby entries
+share similar shapes). If the runtime already has a self-describing dump
+function (here: runtime/pcmap.c's `Cmm_show_map`, printing every
+pcmap entry's inalloc/outalloc/return_addressp/register-recovery table in
+one pass), write a tiny throwaway C `main`/constructor that links against
+the SAME object files under test and just calls it - a `__attribute__
+((constructor))` function avoids "multiple definition of main" clashes
+with the real program's own entry point when both get linked together
+(needed here since the pcmap table only gets populated with symbols that
+are actually reachable/linked in - referencing the functions of interest
+from a `void *keepalive[] = {(void*)fn, ...}` array is enough to force
+the linker to pull in their object, without needing to actually call
+them). This turns "what does the compiler think this call site's frame
+looks like" from a manual reconstruction into a direct, authoritative
+read - and cross-checking that dump's addresses/offsets against a
+disassembly of the exact same linked binary (not a separate, unlinked
+build - relative offsets can shift between the two) is what actually
+caught the accumulating-8-bytes-per-hop pattern in notes_amd64.txt's
+fix, not disassembly alone.
+
+42. After reverting a source file mid-session (`git checkout -- <file>`),
+    rebuild before trusting the binary again
+---------------------------------------------------------------------------
+dune's incremental build only rebuilds what its own dependency tracking
+says changed SINCE THE LAST BUILD IT RAN - reverting a file's content on
+disk (via git, or by hand) doesn't retroactively undo a build that already
+happened before the revert. Editing a file, running `dune build`, then
+reverting that same edit with `git checkout -- file.ml` leaves the
+PREVIOUSLY-BUILT (edited) version sitting in `_build`/`bin/qc` until dune
+build runs again - dune sees the file's current content differs from what
+it last built FROM, and will rebuild on the next invocation, but not
+before. Concretely bit this project's own amd64 GC-walk investigation: a
+first fix attempt in amd64call.ml was built, found to break something
+unrelated, and reverted via `git checkout --` - but `bin/qc` was not
+rebuilt afterward, so every subsequent test (including ones that had
+nothing to do with the reverted file) kept failing with the BROKEN
+version's own symptoms for several steps, looking like a completely
+separate, pre-existing regression (a totally unrelated procedure failing
+to compile) until `dune build` was actually re-run and the failure
+vanished. Whenever a build artifact's behavior doesn't match what the
+CURRENT source on disk should produce, check `git status`/`git diff` for
+uncommitted reverts first, then `dune build` (or equivalent) again before
+spending time debugging the artifact's behavior as if it were a new bug.
+
 Tooling traps in this particular working copy
 ----------------------------------------------
 - goken's Plan 9 versions of diff, sed, tail and cat come first on PATH.

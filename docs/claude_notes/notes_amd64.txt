@@ -647,3 +647,345 @@ Not attempted (this pass)
   tests/tiger64/ (T.capabilities declares no unary operator at all yet),
   so not exercised or checked.
 - Any of the "Known remaining gaps" above.
+
+===============================================================================
+Follow-up pass: colmajor/rc4/rb/wf/wff root-caused to a GC stack-walk bug,
+NOT fixed (2026-09-03)
+===============================================================================
+
+Goal: actually root-cause the 5 remaining failures (colmajor, rc4, rb, wf,
+wff - still 10/15 at this pass's start, unchanged since the previous pass)
+instead of re-confirming the "likely the same undiagnosed cross-backend
+GC/liveness bug" hypothesis above, which was never actually verified. It
+was wrong in one respect and right in another: this IS GC-related, but it
+is NOT the same bug as colmajor's own cross-backend (arm64/riscv64-shared)
+heap-growth issue - it is a real, amd64-specific bug in this backend's
+frame-size metadata, found and localized precisely but NOT fixed this pass
+(ran out of scope for a safe fix - see "Why not fixed" below).
+
+Step 1 - proved it's 100% GC-triggered, precisely
+--------------------------------------------------
+Built a diagnostic-only tigermain-amd64.o with HEAP_SIZE bumped from 8192 to
+8388608 (runtime/runtime.c--, not committed - a pure diagnostic, NOT the
+fix: the user explicitly rejects "bump a constant" fixes, see pad's own
+"user wants general fixes, not thresholds" guidance). Relinking EACH of the
+5 failing tests against this oversized heap (so tig_gc/collection never
+triggers at all) made all 5 pass byte-for-byte against their expected
+output. This is the single most useful fact this pass found: it converts
+"maybe GC-related" into "provably 100% GC-related, on every one of the 5,"
+and gives a one-command yes/no oracle for any future hypothesis (see
+notes_debugging_techniques.txt's new "big-heap escape hatch" entry).
+
+Step 2 - traced one crash (rb) to a corrupted heap pointer, not a
+regalloc/liveness bug
+------------------------------------------------------------------------------
+gdb (via qemu-x86_64's -g gdbstub, see notes_debugging_techniques.txt) on
+rb's real small-heap run gives a clean backtrace: SIGSEGV in
+__strlen_avx2, called from printf from tig_print(NULL-ish pointer 0x8),
+called from tprint_48 (rb.tig's tree-printing routine), reading tree.name
+at bits64[%add(bits64[%add(fp,8)],16)] - a heap RECORD FIELD that is 0
+when it should hold a live Tiger string pointer. tig_print(s) does
+"s->chars" (s+8), so a NULL s reads at address 8, matching rdi=0x8 in the
+backtrace exactly. This field is written once, by insert_46 (rb.c--'s BST
+insert), from a value built earlier and carried across a call_gc(48) site -
+consistent with a lost/un-forwarded GC root, not a two-address regalloc
+clobber (the previous pass's fix for Post.binop's default case is a single
+shared code path already exercised correctly everywhere else in this
+suite).
+
+Step 3 - instrumented tig_gc's own root-scan loop directly (fastest
+signal, see notes_debugging_techniques.txt)
+------------------------------------------------------------------------------
+Patched a throwaway copy of fork-tiger's runtime/gc.c (NOT committed) to
+fprintf every activation tig_gc's while(Cmm_ChangeActivation(&a)) loop
+visits (pc, vfp, var_count, gc_data, gc_data[0]) and every stack-slot
+forward it performs. Relinked rb against this instrumented gc.o with the
+REAL (small, 8192-byte) heap, so the real, naturally-occurring first
+collection is observed. Result: only ONE collection happens in the entire
+run (needed=24 bytes - some small allocation during input tokenization,
+well before any tree insertion), and it walks exactly 4 activations, ALL
+of them with gc_data=NULL (no stackdata table), before the walk arrives at
+pc=0x4bd140 (a bogus, libc-range address) with vfp=NULL - i.e. the walk
+runs off the rails after only 4 hops, without ever reaching any of the
+real, stackdata-bearing Tiger frames (insert_46 and friends) whose roots
+actually matter.
+
+Step 4 - confirmed this IS amd64-specific by running the byte-identical
+instrumented gc.c natively on arm64
+------------------------------------------------------------------------------
+This repo's own dev host is aarch64-linux, so the arm64 side of this
+comparison needed no cross toolchain or qemu at all - just `gcc` and the
+already-checked-in tests/tiger64/tigermain-arm64.o/stdlib-arm64.a. Same
+instrumented gc.c, same rb.c-- input, run natively: the walk correctly
+continues past the same 4 gc_data=NULL frames and reaches 4 MORE frames
+with real gc_data (stack_var_count 3, 2, 4 - genuine Tiger stackdata
+tables) and genuine, correct pointer-forwarding (e.g. "slot[1] ptr_flg=1
+before=0x32a806b0 after=0x32a806c8 is_ptr=1"), terminating cleanly at
+vfp=NULL as the 9th entry - not a crash, a normal walk end. It then goes on
+to run MANY more collections over the rest of the program (this dumped
+1267 lines total, vs amd64's 6). Same C source, same Tiger source, same
+walk algorithm - only the target differs. This is the single strongest
+piece of evidence that the bug is in amd64's own frame-layout metadata,
+not in the shared runtime.c/gc.c walking logic itself.
+
+Step 5 - localized the exact divergence: a per-callsite frame-size offset
+that is correct at one recursion depth and wrong one level deeper
+------------------------------------------------------------------------------
+Instrumented runtime.c's normal_change (NOT gc.c this time) to print the
+raw computed return-address location and value on every call, still on
+amd64 with the real heap. The 4-hop walk's raw data:
+  call1: vfp=...498 calleedata=0x4ccbd0 -> loc=...458 (vfp-64) -> ra=0x408480 (tig_alloc, valid)
+  call2: vfp=...4b0 calleedata=0x4ccc78 -> loc=...480 (vfp-48) -> ra=0x407176 (new_string, valid)
+  call3: vfp=...4c8 calleedata=0x4cc400 -> loc=...498 (vfp-48) -> ra=0x408480 (tig_alloc, valid)
+  call4: vfp=...4e0 calleedata=0x4ccc78 -> loc=...4b0 (vfp-48) -> ra=0x4bd140 (GARBAGE)
+call2 and call4 use the IDENTICAL pcmap entry (0x4ccc78, same call site,
+same compiled "return_addressp" offset of vfp-48) - one level of recursion
+apart (vfp steps by a constant +24 per hop here: inalloc=0, outalloc=-24 at
+every hop). At the shallower depth (call2) that fixed vfp-48 offset reads
+a real, valid return address; one recursion level deeper (call4, vfp 24
+bytes higher) the SAME offset reads garbage - and notably, address
+vfp-48 for call4 is EXACTLY equal to vfp for call2, i.e. the walk is
+reading a stale/wrong absolute stack slot rather than a structurally
+wrong RELATIVE offset that would fail identically at every depth. The
+natural reading: amd64's compiled outalloc/inalloc frame-size metadata
+for this call site (new_string/tig_alloc's mutual recursion via repeated
+per-character allocation - the input is fed one word at a time, each
+character likely a separate new_string/concat call) does not match the
+REAL number of bytes the generated prologue/epilogue advances %rsp by per
+call, so the "walk N frames back" arithmetic drifts and eventually lands
+on the wrong absolute address once enough frames have accumulated - a
+classic frame-size-accounting bug, NOT a register-allocator or GC-
+liveness bug.
+
+Why not fixed this pass
+-------------------------
+Step 5 pins down WHERE and WHAT (a stack offset that is fine shallow and
+wrong deeper, at a specific recursive call site through tig_alloc/
+new_string), but not yet the single wrong line - that needs comparing the
+REAL generated prologue/epilogue of the relevant amd64 frame (disassemble
+around pc 0x407176/0x408480 in a `-stop .s` build of the same test,
+measuring the actual %rsp delta per call) against the outalloc=-24/
+inalloc=0 metadata amd64call.ml's automaton produces for that same call
+site, to find the actual byte discrepancy. That comparison is the
+concrete next step - not attempted here for lack of remaining budget in
+this pass, deliberately stopping at a fully-localized, reproducible
+finding rather than guessing at a fix for stack-frame-layout code shared
+by every call site in the backend (real regression risk if guessed wrong,
+same caution the previous pass's own "declined to finish" note already
+flagged, but now backed by a precise repro instead of a hunch).
+
+Reproduction (all diagnostics were throwaway - none of this is committed)
+------------------------------------------------------------------------------
+  - Big-heap oracle: see notes_debugging_techniques.txt's "big-heap escape
+    hatch" entry for the exact recipe (regenerate a diagnostic
+    tigermain-amd64.o with HEAP_SIZE bumped way up, relink any failing
+    test against it, confirm it now matches expected output).
+  - GC-walk trace: patch fork-tiger/runtime/gc.c's tig_gc loop (see
+    notes_debugging_techniques.txt) with fprintf per activation/per-slot,
+    rebuild gc.o, splice into a fresh copy of stdlib-amd64.a (ar x/cp/ar
+    cr), relink rb against the UNMODIFIED (small-heap) tigermain-amd64.o,
+    run under qemu-x86_64, read stderr.
+  - Cross-arch comparison: same instrumented gc.c compiled NATIVELY with
+    plain `gcc` (no cross toolchain, no qemu - this host IS aarch64-linux)
+    against tests/tiger64/tigermain-arm64.o/stdlib-arm64.a, run directly.
+  - Frame-size trace: patch runtime/runtime.c's normal_change (NOT gc.c)
+    to print calleedata's inalloc/outalloc and the raw return-address
+    location/value on every call; rebuild runtime.o, splice into a copy of
+    runtime/build-amd64/libqcmm.a, relink rb against stdlib-amd64.a
+    (unmodified) + this instrumented libqcmm.a, run under qemu-x86_64.
+
+Known remaining gaps (updated again) - SUPERSEDED, see next section
+--------------------------------------
+- colmajor/rc4/rb/wf/wff (5/15): root cause NARROWED from "maybe a shared
+  GC/liveness bug" to "amd64-specific: a per-call-site frame-size
+  (inalloc/outalloc) mismatch in the pcmap metadata that corrupts the GC's
+  C-- stack walk once recursion goes one level deeper than the metadata
+  assumes" - localized to a specific call site (new_string/tig_alloc's
+  repeated-allocation recursion) with exact vfp/offset/value evidence
+  above, but the single responsible line in amd64.ml/amd64call.ml/
+  amd64rec.mlb (or in the target-independent frame-size computation these
+  feed, if the bug turns out not to be amd64-specific after all despite
+  the arm64 A/B comparison) is still not identified. NOT fixed.
+
+===============================================================================
+Follow-up pass: colmajor/rc4/rb/wf/wff root cause pinned down and FIXED -
+tiger64-amd64 now 15/15 (2026-09-03, same day as the pass above)
+===============================================================================
+
+Goal: finish the previous pass's own "concrete next step" (compare the
+REAL generated amd64 prologue/epilogue against amd64call.ml's compiled
+inalloc/outalloc metadata for the new_string/tig_alloc call chain) and fix
+it. Fully succeeded - tests/run-tiger64-amd64.sh now reports 15/15,
+recorded as the new expected/tiger64-amd64.txt baseline.
+
+Root cause: amd64call.ml's `inalloc` is 8 bytes short for EVERY procedure,
+because x86-64's `call` (unlike every other 64-bit backend here) has no
+link register - it pushes an 8-byte return address onto the stack, and
+amd64call.ml's own vfp is DEFINED to sit exactly at that pushed word (see
+`mem_ra`, "the return address lives on the stack at the vfp location").
+amd64call.ml's `prolog` (the incoming-parameter automaton that
+middle/translate/ast2ir.ml's `inalloc` is computed from, via that
+automaton's own young_end) starts allocating stack-passed arguments at
+plain `vfp` though - copied from arm64call.ml's identically-shaped prolog,
+correct for AArch64 (whose `bl` writes x30, no stack push at all) but
+wrong for a stack-based-return-address ISA. arch/x86/x86call.ml's own
+32-bit prolog already gets this right (`autoAt (addk vfp 4) specs.A.call`,
+skipping its own 4-byte pushed return address) - amd64call.ml just needed
+the 64-bit-pointer-width version of the same adjustment, but was modeled
+on arm64call.ml's file instead (per this file's own header comment) and
+inherited arm64's "no adjustment needed" prolog verbatim.
+
+Effect at runtime: runtime/runtime.c's normal_change computes each
+unwind hop's new vfp as `calleeVfp + calleedata->inalloc -
+callerdata->outalloc` - with inalloc always 8 short, every hop through
+amd64 code undershoots by 8 bytes. Traced with the previous pass's own
+frame-size-trace recipe (see above): the walk's return-address reads
+stayed byte-for-byte correct for the first 1-2 hops (the 8-byte-per-hop
+drift hadn't yet crossed into unrelated stack data) but by hop 3-4
+started reading a DIFFERENT, already-processed frame's own vfp value
+instead of the intended one - not random garbage, an exact, reproducible
+aliasing this pass's own trace pinned down precisely: recovering
+new_string's own preserved rbx (at what should be tig_alloc's own
+rsp_new+0) instead read tig_call_gc's own vfp value (a real, valid-
+looking but WRONG address, exactly 8*2=16 bytes off after 2 accumulated
+hops) - a classic "off by a small constant per hop, fine until it isn't"
+signature, confirmed by manually reading the real x86-64 disassembly of
+new_string/tig_alloc/tig_call_gc side by side against their own pcmap
+entries (`sub $24,%rsp` in new_string/tig_alloc's real prologues vs the
+"outalloc=-24" metadata already matched exactly - the missing piece was
+always the +8 for the implicit push, never present anywhere in either
+number).
+
+The fix that was tried first and DIDN'T work: touching amd64call.ml's own
+prolog automaton directly (`~mkauto:(fun () -> autoAt ~start:(RU.addk 64
+vfp 8) stage.A.call)` in place of the `Block.srelative vfp ...` it had).
+This changes `inalloc` correctly in isolation, but every OTHER automaton
+for the same procedure (call_actuals, call_results, also_cuts_to, epilog,
+plus stackdata/private/empty-block placement) is solved as ONE
+simultaneous Eqn.t system anchored on the same symbolic vfp (front_fenv's
+Block/Eqn machinery, see CLAUDE.md's front_fenv description) - shifting
+only the prolog's own anchor left that system unsolvable ("Impossible:
+for procedure main; can't solve these eqns", confirmed reproducibly on
+BOTH a real tiger64 test and on runtime/cut.c-- itself). Reworking the
+rest of the automaton wiring to shift consistently was not attempted -
+real regression risk to every call site in the backend, and a correct
+version would very likely just reconstruct x86call.ml's own more
+elaborate per-automaton +4 adjustments (see call_actuals/epilog/etc in
+that file) one at a time, unverified here.
+
+The fix that DID work: compensate at the ONE runtime consumer instead,
+exactly like the SPARC/MIPS return-address adjustments immediately above
+this comment in the SAME function (runtime/runtime.c's normal_change) -
+same "runtime-side patch at the one point that actually needs the two
+values to agree" reasoning those two already use, now for a third ISA
+quirk. Added a local `calleedata_inalloc` (= `Cmm_as_offset(calleedata->
+inalloc)`, `#ifdef __x86_64__`-guarded `+= 8`) and used it in place of
+the inline `Cmm_as_offset(calleedata->inalloc)` at BOTH of that value's
+two consumers (the normal in-callerdata branch, and Cmm_init_c_frame's
+own C-boundary branch - both need it, confirmed by grepping every
+`->inalloc` use in runtime/). Zero OCaml changes; the fix is entirely in
+runtime/runtime.c, one `#ifdef __x86_64__` block. i386/x86 does NOT get
+this compensation (x86call.ml's own automaton already includes it, so
+adding it again in the shared runtime.c would double-count it) - the
+guard is `__x86_64__` specifically, not any wider "x86-family" macro.
+
+A separate, PRE-EXISTING bug surfaced along the way (not fixed, not
+caused by anything in this pass): `runtime/cut.c--` (Cmm_CutTo) currently
+fails to compile for `-amd64` at all - `qc -amd64 -stop .o` on it hits
+the exact same "Impossible: can't solve these eqns" class of failure the
+failed automaton-side fix attempt above also hit, for procedure
+Cmm_CutTo specifically. This means `tests/tiger64/regenerate-amd64.sh`
+and `runtime/Makefile`'s own `BACKEND=amd64` build are currently BOTH
+broken from a clean `rm -rf runtime/build-amd64` - the checked-in
+tests/tiger64/tigermain-amd64.o/stdlib-amd64.a and this pass's own
+verification both had to fall back to a pre-built cut.o/thread.o/yield.o
+(found cached in ~/github/fork-tiger/runtime/build-amd64/qcmm/, dated the
+day before this pass, presumably built by an EARLIER qc-- snapshot before
+whatever introduced this) rather than a fresh one. Cmm_CutTo isn't
+exercised by tests/tiger64 at all (confirmed: all 15 pass regardless of
+which cut.o is linked in), so this didn't block THIS pass's own fix or
+verification, but a genuinely fresh amd64 runtime build is currently NOT
+possible until someone root-causes why Cmm_CutTo's own automaton system
+is unsolvable (very likely a DIFFERENT/additional shape of the same
+"amd64's automaton wasn't fully adapted from arm64's" family of gaps,
+plausibly cut-to's own `cut_actuals`/`also_cuts_to` automata, which this
+pass did not attempt - see "Not attempted" below).
+
+Verification performed
+-----------------------
+    (from a clean rebuild of runtime/build-amd64/libqcmm.a with the fixed
+    runtime.c - see the Cmm_CutTo caveat above for why cut.o/thread.o/
+    yield.o were reused from a cached build rather than freshly compiled)
+    tests/run-tiger64-amd64.sh              # 15/15, up from 10/15
+    tests/run-tiger64-amd64.sh --update     # recorded the new baseline
+    tests/run-tiger64-arm64.sh              # 15/15, matches baseline, no
+                                             #   regression (also confirmed
+                                             #   runtime/build-arm64 itself
+                                             #   still rebuilds cleanly from
+                                             #   scratch, including cut.c--)
+    tests/run-tiger64-riscv64.sh            # 15/15, matches baseline, no
+                                             #   regression (same clean-
+                                             #   rebuild-including-cut.c--
+                                             #   check as arm64 above)
+    tests/run-tiger-x86.sh                  # 15/15, matches baseline, no
+                                             #   regression (32-bit x86
+                                             #   shares runtime.c too;
+                                             #   confirms the __x86_64__
+                                             #   guard doesn't leak into
+                                             #   i386 builds) - also a
+                                             #   clean rebuild from scratch
+    qc -globals -amd64 -o ... demos/hello_amd64.c--   # still compiles and
+                                             #   links (only smoke-tested;
+                                             #   this host's qemu-x86_64
+                                             #   isn't set up for dynamic
+                                             #   linking, unrelated to this
+                                             #   fix - the tiger suite
+                                             #   above already covers real
+                                             #   execution via -static)
+
+NOT verified (needs a real Mac, not available here): amd64-mach-o shares
+amd64.ml/amd64call.ml and runtime/runtime.c entirely (only amd64asm.ml
+differs), so expected/tiger64-amd64-mach-o.txt's identical 10/15 (same 5
+failures) should also become 15/15 with this same fix - but
+tests/run-tiger64-amd64-mach-o.sh cannot run on this Linux host at all
+(Darwin-only, per Makefile's own comment), so this is a prediction, not a
+confirmed result. Whoever next has Mac access should re-run
+tests/tiger64/regenerate-amd64-mach-o.sh (needs nothing from this pass -
+the fix is entirely in shared runtime.c) and
+`tests/run-tiger64-amd64-mach-o.sh --update`.
+
+Files changed (this pass)
+--------------------------
+- runtime/runtime.c - the actual fix: `calleedata_inalloc` local +
+  `#ifdef __x86_64__` +8 compensation in normal_change, used at both of
+  calleedata->inalloc's consumers. This file is shared by every backend;
+  the fix itself only affects x86_64 targets.
+- tests/expected/tiger64-amd64.txt - updated baseline, 10/15 -> 15/15.
+- docs/claude_notes/notes_amd64.txt, notes_debugging_techniques.txt -
+  this section and the previous pass's.
+- NOT changed: tests/tiger64/tigermain-amd64.o/stdlib-amd64.a (this fix
+  is runtime-library-only, not compiler-output-affecting - the existing
+  checked-in objects needed no regeneration) or any arch/amd64/*.ml file
+  (the working fix ended up entirely outside the OCaml compiler).
+
+Not attempted (this pass)
+--------------------------
+- Root-causing runtime/cut.c--'s own "-amd64 can't solve these eqns"
+  compile failure (see above) - a separate, real gap, most likely another
+  instance of the same "amd64call.ml copied arm64call.ml's automaton
+  shape without adapting it for stack-based return addresses" family,
+  probably in the cut/cutto-specific automata (`also_cuts_to`,
+  `cut_actuals`) this pass didn't examine. Whoever picks this up should
+  start from this pass's own failed-fix attempt (see above) as a
+  cautionary example: touching the automaton directly perturbs a
+  simultaneous-equation system shared by every other call-site automaton
+  in the same procedure, so isolate exactly which automaton's own anchor
+  needs adjusting for cut-to specifically before changing anything.
+- runtime/thread.c--/yield.c-- were not re-examined either - only cut.c--
+  was found broken (thread.o/yield.o compiled fine as part of this same
+  pass's arm64/riscv64/x86 clean rebuilds, and amd64's own copies came
+  from the same working cached build as cut.o, so their own -amd64
+  compilability is simply unknown, not confirmed either way).
+- Verifying whether this fix also matters for amd64's -O3 path (colorgraph
+  register allocator) - -O3 was never tried against amd64 at all per the
+  very first pass's own "Known remaining gaps", still true.

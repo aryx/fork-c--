@@ -48,6 +48,7 @@ struct cmm_activation_methods *Cmm_cmm_frame_methods = &cmm_methods;
 static int normal_change(Cmm_Activation *a) {
   char *vfp;
   pc_map_entry* calleedata, *callerdata;
+  intptr_t calleedata_inalloc;
 
   assert(a && a->vfp);
   calleedata = a->rtdata;
@@ -113,20 +114,66 @@ static int normal_change(Cmm_Activation *a) {
   callerdata = Cmm_lookup_entry(a->pc);
   a->rtdata  = callerdata;
 
+  calleedata_inalloc = Cmm_as_offset(calleedata->inalloc);
+  /* claude: amd64.ml's vfp sits AT the return-address word itself (see
+   * amd64call.ml's mem_ra, "the return address lives on the stack at the
+   * vfp location" - x86-64's `call` has no link register, unlike every
+   * other 64-bit backend here, so it pushes that 8-byte word there,
+   * unconditionally, on every single call). amd64call.ml's own incoming-
+   * parameter automaton (its `prolog`) starts allocating stack-passed
+   * arguments at plain vfp instead of vfp+8 though - modeled on
+   * arm64call.ml's identically-shaped prolog, which is correct for
+   * AArch64 (no pushed return address to skip over) but not ported from
+   * x86call.ml's own analogous 32-bit prolog, which DOES start its own
+   * automaton at "addk vfp 4" for exactly this reason. The result: every
+   * amd64 procedure's own inalloc (computed from that automaton's own
+   * young_end, see middle/translate/ast2ir.ml's `inalloc`) comes out 8
+   * bytes short of where it should be, uniformly, regardless of whether
+   * the procedure has any stack-passed args at all. Reworking the
+   * automaton wiring to fix this at the source touches the same Block/Eqn
+   * simultaneous-equation solver every OTHER call-site automaton for the
+   * same procedure (in ovfl results, out call parms, stackdata, private,
+   * empty block, ...) is solved together with (confirmed empirically: a
+   * `Block.srelative vfp ... -> autoAt (addk vfp 8) ...` swap in
+   * amd64call.ml's prolog alone left main's own frame with an
+   * unsolvable equation system, "Impossible: can't solve these eqns" -
+   * real regression risk to reworking that shared machinery further)
+   * - so, matching the SPARC/MIPS return-address compensations just above
+   * (same function, same "runtime-side patch at the one point that
+   * actually needs the two values to agree" reasoning their own comments
+   * give), the 8 bytes are added back here instead: the ONE place both of
+   * calleedata->inalloc's consumers (the normal in-callerdata branch just
+   * below, and Cmm_init_c_frame's own C-boundary branch) read it.
+   * Confirmed via the trace in docs/claude_notes/notes_amd64.txt's dated
+   * follow-up: without this, every vfp-stepping hop through amd64 code
+   * came up 8 bytes short, harmless for a hop or two (still landed on
+   * plausible-looking stack data) but fatal once enough nested calls
+   * (tig_alloc/new_string's own repeated-allocation chains, as
+   * tests/tiger64/colmajor.c--/rc4.c--/rb.c--/wf.c--/wff.c-- all trigger)
+   * accumulated the drift into unrelated stack memory - a GC root-scan
+   * that silently walked off the rails after only 4 real hops, or a
+   * segfault reading a garbage pointer as a Tiger string. NOT needed by
+   * i386/x86 (arch/x86/x86call.ml already gets its own 4-byte version of
+   * this right in the automaton itself, so its inalloc is already
+   * correct - adding this there too would double-count it). */
+#ifdef __x86_64__
+  calleedata_inalloc += 8;
+#endif
+
   if (callerdata) {
     if (Cmm_is_thread_start_frame(callerdata, a->pc))
       return 0;
     /* deallocpt = vfp       + calleedata->inalloc
        deallocpt = callervfp + callerdata->outalloc
 
-       therefore callerfvp = vfp + calleedata->inalloc - callerdata->outalloc 
+       therefore callerfvp = vfp + calleedata->inalloc - callerdata->outalloc
     */
-    a->vfp = vfp + Cmm_as_offset(calleedata->inalloc)
+    a->vfp = vfp + calleedata_inalloc
                  - Cmm_as_offset(callerdata->outalloc);
   } else {
     a->methods = &c_methods;
     a->rtdata = Cmm_empty_pcmap_entry;
-    Cmm_init_c_frame(a, vfp + Cmm_as_offset(calleedata->inalloc));
+    Cmm_init_c_frame(a, vfp + calleedata_inalloc);
   }
   return 1;
 }
