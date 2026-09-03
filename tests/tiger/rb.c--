@@ -585,6 +585,7 @@ insert_46(bits32 pfp,bits32 word,bits32 p) {
   bits32[fp+0] = pfp;
   bits32[fp+4] = word;
   bits32[fp+8] = p;
+  bits32[fp+12] = 0;
   bits32 temp_327;
   bits32 temp_236;
   bits32 temp_233;
@@ -775,6 +776,8 @@ getword_50(bits32 pfp) {
  span 1 getword_50_gc_data {
   stackdata { align 4; fp : bits32[3]; }
   bits32[fp+0] = pfp;
+  bits32[fp+4] = 0;
+  bits32[fp+8] = 0;
   bits32 temp_338;
   bits32 temp_337;
   bits32 temp_336;
@@ -847,6 +850,7 @@ main_51(bits32 pfp) {
  span 1 main_51_gc_data {
   stackdata { align 4; fp : bits32[2]; }
   bits32[fp+0] = pfp;
+  bits32[fp+4] = 0;
   bits32 temp_340;
   bits32 temp_339;
   bits32 temp_314;
@@ -879,6 +883,7 @@ tiger_main(bits32 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 4; fp : bits32[4]; }
   bits32[fp+0] = pfp;
+  bits32[fp+4] = 0;
   bits32 temp_315;
   bits32[%add(fp, 4)] = 0;
   bits32[%add(fp, 8)] = 0;

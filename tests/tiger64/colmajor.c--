@@ -132,6 +132,8 @@ getline_79(bits64 pfp) {
  span 1 getline_79_gc_data {
   stackdata { align 8; fp : bits64[3]; }
   bits64[fp+0] = pfp;
+  bits64[fp+8] = 0;
+  bits64[fp+16] = 0;
   bits64 temp_96;
   bits64 temp_92;
   bits64 temp_91;
@@ -239,6 +241,8 @@ tiger_main(bits64 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 8; fp : bits64[18]; }
   bits64[fp+0] = pfp;
+  bits64[fp+64] = 0;
+  bits64[fp+88] = 0;
   bits64 temp_75;
   bits64 temp_72;
   bits64 temp_71;

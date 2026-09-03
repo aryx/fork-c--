@@ -427,6 +427,7 @@ exchange_179(bits64 pfp,bits64 x,bits64 y) {
   bits64[fp+0] = pfp;
   bits64[fp+8] = x;
   bits64[fp+16] = y;
+  bits64[fp+24] = 0;
   bits64 temp_188;
   bits64 temp_187;
   bits64 temp_186;
@@ -577,6 +578,7 @@ tiger_main(bits64 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 8; fp : bits64[3]; }
   bits64[fp+0] = pfp;
+  bits64[fp+16] = 0;
   bits64 temp_53;
   bits64 temp_50;
   bits64 temp_49;

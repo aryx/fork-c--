@@ -9,6 +9,13 @@ Short version: the bug is in tiger's generated code, not in qc--. Whether it
 upstream never saw it and we do. So there is a real fix (in fork-tiger) and
 a defensible decision to leave it alone (recorded in the baseline).
 
+RESOLVED 2026-09-03 - Option A below was implemented. See the dated
+follow-up section at the end of this file for the fix, its verification
+across every backend, and a discussion of the alternative designs (the
+"principled" per-program-point stack map, and a cheaper middle ground)
+that were considered and deliberately not built. Everything below this
+point is the original diagnosis, kept as-is for the historical record.
+
 
 The symptom
 -----------
@@ -163,3 +170,153 @@ qemu's gdb stub has no hardware watchpoints, and software watchpoints
 single-step, so watching a stack address from main is too slow to finish -
 that is why the writer of slot 11 was identified by reasoning about the call
 sequence rather than by watching the address.
+
+===============================================================================
+Follow-up: fixed (2026-09-03), triggered by chasing alpha's own colmajor
+===============================================================================
+
+Context: tests/expected/tiger64-alpha.txt recorded colmajor as the one
+alpha-64 failure (14/15), with fork-tiger's own internal_alloc bounds check
+(added since this file was first written, during the arm64/riscv64
+heap-growth follow-up) turning what used to be silent heap corruption into
+a clean diagnostic: "internal allocation of ... bytes during collection
+would overflow to_space - likely a stale/uninitialized GC root, not a real
+object." That message is this exact bug, just caught earlier and more
+legibly than the malloc/memcpy corruption this file's original diagnosis
+describes for 32-bit x86.
+
+The fix: Option A, implemented
+-------------------------------
+frontend/frame.ml's output_header now zero-initializes every locally-
+declared stack slot flagged as a GC pointer (frm.vars with ptr=true), right
+after the existing parameter-initialization loop - the exact mechanism
+Option A above proposed. See frame.ml's own "claude:" comment at the call
+site for the implementation (params occupy stack slots 0..nparams-1 in
+frm.params order; locals follow at nparams.. in frm.vars' allocation order,
+which List.rev restores since alloc_local prepends). gc.c's is_pointer
+already skips a zero value, so a zeroed slot is inert - exactly as
+described above - until the program's own first real assignment gives it
+a genuine value.
+
+This was deliberately done as a general, unconditional fix in tigerc's
+frontend, NOT as a per-architecture flag or a bigger default heap. The
+bug was never alpha-specific (or amd64-specific, or x86-specific) - every
+backend carries the same latent unsoundness, and which one first exposes
+it is purely a function of that backend's own frame-size/call-sequence
+"luck" (see "Why it passed in 2005" above - the same reasoning that let
+upstream's bigger frames dodge this is why most of this fork's own
+backends still don't trip over it today). Special-casing the fix to
+alpha would have left every other current and future backend carrying
+the same defect, silently, until its own turn came up - the same trap
+Option C below already warned against, just one meta-level up (a
+per-arch conditional zero-init is no different in spirit from not
+zeroing at all: both let the bug keep hiding behind whichever frame
+layout happens not to expose it yet).
+
+Regenerated the ENTIRE tiger test corpus from this fixed tigerc, not just
+colmajor - both tests/tiger/*.c-- (32-bit) and tests/tiger64/*.c--
+(64-bit), via each directory's own regenerate-c--.sh (rbshort excluded,
+it shares rb.c--). Every diff against the previously-checked-in files
+was exactly the new "bits32/64[fp+N] = 0;" store lines and nothing else -
+confirmed with `diff old new | grep -v '<pattern>'` coming up empty for
+every changed file. This corpus regeneration is itself the reason this
+looked like a bigger change than "one test, one architecture": tigerc is
+the source of truth for these .c-- files (they are not meant to be
+hand-patched piecemeal), so once frame.ml changed, EVERY test's checked-in
+source needed to be regenerated to stay in sync with it, even though only
+colmajor's behavior actually changed.
+
+Verified, every backend, after the full regeneration
+-------------------------------------------------------
+  tests/run-tiger64-alpha.sh     14/15 -> 15/15 (colmajor: FAIL -> PASS,
+                                  the fix's actual target)
+  tests/run-tiger64-arm64.sh     15/15, matches baseline (no change)
+  tests/run-tiger64-riscv64.sh   15/15, matches baseline (no change)
+  tests/run-tiger64-amd64.sh     15/15, matches baseline (no change)
+  tests/run-tiger-x86.sh         15/15, matches baseline (no change)
+  tests/run-tiger-ppc.sh         15/15, matches baseline (no change)
+  tests/run-tiger-riscv32.sh     15/15, matches baseline (no change)
+  tests/run-tiger-mips.sh        15/15, matches baseline (no change)
+  tests/run-tiger-arm.sh         15/15, matches baseline (no change)
+  tests/run-tiger-m68k.sh        15/15, matches baseline (no change)
+  tests/run-tiger-sparc.sh       4/15, matches baseline (unchanged -
+                                  sparc's own pre-existing, unrelated
+                                  register-recovery gap, see
+                                  notes_status.txt/sparc's own notes)
+Only tests/expected/tiger64-alpha.txt needed re-recording; every other
+baseline already matched with zero edits. amd64-mach-o/arm64-mach-o were
+NOT re-verified (Darwin-only, no Mac available here) - they share this
+exact tigerc/corpus, so should also be unaffected, but a human should
+confirm on a real Mac before trusting that assumption blindly.
+
+Cost: one store per pointer-flagged local per procedure entry, not per
+call site or loop iteration - see the perf discussion below and in this
+session's own conversation record. Negligible next to the cost of the
+call/allocation machinery already in every prologue.
+
+Alternative designs considered, and why they were NOT built
+--------------------------------------------------------------
+Two more precise (and more expensive to build) designs exist. Documented
+here so nobody re-discovers them as "the real fix we should have done"
+without knowing they were already weighed and deliberately deferred:
+
+1. The "principled" fix: per-program-point stack maps instead of one
+   descriptor per procedure. Today's design (frame.ml's output_footer)
+   emits exactly ONE _gc_data table per procedure, declaring the full set
+   of ever-pointer-flagged locals as live for the ENTIRE activation, from
+   entry to return - there is no notion of "not live yet" at a specific
+   call site. A collection triggered by any allocating call anywhere in
+   the body (including deep inside an unrelated helper call, or several
+   recursive frames down, as the earlier amd64 investigation's own
+   tig_alloc/new_string chain illustrates for a related bug) walks the
+   frame using that same one static map, regardless of how much of the
+   procedure has actually executed yet. A precise collector tracks
+   liveness PER PROGRAM POINT instead - a call site only reports the
+   locals that are provably assigned by that point as roots, so an
+   as-yet-unassigned pointer slot is simply never reported, no zeroing
+   needed at all. This eliminates the runtime cost entirely, at the price
+   of real compiler engineering: a dataflow analysis (reaching
+   definitions / definite-assignment, computed per call site rather than
+   once per procedure) plus either richer per-call-site metadata or some
+   other way to communicate "which slots are live here" to the collector
+   at collection time, instead of one flat table. This is what production
+   precise/exact garbage collectors (JVM/CLR JIT-generated stack maps,
+   LLVM's statepoint/gcroot infrastructure) actually do, for exactly this
+   reason.
+
+2. A middle ground, also not built: keep the current one-descriptor-per-
+   procedure design, but compute - via a much smaller dataflow check than
+   full per-program-point maps - which pointer-flagged locals can
+   actually be READ (by a collection) before their own first assignment
+   is guaranteed to have executed, and zero-initialize only those. A
+   local that is unconditionally assigned before any call appears in the
+   procedure needs no zero-store at all under this scheme, since no
+   collection can ever observe it unassigned; only locals whose first
+   assignment is reachable-after some call site need the guard. This
+   keeps the fix as simple and general as what was actually built (still
+   a plain frontend-only change, still unconditional per architecture,
+   still no per-program-point metadata), while reducing the zero-store
+   count for procedures where the analysis can prove it is unnecessary.
+
+Neither was attempted: the actually-built fix (zero every pointer local,
+unconditionally, still a small bounded per-procedure-entry cost) already
+restores full soundness for the cost of a store that would otherwise not
+exist at all, and pad's own standing guidance (see fork-c--'s
+[[user-feedback-general-fixes]] memory) is to prefer the general, always-
+correct mechanism over a narrower optimization unless there's a concrete
+reason (measured hot-path cost, not a hypothetical one) to build the
+narrower version. If a future session finds this cost actually shows up
+in a profile, option 2 above is the natural next step - option 1 only if
+the language/runtime needs precise collection for other reasons too.
+
+Option C above (don't zero in qc--/the runtime instead) was re-confirmed
+as the wrong place to fix this, now with an even sharper reason than the
+original file gives: qc-- has no idea a given stackdata slot is meant to
+represent a "not yet assigned" Tiger value versus genuinely-uninitialized
+scratch space that will never hold a pointer - only the front end
+(tigerc) that decided a slot is pointer-typed can decide it also needs
+zeroing. Fixing it at the qc-- runtime/collector level was never a live
+option, just newly worth stating explicitly given how this bug's amd64
+and arm64/riscv64 cousins (separate, already-fixed bugs - see
+notes_amd64.txt and the arm64/riscv64 heap-growth commit) all turned out
+to be genuinely backend-specific, unlike this one.

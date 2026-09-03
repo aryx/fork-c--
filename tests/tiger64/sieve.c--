@@ -141,6 +141,7 @@ tiger_main(bits64 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 8; fp : bits64[4]; }
   bits64[fp+0] = pfp;
+  bits64[fp+16] = 0;
   bits64 temp_70;
   bits64 temp_32;
   bits64 temp_29;

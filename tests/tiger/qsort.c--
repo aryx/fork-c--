@@ -407,6 +407,7 @@ exchange_169(bits32 pfp,bits32 x,bits32 y) {
   bits32[fp+0] = pfp;
   bits32[fp+4] = x;
   bits32[fp+8] = y;
+  bits32[fp+12] = 0;
   bits32 temp_178;
   bits32 temp_177;
   bits32 temp_176;
@@ -557,6 +558,7 @@ tiger_main(bits32 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 4; fp : bits32[3]; }
   bits32[fp+0] = pfp;
+  bits32[fp+8] = 0;
   bits32 temp_53;
   bits32 temp_50;
   bits32 temp_49;

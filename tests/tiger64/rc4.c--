@@ -321,6 +321,8 @@ cypher_52(bits64 pfp) {
  span 1 cypher_52_gc_data {
   stackdata { align 8; fp : bits64[5]; }
   bits64[fp+0] = pfp;
+  bits64[fp+24] = 0;
+  bits64[fp+32] = 0;
   bits64 temp_162;
   bits64 temp_161;
   bits64 temp_160;
@@ -379,6 +381,7 @@ tiger_main(bits64 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 8; fp : bits64[2]; }
   bits64[fp+0] = pfp;
+  bits64[fp+8] = 0;
   bits64 temp_44;
   bits64 temp_41;
   bits64 temp_40;

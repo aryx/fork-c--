@@ -373,6 +373,8 @@ getword_41(bits64 pfp) {
  span 1 getword_41_gc_data {
   stackdata { align 8; fp : bits64[3]; }
   bits64[fp+0] = pfp;
+  bits64[fp+8] = 0;
+  bits64[fp+16] = 0;
   bits64 temp_209;
   bits64 temp_208;
   bits64 temp_207;
@@ -465,6 +467,7 @@ main_42(bits64 pfp) {
  span 1 main_42_gc_data {
   stackdata { align 8; fp : bits64[2]; }
   bits64[fp+0] = pfp;
+  bits64[fp+8] = 0;
   bits64 temp_211;
   bits64 temp_210;
   bits64 temp_195;
@@ -497,6 +500,7 @@ tiger_main(bits64 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 8; fp : bits64[2]; }
   bits64[fp+0] = pfp;
+  bits64[fp+8] = 0;
   bits64 temp_196;
   bits64[%add(fp, 8)] = 0;
   temp_196 =  main_42(fp) also aborts ;

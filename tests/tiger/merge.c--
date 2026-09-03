@@ -173,6 +173,7 @@ readlist_81(bits32 pfp) {
  span 1 readlist_81_gc_data {
   stackdata { align 4; fp : bits32[3]; }
   bits32[fp+0] = pfp;
+  bits32[fp+4] = 0;
   bits32 temp_98;
   bits32 temp_94;
   bits32 temp_91;
@@ -408,6 +409,9 @@ tiger_main(bits32 pfp) {
  span 1 tiger_main_gc_data {
   stackdata { align 4; fp : bits32[4]; }
   bits32[fp+0] = pfp;
+  bits32[fp+4] = 0;
+  bits32[fp+8] = 0;
+  bits32[fp+12] = 0;
   bits32 temp_172;
   bits32 temp_171;
   bits32 temp_170;
