@@ -63,7 +63,7 @@
 %******************************************************************************
 \title{
 {\Huge 
-Principia Softwarica: The C-- Compiler Backend [[qc]]
+The C-- Compiler Backend [[qc--]]
 }\\
 {version 0.1}
 }
@@ -72,6 +72,9 @@ Principia Softwarica: The C-- Compiler Backend [[qc]]
 \author{
 Yoann Padioleau\\
 \texttt{yoann.padioleau@gmail.com}
+\\
+with code from\\
+Norman Ramsey and Christian Lindig
 }
 
 \maketitle 
@@ -154,7 +157,7 @@ License.
 
 \section{Compiler back end principles}
 
-\section{[[qc]] services}
+\section{[[qc--]] services}
 
 \section{Input [[C--]] language}
 
@@ -3321,7 +3324,7 @@ let spillMap = ref RM.empty in
 let get_spill_loc ((_, _, ms), _, c as temp) =
   try RM.find temp (!spillMap)
   with Not_found ->
-    let l = Automaton.allocate proc.Proc.priv ~width:(Cell.to_width ms c)
+    let l = Automaton.allocate proc.priv ~width:(Cell.to_width ms c)
                                ~kind:"" ~align:1 in
     spillMap := RM.add temp l (!spillMap);
     l in
@@ -3340,9 +3343,9 @@ Therefore, after the register assignments are computed,
 we have to use a rewriting phase that doesn't check for convergence.
 <<flowra.ml >>=
 <<type definitions used internally by the register allocator>>
-let ralloc v (g, ({Proc.cc = cc; Proc.target = Preast2ir.T tgt} as proc)) =
+let ralloc v (g, (Procedure.{cc = cc; target = Preast2ir.T tgt} as proc)) =
   let debug = Debug.on "flowra" in
-  let m              = (proc, tgt.T.machine, proc.Proc.exp_of_lbl) in
+  let m              = (proc, tgt.T.machine, proc.exp_of_lbl) in
   let regs           = RS.elements (cc.Call.volregs ++ cc.Call.pre_nvregs) in
   let is_tmp (s,_,_) = T.is_tmp tgt s in
   let is_vfp t       = Vfp.is_vfp (Dn.loc (Rtl.reg t)) in
@@ -4633,7 +4636,7 @@ let cgInfo =
 [[clearCGInfo]] clears the data structure, leaving only the register lists.
 <<init cgInfo>>=
 let allocatable cc = CS.of_regs (cc.Call.pre_nvregs ++ cc.Call.volregs)
-let clearCGInfo cg (cfg, ({Proc.cc = colors} as proc)) = 
+let clearCGInfo cg (cfg, (Procedure.{cc = colors} as proc)) = 
   let pre = ref None in
   let init = ref None in
   let simp = ref None in
@@ -4818,7 +4821,7 @@ let get_regs cfg =
   let block b rst = GR.fold_fwd_block first middle last b rst in
   G.fold_blocks block RS.empty cfg
 
-let build cg (cfg, ({Proc.target = PA.T target} as proc)) =
+let build cg (cfg, (Procedure.{target = PA.T target} as proc)) =
   Debug.eprintf "color" "color::build()\n"; flush stderr;
   let () = if is_some (!(cg.tempLG Initial)) then
     Impossible.impossible "Temps on initial list prematurely" in
@@ -4965,7 +4968,7 @@ previously constrained moves to be coalesced.
 <<simplify>>=
 <<remove temp>>
 
-let simplify cg (cfg, ({Proc.target = PA.T t} as proc)) =
+let simplify cg (cfg, (Procedure.{target = PA.T t} as proc)) =
   (*Debug.eprintf "color" "color::simplify()\n"; flush stderr;*)
   (match !(cg.tempLG SimplifyWorklist) with
   | Some temp ->
@@ -5033,7 +5036,7 @@ There are four possible cases for moves on the [[worklistMoves]] list:
 <<definition of [[uniq]]>>
 <<coalesce move>>
 
-let coalesce cg (cfg, ({Proc.target = PA.T target} as proc)) =
+let coalesce cg (cfg, (Procedure.{target = PA.T target} as proc)) =
   (*Debug.eprintf "color" "color::coalesce()\n"; flush stderr;*)
     (match !(cg.moveLG WorklistMove) with
     | Some move ->
@@ -5304,7 +5307,7 @@ The [[GraphColoring]] exception is raised if the graph is uncolorable.
 <<assignColors>>=
 exception GraphColoring
 
-let assignColors cg (cfg, ({Proc.target = PA.T target} as proc)) =
+let assignColors cg (cfg, ({Procedure.target = PA.T target} as proc)) =
   Debug.eprintf "color" "color::assignColors()\n"; flush stderr;
   <<colorTemp>>
   let colorSelectStack () =
@@ -5377,7 +5380,7 @@ exception will be raised.
 This exception indicates an error in the graph-coloring implementation.
 <<applyColors>>=
 <<define span updating functions>>
-let applyColors cg (cfg, ({Proc.target = PA.T target; Proc.var_map = vMap} as proc)) =
+let applyColors cg (cfg, ({Procedure.target = PA.T target; Procedure.var_map = vMap} as proc)) =
   let find (((s,_,_), i, _) as t) =
     try RM.find t cg.colorMap
     with Not_found -> impossf "Uncolored temp %c%d" s i in
@@ -5505,12 +5508,12 @@ We fold over each block to insert spills and loads, and to replace spilled
 let updateBlock proc spillees uid block (blockMap, spillMap, newTemps) =
   let len = ilg_fold (fun _ rst -> rst + 1) spillees 0 in
   Debug.eprintf "color" "  color::updateBlock(%d)\n" len; flush stderr;
-  let PA.T tgt = proc.Proc.target in
+  let PA.T tgt = proc.Procedure.target in
   <<define update functions for each type of node in the cfg>>
 
 
   let (head, last) = GR.goto_end (GR.unzip block) in
-  let m = (proc, tgt.T.machine, proc.P.exp_of_lbl) in
+  let m = (proc, tgt.T.machine, proc.exp_of_lbl) in
   let add_nodes shuffles (g : G.zgraph) =
     let add_subgraph g block =
       let (subg, _) = G.block2cfg m block in
@@ -5569,7 +5572,7 @@ let updateInstr map_rtl instr spillee
   let reads, writes = reads_writes instr spillee in
   if reads || writes then
     let (mem, spill_regs) = RM.find spillee spillMap in
-    let tmp   = Talloc.Multiple.reg_like proc.Proc.temps spillee in
+    let tmp   = Talloc.Multiple.reg_like proc.temps spillee in
     let subst = fun x -> if Register.eq x spillee then tmp else x in 
     let map = Rtlutil.Subst.reg ~map:subst in
     let loads  =
@@ -5644,7 +5647,7 @@ let updateLast spillee (last, loads, spillMap, spills, newTemps) =
   let last, loads, spillMap, newTemps =
     if RSX.mem (R.Reg spillee_v) (last_extra_uses last) then
       let (mem, spill_regs) = RM.find spillee_v spillMap in
-      let tmp = Talloc.Multiple.reg_like proc.Proc.temps spillee_v in
+      let tmp = Talloc.Multiple.reg_like proc.temps spillee_v in
       let loads = tgt.T.machine.T.reload proc mem tmp :: loads in
       let spillMap = RM.add tmp (mem, tmp :: spill_regs) spillMap in
       (subst_last_extra_uses spillee_v tmp last, loads, spillMap, tmp :: newTemps)
@@ -5662,7 +5665,7 @@ In addition to adding store and fetch instructions to replace the spilled
 temps in the \cfg, [[rewrite]] returns the new spill temps that are
 generated.
 <<insert spills>>=
-let rewrite cfg ({Proc.target = PA.T target} as proc) spillees =
+let rewrite cfg (Procedure.{target = PA.T target} as proc) spillees =
   let spillMap =
     ilg_fold (fun s map -> RM.add s.v (spill_slot_for proc s.v, []) map)
              spillees RM.empty in
@@ -5811,7 +5814,7 @@ let usesl last =
 
 <<colorgraph.ml >>=
 let spill_slot_for proc ((_,_,ms), _, c)  =
-  Automaton.allocate proc.Proc.priv (Cell.to_width ms c) "" 1
+  Automaton.allocate proc.Procedure.priv (Cell.to_width ms c) "" 1
 module type COLOR = sig
   type t 
   type set
@@ -6975,11 +6978,11 @@ let rpo_dfs cfg =
 @
 
 <<dls algorithm>>=
-let dls _ (cfg, ({Proc.cc = cc; Proc.target = PA.T tgt} as proc)) =
+let dls _ (cfg, (Procedure.{cc = cc; target = PA.T tgt} as proc)) =
   let machine = tgt.T.machine in
-  let l2e = proc.P.exp_of_lbl in
+  let l2e = proc.exp_of_lbl in
   let m = (proc, machine, l2e) in
-  let () = Debug.eprintf "dls" "DLS(%s)\n" proc.Proc.symbol#original_text in
+  let () = Debug.eprintf "dls" "DLS(%s)\n" proc.symbol#original_text in
   <<set up [[spillMap]]>>
   let ((cfg, proc), _) = Optimize.trim_unreachable_code () (cfg, proc) in
   if Debug.on "dls" then
@@ -7295,7 +7298,7 @@ varmaps because we may have to set a spill location for the temp.
   let get_spill_loc ((_, _, ms), _, c as temp) =
     try RM.find temp (!spillMap)
     with Not_found ->
-      let l = Automaton.allocate proc.Proc.priv ~width:(Cell.to_width ms c)
+      let l = Automaton.allocate proc.priv ~width:(Cell.to_width ms c)
                                  ~kind:"" ~align:1 in
       let () = spillMap := RM.add temp l (!spillMap) in
       l in
@@ -7576,7 +7579,7 @@ let shuffle_between blockmap predmap pred_id succ_id =
     impossf "%s %s %s %s %s %s %s %s"
             "DLS register allocator error in shuffle(): Temp" (printReg temp)
             "allocated in succ" (blockname succ) "but not pred" (blockname pred)
-            "map in function" (proc.Proc.symbol#original_text) in
+            "map in function" (proc.symbol#original_text) in
   let _fail () = VM.print "Pred VM:" pred_vm;
                 VM.print "Succ VM:" succ_vm;
                 impossf "Varmap has temp in unexpected locations" in
@@ -9315,7 +9318,7 @@ extending it if needed.
 let is_hardware_register proc loc =
   match loc with
   | RP.Global (_, i, w) ->
-      (match Dn.exp (proc.Proc.global_map.(i).Automaton.fetch w) with
+      (match Dn.exp (proc.Procedure.global_map.(i).Automaton.fetch w) with
       | RP.Fetch (l, _) -> RU.is_hardware l
       | _ -> false)
   | _ -> RU.is_hardware loc
@@ -9360,8 +9363,8 @@ Calling [[widen_loc]] never changes the width of the location---it
 simply fixes up any code in an addressing expression that might need
 widening. 
 <<widen.ml >>=
-let dpwiden (g,proc) r =
-  let PA.T t      = proc.Proc.target in
+let dpwiden ((g,proc) : Ast2ir.proc) r =
+  let PA.T t      = proc.target in
   let targetwidth = t.Target.wordsize in
   let ptrwidth    = t.Target.pointersize in
   let rm          =
@@ -10064,6 +10067,7 @@ callee's [[vfp]].
 static int normal_change(Cmm_Activation *a) {
   char *vfp;
   pc_map_entry* calleedata, *callerdata;
+  intptr_t calleedata_inalloc;
 
   assert(a && a->vfp);
   calleedata = a->rtdata;
@@ -10123,20 +10127,66 @@ static int normal_change(Cmm_Activation *a) {
   callerdata = Cmm_lookup_entry(a->pc);
   a->rtdata  = callerdata;
 
+  calleedata_inalloc = Cmm_as_offset(calleedata->inalloc);
+  /* claude: amd64.ml's vfp sits AT the return-address word itself (see
+   * amd64call.ml's mem_ra, "the return address lives on the stack at the
+   * vfp location" - x86-64's `call` has no link register, unlike every
+   * other 64-bit backend here, so it pushes that 8-byte word there,
+   * unconditionally, on every single call). amd64call.ml's own incoming-
+   * parameter automaton (its `prolog`) starts allocating stack-passed
+   * arguments at plain vfp instead of vfp+8 though - modeled on
+   * arm64call.ml's identically-shaped prolog, which is correct for
+   * AArch64 (no pushed return address to skip over) but not ported from
+   * x86call.ml's own analogous 32-bit prolog, which DOES start its own
+   * automaton at "addk vfp 4" for exactly this reason. The result: every
+   * amd64 procedure's own inalloc (computed from that automaton's own
+   * young_end, see middle/translate/ast2ir.ml's `inalloc`) comes out 8
+   * bytes short of where it should be, uniformly, regardless of whether
+   * the procedure has any stack-passed args at all. Reworking the
+   * automaton wiring to fix this at the source touches the same Block/Eqn
+   * simultaneous-equation solver every OTHER call-site automaton for the
+   * same procedure (in ovfl results, out call parms, stackdata, private,
+   * empty block, ...) is solved together with (confirmed empirically: a
+   * `Block.srelative vfp ... -> autoAt (addk vfp 8) ...` swap in
+   * amd64call.ml's prolog alone left main's own frame with an
+   * unsolvable equation system, "Impossible: can't solve these eqns" -
+   * real regression risk to reworking that shared machinery further)
+   * - so, matching the SPARC/MIPS return-address compensations just above
+   * (same function, same "runtime-side patch at the one point that
+   * actually needs the two values to agree" reasoning their own comments
+   * give), the 8 bytes are added back here instead: the ONE place both of
+   * calleedata->inalloc's consumers (the normal in-callerdata branch just
+   * below, and Cmm_init_c_frame's own C-boundary branch) read it.
+   * Confirmed via the trace in docs/claude_notes/notes_amd64.txt's dated
+   * follow-up: without this, every vfp-stepping hop through amd64 code
+   * came up 8 bytes short, harmless for a hop or two (still landed on
+   * plausible-looking stack data) but fatal once enough nested calls
+   * (tig_alloc/new_string's own repeated-allocation chains, as
+   * tests/tiger64/colmajor.c--/rc4.c--/rb.c--/wf.c--/wff.c-- all trigger)
+   * accumulated the drift into unrelated stack memory - a GC root-scan
+   * that silently walked off the rails after only 4 real hops, or a
+   * segfault reading a garbage pointer as a Tiger string. NOT needed by
+   * i386/x86 (arch/x86/x86call.ml already gets its own 4-byte version of
+   * this right in the automaton itself, so its inalloc is already
+   * correct - adding this there too would double-count it). */
+#ifdef __x86_64__
+  calleedata_inalloc += 8;
+#endif
+
   if (callerdata) {
     if (Cmm_is_thread_start_frame(callerdata, a->pc))
       return 0;
     /* deallocpt = vfp       + calleedata->inalloc
        deallocpt = callervfp + callerdata->outalloc
 
-       therefore callerfvp = vfp + calleedata->inalloc - callerdata->outalloc 
+       therefore callerfvp = vfp + calleedata->inalloc - callerdata->outalloc
     */
-    a->vfp = vfp + Cmm_as_offset(calleedata->inalloc)
+    a->vfp = vfp + calleedata_inalloc
                  - Cmm_as_offset(callerdata->outalloc);
   } else {
     a->methods = &c_methods;
     a->rtdata = Cmm_empty_pcmap_entry;
-    Cmm_init_c_frame(a, vfp + Cmm_as_offset(calleedata->inalloc));
+    Cmm_init_c_frame(a, vfp + calleedata_inalloc);
   }
   return 1;
 }
@@ -11559,7 +11609,7 @@ Then we remove the unreachable spans.
 I DON'T SEE WHERE UNREACHABLE SPANS ARE EVER REMOVED. 
 CAN THE OLD CODE SIMPLY BE REMOVED?
 <<optimize.ml >>=
-let trim_unreachable_code _ {Proc.cfg = cfg} =
+let trim_unreachable_code _ {Procedure.cfg = cfg} =
   let module IS = Set.Make (struct type t = int let compare x y = x - y end) in
   let nodes_from_entry =
     let _add_labels n lset = 
@@ -11692,8 +11742,8 @@ let badrtl r =
     (* if you want to do the following, extend Target.t with a to_asm function *)
     (*  Printf.eprintf "x86 rec says %s\n" (X86rec.M.to_asm r) *)
   
-let validate _ (g, proc) =
-  let PA.T tgt = proc.P.target in
+let validate _ ((g, proc) : Ast2ir.proc) =
+  let PA.T tgt = proc.target in
   let check r = if not (tgt.T.is_instruction r) then badrtl r else () in
   let first _ = () in
   let middle m = if GR.is_executable m then check (GR.mid_instr m) in
@@ -11786,8 +11836,8 @@ Two key functions are wrapped for debugging:
 \end{itemize}
 
 <<peephole.ml >>=
-let tx (g, proc) =
-  let PA.T tgt = proc.P.target in
+let tx ((g, proc) : Ast2ir.proc) =
+  let PA.T tgt = proc.target in
   let replace =
     if debug then
       (fun rtl old ->

@@ -13,6 +13,7 @@
  ; it automatically). Without a public_name an executable is build-only
  ; and `dune install` has nothing to do for it.
  (public_name qc)
+
  (libraries
   xix_commons
   ;profiling

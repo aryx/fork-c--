@@ -19428,36 +19428,37 @@ type 'a nvr = { reg : 'a; tmp : 'a }   (* for callee-saves info *)
     proc.N.formals in
   let (i : proc) =    
     g,
-    { Proc.symbol      = proc.N.sym
-    ; Proc.cc          = proc_cc
-    ; Proc.target      = T target
-    ; Proc.formals     = formals
-    ; Proc.temps       = temps
-    ; Proc.mk_symbol   = Fenv.Clean.symbol env
-    ; Proc.cfg         = ()
-    ; Proc.oldblocks   = (* parms must be first, so call List.rev *)
+    Procedure.{ 
+      symbol      = proc.N.sym
+    ; cc          = proc_cc
+    ; target      = T target
+    ; formals     = formals
+    ; temps       = temps
+    ; mk_symbol   = Fenv.Clean.symbol env
+    ; cfg         = ()
+    ; oldblocks   = (* parms must be first, so call List.rev *)
         { C.callee = List.rev (oldblocks.callee); 
           C.caller = List.rev (oldblocks.caller); }
-    ; Proc.youngblocks = (* order doesn't matter *)
+    ; youngblocks = (* order doesn't matter *)
         { C.callee = youngblocks.callee; 
           C.caller = youngblocks.caller; }
-    ; Proc.stackd         = proc.N.stackmem     (* stack data block *)
+    ; stackd         = proc.N.stackmem     (* stack data block *)
 
-    ; Proc.priv           = Block.relative vfp "private"
+    ; priv           = Block.relative vfp "private"
                             (aligned_mem ~align:proc_cc.C.sp_align) target
 (*
     ; Proc.priv           = AT.of_methods {AT.allocate = allocate ; AT.freeze = freeze}
 *)
-    ; Proc.sp             = Block.at proc_cc.C.stable_sp_loc 0 proc_cc.C.sp_align 
-    ; Proc.eqns           = List.concat (!constraints)
-    ; Proc.conts          = contblocks
-    ; Proc.vars           = nvars              (* number of variables *)
-    ; Proc.nvregs         = RS.cardinal nvregs (* number of non-volatile regs *)
-    ; Proc.var_map        = Array.make nvars None
-    ; Proc.global_map     = global_map
-    ; Proc.bodylbl        = bodylbl
-    ; Proc.headroom       = !headroom
-    ; Proc.exp_of_lbl     = exp_of_code_label
+    ; sp             = Block.at proc_cc.C.stable_sp_loc 0 proc_cc.C.sp_align 
+    ; eqns           = List.concat (!constraints)
+    ; conts          = contblocks
+    ; vars           = nvars              (* number of variables *)
+    ; nvregs         = RS.cardinal nvregs (* number of non-volatile regs *)
+    ; var_map        = Array.make nvars None
+    ; global_map     = global_map
+    ; bodylbl        = bodylbl
+    ; headroom       = !headroom
+    ; exp_of_lbl     = exp_of_code_label
     } in
 @ 
 %%Before running the optimizer, we trim away any unreachable code,
@@ -22265,17 +22266,17 @@ let temp_in_context t context instructions =
 %%\nextchunklabel{expander.contextmap}%
 <<generic expander>>=
 let expand proc =
-  let PA.T tgt = proc.Proc.target in
+  let PA.T tgt = proc.Procedure.target in
   <<stack-slot allocation>>
   <<block-manipulation utilities>>
   <<functions for dealing with trivial guards>>
-  let contextmap (allocator, checker) = (allocator proc.Proc.temps, checker) in
+  let contextmap (allocator, checker) = (allocator proc.temps, checker) in
   let icontext = contextmap Post.icontext in
   let acontext = contextmap Post.acontext in
   let fcontext = contextmap Post.fcontext in
   <<rounding-mode checking>>
   <<context guessing>>
-  let alloc_direct (allocator, _) = allocator proc.Proc.temps in
+  let alloc_direct (allocator, _) = allocator proc.temps in
   <<definition of [[temp_in_context]]>>
   <<definitions of [[to_temp]], [[rtl]] and all the other generic expander functions>>
   (block, branch', expand_cbranch, call', jump', cut')
@@ -23417,10 +23418,10 @@ and old_loc l =
 %%establishes the mutual recursion between the generic expander and the
 %%machine-specific postexpander.
 <<generic flow-graph expander>>=
-let expand f proc =
+let expand f (proc : PA.basic_proc) =
   let modified = ref false in
-  let PA.T tgt = proc.Proc.target in
-  let machine  = proc, tgt.Target.machine, proc.Proc.exp_of_lbl in
+  let PA.T tgt = proc.target in
+  let machine  = proc, tgt.Target.machine, proc.exp_of_lbl in
   <<block-conversion functions>>
   let (expand_block, expand_branch, expand_cbranch,
        expand_call, expand_jump, expand_cut as expanders) = expand proc in
@@ -23428,7 +23429,7 @@ let expand f proc =
     if Postexpander.Alloc.isValid () then
       f expanders (block_before, block2cfg, cbranch2cfg)
     else
-      (Postexpander.remember_allocators proc.Proc.temps proc.Proc.priv;
+      (Postexpander.remember_allocators proc.temps proc.priv;
        Postexpander.remember_expanders expand_block expand_branch expand_cbranch;
        let g = f expanders (block_before, block2cfg, cbranch2cfg) in
        Postexpander.forget_allocators();
@@ -23436,8 +23437,8 @@ let expand f proc =
        g) in
   g, !modified
 
-let cfg _ (cfg, proc) =
-  let PA.T tgt = proc.Proc.target in
+let cfg _ ((cfg, proc) : Preast2ir.proc) =
+  let PA.T tgt = proc.target in
   let m = tgt.Target.machine in
   let expand_cfg (expand_block, expand_branch, expand_cbranch, expand_call,
                   expand_jump, expand_cut)
@@ -24084,9 +24085,9 @@ let capply to_temp to_warg opr = cappfun to_temp to_warg (of_opr opr)
 %%This code is in a separate module to make it easier to avoid circular dependencies.
 <<type defs>>=
 type tgt  = T of (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
-and basic_proc = (Automaton.t, unit, Call.t, tgt) Proc.t
+and basic_proc = (Automaton.t, unit, Call.t, tgt) Procedure.t
 type proc = Zipcfg.graph * basic_proc
-type old_proc = (Automaton.t, Rtl.rtl Cfgx.M.cfg, Call.t, tgt) Proc.t
+type old_proc = (Automaton.t, Rtl.rtl Cfgx.M.cfg, Call.t, tgt) Procedure.t
 @
 <<preast2ir.mli >>=
 <<type defs>>
@@ -24095,7 +24096,7 @@ val tgt : basic_proc -> (basic_proc, (Rtl.exp -> Automaton.t), Call.t) Target.t
 %%
 <<preast2ir.ml >>=
 <<type defs>>
-let tgt {Proc.target = T t} = t
+let tgt {Procedure.target = T t} = t
 @ 
 \section{[[front_ir/proc.nw]]}
 <<front_ir/procedure.ml>>=
@@ -26014,7 +26015,7 @@ let matches next = match next with
 | Some (u, l) -> (fun (u', l') -> Unique.eq u u')
 
 let emit proc cfg call_emit rtl_emit sym_emit =
-  let PA.T tgt = proc.P.target in
+  let PA.T tgt = proc.Procedure.target in
   let rec seq_emit = function  (* emit sequence of RTLs only *)
     | DG.Rtl r -> rtl_emit r
     | DG.Seq (a, b) -> seq_emit a; seq_emit b
@@ -26031,7 +26032,7 @@ let emit proc cfg call_emit rtl_emit sym_emit =
     | GR.Branch (_, tgt) when matches next tgt -> ()
     | GR.Cbranch (_, ttgt, ftgt) when not (matches next ftgt) ->
         rtl_emit (GR.last_instr l);
-        let (b, r) = tgt.T.machine.T.goto.T.embed proc (proc.P.exp_of_lbl ftgt) in
+        let (b, r) = tgt.T.machine.T.goto.T.embed proc (proc.exp_of_lbl ftgt) in
         seq_emit b;
         rtl_emit r
     | GR.Call c -> call_emit c
@@ -26246,7 +26247,7 @@ object (this)
     method cfg_instr (proc : 'proc) =
       print_string "pad: Dotasm.cfg_instr\n";
       let (cfg, proc) = proc in
-      let s   = proc.Proc.symbol in
+      let s   = proc.Procedure.symbol in
       let mangle  = Mangle.mk spec in
       output_string fd (cfg2dot ~name:(mangle s#mangled_text) cfg)
 
@@ -28101,8 +28102,8 @@ module RP = Rtl.Private
 <<replace var>>
 @ 
 <<fetch and store globals>>=
-let store_global exp (s, i, w) = proc.P.global_map.(i).A.store (R.Up.exp exp) w in
-let fetch_global     (s, i, w) = proc.P.global_map.(i).A.fetch                w in
+let store_global exp (s, i, w) = proc.global_map.(i).A.store (R.Up.exp exp) w in
+let fetch_global     (s, i, w) = proc.global_map.(i).A.fetch                w in
 @    
 %%We use a higer-order function to allow different variable placers to replace a variable
 %%and take advantage of the rtl-walk.
@@ -28165,8 +28166,8 @@ module SM = Strutil.Map
 %%conventions, we have no such guarantees.
 <<placevar.ml >>=
 <<define context count structures>>
-let context autmtn _ (g, ({ Proc.target = PA.T tgt; Proc.formals = formals;
-                            Proc.var_map = tMap} as proc)) =
+let context autmtn _ (g, (Procedure.{ target = PA.T tgt; formals = formals;
+                            var_map = tMap} as proc)) =
   let changed = ref false in
   let autmtn  = autmtn (g, proc) in
   <<initialize context count structures>>
@@ -28191,7 +28192,7 @@ type counts = { mutable intc   : float
 @
 <<initialize context count structures>>=
 let new_count _ = { intc = 0.0; floatc = 0.0; addrc = 0.0; boolc = 0.0}        in
-let var_counts = Array.init proc.Proc.vars new_count                           in
+let var_counts = Array.init proc.vars new_count                           in
 let inc_int   i f = let record = var_counts.(i)                                in
                     record.intc <- record.intc +. f                            in
 let inc_float i f = let record = var_counts.(i)                                in
@@ -28284,7 +28285,7 @@ let ctxt_map =
     let acnt = cnts.addrc     in
     let (cnt,ctxt) = if icnt >=. fcnt then (icnt,"int") else (fcnt, "float") in
     if cnt >=. acnt then ctxt else "address" in
-  Array.init proc.Proc.vars elect in
+  Array.init proc.vars elect in
 @
 %%To replace a variable, we use the automaton to allocate a new fetch of the variable,
 %%and we extract the location.
@@ -28297,7 +28298,7 @@ let ctxt_map =
 %%
 %%WE DON'T INFER ANY ALIGNMENT.  SHOULD WE WORRY?
 <<context replace var>>=
-let formal_arr = Array.make proc.Proc.vars None in
+let formal_arr = Array.make proc.vars None in
 let () = List.iter (fun (i,v) -> formal_arr.(i) <- Some v) formals in
 let choose_ty i elected_kind = 
   let space_name = function "signed" | "unsigned" | "" -> "int"
@@ -28364,21 +28365,21 @@ let _ = if Block.size aresult.A.overflow <> 0 then
 let ( *> ) = A.( *> )
 
 let from_temps proc space = (* stage to allocate a temporary location *)
-  let allocator = Talloc.Multiple.loc proc.Proc.temps space in
+  let allocator = Talloc.Multiple.loc proc.Procedure.temps space in
   let alloc ~width:w ~alignment:a ~kind:h = A.of_loc (allocator w) in
   A.wrap (fun methods -> {A.allocate = alloc; A.freeze = methods.A.freeze})
 
 let debug lbl w h a ctr =
   Printf.eprintf "Placevar %s w=%d h=%s a=%d ctr=%d\n" lbl w h a ctr
 
-let mk_automaton ~warn ~vfp ~memspace mk_stage (g, proc) =
+let mk_automaton ~warn ~vfp ~memspace mk_stage ((g, proc) : Ast2ir.proc) =
   let warn methods =
     let alloc ~width:w ~alignment:a ~kind:h =
       warn ~width:w ~alignment:a ~kind:h;
       methods.A.allocate w a h in
     {A.allocate = alloc; A.freeze = methods.A.freeze} in
   Block.srelative vfp "variables placed in memory" (A.at memspace)
-  ( A.wrap warn *> mk_stage ~temps:(from_temps proc) *> A.as_stage proc.Proc.priv )
+  ( A.wrap warn *> mk_stage ~temps:(from_temps proc) *> A.as_stage proc.priv )
 @
 %%After we have placed the variables, we record their locations in the spans.
 <<add variable placements to spans>>=
@@ -28390,7 +28391,7 @@ let upd_var e = match R.Dn.loc e with
 RT.upd_all_spans upd_var g;
 @
 <<placevar.ml >>=
-let replace_globals _ (g, ({ Proc.target = tgt; Proc.global_map = gmap} as proc)) =
+let replace_globals _ (g, (Procedure.{ target = tgt; global_map = gmap} as proc)) =
   let subst = RU.Subst.aloc ~guard:(function RP.Global _ -> true | _ -> false)
                 ~map:(function RP.Global (_, i, _) -> gmap.(i)
                              | l -> Impossible.impossible "global replacement") in
@@ -31240,8 +31241,8 @@ end
 %%The assembler constructor receives the output channel for the assembler. 
 <<x86asm.mli>>=
 val make : 
-  (('a, 'b, 'c, 'd) Proc.t -> 'cfg -> (Zipcfg.Rep.call -> unit) -> (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
-  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Proc.t) Asm.assembler
+  (('a, 'b, 'c, 'd) Procedure.t -> 'cfg -> (Zipcfg.Rep.call -> unit) -> (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
+  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Procedure.t) Asm.assembler
   (* pass Cfgutil.emit *)
 @
 %%
@@ -31321,7 +31322,7 @@ let spec =
 <<definition of [[manglespec]] (for the name mangler)(x86asm.nw)>>
 
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
-  : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler = 
+  : ['cfg * ('a, 'b, 'c, 'd) Procedure.t] Asm.assembler = 
 object (this)
     val         _fd       = fd
     val         _mangle  = (Mangle.mk spec)   
@@ -31500,7 +31501,7 @@ method private call node =
 method cfg_instr (cfg,proc)  = 
     (* We have to emit a label/whatever for the procedure's 
        entry point. This is what symbol is for. Simply use this#label?  *)
-    let symbol = proc.Proc.symbol in
+    let symbol = proc.Procedure.symbol in
     let label l = this#label (try SM.find l _syms with Not_found -> this#local l) in
     this#label symbol;
     (emitter proc cfg (this#call) (this#instruction) label : unit)
@@ -36178,9 +36179,9 @@ let placevars =
  * caller, per the comment below) has since moved to the newer
  * Zipcfg.Rep-based "call" node, same shape arch/ppc/ppcasm.mli uses. *)
 val make :
-  (('a, 'b, 'c, 'd) Proc.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
+  (('a, 'b, 'c, 'd) Procedure.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
             (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
-  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Proc.t) Asm.assembler
+  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Procedure.t) Asm.assembler
   (* pass Cfgutil.emit *)
 @ 
 
@@ -36228,7 +36229,7 @@ let spec =
 <<[[Sparcasm]] definitions>>=
 <<definition of [[manglespec]] (for the name mangler)>>
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
-  : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler =
+  : ['cfg * ('a, 'b, 'c, 'd) Procedure.t] Asm.assembler =
 object (this)
     val         _fd       = fd
     val         _mangle  = (Mangle.mk spec)   
@@ -36356,7 +36357,7 @@ method private call (node : GR.call) =
 method cfg_instr (cfg, proc) =
   (* We have to emit a label for the procedure's
      entry point. This is what symbol is for. Simply use this#label?  *)
-  let symbol = proc.Proc.symbol in
+  let symbol = proc.Procedure.symbol in
   let label l = this#label (try SM.find l _syms with Not_found -> this#local l) in
     this#label symbol;
     (emitter proc cfg (this#call) (this#instruction) label : unit)
@@ -38445,9 +38446,9 @@ implements the [[Asm.assembler]] interface.
  * sparcasm.mli/arch/ppc/ppcasm.mli use - see alphaasm.ml's #call/
  * #cfg_instr for the corresponding implementation fix. *)
 val make :
-  (('a, 'b, 'c, 'd) Proc.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
+  (('a, 'b, 'c, 'd) Procedure.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
             (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
-  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Proc.t) Asm.assembler
+  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Procedure.t) Asm.assembler
   (* pass Cfgutil.emit *)
 @
 
@@ -38507,7 +38508,7 @@ let int64   = Bits.U.to_int64
  * pairs the Zipcfg.graph alongside the Proc.t record; see #cfg_instr
  * below, which receives that pair). *)
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
-  : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler =
+  : ['cfg * ('a, 'b, 'c, 'd) Procedure.t] Asm.assembler =
 object (this)
     val         _fd       = fd
     val         _mangle  = (Mangle.mk spec)   
@@ -38631,7 +38632,7 @@ method private call (node : GR.call) =
  * this file's #call above and the class type declaration for the
  * rest of that fix). *)
 method cfg_instr (cfg, proc) =
-    let symbol = proc.Proc.symbol in
+    let symbol = proc.Procedure.symbol in
     let label l = this#label (try SM.find l _syms
                               with Not_found -> this#local l) in
 
@@ -40204,9 +40205,9 @@ let target =
  * sparcasm.mli/arch/alpha/alphaasm.mli use - see mipsasm.ml's #call/
  * #cfg_instr for the corresponding implementation fix. *)
 val make :
-  (('a, 'b, 'c, 'd) Proc.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
+  (('a, 'b, 'c, 'd) Procedure.t -> 'cfg -> (Zipcfg.Rep.call -> unit) ->
             (Rtl.rtl -> unit) -> (string -> unit) -> unit) ->
-  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Proc.t) Asm.assembler
+  out_channel -> ('cfg * ('a, 'b, 'c, 'd) Procedure.t) Asm.assembler
   (* pass Cfgutil.emit *)
 @
 %%
@@ -40265,7 +40266,7 @@ let int64   = Bits.U.to_int64
  * param now pairs the Zipcfg.graph alongside the Proc.t record; see
  * #cfg_instr below, which receives that pair). *)
 class ['cfg, 'a, 'b, 'c, 'd] asm emitter fd
-  : ['cfg * ('a, 'b, 'c, 'd) Proc.t] Asm.assembler =
+  : ['cfg * ('a, 'b, 'c, 'd) Procedure.t] Asm.assembler =
 object (this)
     val         _fd       = fd
     val         _mangle  = (Mangle.mk spec)   
@@ -40395,7 +40396,7 @@ method private call (node : GR.call) =
  * #call above and the class type declaration for the rest of that
  * fix). *)
 method cfg_instr (cfg, proc) =
-    let symbol = proc.Proc.symbol in
+    let symbol = proc.Procedure.symbol in
     let label l = this#label (try SM.find l _syms
                               with Not_found -> this#local l) in
     Printf.fprintf _fd ".set noreorder  /* HACK! mipsasm.nw did this */\n";
