@@ -42,6 +42,10 @@ exactly (shared GC/liveness bug; tail-call return-value bug), not
 arm64-specific. Still open: sub-word memory *loads* (stores now work), a
 Linux/ELF "-arm64-elf" sibling.
 
+* Cmm.nw
+#good to vary a bit from principia, not always C code written by the same people :)
+#and also different language!
+
 * Code
 
 ** Code estet
